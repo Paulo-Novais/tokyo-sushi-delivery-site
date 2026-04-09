@@ -1,42 +1,23 @@
 # Publicacao do dominio
 
-Dominio principal configurado no projeto:
+Ponto unico de configuracao:
 
-- `tokyosushidelivery.com.br`
+- Edite `site.config.json` para trocar o dominio principal, dominios alternativos e a imagem social padrao.
+- Rode `py scripts/apply-site-config.py` para atualizar os HTMLs, `robots.txt`, `sitemap.xml`, `site-config.js` e `vercel.json`.
 
-Arquivos ja adicionados:
+Checklist de deploy na Vercel:
 
-- `CNAME`
-- `.nojekyll`
-- `robots.txt`
-- `sitemap.xml`
-- `site.webmanifest`
-- `404.html`
+1. Em `Project > Settings > Domains`, adicione o dominio principal e os alternativos.
+2. Deixe o dominio principal como canonical no painel e mantenha o redirecionamento dos alternativos ativo.
+3. Faça o deploy depois de aplicar a configuracao central.
 
-Checklist no GitHub Pages:
+Checklist de DNS:
 
-1. Em `Settings > Pages`, confirme o dominio customizado `tokyosushidelivery.com.br`.
-2. Ative `Enforce HTTPS` assim que o GitHub liberar a opcao.
-3. Se houver opcao de verificar o dominio, faca a verificacao para evitar takeover.
-
-Checklist no DNS:
-
-- Apex `@` com `A` para:
-  - `185.199.108.153`
-  - `185.199.109.153`
-  - `185.199.110.153`
-  - `185.199.111.153`
-- Apex `@` com `AAAA` para:
-  - `2606:50c0:8000::153`
-  - `2606:50c0:8001::153`
-  - `2606:50c0:8002::153`
-  - `2606:50c0:8003::153`
-- `www` com `CNAME` apontando para o dominio padrao do seu projeto no GitHub Pages.
+- Configure o apex `@` e o `www` conforme os registros mostrados no painel da Vercel.
+- Aguarde a emissao do certificado SSL antes de validar o redirecionamento final.
 
 Observacoes:
 
-- O `CNAME` do repositorio deve continuar com `tokyosushidelivery.com.br`.
-- O site ja esta preparado para funcionar com `tokyosushidelivery.com.br` e `www.tokyosushidelivery.com.br`.
-- A chave do Google Maps precisa liberar:
-  - `https://tokyosushidelivery.com.br/*`
-  - `https://www.tokyosushidelivery.com.br/*`
+- O front usa caminhos relativos para assets, scripts e chamadas de API, entao a troca de host nao exige alterar links internos.
+- `vercel.json` passa a concentrar o redirecionamento de host para o dominio principal e os headers de seguranca/HTTPS.
+- Se o dominio mudar, atualize tambem os referers liberados da chave do Google Maps usando os valores gerados em `site-config.js`.

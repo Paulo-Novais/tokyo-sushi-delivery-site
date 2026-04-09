@@ -3,6 +3,8 @@ const CART_STORAGE_KEY = "tokyo_sushi_delivery_cart";
 const AUTH_PROFILE_KEY = "tokyo_sushi_profile";
 const AUTH_ACCOUNTS_KEY = "tokyo_sushi_accounts";
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
+const PHONE_VERIFICATION_SEND_ENDPOINT = "/api/auth/send-whatsapp-code";
+const PHONE_VERIFICATION_SEND_TIMEOUT_MS = 12000;
 const ORDER_HISTORY_STORAGE_KEY = "tokyo_sushi_order_history";
 const CART_ADDONS_STORAGE_KEY = "tokyo_sushi_delivery_cart_addons";
 const CART_CHECKOUT_STORAGE_KEY = "tokyo_sushi_cart_checkout";
@@ -100,11 +102,14 @@ const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
 const DELIVERY_MANUAL_TIME_TEXT = "Confirmar no WhatsApp";
 const siteHeader = document.querySelector(".site-header");
 const catalogRoot = document.querySelector("[data-catalog-root]");
+const MOBILE_NAV_BREAKPOINT = 860;
+const MOBILE_CATALOG_BREAKPOINT = 860;
 const authState = {
   view: "entry",
   socialProvider: null,
   socialStatus: "idle",
   socialTimer: 0,
+  phoneCodeStatus: "idle",
   editing: false,
   error: "",
   message: "",
@@ -1223,15 +1228,46 @@ const PLACEHOLDER_PRICE_LABEL = "R$: 00,00";
 const EMPTY_GROUP_TOTAL_LABEL = "R$ 00,00";
 const GROUP_MEDIA_CYCLE_MS = 2800;
 const GROUP_MEDIA_FADE_MS = 620;
-const SITE_PRIMARY_ORIGIN = "https://tokyosushidelivery.com.br";
-const SITE_ALTERNATE_HOSTNAMES = Object.freeze(["www.tokyosushidelivery.com.br"]);
-const GOOGLE_MAPS_ALLOWED_REFERRERS = Object.freeze([
-  `${SITE_PRIMARY_ORIGIN}/*`,
-  ...SITE_ALTERNATE_HOSTNAMES.map((hostname) => `https://${hostname}/*`),
-]);
+const TOKYO_SITE_CONFIG = window.TOKYO_SITE_CONFIG || {};
+const DELIVERY_DEBUG_ENABLED = Boolean(TOKYO_SITE_CONFIG.debugDelivery);
+const normalizeSiteHostnameList = (value) =>
+  Array.isArray(value)
+    ? value
+        .map((hostname) =>
+          String(hostname || "")
+            .trim()
+            .replace(/^https?:\/\//, "")
+            .replace(/\/+$/, "")
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    : [];
+const getBrowserOriginFallback = () => {
+  const origin = String(window.location?.origin || "").trim();
+  return !origin || origin === "null" ? "" : origin;
+};
+const SITE_PRIMARY_ORIGIN = String(
+  TOKYO_SITE_CONFIG.primaryOrigin || getBrowserOriginFallback()
+).trim();
+const SITE_ALTERNATE_HOSTNAMES = Object.freeze(
+  normalizeSiteHostnameList(TOKYO_SITE_CONFIG.alternateDomains)
+);
+const GOOGLE_MAPS_ALLOWED_REFERRERS = Object.freeze(
+  Array.isArray(TOKYO_SITE_CONFIG.googleMapsAllowedReferrers) &&
+    TOKYO_SITE_CONFIG.googleMapsAllowedReferrers.length
+    ? TOKYO_SITE_CONFIG.googleMapsAllowedReferrers
+        .map((referrer) => String(referrer || "").trim())
+        .filter(Boolean)
+    : [
+        ...(SITE_PRIMARY_ORIGIN ? [`${SITE_PRIMARY_ORIGIN}/*`] : []),
+        ...SITE_ALTERNATE_HOSTNAMES.map((hostname) => `https://${hostname}/*`),
+      ]
+);
 let googleMapsLoaderPromise;
 let deliveryCepLookupToken = 0;
 let lastGoogleMapsApiErrorMessage = "";
+let mobileExpandedCatalogSectionId = "";
+let lastCatalogViewportMode = "";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -1241,12 +1277,16 @@ const formatPrice = (value) => `R$ ${value.toFixed(2).replace(".", ",")}`;
 
 const getCurrentPageOrigin = () => {
   const origin = String(window.location?.origin || "").trim();
-  return !origin || origin === "null" ? SITE_PRIMARY_ORIGIN : origin;
+  return !origin || origin === "null" ? SITE_PRIMARY_ORIGIN || "" : origin;
 };
 
 const getGoogleMapsAllowedReferrersLabel = () => GOOGLE_MAPS_ALLOWED_REFERRERS.join(" e ");
 
 const logDeliveryDebug = (stage, payload) => {
+  if (!DELIVERY_DEBUG_ENABLED) {
+    return;
+  }
+
   console.info(`[delivery] ${stage}`, payload);
 };
 
@@ -1310,6 +1350,33 @@ const fillDeliveryAddressFromCep = (form, cepData) => {
 
   if (stateField) {
     stateField.value = String(cepData.uf || "").trim();
+  }
+};
+
+const getStoredString = (storageKey, fallback = "") => {
+  try {
+    const value = localStorage.getItem(storageKey);
+    return value == null ? fallback : String(value);
+  } catch (error) {
+    return fallback;
+  }
+};
+
+const setStoredString = (storageKey, value) => {
+  try {
+    localStorage.setItem(storageKey, String(value));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const removeStoredValue = (storageKey) => {
+  try {
+    localStorage.removeItem(storageKey);
+    return true;
+  } catch (error) {
+    return false;
   }
 };
 
@@ -1406,11 +1473,7 @@ const getGoogleMapsApiKey = () => {
     return runtimeKey;
   }
 
-  try {
-    return String(localStorage.getItem(GOOGLE_MAPS_API_KEY_STORAGE_KEY) || "").trim();
-  } catch (error) {
-    return "";
-  }
+  return getStoredString(GOOGLE_MAPS_API_KEY_STORAGE_KEY, "").trim();
 };
 
 const getMaskedGoogleMapsApiKey = () => {
@@ -1777,6 +1840,21 @@ const getComboContentsMarkup = (section, group) => {
     .join("")}</div>`;
 };
 
+const getCombinadosMobileDetailsMarkup = (section, item) => {
+  const contentsMarkup = getComboContentsMarkup(section, item);
+
+  if (!contentsMarkup) {
+    return "";
+  }
+
+  return `
+    <div class="catalog-combinados-mobile-details" id="catalog-combinado-details-${item.id}">
+      <p class="catalog-combinados-mobile-details-title">O combo inclui</p>
+      ${contentsMarkup}
+    </div>
+  `;
+};
+
 const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
   if (!category) {
     return "";
@@ -1864,7 +1942,7 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
     </article>
   `;
 
-  const isComboSelected = Boolean(selectedCombo);
+  /* dead-code cleanup marker */
   const previewImage = selectedCombo?.image || category.image;
   const previewAlt = selectedCombo ? selectedCombo.name : category.alt;
   const previewTitle = isComboSelected ? selectedCombo.name : category.title;
@@ -1983,8 +2061,131 @@ const getCombinadosCategoriesMarkup = (categories, selectedCategoryId) =>
     )
     .join("");
 
-const getCombinadosItemsMarkup = (category, selectedComboId) =>
+const getCombinadosMobileFiltersMarkup = (categories, selectedCategoryId) =>
   `
+    <div class="catalog-combinados-mobile-filters" aria-label="Categorias de combinados">
+      ${categories
+        .map((category) => {
+          const isActive = category.id === selectedCategoryId;
+
+          return `
+            <button
+              class="catalog-combinados-mobile-filter${isActive ? " is-active" : ""}"
+              type="button"
+              data-combinado-category-id="${category.id}"
+              data-combinado-category-items="${category.items.map((item) => item.id).join(",")}"
+              aria-pressed="${isActive ? "true" : "false"}"
+            >
+              <span class="catalog-combinados-mobile-filter-title">${escapeHtml(category.title)}</span>
+              <span class="catalog-pill catalog-combinados-mobile-filter-count">${category.items.length} combinados</span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
+  `
+    <div class="catalog-combinados-mobile-grid" aria-label="Lista de combinados da categoria ${category.title}">
+      ${category.items
+        .map((item) => {
+          const isExpanded = item.id === selectedComboId;
+          const unitsLabel = getCombinadoUnitsLabel(item);
+          const detailsMarkup = getCombinadosMobileDetailsMarkup(section, item);
+
+          return `
+            <article
+              class="catalog-combinados-mobile-card${isExpanded ? " is-open" : ""}"
+              data-combinado-mobile-card="${item.id}"
+            >
+              <figure class="catalog-combinados-mobile-media">
+                <img
+                  src="${item.image}"
+                  alt="${escapeHtml(item.name)}"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+              <div class="catalog-combinados-mobile-body">
+                <div class="catalog-combinados-mobile-head">
+                  <div class="catalog-combinados-mobile-copy">
+                    <h4>${escapeHtml(item.name)}</h4>
+                    ${unitsLabel ? `<p class="catalog-combinados-mobile-units">Pecas: ${escapeHtml(unitsLabel)}</p>` : ""}
+                  </div>
+                  <p class="catalog-combinados-mobile-price">${getCombinadoPriceLabel(item)}</p>
+                </div>
+                <div class="catalog-combinados-mobile-actions">
+                  <div
+                    class="catalog-option catalog-option-preview catalog-combinados-mobile-purchase"
+                    data-item-chip
+                    data-item-id="${item.id}"
+                    data-item-name="${escapeHtml(item.name)}"
+                    data-item-category="${escapeHtml(category.title)}"
+                  >
+                    <button
+                      class="catalog-option-main catalog-combinados-cta catalog-combinados-mobile-cta"
+                      type="button"
+                      data-item-button
+                      data-add-to-cart
+                      aria-pressed="false"
+                      aria-label="Adicionar ${escapeHtml(item.name)} a sacola"
+                    >
+                      <span class="catalog-option-copy">
+                        <span class="catalog-option-label">Adicionar</span>
+                      </span>
+                    </button>
+                    <div class="catalog-option-controls" aria-label="Controle de quantidade">
+                      <button
+                        class="catalog-stepper"
+                        type="button"
+                        data-item-decrease
+                        aria-label="Diminuir ${escapeHtml(item.name)}"
+                      >
+                        -
+                      </button>
+                      <span class="catalog-option-qty" data-item-qty></span>
+                      <button
+                        class="catalog-stepper"
+                        type="button"
+                        data-item-increase
+                        aria-label="Aumentar ${escapeHtml(item.name)}"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  ${
+                    detailsMarkup
+                      ? `
+                    <button
+                      class="catalog-combinados-mobile-details-toggle${isExpanded ? " is-open" : ""}"
+                      type="button"
+                      data-combinado-detail-toggle="${item.id}"
+                      aria-expanded="${isExpanded ? "true" : "false"}"
+                      aria-controls="catalog-combinado-details-${item.id}"
+                    >
+                      ${isExpanded ? "Ocultar detalhes" : "Ver detalhes"}
+                    </button>
+                    ${isExpanded ? detailsMarkup : ""}
+                  `
+                      : ""
+                  }
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+const getCombinadosItemsMarkup = (section, category, selectedComboId) => {
+  if (isCatalogMobileViewport()) {
+    return getCombinadosMobileCardsMarkup(section, category, selectedComboId);
+  }
+
+  return `
     <div class="catalog-combinados-items-panel">
       <div class="catalog-combinados-items-panel-head">
         <p class="catalog-kicker">${category.label}</p>
@@ -2015,14 +2216,25 @@ const getCombinadosItemsMarkup = (category, selectedComboId) =>
       </div>
     </div>
   `;
+};
 
-const isCatalogSectionCollapsed = (sectionId) => collapsedCatalogSections.has(sectionId);
+const isCatalogSectionCollapsed = (sectionId) =>
+  isCatalogMobileViewport()
+    ? mobileExpandedCatalogSectionId !== sectionId
+    : collapsedCatalogSections.has(sectionId);
 
-const getCatalogSectionToggleLabel = (sectionId) =>
-  isCatalogSectionCollapsed(sectionId) ? "Mostrar categoria" : "Ocultar categoria";
+const getCatalogSectionToggleLabel = (sectionId) => {
+  const isCollapsed = isCatalogSectionCollapsed(sectionId);
+
+  if (isCatalogMobileViewport()) {
+    return isCollapsed ? "Ver itens" : "Fechar";
+  }
+
+  return isCollapsed ? "Mostrar categoria" : "Ocultar categoria";
+};
 
 const getCatalogSectionHeadMarkup = (section) => `
-  <div class="catalog-block-head reveal">
+  <div class="catalog-block-head reveal" data-catalog-section-head="${section.id}">
     <div class="catalog-block-head-main">
       <div>
         <p class="section-tag">${section.kicker}</p>
@@ -2084,6 +2296,16 @@ const toggleCatalogSectionVisibility = (sectionId) => {
     return;
   }
 
+  if (isCatalogMobileViewport()) {
+    mobileExpandedCatalogSectionId = mobileExpandedCatalogSectionId === sectionId ? "" : sectionId;
+
+    MENU_SECTIONS.forEach((section) => {
+      updateCatalogSectionVisibility(section.id);
+    });
+
+    return;
+  }
+
   if (collapsedCatalogSections.has(sectionId)) {
     collapsedCatalogSections.delete(sectionId);
   } else {
@@ -2100,9 +2322,35 @@ const renderCombinadosSection = (section) => {
     return "";
   }
 
-  const selectedCategory = categories[0];
+  const selectedCategory =
+    categories.find((category) => category.id === selectedCombinadosCategoryId) || categories[0];
   selectedCombinadosCategoryId = selectedCategory.id;
-  selectedCombinadosComboId = null;
+  selectedCombinadosComboId = selectedCategory.items.some((item) => item.id === selectedCombinadosComboId)
+    ? selectedCombinadosComboId
+    : null;
+  const selectedCombo =
+    selectedCategory.items.find((item) => item.id === selectedCombinadosComboId) || null;
+
+  if (isCatalogMobileViewport()) {
+    return `
+      <section class="catalog-block catalog-block-combinados" id="${section.id}">
+        ${getCatalogSectionHeadMarkup(section)}
+        <div
+          class="catalog-block-content${isCatalogSectionCollapsed(section.id) ? " is-collapsed" : ""}"
+          id="catalog-section-content-${section.id}"
+          data-catalog-section-content="${section.id}"
+          ${isCatalogSectionCollapsed(section.id) ? "hidden" : ""}
+        >
+          <div class="catalog-combinados-mobile">
+            ${getCombinadosMobileFiltersMarkup(categories, selectedCombinadosCategoryId)}
+            <div class="catalog-combinados-mobile-list" data-combinados-items>
+              ${getCombinadosItemsMarkup(section, selectedCategory, selectedCombinadosComboId)}
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
 
   return `
     <section class="catalog-block catalog-block-combinados" id="${section.id}">
@@ -2118,12 +2366,12 @@ const renderCombinadosSection = (section) => {
             ${getCombinadosCategoriesMarkup(categories, selectedCombinadosCategoryId)}
           </aside>
           <div class="catalog-combinados-main">
-            <div class="catalog-combinados-main-panel" data-combinados-main-panel>
+            <div class="catalog-combinados-main-panel${selectedCombo ? " has-selection" : ""}" data-combinados-main-panel>
               <div class="catalog-combinados-items" data-combinados-items>
-                ${getCombinadosItemsMarkup(selectedCategory, selectedCombinadosComboId)}
+                ${getCombinadosItemsMarkup(section, selectedCategory, selectedCombinadosComboId)}
               </div>
               <div class="catalog-combinados-preview-shell" data-combinados-preview-shell aria-live="polite">
-                ${getCombinadosPreviewMarkup(selectedCategory, null, section)}
+                ${getCombinadosPreviewMarkup(selectedCategory, selectedCombo, section)}
               </div>
             </div>
           </div>
@@ -2169,12 +2417,18 @@ const syncCombinadosCartSelections = (quantityById) => {
 
     button.classList.toggle("is-in-cart", hasItemInCart);
   });
+
+  document.querySelectorAll("[data-combinado-mobile-card]").forEach((card) => {
+    const hasItemInCart = (quantityById.get(card.dataset.combinadoMobileCard) || 0) > 0;
+
+    card.classList.toggle("is-in-cart", hasItemInCart);
+  });
 };
 
 const updateCombinadosPreviewShell = () => {
   const section = MENU_SECTIONS.find((section) => section.id === "combinados");
   const selectedCategory = getSelectedCombinadosCategory();
-  if (!section || !selectedCategory) {
+  if (!section || !selectedCategory || isCatalogMobileViewport()) {
     return;
   }
 
@@ -2196,8 +2450,9 @@ const updateCombinadosPreviewShell = () => {
 const updateCombinadosSidebarInfo = () => {};
 
 const updateCombinadosItemsList = () => {
+  const section = MENU_SECTIONS.find((menuSection) => menuSection.id === "combinados");
   const selectedCategory = getSelectedCombinadosCategory();
-  if (!selectedCategory) {
+  if (!section || !selectedCategory) {
     return;
   }
 
@@ -2206,7 +2461,7 @@ const updateCombinadosItemsList = () => {
     return;
   }
 
-  itemsContainer.innerHTML = getCombinadosItemsMarkup(selectedCategory, selectedCombinadosComboId);
+  itemsContainer.innerHTML = getCombinadosItemsMarkup(section, selectedCategory, selectedCombinadosComboId);
   syncCatalogSelections();
 };
 
@@ -2220,13 +2475,26 @@ const updateCombinadosCategorySelection = (categoryId) => {
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 
+  if (isCatalogMobileViewport()) {
+    const activeCategoryButton = [...document.querySelectorAll("[data-combinado-category-id]")].find(
+      (button) => button.dataset.combinadoCategoryId === categoryId
+    );
+
+    activeCategoryButton?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }
+
   updateCombinadosPreviewShell();
   updateCombinadosSidebarInfo();
   updateCombinadosItemsList();
 };
 
 const updateCombinadosComboSelection = (comboId) => {
-  selectedCombinadosComboId = comboId;
+  selectedCombinadosComboId =
+    isCatalogMobileViewport() && selectedCombinadosComboId === comboId ? null : comboId;
 
   document.querySelectorAll("[data-combinado-item-id]").forEach((button) => {
     const isActive = button.dataset.combinadoItemId === comboId;
@@ -2629,6 +2897,72 @@ const updateHeaderState = () => {
   }
 
   siteHeader.classList.toggle("is-scrolled", window.scrollY > 18);
+};
+
+const isCatalogMobileViewport = () => window.innerWidth <= MOBILE_CATALOG_BREAKPOINT;
+
+const getCatalogViewportMode = () => (isCatalogMobileViewport() ? "mobile" : "desktop");
+
+const isMobileNavigationViewport = () => window.innerWidth <= MOBILE_NAV_BREAKPOINT;
+
+const getMobileNavigationToggle = () => document.querySelector("[data-nav-toggle]");
+
+const setMobileNavigationOpen = (open) => {
+  const shouldOpen = Boolean(open) && isMobileNavigationViewport();
+  const toggle = getMobileNavigationToggle();
+
+  document.body.classList.toggle("nav-open", shouldOpen);
+  siteHeader?.classList.toggle("is-nav-open", shouldOpen);
+
+  if (!toggle) {
+    return;
+  }
+
+  toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  toggle.setAttribute("aria-label", shouldOpen ? "Fechar menu" : "Abrir menu");
+};
+
+const closeMobileNavigation = () => {
+  setMobileNavigationOpen(false);
+};
+
+const toggleMobileNavigation = () => {
+  setMobileNavigationOpen(!document.body.classList.contains("nav-open"));
+};
+
+const setupMobileNavigation = () => {
+  const nav = document.querySelector(".nav-links");
+  const navActions = document.querySelector(".nav-actions");
+
+  if (!nav || !navActions || getMobileNavigationToggle()) {
+    return;
+  }
+
+  if (!nav.id) {
+    nav.id = "site-navigation";
+  }
+
+  navActions.insertAdjacentHTML(
+    "afterbegin",
+    `
+      <button
+        class="nav-toggle"
+        type="button"
+        data-nav-toggle
+        aria-controls="${nav.id}"
+        aria-expanded="false"
+        aria-label="Abrir menu"
+      >
+        <span class="nav-toggle-icon" aria-hidden="true"></span>
+      </button>
+    `
+  );
+};
+
+const syncMobileNavigationState = () => {
+  if (!isMobileNavigationViewport()) {
+    closeMobileNavigation();
+  }
 };
 
 const setupReveal = () => {
@@ -3106,7 +3440,7 @@ const formatDateTime = (value) => {
 
 const loadStoredCollection = (storageKey) => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    const parsed = JSON.parse(getStoredString(storageKey, "[]"));
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     return [];
@@ -3114,7 +3448,7 @@ const loadStoredCollection = (storageKey) => {
 };
 
 const saveStoredCollection = (storageKey, items) => {
-  localStorage.setItem(storageKey, JSON.stringify(items));
+  setStoredString(storageKey, JSON.stringify(items));
 };
 
 collapsedCatalogSections = new Set(
@@ -3241,7 +3575,7 @@ const normalizeCartCheckout = (storedCheckout = {}) => {
 
 const loadCartCheckout = () => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(CART_CHECKOUT_STORAGE_KEY) || "{}");
+    const parsed = JSON.parse(getStoredString(CART_CHECKOUT_STORAGE_KEY, "{}"));
     return normalizeCartCheckout(parsed && typeof parsed === "object" ? parsed : {});
   } catch (error) {
     return normalizeCartCheckout();
@@ -3249,7 +3583,7 @@ const loadCartCheckout = () => {
 };
 
 const saveCartCheckout = (checkout) => {
-  localStorage.setItem(CART_CHECKOUT_STORAGE_KEY, JSON.stringify(normalizeCartCheckout(checkout)));
+  setStoredString(CART_CHECKOUT_STORAGE_KEY, JSON.stringify(normalizeCartCheckout(checkout)));
 };
 
 const getCartPaymentMethodLabel = (id) =>
@@ -3913,21 +4247,66 @@ const getAuthProviderIconMarkup = (provider) => {
   return icons[provider] || "";
 };
 
-const buildPhoneVerificationWhatsappHref = (name, phone, code) => {
-  const whatsappPhone = normalizeWhatsappPhone(phone);
+const postJsonWithTimeout = async (url, payload, timeoutMs = PHONE_VERIFICATION_SEND_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!whatsappPhone) {
-    return "";
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const requestError = new Error(
+        data?.error || "Nao consegui enviar o codigo automaticamente pelo WhatsApp."
+      );
+      requestError.status = response.status;
+      requestError.code = data?.errorCode || "request_failed";
+      throw requestError;
+    }
+
+    return data || {};
+  } finally {
+    window.clearTimeout(timeoutId);
   }
+};
 
-  const message = normalizePortugueseText([
-    "Tokyo Sushi Delivery Premium",
-    `Ola, ${getFirstName(name)}!`,
-    `Seu codigo de verificacao e: ${code}`,
-    `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos no login para concluir o acesso.`,
-  ].join("\n"));
+const requestPhoneVerificationDelivery = async (verification) => {
+  try {
+    const response = await postJsonWithTimeout(PHONE_VERIFICATION_SEND_ENDPOINT, {
+      name: verification.name,
+      phone: verification.phone,
+      code: verification.code,
+    });
 
-  return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+    return {
+      mode: "whatsapp-api",
+      notice:
+        response.message ||
+        `Codigo enviado pelo WhatsApp para ${maskPhoneDisplay(verification.phone)}.`,
+    };
+  } catch (error) {
+    console.warn("[auth] whatsapp-code-delivery-fallback", error);
+
+    return {
+      mode: "device-fallback",
+      notice:
+        "Nao consegui enviar o codigo automaticamente pelo WhatsApp agora. Para nao travar seu acesso, usamos um codigo provisorio neste aparelho.",
+    };
+  }
 };
 
 const getAuthProviderConfig = (provider) => {
@@ -3963,7 +4342,7 @@ const getAuthProviderConfig = (provider) => {
 
 const loadAuthAccounts = () => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(AUTH_ACCOUNTS_KEY) || "[]");
+    const parsed = JSON.parse(getStoredString(AUTH_ACCOUNTS_KEY, "[]"));
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     return [];
@@ -3971,12 +4350,12 @@ const loadAuthAccounts = () => {
 };
 
 const saveAuthAccounts = (accounts) => {
-  localStorage.setItem(AUTH_ACCOUNTS_KEY, JSON.stringify(accounts));
+  setStoredString(AUTH_ACCOUNTS_KEY, JSON.stringify(accounts));
 };
 
 const loadAuthProfile = () => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(AUTH_PROFILE_KEY) || "null");
+    const parsed = JSON.parse(getStoredString(AUTH_PROFILE_KEY, "null"));
 
     if (!parsed || typeof parsed !== "object") {
       return null;
@@ -4003,7 +4382,7 @@ const loadAuthProfile = () => {
 };
 
 const saveAuthProfile = (profile) => {
-  localStorage.setItem(
+  setStoredString(
     AUTH_PROFILE_KEY,
     JSON.stringify({
       id: profile.id,
@@ -4057,7 +4436,7 @@ const createSocialAccountProfile = (provider) => {
 };
 
 const clearAuthProfile = () => {
-  localStorage.removeItem(AUTH_PROFILE_KEY);
+  removeStoredValue(AUTH_PROFILE_KEY);
 };
 
 const upsertPhoneAccountProfile = (name, phone) => {
@@ -4316,12 +4695,31 @@ const renderAuthPanel = () => {
   if (authState.view === "phone-verify" && authState.phoneVerification) {
     panel.dataset.authView = "phone-verify";
     const verification = authState.phoneVerification;
+    const isSendingCode = authState.phoneCodeStatus === "sending";
+    const usesWhatsappDelivery = verification.deliveryMode === "whatsapp-api";
+    const usesDeviceFallback = verification.deliveryMode === "device-fallback";
+    const titleText = usesWhatsappDelivery
+      ? "Confirme o codigo enviado"
+      : usesDeviceFallback
+        ? "Confirme o codigo provisorio"
+        : "Preparando seu codigo";
+    const helperText = usesWhatsappDelivery
+      ? `Digite o codigo de ${PHONE_VERIFICATION_CODE_LENGTH} digitos enviado pelo WhatsApp para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`
+      : usesDeviceFallback
+        ? "No momento o envio automatico pelo WhatsApp ficou indisponivel. Para nao travar o acesso, use o codigo provisorio mostrado abaixo neste aparelho."
+        : `Estamos preparando o envio do codigo para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`;
+    const primaryStepText = usesWhatsappDelivery
+      ? "Enviamos o codigo pelo WhatsApp para o numero informado."
+      : usesDeviceFallback
+        ? "Geramos um codigo provisorio neste aparelho enquanto o envio automatico nao responde."
+        : "Estamos tentando disparar o codigo automaticamente para o WhatsApp informado.";
+    const inputLabel = usesWhatsappDelivery ? "Codigo recebido no WhatsApp" : "Codigo de verificacao";
 
     panel.innerHTML = `
       <div class="auth-panel-head">
         <p class="section-tag">Verificacao de telefone</p>
-        <h2 id="auth-title">Confirme o codigo enviado</h2>
-        <p>Digite o codigo de ${PHONE_VERIFICATION_CODE_LENGTH} digitos enviado pelo WhatsApp para ${escapeHtml(maskPhoneDisplay(verification.phone))}.</p>
+        <h2 id="auth-title">${titleText}</h2>
+        <p>${helperText}</p>
       </div>
 
       <div class="auth-social-verify glass-card">
@@ -4336,7 +4734,7 @@ const renderAuthPanel = () => {
         <div class="auth-social-steps">
           <div>
             <span>1</span>
-            <p>Enviamos o codigo pelo WhatsApp para o numero informado.</p>
+            <p>${primaryStepText}</p>
           </div>
           <div>
             <span>2</span>
@@ -4344,9 +4742,21 @@ const renderAuthPanel = () => {
           </div>
         </div>
 
+        ${
+          usesDeviceFallback
+            ? `
+              <div class="auth-code-preview" aria-live="polite">
+                <span>Codigo provisorio</span>
+                <strong>${escapeHtml(verification.code)}</strong>
+                <small>Use esse codigo somente neste aparelho.</small>
+              </div>
+            `
+            : ""
+        }
+
         <form class="auth-form" data-auth-form data-auth-phone-verify-form>
           <label class="auth-field">
-            <span>Codigo de verificacao</span>
+            <span>${inputLabel}</span>
             <input
               class="auth-input auth-code-input"
               type="text"
@@ -4360,19 +4770,22 @@ const renderAuthPanel = () => {
             />
           </label>
 
-          <button class="button button-primary full-width auth-submit" type="submit">
+          <button class="button button-primary full-width auth-submit" type="submit"${
+            isSendingCode ? " disabled" : ""
+          }>
             Verificar e entrar
           </button>
         </form>
 
         <div class="auth-social-actions">
-          <button class="button button-primary" type="button" data-auth-phone-open-whatsapp>
-            Abrir WhatsApp
-          </button>
-          <button class="button button-outline" type="button" data-auth-phone-resend>
+          <button class="button button-outline" type="button" data-auth-phone-resend${
+            isSendingCode ? " disabled" : ""
+          }>
             Reenviar codigo
           </button>
-          <button class="button button-outline" type="button" data-auth-entry>
+          <button class="button button-outline" type="button" data-auth-entry${
+            isSendingCode ? " disabled" : ""
+          }>
             Alterar telefone
           </button>
         </div>
@@ -4478,6 +4891,7 @@ const openAuth = (view = null, pendingHref = "") => {
     authState.editing = false;
   }
 
+  closeMobileNavigation();
   closeCart();
   renderAuthPanel();
   shell.classList.add("is-open");
@@ -4511,6 +4925,7 @@ const closeAuth = () => {
   authState.error = "";
   authState.message = "";
   authState.editing = false;
+  authState.phoneCodeStatus = "idle";
   authState.socialProvider = null;
   authState.socialStatus = "idle";
   authState.pendingHref = "";
@@ -4554,6 +4969,7 @@ const finalizeAuth = (profile, message) => {
   authState.error = "";
   authState.message = message;
   authState.editing = false;
+  authState.phoneCodeStatus = "idle";
   authState.socialProvider = null;
   authState.socialStatus = "idle";
   authState.draft = {};
@@ -4623,27 +5039,32 @@ const appendProfileToWhatsappHref = (href) => {
   }
 };
 
-const openPhoneVerificationWhatsapp = (verification, options = {}) => {
-  if (!verification?.whatsappHref) {
-    authState.error = "Nao consegui preparar o envio do codigo pelo WhatsApp.";
-    authState.message = "";
-    renderAuthPanel();
-    return false;
+const deliverPhoneVerificationCode = async (verification, options = {}) => {
+  if (!verification) {
+    return;
   }
 
-  const popup = window.open(verification.whatsappHref, "_blank", "noopener");
-
+  authState.phoneCodeStatus = "sending";
   authState.error = "";
-  authState.message = popup
-    ? `${options.resent ? "WhatsApp reaberto com um novo codigo de 6 digitos" : "WhatsApp aberto com o codigo de 6 digitos"} para ${maskPhoneDisplay(
-        verification.phone
-      )}.`
-    : `Nao consegui abrir o WhatsApp automaticamente. Toque em "Abrir WhatsApp" para enviar o codigo para ${maskPhoneDisplay(
-        verification.phone
-      )}.`;
+  authState.message = options.resent
+    ? "Reenviando o codigo para o WhatsApp informado..."
+    : "Enviando o codigo para o WhatsApp informado...";
   renderAuthPanel();
 
-  return Boolean(popup);
+  const delivery = await requestPhoneVerificationDelivery(verification);
+
+  if (authState.phoneVerification !== verification) {
+    return;
+  }
+
+  authState.phoneCodeStatus = "idle";
+  authState.phoneVerification = {
+    ...verification,
+    deliveryMode: delivery.mode,
+  };
+  authState.error = "";
+  authState.message = delivery.notice;
+  renderAuthPanel();
 };
 
 const startSocialVerification = () => {
@@ -4680,18 +5101,16 @@ const startSocialVerification = () => {
   }, 1600);
 };
 
-const startPhoneVerification = (name, phone, options = {}) => {
-  authState.phoneVerification = {
+const startPhoneVerification = async (name, phone, options = {}) => {
+  const verification = {
     name,
     phone,
     code: generateNumericCode(PHONE_VERIFICATION_CODE_LENGTH),
+    deliveryMode: "pending",
   };
-  authState.phoneVerification.whatsappHref = buildPhoneVerificationWhatsappHref(
-    authState.phoneVerification.name,
-    authState.phoneVerification.phone,
-    authState.phoneVerification.code
-  );
+  authState.phoneVerification = verification;
   authState.view = "phone-verify";
+  authState.phoneCodeStatus = "idle";
   authState.error = "";
   authState.message = "Preparando envio do codigo pelo WhatsApp...";
   authState.draft = {
@@ -4701,7 +5120,7 @@ const startPhoneVerification = (name, phone, options = {}) => {
     phone_code: "",
   };
   renderAuthPanel();
-  openPhoneVerificationWhatsapp(authState.phoneVerification, options);
+  await deliverPhoneVerificationCode(verification, options);
 };
 
 const confirmPhoneVerification = (code) => {
@@ -4716,16 +5135,18 @@ const confirmPhoneVerification = (code) => {
   }
 
   const sanitizedCode = String(code || "").replace(/\D/g, "").slice(0, PHONE_VERIFICATION_CODE_LENGTH);
+  const codeSourceLabel =
+    verification.deliveryMode === "whatsapp-api" ? "recebidos no WhatsApp" : "do codigo exibido";
 
   if (sanitizedCode.length !== PHONE_VERIFICATION_CODE_LENGTH) {
-    authState.error = `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos recebidos no WhatsApp.`;
+    authState.error = `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel}.`;
     authState.message = "";
     renderAuthPanel();
     return;
   }
 
   if (sanitizedCode !== verification.code) {
-    authState.error = `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos recebidos e tente novamente.`;
+    authState.error = `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel} e tente novamente.`;
     authState.message = "";
     renderAuthPanel();
     return;
@@ -4739,7 +5160,7 @@ const confirmPhoneVerification = (code) => {
 
 const loadCart = () => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "[]");
+    const parsed = JSON.parse(getStoredString(CART_STORAGE_KEY, "[]"));
     return Array.isArray(parsed) ? parsed.map(normalizeCartItem).filter(Boolean) : [];
   } catch (error) {
     return [];
@@ -4747,7 +5168,7 @@ const loadCart = () => {
 };
 
 const saveCart = (cart) => {
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  setStoredString(CART_STORAGE_KEY, JSON.stringify(cart));
 };
 
 const getCartItemCount = (cart) =>
@@ -4886,6 +5307,30 @@ const createSiteFooter = () => {
 
   document.body.insertAdjacentHTML("beforeend", markup);
   schedulePortugueseUiRefresh();
+};
+
+const setupWhatsappBubble = () => {
+  const bubble = document.querySelector(".whatsapp-bubble");
+
+  if (!bubble || bubble.dataset.bubbleReady === "true") {
+    return;
+  }
+
+  bubble.dataset.bubbleReady = "true";
+  bubble.hidden = false;
+
+  window.setTimeout(() => {
+    bubble.classList.add("is-visible");
+  }, 120);
+
+  window.setTimeout(() => {
+    bubble.classList.add("is-leaving");
+  }, 10120);
+
+  window.setTimeout(() => {
+    bubble.classList.remove("is-visible", "is-leaving");
+    bubble.hidden = true;
+  }, 10620);
 };
 
 const createCartShell = () => {
@@ -5510,6 +5955,7 @@ const renderCart = () => {
 };
 
 const openCart = () => {
+  closeMobileNavigation();
   document.body.classList.add("cart-open");
 };
 
@@ -6538,6 +6984,8 @@ const renderCatalog = () => {
     return;
   }
 
+  lastCatalogViewportMode = getCatalogViewportMode();
+
   const sectionOrder = new Map(
     MENU_SECTION_DISPLAY_ORDER.map((sectionId, index) => [sectionId, index])
   );
@@ -6693,6 +7141,23 @@ catalogRoot.innerHTML = orderedSections
   schedulePortugueseUiRefresh();
 };
 
+const syncCatalogResponsiveLayout = () => {
+  if (!catalogRoot) {
+    return;
+  }
+
+  if (getCatalogViewportMode() !== lastCatalogViewportMode) {
+    renderCatalog();
+    return;
+  }
+
+  if (isCatalogMobileViewport()) {
+    MENU_SECTIONS.forEach((section) => {
+      updateCatalogSectionVisibility(section.id);
+    });
+  }
+};
+
 const handleDocumentInput = (event) => {
   if (event.target.name === "entry_phone" || event.target.name === "career_phone") {
     const digits = normalizePhone(event.target.value);
@@ -6793,7 +7258,7 @@ const handleDocumentFocusOut = (event) => {
   }
 };
 
-const handleDocumentSubmit = (event) => {
+const handleDocumentSubmit = async (event) => {
   const deliveryForm = event.target.closest("[data-delivery-form]");
 
   if (deliveryForm) {
@@ -6835,7 +7300,7 @@ const handleDocumentSubmit = (event) => {
       return;
     }
 
-    startPhoneVerification(name, phone);
+    await startPhoneVerification(name, phone);
     return;
   }
 
@@ -6858,6 +7323,26 @@ const handleDocumentSubmit = (event) => {
 };
 
 const handleDocumentClick = (event) => {
+  const navToggleButton = event.target.closest("[data-nav-toggle]");
+  if (navToggleButton) {
+    event.preventDefault();
+    toggleMobileNavigation();
+    return;
+  }
+
+  if (document.body.classList.contains("nav-open")) {
+    const navLink = event.target.closest(".nav-links a");
+
+    if (navLink) {
+      closeMobileNavigation();
+      return;
+    }
+
+    if (!event.target.closest(".nav-shell")) {
+      closeMobileNavigation();
+    }
+  }
+
   const authOpenButton = event.target.closest("[data-auth-open]");
   if (authOpenButton) {
     openAuth(loadAuthProfile() ? "profile" : "entry");
@@ -6887,6 +7372,7 @@ const handleDocumentClick = (event) => {
   const authEntryButton = event.target.closest("[data-auth-entry]");
   if (authEntryButton) {
     authState.view = "entry";
+    authState.phoneCodeStatus = "idle";
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.phoneVerification = null;
@@ -6904,15 +7390,9 @@ const handleDocumentClick = (event) => {
 
   const authPhoneResend = event.target.closest("[data-auth-phone-resend]");
   if (authPhoneResend && authState.phoneVerification) {
-    startPhoneVerification(authState.phoneVerification.name, authState.phoneVerification.phone, {
+    void startPhoneVerification(authState.phoneVerification.name, authState.phoneVerification.phone, {
       resent: true,
     });
-    return;
-  }
-
-  const authPhoneOpenWhatsapp = event.target.closest("[data-auth-phone-open-whatsapp]");
-  if (authPhoneOpenWhatsapp && authState.phoneVerification) {
-    openPhoneVerificationWhatsapp(authState.phoneVerification, { resent: false });
     return;
   }
 
@@ -6921,6 +7401,7 @@ const handleDocumentClick = (event) => {
     const profile = loadAuthProfile();
     authState.view = "entry";
     authState.editing = true;
+    authState.phoneCodeStatus = "idle";
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.error = "";
@@ -6937,6 +7418,7 @@ const handleDocumentClick = (event) => {
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.editing = false;
+    authState.phoneCodeStatus = "idle";
     authState.error = "";
     authState.message = "Voce saiu da conta neste aparelho.";
     authState.draft = {};
@@ -7022,6 +7504,16 @@ const handleDocumentClick = (event) => {
     return;
   }
 
+  const catalogSectionHead = event.target.closest("[data-catalog-section-head]");
+  if (
+    catalogSectionHead &&
+    isCatalogMobileViewport() &&
+    !event.target.closest("button, a, input, select, textarea, label")
+  ) {
+    toggleCatalogSectionVisibility(catalogSectionHead.dataset.catalogSectionHead);
+    return;
+  }
+
   const increaseButton = event.target.closest("[data-item-increase]");
   if (increaseButton) {
     const itemChip = increaseButton.closest("[data-item-chip]");
@@ -7056,6 +7548,12 @@ const handleDocumentClick = (event) => {
   if (combinadoItemButton) {
     const comboId = combinadoItemButton.dataset.combinadoItemId;
     updateCombinadosComboSelection(comboId);
+    return;
+  }
+
+  const combinadoDetailsButton = event.target.closest("[data-combinado-detail-toggle]");
+  if (combinadoDetailsButton) {
+    updateCombinadosComboSelection(combinadoDetailsButton.dataset.combinadoDetailToggle);
     return;
   }
 
@@ -7114,6 +7612,7 @@ window.addEventListener(
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    closeMobileNavigation();
     closeAuth();
     closeCart();
   }
@@ -7123,6 +7622,7 @@ renderCatalog();
 createCartShell();
 createAuthShell();
 createSiteFooter();
+setupMobileNavigation();
 updateAuthTriggers();
 renderAuthPanel();
 renderCart();
@@ -7135,4 +7635,13 @@ prefillProfileForms();
 setupReveal();
 updateHeaderState();
 refreshPortugueseUi(document.body);
+setupWhatsappBubble();
 window.addEventListener("scroll", updateHeaderState, { passive: true });
+window.addEventListener(
+  "resize",
+  () => {
+    syncMobileNavigationState();
+    syncCatalogResponsiveLayout();
+  },
+  { passive: true }
+);
