@@ -2,7 +2,6 @@ const WHATSAPP_NUMBER = "5516990507398";
 const CART_STORAGE_KEY = "tokyo_sushi_delivery_cart";
 const AUTH_PROFILE_KEY = "tokyo_sushi_profile";
 const AUTH_ACCOUNTS_KEY = "tokyo_sushi_accounts";
-const AUTH_PROMPT_SESSION_KEY = "tokyo_sushi_auth_prompted";
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
 const ORDER_HISTORY_STORAGE_KEY = "tokyo_sushi_order_history";
 const CART_ADDONS_STORAGE_KEY = "tokyo_sushi_delivery_cart_addons";
@@ -6991,10 +6990,3 @@ setupReveal();
 updateHeaderState();
 refreshPortugueseUi(document.body);
 window.addEventListener("scroll", updateHeaderState, { passive: true });
-
-if (!loadAuthProfile() && !sessionStorage.getItem(AUTH_PROMPT_SESSION_KEY)) {
-  sessionStorage.setItem(AUTH_PROMPT_SESSION_KEY, "true");
-  window.setTimeout(() => {
-    openAuth("entry");
-  }, 160);
-}
