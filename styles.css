@@ -904,6 +904,39 @@ body.is-authenticated .nav-actions [data-auth-required] {
   line-height: 1.7;
 }
 
+.auth-code-preview {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 214, 102, 0.22);
+  background: rgba(255, 214, 102, 0.08);
+}
+
+.auth-code-preview span,
+.auth-code-preview small {
+  color: rgba(255, 241, 221, 0.82);
+}
+
+.auth-code-preview span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-code-preview strong {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: #ffe9b3;
+}
+
+.auth-code-preview small {
+  line-height: 1.5;
+}
+
 .auth-social-actions {
   margin-top: 1rem;
   display: flex;

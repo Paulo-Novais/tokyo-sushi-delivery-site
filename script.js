@@ -3,6 +3,8 @@ const CART_STORAGE_KEY = "tokyo_sushi_delivery_cart";
 const AUTH_PROFILE_KEY = "tokyo_sushi_profile";
 const AUTH_ACCOUNTS_KEY = "tokyo_sushi_accounts";
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
+const PHONE_VERIFICATION_SEND_ENDPOINT = "/api/auth/send-whatsapp-code";
+const PHONE_VERIFICATION_SEND_TIMEOUT_MS = 12000;
 const ORDER_HISTORY_STORAGE_KEY = "tokyo_sushi_order_history";
 const CART_ADDONS_STORAGE_KEY = "tokyo_sushi_delivery_cart_addons";
 const CART_CHECKOUT_STORAGE_KEY = "tokyo_sushi_cart_checkout";
@@ -105,6 +107,7 @@ const authState = {
   socialProvider: null,
   socialStatus: "idle",
   socialTimer: 0,
+  phoneCodeStatus: "idle",
   editing: false,
   error: "",
   message: "",
@@ -3913,21 +3916,66 @@ const getAuthProviderIconMarkup = (provider) => {
   return icons[provider] || "";
 };
 
-const buildPhoneVerificationWhatsappHref = (name, phone, code) => {
-  const whatsappPhone = normalizeWhatsappPhone(phone);
+const postJsonWithTimeout = async (url, payload, timeoutMs = PHONE_VERIFICATION_SEND_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!whatsappPhone) {
-    return "";
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const requestError = new Error(
+        data?.error || "Nao consegui enviar o codigo automaticamente pelo WhatsApp."
+      );
+      requestError.status = response.status;
+      requestError.code = data?.errorCode || "request_failed";
+      throw requestError;
+    }
+
+    return data || {};
+  } finally {
+    window.clearTimeout(timeoutId);
   }
+};
 
-  const message = normalizePortugueseText([
-    "Tokyo Sushi Delivery Premium",
-    `Ola, ${getFirstName(name)}!`,
-    `Seu codigo de verificacao e: ${code}`,
-    `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos no login para concluir o acesso.`,
-  ].join("\n"));
+const requestPhoneVerificationDelivery = async (verification) => {
+  try {
+    const response = await postJsonWithTimeout(PHONE_VERIFICATION_SEND_ENDPOINT, {
+      name: verification.name,
+      phone: verification.phone,
+      code: verification.code,
+    });
 
-  return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+    return {
+      mode: "whatsapp-api",
+      notice:
+        response.message ||
+        `Codigo enviado pelo WhatsApp para ${maskPhoneDisplay(verification.phone)}.`,
+    };
+  } catch (error) {
+    console.warn("[auth] whatsapp-code-delivery-fallback", error);
+
+    return {
+      mode: "device-fallback",
+      notice:
+        "Nao consegui enviar o codigo automaticamente pelo WhatsApp agora. Para nao travar seu acesso, usamos um codigo provisorio neste aparelho.",
+    };
+  }
 };
 
 const getAuthProviderConfig = (provider) => {
@@ -4316,12 +4364,31 @@ const renderAuthPanel = () => {
   if (authState.view === "phone-verify" && authState.phoneVerification) {
     panel.dataset.authView = "phone-verify";
     const verification = authState.phoneVerification;
+    const isSendingCode = authState.phoneCodeStatus === "sending";
+    const usesWhatsappDelivery = verification.deliveryMode === "whatsapp-api";
+    const usesDeviceFallback = verification.deliveryMode === "device-fallback";
+    const titleText = usesWhatsappDelivery
+      ? "Confirme o codigo enviado"
+      : usesDeviceFallback
+        ? "Confirme o codigo provisorio"
+        : "Preparando seu codigo";
+    const helperText = usesWhatsappDelivery
+      ? `Digite o codigo de ${PHONE_VERIFICATION_CODE_LENGTH} digitos enviado pelo WhatsApp para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`
+      : usesDeviceFallback
+        ? "No momento o envio automatico pelo WhatsApp ficou indisponivel. Para nao travar o acesso, use o codigo provisorio mostrado abaixo neste aparelho."
+        : `Estamos preparando o envio do codigo para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`;
+    const primaryStepText = usesWhatsappDelivery
+      ? "Enviamos o codigo pelo WhatsApp para o numero informado."
+      : usesDeviceFallback
+        ? "Geramos um codigo provisorio neste aparelho enquanto o envio automatico nao responde."
+        : "Estamos tentando disparar o codigo automaticamente para o WhatsApp informado.";
+    const inputLabel = usesWhatsappDelivery ? "Codigo recebido no WhatsApp" : "Codigo de verificacao";
 
     panel.innerHTML = `
       <div class="auth-panel-head">
         <p class="section-tag">Verificacao de telefone</p>
-        <h2 id="auth-title">Confirme o codigo enviado</h2>
-        <p>Digite o codigo de ${PHONE_VERIFICATION_CODE_LENGTH} digitos enviado pelo WhatsApp para ${escapeHtml(maskPhoneDisplay(verification.phone))}.</p>
+        <h2 id="auth-title">${titleText}</h2>
+        <p>${helperText}</p>
       </div>
 
       <div class="auth-social-verify glass-card">
@@ -4336,7 +4403,7 @@ const renderAuthPanel = () => {
         <div class="auth-social-steps">
           <div>
             <span>1</span>
-            <p>Enviamos o codigo pelo WhatsApp para o numero informado.</p>
+            <p>${primaryStepText}</p>
           </div>
           <div>
             <span>2</span>
@@ -4344,9 +4411,21 @@ const renderAuthPanel = () => {
           </div>
         </div>
 
+        ${
+          usesDeviceFallback
+            ? `
+              <div class="auth-code-preview" aria-live="polite">
+                <span>Codigo provisorio</span>
+                <strong>${escapeHtml(verification.code)}</strong>
+                <small>Use esse codigo somente neste aparelho.</small>
+              </div>
+            `
+            : ""
+        }
+
         <form class="auth-form" data-auth-form data-auth-phone-verify-form>
           <label class="auth-field">
-            <span>Codigo de verificacao</span>
+            <span>${inputLabel}</span>
             <input
               class="auth-input auth-code-input"
               type="text"
@@ -4360,19 +4439,22 @@ const renderAuthPanel = () => {
             />
           </label>
 
-          <button class="button button-primary full-width auth-submit" type="submit">
+          <button class="button button-primary full-width auth-submit" type="submit"${
+            isSendingCode ? " disabled" : ""
+          }>
             Verificar e entrar
           </button>
         </form>
 
         <div class="auth-social-actions">
-          <button class="button button-primary" type="button" data-auth-phone-open-whatsapp>
-            Abrir WhatsApp
-          </button>
-          <button class="button button-outline" type="button" data-auth-phone-resend>
+          <button class="button button-outline" type="button" data-auth-phone-resend${
+            isSendingCode ? " disabled" : ""
+          }>
             Reenviar codigo
           </button>
-          <button class="button button-outline" type="button" data-auth-entry>
+          <button class="button button-outline" type="button" data-auth-entry${
+            isSendingCode ? " disabled" : ""
+          }>
             Alterar telefone
           </button>
         </div>
@@ -4511,6 +4593,7 @@ const closeAuth = () => {
   authState.error = "";
   authState.message = "";
   authState.editing = false;
+  authState.phoneCodeStatus = "idle";
   authState.socialProvider = null;
   authState.socialStatus = "idle";
   authState.pendingHref = "";
@@ -4554,6 +4637,7 @@ const finalizeAuth = (profile, message) => {
   authState.error = "";
   authState.message = message;
   authState.editing = false;
+  authState.phoneCodeStatus = "idle";
   authState.socialProvider = null;
   authState.socialStatus = "idle";
   authState.draft = {};
@@ -4623,27 +4707,32 @@ const appendProfileToWhatsappHref = (href) => {
   }
 };
 
-const openPhoneVerificationWhatsapp = (verification, options = {}) => {
-  if (!verification?.whatsappHref) {
-    authState.error = "Nao consegui preparar o envio do codigo pelo WhatsApp.";
-    authState.message = "";
-    renderAuthPanel();
-    return false;
+const deliverPhoneVerificationCode = async (verification, options = {}) => {
+  if (!verification) {
+    return;
   }
 
-  const popup = window.open(verification.whatsappHref, "_blank", "noopener");
-
+  authState.phoneCodeStatus = "sending";
   authState.error = "";
-  authState.message = popup
-    ? `${options.resent ? "WhatsApp reaberto com um novo codigo de 6 digitos" : "WhatsApp aberto com o codigo de 6 digitos"} para ${maskPhoneDisplay(
-        verification.phone
-      )}.`
-    : `Nao consegui abrir o WhatsApp automaticamente. Toque em "Abrir WhatsApp" para enviar o codigo para ${maskPhoneDisplay(
-        verification.phone
-      )}.`;
+  authState.message = options.resent
+    ? "Reenviando o codigo para o WhatsApp informado..."
+    : "Enviando o codigo para o WhatsApp informado...";
   renderAuthPanel();
 
-  return Boolean(popup);
+  const delivery = await requestPhoneVerificationDelivery(verification);
+
+  if (authState.phoneVerification !== verification) {
+    return;
+  }
+
+  authState.phoneCodeStatus = "idle";
+  authState.phoneVerification = {
+    ...verification,
+    deliveryMode: delivery.mode,
+  };
+  authState.error = "";
+  authState.message = delivery.notice;
+  renderAuthPanel();
 };
 
 const startSocialVerification = () => {
@@ -4680,18 +4769,16 @@ const startSocialVerification = () => {
   }, 1600);
 };
 
-const startPhoneVerification = (name, phone, options = {}) => {
-  authState.phoneVerification = {
+const startPhoneVerification = async (name, phone, options = {}) => {
+  const verification = {
     name,
     phone,
     code: generateNumericCode(PHONE_VERIFICATION_CODE_LENGTH),
+    deliveryMode: "pending",
   };
-  authState.phoneVerification.whatsappHref = buildPhoneVerificationWhatsappHref(
-    authState.phoneVerification.name,
-    authState.phoneVerification.phone,
-    authState.phoneVerification.code
-  );
+  authState.phoneVerification = verification;
   authState.view = "phone-verify";
+  authState.phoneCodeStatus = "idle";
   authState.error = "";
   authState.message = "Preparando envio do codigo pelo WhatsApp...";
   authState.draft = {
@@ -4701,7 +4788,7 @@ const startPhoneVerification = (name, phone, options = {}) => {
     phone_code: "",
   };
   renderAuthPanel();
-  openPhoneVerificationWhatsapp(authState.phoneVerification, options);
+  await deliverPhoneVerificationCode(verification, options);
 };
 
 const confirmPhoneVerification = (code) => {
@@ -4716,16 +4803,18 @@ const confirmPhoneVerification = (code) => {
   }
 
   const sanitizedCode = String(code || "").replace(/\D/g, "").slice(0, PHONE_VERIFICATION_CODE_LENGTH);
+  const codeSourceLabel =
+    verification.deliveryMode === "whatsapp-api" ? "recebidos no WhatsApp" : "do codigo exibido";
 
   if (sanitizedCode.length !== PHONE_VERIFICATION_CODE_LENGTH) {
-    authState.error = `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos recebidos no WhatsApp.`;
+    authState.error = `Digite os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel}.`;
     authState.message = "";
     renderAuthPanel();
     return;
   }
 
   if (sanitizedCode !== verification.code) {
-    authState.error = `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos recebidos e tente novamente.`;
+    authState.error = `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel} e tente novamente.`;
     authState.message = "";
     renderAuthPanel();
     return;
@@ -6793,7 +6882,7 @@ const handleDocumentFocusOut = (event) => {
   }
 };
 
-const handleDocumentSubmit = (event) => {
+const handleDocumentSubmit = async (event) => {
   const deliveryForm = event.target.closest("[data-delivery-form]");
 
   if (deliveryForm) {
@@ -6835,7 +6924,7 @@ const handleDocumentSubmit = (event) => {
       return;
     }
 
-    startPhoneVerification(name, phone);
+    await startPhoneVerification(name, phone);
     return;
   }
 
@@ -6887,6 +6976,7 @@ const handleDocumentClick = (event) => {
   const authEntryButton = event.target.closest("[data-auth-entry]");
   if (authEntryButton) {
     authState.view = "entry";
+    authState.phoneCodeStatus = "idle";
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.phoneVerification = null;
@@ -6904,15 +6994,9 @@ const handleDocumentClick = (event) => {
 
   const authPhoneResend = event.target.closest("[data-auth-phone-resend]");
   if (authPhoneResend && authState.phoneVerification) {
-    startPhoneVerification(authState.phoneVerification.name, authState.phoneVerification.phone, {
+    void startPhoneVerification(authState.phoneVerification.name, authState.phoneVerification.phone, {
       resent: true,
     });
-    return;
-  }
-
-  const authPhoneOpenWhatsapp = event.target.closest("[data-auth-phone-open-whatsapp]");
-  if (authPhoneOpenWhatsapp && authState.phoneVerification) {
-    openPhoneVerificationWhatsapp(authState.phoneVerification, { resent: false });
     return;
   }
 
@@ -6921,6 +7005,7 @@ const handleDocumentClick = (event) => {
     const profile = loadAuthProfile();
     authState.view = "entry";
     authState.editing = true;
+    authState.phoneCodeStatus = "idle";
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.error = "";
@@ -6937,6 +7022,7 @@ const handleDocumentClick = (event) => {
     authState.socialProvider = null;
     authState.socialStatus = "idle";
     authState.editing = false;
+    authState.phoneCodeStatus = "idle";
     authState.error = "";
     authState.message = "Voce saiu da conta neste aparelho.";
     authState.draft = {};
