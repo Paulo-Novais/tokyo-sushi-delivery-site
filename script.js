@@ -95,6 +95,9 @@ const DELIVERY_FEE_RULES = [
     description: "R$ 15,00 para entregas de ate 14,9 km.",
   },
 ];
+const DELIVERY_MANUAL_FALLBACK_FEE = DELIVERY_FEE_RULES[0]?.fee || 9;
+const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
+const DELIVERY_MANUAL_TIME_TEXT = "Confirmar no WhatsApp";
 const siteHeader = document.querySelector(".site-header");
 const catalogRoot = document.querySelector("[data-catalog-root]");
 const authState = {
@@ -3258,6 +3261,17 @@ const getCartFulfillmentLabel = (id) =>
 const getPickupEstimateText = () =>
   `Retirada prevista em ate ${PICKUP_ESTIMATE_MINUTES} minutos, conforme o prazo mostrado no site.`;
 
+const isManualDeliveryQuote = (quote) => Boolean(quote?.isManualEstimate);
+
+const getDeliveryQuoteFeeText = (quote) => {
+  if (!quote) {
+    return "";
+  }
+
+  const feeText = formatPrice(Number(quote.fee || 0));
+  return isManualDeliveryQuote(quote) ? `${feeText} minimo` : feeText;
+};
+
 const getCartGrandTotalAmount = (
   cart,
   addons = loadCartAddons(),
@@ -3329,9 +3343,24 @@ const getDeliveryQuoteSummaryText = (quote) => {
     return "";
   }
 
-  return `${quote.distanceText || "Distancia calculada"} | ${quote.routeBand} | ${formatPrice(
-    Number(quote.fee || 0)
-  )} | ${quote.totalEstimateText || "Prazo aproximado"}`;
+  if (isManualDeliveryQuote(quote)) {
+    return [
+      quote.routeBand || DELIVERY_MANUAL_ROUTE_BAND,
+      getDeliveryQuoteFeeText(quote),
+      quote.totalEstimateText || DELIVERY_MANUAL_TIME_TEXT,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+  }
+
+  return [
+    quote.distanceText || "Distancia calculada",
+    quote.routeBand,
+    getDeliveryQuoteFeeText(quote),
+    quote.totalEstimateText || "Prazo aproximado",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 };
 
 const getCartCheckoutValidation = (
@@ -3423,6 +3452,16 @@ const getCartCheckoutValidation = (
   }
 
   if (checkout.fulfillmentMode === "delivery") {
+    if (isManualDeliveryQuote(deliveryQuote)) {
+      return {
+        isValid: true,
+        tone: "success",
+        message: `Entrega salva em modo provisorio: ${getDeliveryQuoteSummaryText(
+          deliveryQuote
+        )}. A taxa final sera confirmada no atendimento.`,
+      };
+    }
+
     return {
       isValid: true,
       tone: "success",
@@ -4950,14 +4989,28 @@ const getCartCheckoutWhatsappLines = (
 
     if (deliveryQuote) {
       lines.push(
-        `Endereco confirmado: ${deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel}`
+        `${isManualDeliveryQuote(deliveryQuote) ? "Endereco informado" : "Endereco confirmado"}: ${
+          deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel
+        }`
       );
-      lines.push(`Taxa de entrega: ${formatPrice(Number(deliveryQuote.fee || 0))}`);
-      lines.push(`Distancia calculada: ${deliveryQuote.distanceText || "-"}`);
+      lines.push(
+        `${isManualDeliveryQuote(deliveryQuote) ? "Taxa provisoria no site" : "Taxa de entrega"}: ${getDeliveryQuoteFeeText(
+          deliveryQuote
+        )}`
+      );
+      lines.push(
+        `${isManualDeliveryQuote(deliveryQuote) ? "Status da distancia" : "Distancia calculada"}: ${
+          deliveryQuote.distanceText || "-"
+        }`
+      );
       lines.push(`Faixa aplicada: ${deliveryQuote.routeBand || "-"}`);
       lines.push(`Preparo estimado: ${deliveryQuote.preparationTimeText || "-"}`);
       lines.push(`Deslocamento estimado: ${deliveryQuote.travelTimeText || "-"}`);
       lines.push(`Prazo total aproximado: ${deliveryQuote.totalEstimateText || "-"}`);
+
+      if (isManualDeliveryQuote(deliveryQuote)) {
+        lines.push("Observacao: taxa final e prazo exato serao confirmados no atendimento.");
+      }
     }
   } else if (checkout.fulfillmentMode === "pickup") {
     lines.push("Recebimento: Retirada no local");
@@ -5234,10 +5287,14 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
                     <div class="cart-delivery-summary">
                       <div class="cart-delivery-summary-top">
                         <div>
-                          <strong>Entrega calculada</strong>
+                          <strong>${
+                            isManualDeliveryQuote(deliveryQuote)
+                              ? "Entrega salva em modo provisorio"
+                              : "Entrega calculada"
+                          }</strong>
                           <span>${escapeHtml(getDeliveryQuoteSummaryText(deliveryQuote))}</span>
                         </div>
-                        <span class="cart-delivery-fee">${formatPrice(Number(deliveryQuote.fee || 0))}</span>
+                        <span class="cart-delivery-fee">${getDeliveryQuoteFeeText(deliveryQuote)}</span>
                       </div>
                       <p class="cart-delivery-address">${escapeHtml(
                         deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel || ""
@@ -5348,7 +5405,11 @@ const syncCartCheckoutUi = ({
     cartNoteNode.textContent = profile
       ? checkout.fulfillmentMode === "delivery"
         ? deliveryQuote
-          ? `Entrega vinculada: ${getDeliveryQuoteSummaryText(
+          ? `${
+              isManualDeliveryQuote(deliveryQuote)
+                ? "Entrega salva em modo provisorio"
+                : "Entrega vinculada"
+            }: ${getDeliveryQuoteSummaryText(
               deliveryQuote
             )}. Os detalhes podem ser atualizados na aba Entrega.`
           : "Abra a aba Entrega para calcular e salvar os dados desta conta antes de finalizar."
@@ -5908,6 +5969,110 @@ const buildDeliveryEstimateResult = ({
   };
 };
 
+const buildManualDeliveryEstimateResult = ({
+  cepDigits,
+  streetLabel,
+  numericHouseNumber,
+  complementLabel,
+  destinationLabel,
+  destinationAddress,
+}) => ({
+  cep: formatCepDisplay(cepDigits),
+  street: streetLabel,
+  houseNumber: numericHouseNumber,
+  complement: complementLabel,
+  destinationLabel,
+  routeBand: DELIVERY_MANUAL_ROUTE_BAND,
+  distanceKm: 0,
+  distanceText: "Distancia em confirmacao",
+  fee: DELIVERY_MANUAL_FALLBACK_FEE,
+  pricingRuleLabel: `Taxa minima provisoria de ${formatPrice(
+    DELIVERY_MANUAL_FALLBACK_FEE
+  )} enquanto o Google Maps estiver indisponivel.`,
+  preparationMinutes: DELIVERY_PREPARATION_TIME_MINUTES,
+  preparationTimeText: DELIVERY_MANUAL_TIME_TEXT,
+  travelMinutes: 0,
+  travelTimeText: DELIVERY_MANUAL_TIME_TEXT,
+  totalEstimateMinutes: DELIVERY_PREPARATION_TIME_MINUTES,
+  totalEstimateText: DELIVERY_MANUAL_TIME_TEXT,
+  geocodedAddress: destinationAddress,
+  routeSteps: [
+    `Origem fixa do delivery: ${DELIVERY_STORE_LABEL}.`,
+    `Destino informado: ${destinationLabel}.`,
+    `Endereco salvo para atendimento: ${destinationAddress}.`,
+    `Taxa minima provisoria mostrada no site: ${formatPrice(DELIVERY_MANUAL_FALLBACK_FEE)}.`,
+    "A taxa final e o prazo exato serao confirmados pelo atendimento no WhatsApp antes do envio.",
+  ],
+  isManualEstimate: true,
+});
+
+const saveDeliveryEstimate = (estimate, profile = loadAuthProfile()) => {
+  const quotes = loadDeliveryHistory();
+  const profileKey = profile ? getProfileStorageKey(profile) : "";
+
+  quotes.unshift({
+    ...estimate,
+    profileKey,
+    profileName: profile?.name || "",
+    createdAt: new Date().toISOString(),
+  });
+
+  saveDeliveryHistory(quotes);
+};
+
+const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
+  if (!resultNode) {
+    return;
+  }
+
+  const isManual = isManualDeliveryQuote(estimate);
+  const feeLabel = getDeliveryQuoteFeeText(estimate);
+  const summaryLabel = isManual ? "Modo provisorio ativo" : "Estimativa atual";
+  const addressLabel = estimate.geocodedAddress || estimate.destinationLabel || "";
+  const metaLines = isManual
+    ? [
+        "Endereco salvo",
+        addressLabel,
+        estimate.routeBand,
+        `Taxa minima: ${feeLabel}`,
+        `Prazo: ${estimate.totalEstimateText || DELIVERY_MANUAL_TIME_TEXT}`,
+      ]
+    : [
+        "Distancia calculada",
+        estimate.distanceText,
+        estimate.routeBand,
+        `Preparo: ${estimate.preparationTimeText}`,
+        `Deslocamento: ${estimate.travelTimeText}`,
+        `Prazo total: ${estimate.totalEstimateText}`,
+      ];
+
+  resultNode.innerHTML = `
+    <div class="delivery-summary">
+      <div class="delivery-top">
+        <div>
+          <span class="section-tag">${summaryLabel}</span>
+          <strong>${feeLabel}</strong>
+        </div>
+        <span class="catalog-badge">${escapeHtml(estimate.routeBand)}</span>
+      </div>
+
+      <p>${escapeHtml(
+        isManual
+          ? "Seu endereco foi salvo mesmo sem o Google Maps. O atendimento confirma taxa final e prazo no WhatsApp."
+          : `Endereco confirmado: ${addressLabel}.`
+      )}</p>
+
+      <div class="delivery-meta">
+        ${metaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
+      </div>
+
+      <ul class="delivery-route">
+        ${estimate.routeSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+};
+
 const calculateDeliveryEstimate = async ({
   street,
   cep,
@@ -6095,7 +6260,7 @@ const submitDeliveryForm = async (form) => {
   if (resultNode) {
     setResultCardState(resultNode, "");
     resultNode.innerHTML =
-      "<p>Consultando a distancia entre a loja e o endereco informado no Google Maps...</p>";
+      "<p>Calculando a entrega automaticamente. Se o Google Maps nao responder, o site salva seu endereco em modo provisorio.</p>";
   }
 
   schedulePortugueseUiRefresh();
@@ -6110,60 +6275,41 @@ const submitDeliveryForm = async (form) => {
       city,
       state,
     });
-    const quotes = loadDeliveryHistory();
     const profile = loadAuthProfile();
-    const profileKey = profile ? getProfileStorageKey(profile) : "";
-    quotes.unshift({
-      ...estimate,
-      profileKey,
-      profileName: profile?.name || "",
-      createdAt: new Date().toISOString(),
-    });
-    saveDeliveryHistory(quotes);
+    saveDeliveryEstimate(estimate, profile);
     setResultCardState(resultNode, "success");
-
-    if (resultNode) {
-      resultNode.innerHTML = `
-        <div class="delivery-summary">
-          <div class="delivery-top">
-            <div>
-              <span class="section-tag">Estimativa atual</span>
-              <strong>${formatPrice(estimate.fee)}</strong>
-            </div>
-            <span class="catalog-badge">${escapeHtml(estimate.routeBand)}</span>
-          </div>
-
-          <div class="delivery-meta">
-            <span>Distancia calculada</span>
-            <span>${escapeHtml(estimate.distanceText)}</span>
-            <span>${escapeHtml(estimate.routeBand)}</span>
-            <span>Preparo: ${escapeHtml(estimate.preparationTimeText)}</span>
-            <span>Deslocamento: ${escapeHtml(estimate.travelTimeText)}</span>
-            <span>Prazo total: ${escapeHtml(estimate.totalEstimateText)}</span>
-          </div>
-
-          <ul class="delivery-route">
-            ${estimate.routeSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
-          </ul>
-        </div>
-      `;
-    }
+    renderDeliveryEstimateResultCard(resultNode, estimate);
 
     renderDeliveryHistory();
     renderCart();
     schedulePortugueseUiRefresh();
   } catch (error) {
-    setResultCardState(resultNode, "error");
-
-    if (resultNode) {
-      resultNode.innerHTML = `
-        <p>${escapeHtml(
-          error?.userMessage ||
-            "Nao foi possivel calcular a distancia da entrega com o Google Maps agora."
-        )}</p>
-      `;
-    }
-
+    const estimate = buildManualDeliveryEstimateResult({
+      cepDigits: cep,
+      streetLabel: street,
+      numericHouseNumber: houseNumber,
+      complementLabel: complement,
+      destinationLabel: buildDeliveryDestinationLabel(street, houseNumber, cep, complement),
+      destinationAddress: buildDeliveryDestinationAddress(
+        street,
+        houseNumber,
+        cep,
+        complement,
+        neighborhood,
+        city,
+        state
+      ),
+    });
+    const profile = loadAuthProfile();
+    saveDeliveryEstimate(estimate, profile);
+    setResultCardState(resultNode, "success");
+    renderDeliveryEstimateResultCard(resultNode, estimate);
+    console.warn("[delivery] manual-fallback-enabled", {
+      origin: getCurrentPageOrigin(),
+      error,
+    });
+    renderDeliveryHistory();
+    renderCart();
     schedulePortugueseUiRefresh();
   } finally {
     if (submitButton) {
