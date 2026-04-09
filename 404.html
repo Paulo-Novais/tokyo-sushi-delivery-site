@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Página não encontrada | Tokyo Sushi Delivery</title>
+    <meta
+      name="description"
+      content="Página não encontrada no Tokyo Sushi Delivery."
+    />
+    <meta name="robots" content="noindex,follow" />
+    <meta name="theme-color" content="#080505" />
+    <link rel="canonical" href="https://tokyosushidelivery.com.br/" />
+    <link rel="icon" type="image/png" href="./site-images/site-icon.png" />
+    <link rel="apple-touch-icon" href="./site-images/site-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="secondary-page">
+    <div class="background-glow background-glow-left"></div>
+    <div class="background-glow background-glow-right"></div>
+
+    <main class="section">
+      <div class="container">
+        <section class="page-panel glass-card reveal" style="max-width: 760px; margin: 6vh auto 0;">
+          <p class="section-tag">Erro 404</p>
+          <h2>Página não encontrada</h2>
+          <p>
+            O endereço pode ter sido digitado sem o final <code>.html</code> ou a página não existe mais.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="./index.html">Voltar ao início</a>
+            <a class="button button-secondary" href="./cardapio.html">Abrir cardápio</a>
+          </div>
+          <p class="cart-note" id="redirect-status">Verificando se existe uma rota equivalente...</p>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        var path = window.location.pathname.replace(/\/+$/, "");
+        var knownRoutes = {
+          "/cardapio": "/cardapio.html",
+          "/entrega": "/entrega.html",
+          "/historico": "/historico.html",
+          "/avaliar": "/avaliar.html",
+          "/trabalhe-conosco": "/trabalhe-conosco.html",
+          "/inicio": "/index.html",
+          "": "/index.html"
+        };
+        var redirectTarget = knownRoutes[path];
+        var status = document.getElementById("redirect-status");
+
+        if (!redirectTarget) {
+          if (status) {
+            status.textContent = "Se quiser, volte ao início ou abra o cardápio pelos botões acima.";
+          }
+          return;
+        }
+
+        if (status) {
+          status.textContent = "Redirecionando automaticamente para a página correta...";
+        }
+
+        window.location.replace(redirectTarget + window.location.search + window.location.hash);
+      })();
+    </script>
+  </body>
+</html>
