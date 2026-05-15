@@ -1,0 +1,20 @@
+{
+  "name": "tokyo-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "admin:hash": "node scripts/generate-admin-password-hash.mjs",
+    "validate:stage-1-1": "node scripts/validate-stage-1-1.mjs",
+    "validate:stage-2": "node scripts/validate-stage-2.mjs",
+    "validate:stage-3": "node scripts/validate-stage-3.mjs",
+    "validate:stage-3-ui": "playwright test tests/validate-stage-3-ui.spec.js",
+    "validate:stage-3-ui-local": "node scripts/validate-stage-3-ui-local.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/functions": "^3.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

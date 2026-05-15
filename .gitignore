@@ -1,3 +1,11 @@
 _tmp_*
 _tmp_chunks/
 .vercel/
+node_modules/
+.data/
+
+# Local Netlify folder
+.netlify
+
+.vercel
+.env*.local

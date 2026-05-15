@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestor de Pedidos | Tokyo Sushi Delivery</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="./admin.css" />
+    <script src="./admin.js" defer></script>
+  </head>
+  <body class="admin-body" data-admin-page="dashboard">
+    <main class="admin-dashboard-shell">
+      <header class="admin-topbar">
+        <div>
+          <span class="admin-eyebrow">Gestor privado</span>
+          <h1>Gestor operacional de pedidos</h1>
+          <p data-admin-welcome>Carregando sessao administrativa...</p>
+        </div>
+
+        <div class="admin-topbar-actions">
+          <button class="admin-button admin-button-secondary" type="button" data-admin-refresh>
+            Atualizar
+          </button>
+          <button class="admin-button admin-button-ghost" type="button" data-admin-logout>
+            Sair
+          </button>
+        </div>
+      </header>
+
+      <section class="admin-status-banner">
+        <div>
+          <strong>Operacao privada do gestor</strong>
+          <span>
+            O site publico continua separado. Esta area recebe, organiza e atualiza apenas os
+            pedidos da operacao interna.
+          </span>
+        </div>
+        <span class="admin-status-pill" data-admin-storage-mode>Conectando...</span>
+      </section>
+
+      <section class="admin-stats-grid" data-admin-stats>
+        <article class="admin-stat-card">
+          <span>Total</span>
+          <strong>--</strong>
+          <small>Pedidos registrados</small>
+        </article>
+        <article class="admin-stat-card">
+          <span>Novos</span>
+          <strong>--</strong>
+          <small>Aguardando primeira acao</small>
+        </article>
+        <article class="admin-stat-card">
+          <span>Ativos</span>
+          <strong>--</strong>
+          <small>Em andamento</small>
+        </article>
+        <article class="admin-stat-card">
+          <span>Agendados</span>
+          <strong>--</strong>
+          <small>Com horario solicitado</small>
+        </article>
+      </section>
+
+      <section class="admin-panel-card admin-toolbar-card">
+        <div class="admin-panel-head">
+          <span class="admin-chip">Operacao diaria</span>
+          <h2>Fila de pedidos por status</h2>
+          <p>Use os filtros para priorizar novos pedidos, producao, entrega e encerramentos.</p>
+        </div>
+
+        <div class="admin-filter-strip" data-admin-status-filters>
+          <button class="admin-filter-chip is-active" type="button">
+            <span>Todos</span>
+            <strong>--</strong>
+          </button>
+        </div>
+
+        <div class="admin-panel-meta">
+          <span data-admin-generated-at>Atualizando...</span>
+          <span data-admin-list-summary>Preparando a leitura operacional do painel.</span>
+        </div>
+      </section>
+
+      <section class="admin-operations-grid">
+        <article class="admin-panel-card admin-panel-card-large admin-orders-panel">
+          <div class="admin-panel-head">
+            <span class="admin-chip">Entrada do site</span>
+            <h2>Pedidos recebidos</h2>
+            <p>
+              Lista operacional com destaque para pedidos novos e leitura rapida para a rotina.
+            </p>
+          </div>
+
+          <div class="admin-order-list" data-admin-order-list>
+            <div class="admin-empty-state">
+              <strong>Aguardando dados</strong>
+              <span>Assim que o painel carregar, os pedidos operacionais aparecem aqui.</span>
+            </div>
+          </div>
+        </article>
+
+        <aside class="admin-panel-card admin-detail-panel">
+          <div class="admin-panel-head">
+            <span class="admin-chip">Detalhes</span>
+            <h2 data-admin-detail-title>Selecione um pedido</h2>
+            <p data-admin-detail-subtitle>
+              Abra um pedido da lista para revisar itens, endereco, pagamento e status.
+            </p>
+          </div>
+
+          <div class="admin-order-detail" data-admin-order-detail>
+            <div class="admin-empty-state admin-empty-state-soft">
+              <strong>Nenhum pedido aberto</strong>
+              <span>Escolha um pedido na lista para trabalhar na operacao.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

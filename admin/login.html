@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login do Gestor | Tokyo Sushi Delivery</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="./admin.css" />
+    <script src="./admin.js" defer></script>
+  </head>
+  <body class="admin-body admin-login-page" data-admin-page="login">
+    <main class="admin-login-layout">
+      <section class="admin-login-hero">
+        <span class="admin-eyebrow">Area privada</span>
+        <h1>Gestor web administrativo do Tokyo Sushi Delivery</h1>
+        <p>
+          Esta area e exclusiva para operacao interna. O site publico do cliente
+          continua separado, e os pedidos entram aqui para gestao.
+        </p>
+
+        <div class="admin-hero-points">
+          <article>
+            <strong>Site publico</strong>
+            <span>Cardapio, carrinho e checkout continuam do lado do cliente.</span>
+          </article>
+          <article>
+            <strong>Painel privado</strong>
+            <span>Login administrativo, visao interna e controle operacional.</span>
+          </article>
+          <article>
+            <strong>Base escalavel</strong>
+            <span>Pedidos estruturados para evoluir status, cardapio e horarios.</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="admin-panel-card">
+        <div class="admin-panel-head">
+          <span class="admin-chip">Etapa 1</span>
+          <h2>Entrar no gestor</h2>
+          <p>Use o login administrativo configurado nas variaveis do projeto.</p>
+        </div>
+
+        <form class="admin-form" data-admin-login-form>
+          <label class="admin-field">
+            <span>Login do administrador</span>
+            <input
+              class="admin-input"
+              type="text"
+              name="identifier"
+              autocomplete="username"
+              placeholder="admin@tokyosushidelivery.com.br"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span>Senha</span>
+            <input
+              class="admin-input"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Sua senha"
+              required
+            />
+          </label>
+
+          <input type="hidden" name="next" value="/admin/" />
+
+          <button class="admin-button admin-button-primary" type="submit" data-admin-login-submit>
+            Entrar no gestor
+          </button>
+        </form>
+
+        <div class="admin-feedback" data-admin-login-feedback hidden></div>
+      </section>
+    </main>
+  </body>
+</html>

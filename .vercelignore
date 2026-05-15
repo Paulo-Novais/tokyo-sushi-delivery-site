@@ -1,0 +1,13 @@
+_tmp*
+_tmp*/
+.tmp/
+.codex-tools/
+.data/
+.env*
+*.env
+.tmp_*.env
+*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

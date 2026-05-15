@@ -3,8 +3,14 @@ const CART_STORAGE_KEY = "tokyo_sushi_delivery_cart";
 const AUTH_PROFILE_KEY = "tokyo_sushi_profile";
 const AUTH_ACCOUNTS_KEY = "tokyo_sushi_accounts";
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
-const PHONE_VERIFICATION_SEND_ENDPOINT = "/api/auth/send-whatsapp-code";
-const PHONE_VERIFICATION_SEND_TIMEOUT_MS = 12000;
+const CUSTOMER_AUTH_START_ENDPOINT = "/api/customer/auth/start";
+const CUSTOMER_AUTH_VERIFY_ENDPOINT = "/api/customer/auth/verify";
+const CUSTOMER_AUTH_REQUEST_TIMEOUT_MS = 12000;
+const ORDER_CREATE_ENDPOINT = "/api/orders/create";
+const ORDER_CREATE_TIMEOUT_MS = 15000;
+const CUSTOMER_ACTIVE_ORDER_ENDPOINT = "/api/customer/orders/active";
+const CUSTOMER_LOGOUT_ENDPOINT = "/api/customer/logout";
+const CUSTOMER_CLIENT_TOKEN_KEY = "tokyo_customer_client_token";
 const ORDER_HISTORY_STORAGE_KEY = "tokyo_sushi_order_history";
 const CART_ADDONS_STORAGE_KEY = "tokyo_sushi_delivery_cart_addons";
 const CART_CHECKOUT_STORAGE_KEY = "tokyo_sushi_cart_checkout";
@@ -13,6 +19,15 @@ const REVIEW_STORAGE_KEY = "tokyo_sushi_site_reviews";
 const CAREER_STORAGE_KEY = "tokyo_sushi_career_forms";
 const CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY = "tokyo_sushi_catalog_collapsed_sections";
 const ORDER_HISTORY_WINDOW_DAYS = 30;
+const CUSTOMER_TRACKING_REFRESH_INTERVAL_MS = 25000;
+const CUSTOMER_TRACKING_PAGE_PATH = "./acompanhar.html";
+const CUSTOMER_TRACKING_PROGRESS_STATUSES = Object.freeze([
+  "Novo",
+  "Confirmado",
+  "Em preparo",
+  "Saiu para entrega",
+  "Finalizado",
+]);
 const PICKUP_ESTIMATE_MINUTES = 25;
 const DELIVERY_PREPARATION_TIME_MINUTES = PICKUP_ESTIMATE_MINUTES;
 const DELIVERY_ROUTE_STRETCH_FACTOR = 1.22;
@@ -99,7 +114,13 @@ const DELIVERY_FEE_RULES = [
 ];
 const DELIVERY_MANUAL_FALLBACK_FEE = DELIVERY_FEE_RULES[0]?.fee || 9;
 const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
-const DELIVERY_MANUAL_TIME_TEXT = "Confirmar no WhatsApp";
+const DELIVERY_MANUAL_TIME_TEXT = "Confirmar com a loja";
+const STORE_HOURS_API = window.TokyoStoreHours;
+const STORE_STATUS_REFRESH_INTERVAL_MS = 60000;
+const CART_ORDER_TIMING_OPTIONS = Object.freeze([
+  { id: "immediate", label: "Pedido imediato" },
+  { id: "scheduled", label: "Agendar pedido" },
+]);
 const siteHeader = document.querySelector(".site-header");
 const catalogRoot = document.querySelector("[data-catalog-root]");
 const MOBILE_NAV_BREAKPOINT = 860;
@@ -118,8 +139,16 @@ const authState = {
   pendingIntent: "",
   phoneVerification: null,
 };
+const customerTrackingState = {
+  loading: false,
+  loaded: false,
+  authenticated: false,
+  activeOrder: null,
+};
 const cartUiState = {
   checkoutExpanded: false,
+  orderNotice: null,
+  orderSubmitting: false,
 };
 const SITE_IMAGES_DIRECTORY = "./site-images";
 const LEGACY_SITE_IMAGE_PATH_PREFIXES = ["./assets/", "./menu_pdf_images/"];
@@ -1268,6 +1297,10 @@ let deliveryCepLookupToken = 0;
 let lastGoogleMapsApiErrorMessage = "";
 let mobileExpandedCatalogSectionId = "";
 let lastCatalogViewportMode = "";
+const mobileCatalogSheetState = {
+  sectionId: "",
+  groupId: "",
+};
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -1378,6 +1411,34 @@ const removeStoredValue = (storageKey) => {
   } catch (error) {
     return false;
   }
+};
+
+const generateCustomerClientToken = () => {
+  try {
+    const randomBytes = new Uint8Array(24);
+    window.crypto.getRandomValues(randomBytes);
+    return Array.from(randomBytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  } catch (error) {
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+};
+
+const getCustomerClientToken = () => getStoredString(CUSTOMER_CLIENT_TOKEN_KEY, "").trim();
+
+const ensureCustomerClientToken = () => {
+  const existingToken = getCustomerClientToken();
+
+  if (existingToken) {
+    return existingToken;
+  }
+
+  const generatedToken = generateCustomerClientToken();
+  setStoredString(CUSTOMER_CLIENT_TOKEN_KEY, generatedToken);
+  return generatedToken;
+};
+
+const clearCustomerClientToken = () => {
+  removeStoredValue(CUSTOMER_CLIENT_TOKEN_KEY);
 };
 
 const lookupCepData = async (cep) => {
@@ -1941,99 +2002,8 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
       </div>
     </article>
   `;
-
-  /* dead-code cleanup marker */
-  const previewImage = selectedCombo?.image || category.image;
-  const previewAlt = selectedCombo ? selectedCombo.name : category.alt;
-  const previewTitle = isComboSelected ? selectedCombo.name : category.title;
-  const previewDetail = isComboSelected ? selectedCombo.detail : category.detail;
-  const previewHint = isComboSelected
-    ? `Unidades: ${selectedCombo.detail}`
-    : `Selecione um combinado da categoria ${category.title} para ver a imagem e unidades`;
-  const previewDetails = isComboSelected ? getComboContentsMarkup(section, selectedCombo) : "";
-
-  return `
-    <article class="catalog-card catalog-card-combinados-preview reveal${isComboSelected ? " catalog-card-combinados-preview-selected" : ""}" data-combinados-preview>
-      <figure class="catalog-combined-preview-media">
-        <img
-          src="${previewImage}"
-          alt="${previewAlt}"
-          loading="lazy"
-          decoding="async"
-        />
-      </figure>
-      <div class="catalog-combined-preview-units-row${isComboSelected ? "" : " is-placeholder"}">
-        <span class="catalog-pill">${previewHint}</span>
-      </div>
-      <div class="catalog-card-top catalog-combined-preview-top${isComboSelected ? " catalog-combined-preview-top-selected" : ""}">
-        <div>
-          <p class="catalog-kicker">${section.kicker}</p>
-          ${isComboSelected ? `<h2>${previewTitle}</h2>` : `<h4>${previewTitle}</h4>`}
-        </div>
-        ${isComboSelected ? `<span class="catalog-badge">${selectedCombo.badge || "Consulte"}</span>` : ""}
-      </div>
-      ${isComboSelected ? `
-        <div class="catalog-combo-hero-copy">
-          <p class="catalog-kicker catalog-kicker-small">Categoria ${category.title}</p>
-          <div class="catalog-combo-contents combo-contents-hero">
-            ${previewDetails}
-          </div>
-        </div>
-      ` : previewDetails}
-      ${isComboSelected
-        ? `
-      <div class="catalog-card-actions">
-        <div class="catalog-option catalog-option-preview" data-item-chip data-item-id="${selectedCombo.id}" data-item-name="${escapeHtml(selectedCombo.name)}" data-item-category="${escapeHtml(category.title)}">
-          <button class="catalog-option-main catalog-combinados-cta" type="button" data-item-button data-add-to-cart aria-pressed="false" aria-label="Adicionar ${escapeHtml(selectedCombo.name)} a sacola">
-            <span class="catalog-option-copy">
-              <span class="catalog-option-label">Adicionar a Sacola</span>
-              <span class="catalog-option-price">${getPriceLabel(selectedCombo.price)}</span>
-            </span>
-          </button>
-          <div class="catalog-option-controls" aria-label="Controle de quantidade">
-            <button class="catalog-stepper" type="button" data-item-decrease aria-label="Diminuir ${escapeHtml(selectedCombo.name)}">-</button>
-            <span class="catalog-option-qty" data-item-qty></span>
-            <button class="catalog-stepper" type="button" data-item-increase aria-label="Aumentar ${escapeHtml(selectedCombo.name)}">+</button>
-          </div>
-        </div>
-      </div>
-      `
-        : ""}
-      <div class="catalog-footer catalog-footer-group">
-        <span class="catalog-pill catalog-combined-preview-units-label">${previewDetail}</span>
-        <span class="catalog-selection-hint">${isComboSelected ? "Adicione este combinado à sacola para incluir no pedido." : "Selecione um combinado para ver a imagem temática da categoria."}</span>
-      </div>
-    </article>
-  `;
 };
 
-const getCombinadosSidebarInfoMarkup = (selectedCombo, selectedCategory, section) => {
-  if (!selectedCombo) {
-    return "";
-  }
-
-  const contentsMarkup = getComboContentsMarkup(section, selectedCombo);
-
-  return `
-    <div class="catalog-combinados-sidebar-info-card">
-      <figure class="catalog-combinados-sidebar-image">
-        <img
-          src="${selectedCombo.image}"
-          alt="${selectedCombo.name}"
-          loading="lazy"
-          decoding="async"
-        />
-      </figure>
-      <div class="catalog-combinados-sidebar-content">
-        <p class="catalog-combinados-sidebar-category">${section.kicker}</p>
-        <h3 class="catalog-combinados-sidebar-title">${selectedCombo.name}</h3>
-        <p class="catalog-combinados-sidebar-units">${selectedCombo.detail}</p>
-        <p class="catalog-combinados-sidebar-price">${getPriceLabel(selectedCombo.price)}</p>
-        ${contentsMarkup ? `<div class="catalog-combinados-sidebar-contents">${contentsMarkup}</div>` : ""}
-      </div>
-    </div>
-  `;
-};
 
 const getCombinadosCategoriesMarkup = (categories, selectedCategoryId) =>
   categories
@@ -2381,10 +2351,6 @@ const renderCombinadosSection = (section) => {
   `;
 };
 
-const updateCombinadosPreview = (groupId) => {
-  updateCombinadosComboSelection(groupId);
-};
-
 const isTemakiPremiumOption = (item) =>
   String(item?.id || "").includes("-premium-250g");
 
@@ -2447,8 +2413,6 @@ const updateCombinadosPreviewShell = () => {
   syncCatalogSelections();
 };
 
-const updateCombinadosSidebarInfo = () => {};
-
 const updateCombinadosItemsList = () => {
   const section = MENU_SECTIONS.find((menuSection) => menuSection.id === "combinados");
   const selectedCategory = getSelectedCombinadosCategory();
@@ -2488,7 +2452,6 @@ const updateCombinadosCategorySelection = (categoryId) => {
   }
 
   updateCombinadosPreviewShell();
-  updateCombinadosSidebarInfo();
   updateCombinadosItemsList();
 };
 
@@ -2503,7 +2466,6 @@ const updateCombinadosComboSelection = (comboId) => {
   });
 
   updateCombinadosPreviewShell();
-  updateCombinadosSidebarInfo();
   updateCombinadosItemsList();
 };
 
@@ -2889,6 +2851,274 @@ const groupCatalogItems = (section) => {
       detail: `${items.length} opc${items.length === 1 ? "ao" : "oes"}`,
     };
   });
+};
+
+const getCatalogSectionById = (sectionId) =>
+  MENU_SECTIONS.find((section) => section.id === sectionId) || null;
+
+const getMobileCatalogGroups = (section) => {
+  if (!section) {
+    return [];
+  }
+
+  if (section.id === "combinados") {
+    return getCombinadosCategories(section).map((category) => ({
+      id: category.id,
+      title: category.title,
+      label: category.label,
+      image: category.image,
+      defaultAlt: category.alt || category.title,
+      items: category.items,
+      description:
+        GROUP_COPY_SUMMARIES[category.label] ||
+        category.items[0]?.description ||
+        section.description,
+      detail: `${category.items.length} combinado${category.items.length === 1 ? "" : "s"}`,
+    }));
+  }
+
+  return groupCatalogItems(section);
+};
+
+const getMobileCatalogSheetContext = () => {
+  const section = getCatalogSectionById(mobileCatalogSheetState.sectionId);
+
+  if (!section) {
+    return {
+      section: null,
+      groups: [],
+      activeGroup: null,
+      visibleItems: [],
+    };
+  }
+
+  const groups = getMobileCatalogGroups(section);
+  const activeGroup =
+    groups.find((group) => group.id === mobileCatalogSheetState.groupId) || null;
+  const visibleItems = activeGroup ? activeGroup.items : section.items;
+
+  return {
+    section,
+    groups,
+    activeGroup,
+    visibleItems,
+  };
+};
+
+const getMobileCatalogItemGroupLabel = (item) => formatGroupTitle(String(item?.category || "").trim());
+
+const getMobileCatalogItemDescription = (section, item) => {
+  const detail = String(item?.detail || "").trim();
+  const description = String(item?.description || "").trim();
+  const uniqueParts = [...new Set([detail, description].filter(Boolean))];
+
+  if (uniqueParts.length > 0) {
+    return uniqueParts.join(" | ");
+  }
+
+  if (section?.description) {
+    return section.description;
+  }
+
+  return "";
+};
+
+const getMobileCatalogSheetFiltersMarkup = (section, groups, activeGroup) => {
+  if (!section || groups.length <= 1) {
+    return "";
+  }
+
+  return `
+    <div class="catalog-mobile-sheet-filters" aria-label="Filtros da categoria ${section.title}">
+      <button
+        class="catalog-mobile-sheet-filter${activeGroup ? "" : " is-active"}"
+        type="button"
+        data-mobile-catalog-sheet-filter=""
+        aria-pressed="${activeGroup ? "false" : "true"}"
+      >
+        Todos
+      </button>
+      ${groups
+        .map(
+          (group) => `
+            <button
+              class="catalog-mobile-sheet-filter${activeGroup?.id === group.id ? " is-active" : ""}"
+              type="button"
+              data-mobile-catalog-sheet-filter="${group.id}"
+              aria-pressed="${activeGroup?.id === group.id ? "true" : "false"}"
+            >
+              ${escapeHtml(group.title)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+};
+
+const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) => {
+  if (!section || visibleItems.length === 0) {
+    return `
+      <div class="empty-panel">
+        <strong>Nenhum item encontrado.</strong>
+        <span>Abra outra categoria para continuar montando o pedido.</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="catalog-mobile-sheet-grid" aria-label="Produtos de ${escapeHtml(
+      activeGroup?.title || section.title
+    )}">
+      ${visibleItems
+        .map((item) => {
+          const groupLabel = getMobileCatalogItemGroupLabel(item);
+          const showGroupLabel = !activeGroup || activeGroup.title !== groupLabel;
+          const description = getMobileCatalogItemDescription(section, item);
+
+          return `
+            <article class="catalog-mobile-sheet-card">
+              <figure class="catalog-mobile-sheet-media">
+                <img
+                  src="${item.image}"
+                  alt="${escapeHtml(item.name)}"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+              <div class="catalog-mobile-sheet-body">
+                <div class="catalog-mobile-sheet-head">
+                  <div class="catalog-mobile-sheet-copy">
+                    ${
+                      showGroupLabel
+                        ? `<span class="catalog-pill catalog-mobile-sheet-group">${escapeHtml(groupLabel)}</span>`
+                        : ""
+                    }
+                    <h4>${escapeHtml(item.name)}</h4>
+                    ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+                  </div>
+                  <strong class="catalog-mobile-sheet-price">${getPriceLabel(item.price)}</strong>
+                </div>
+
+                <div class="catalog-mobile-sheet-actions">
+                  <div
+                    class="catalog-option catalog-option-preview catalog-mobile-sheet-purchase"
+                    data-item-chip
+                    data-item-id="${item.id}"
+                    data-item-name="${escapeHtml(item.name)}"
+                    data-item-category="${escapeHtml(groupLabel)}"
+                  >
+                    <button
+                      class="catalog-option-main catalog-mobile-sheet-cta"
+                      type="button"
+                      data-item-button
+                      data-add-to-cart
+                      aria-pressed="false"
+                      aria-label="Adicionar ${escapeHtml(item.name)} a sacola"
+                    >
+                      <span class="catalog-option-copy">
+                        <span class="catalog-option-label">${
+                          typeof item.price === "number" ? "Adicionar" : "Selecionar"
+                        }</span>
+                        <span class="catalog-option-price">Toque para incluir</span>
+                      </span>
+                    </button>
+                    <div class="catalog-option-controls" aria-label="Controle de quantidade">
+                      <button
+                        class="catalog-stepper"
+                        type="button"
+                        data-item-decrease
+                        aria-label="Diminuir ${escapeHtml(item.name)}"
+                      >
+                        -
+                      </button>
+                      <span class="catalog-option-qty" data-item-qty></span>
+                      <button
+                        class="catalog-stepper"
+                        type="button"
+                        data-item-increase
+                        aria-label="Aumentar ${escapeHtml(item.name)}"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+};
+
+const renderMobileCatalogSection = (section) => {
+  const groups = getMobileCatalogGroups(section);
+
+  return `
+    <section class="catalog-block catalog-mobile-block" id="${section.id}">
+      <button
+        class="catalog-mobile-section-head reveal"
+        type="button"
+        data-mobile-catalog-section-open="${section.id}"
+        aria-haspopup="dialog"
+        aria-controls="mobile-catalog-sheet"
+      >
+        <div class="catalog-mobile-section-copy">
+          <div>
+            <p class="section-tag">${section.kicker}</p>
+            <h3>${section.title}</h3>
+          </div>
+          <p>${section.description}</p>
+        </div>
+        <span class="catalog-mobile-section-cta">Ver produtos</span>
+      </button>
+
+      <div class="catalog-mobile-group-grid" aria-label="Subcategorias de ${section.title}">
+        ${groups
+          .map((group) => {
+            const itemIds = group.items.map((item) => item.id).join(",");
+
+            return `
+              <button
+                class="catalog-mobile-group-card reveal"
+                type="button"
+                data-mobile-catalog-group-card
+                data-mobile-catalog-group-open="${section.id}"
+                data-mobile-catalog-group-id="${group.id}"
+                data-mobile-catalog-group-items="${itemIds}"
+                aria-haspopup="dialog"
+                aria-controls="mobile-catalog-sheet"
+              >
+                <figure class="catalog-mobile-group-media">
+                  <img
+                    src="${group.image}"
+                    alt="${escapeHtml(group.defaultAlt || group.title)}"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </figure>
+                <div class="catalog-mobile-group-copy">
+                  <div class="catalog-mobile-group-copy-top">
+                    <strong>${escapeHtml(group.title)}</strong>
+                    <span class="catalog-badge" data-group-total data-group-items="${itemIds}">
+                      ${EMPTY_GROUP_TOTAL_LABEL}
+                    </span>
+                  </div>
+                  <span>${escapeHtml(group.description)}</span>
+                  <div class="catalog-mobile-group-footer">
+                    <span class="catalog-pill">${escapeHtml(group.detail)}</span>
+                    <span class="catalog-mobile-group-cta">Abrir lista</span>
+                  </div>
+                </div>
+              </button>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
 };
 
 const updateHeaderState = () => {
@@ -3512,6 +3742,22 @@ const normalizeCartDeliveryAddress = (value) =>
 const normalizeCartCashChangeSelection = (value) =>
   normalizeCartCheckoutSelection(value, ["yes", "no"]);
 
+const normalizeCartOrderTimingSelection = (value) =>
+  normalizeCartCheckoutSelection(
+    value,
+    CART_ORDER_TIMING_OPTIONS.map((option) => option.id)
+  );
+
+const normalizeCartScheduleDate = (value) => {
+  const normalizedValue = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalizedValue) ? normalizedValue : "";
+};
+
+const normalizeCartScheduleTime = (value) => {
+  const normalizedValue = String(value || "").trim();
+  return /^\d{2}:\d{2}$/.test(normalizedValue) ? normalizedValue : "";
+};
+
 const normalizeCurrencyInput = (value) =>
   String(value || "")
     .replace(/[^\d,.-]/g, "")
@@ -3543,6 +3789,110 @@ const parseCurrencyAmount = (value) => {
   return Number.isFinite(amount) && amount >= 0 ? Number(amount.toFixed(2)) : null;
 };
 
+const getStoreOperatingContext = (now = new Date()) =>
+  STORE_HOURS_API?.getCurrentContext?.(now) || {
+    isOpen: true,
+    acceptsImmediateOrders: true,
+    statusTone: "open",
+    statusLabel: "Loja aberta",
+    shortStatusLabel: "Aberta agora",
+    businessWindowLabel: "18:00 as 23:00",
+    nowDateValue: "",
+    nowTimeValue: "",
+    nextOpeningDateValue: "",
+    nextOpeningTimeValue: "",
+    nextOpeningLabel: "18:00",
+    detail: "Pedidos imediatos liberados ate 23:00.",
+  };
+
+const getStoreDefaultSchedule = (now = new Date()) =>
+  STORE_HOURS_API?.getDefaultSchedule?.(now) || {
+    dateValue: "",
+    timeValue: "",
+  };
+
+const getStoreScheduleConstraints = (selectedDate = "", now = new Date()) =>
+  STORE_HOURS_API?.getScheduleConstraints?.(selectedDate, now) || {
+    minDate: "",
+    timeMin: "18:00",
+    timeMax: "23:00",
+    stepSeconds: 300,
+    defaultDate: "",
+    defaultTime: "",
+    selectedDateAvailable: true,
+  };
+
+const validateStoreScheduledOrder = (schedule, now = new Date()) =>
+  STORE_HOURS_API?.validateSchedule?.(schedule, now) || {
+    isValid: Boolean(schedule?.dateValue && schedule?.timeValue),
+    reason: schedule?.dateValue && schedule?.timeValue ? "" : "missing_time",
+  };
+
+const formatStoreScheduleLabel = (dateValue, timeValue, now = new Date()) =>
+  STORE_HOURS_API?.formatScheduleLabel?.(dateValue, timeValue, now) ||
+  [dateValue, timeValue].filter(Boolean).join(" ");
+
+const getCartOrderTimingLabel = (id) =>
+  CART_ORDER_TIMING_OPTIONS.find((option) => option.id === id)?.label || "";
+
+const resolveCartScheduleFields = (
+  {
+    timingMode = "",
+    scheduledDate = "",
+    scheduledTime = "",
+  } = {},
+  now = new Date()
+) => {
+  if (timingMode !== "scheduled") {
+    return {
+      scheduledDate: "",
+      scheduledTime: "",
+    };
+  }
+
+  const defaultSchedule = getStoreDefaultSchedule(now);
+  const normalizedDate = normalizeCartScheduleDate(scheduledDate) || defaultSchedule.dateValue || "";
+  const normalizedTime = normalizeCartScheduleTime(scheduledTime) || defaultSchedule.timeValue || "";
+  const constraints = getStoreScheduleConstraints(normalizedDate, now);
+  const effectiveDate = constraints.selectedDateAvailable ? normalizedDate : constraints.defaultDate;
+  const effectiveTime =
+    normalizeCartScheduleTime(normalizedTime) ||
+    constraints.defaultTime ||
+    defaultSchedule.timeValue ||
+    "";
+  const validatedSchedule = validateStoreScheduledOrder(
+    {
+      dateValue: effectiveDate,
+      timeValue: effectiveTime,
+    },
+    now
+  );
+
+  if (validatedSchedule.isValid) {
+    return {
+      scheduledDate: effectiveDate,
+      scheduledTime: effectiveTime,
+    };
+  }
+
+  return {
+    scheduledDate: constraints.defaultDate || effectiveDate || "",
+    scheduledTime: constraints.defaultTime || effectiveTime || "",
+  };
+};
+
+const getCartScheduledOrderSummary = (checkout, now = new Date()) => {
+  if (checkout.timingMode !== "scheduled" || !checkout.scheduledDate || !checkout.scheduledTime) {
+    return "";
+  }
+
+  return `Pedido agendado para ${formatStoreScheduleLabel(
+    checkout.scheduledDate,
+    checkout.scheduledTime,
+    now
+  )}.`;
+};
+
 const normalizeCartCheckout = (storedCheckout = {}) => {
   const paymentMethod = normalizeCartCheckoutSelection(
     storedCheckout?.paymentMethod,
@@ -3563,6 +3913,25 @@ const normalizeCartCheckout = (storedCheckout = {}) => {
     paymentMethod === "dinheiro" && cashChangeRequired === "yes"
       ? normalizeCurrencyInput(storedCheckout?.cashAmountProvided)
       : "";
+  const storeContext = getStoreOperatingContext();
+  let timingMode = normalizeCartOrderTimingSelection(storedCheckout?.timingMode);
+
+  if (!timingMode) {
+    timingMode = storeContext.acceptsImmediateOrders ? "immediate" : "scheduled";
+  }
+
+  if (!storeContext.acceptsImmediateOrders && timingMode === "immediate") {
+    timingMode = "scheduled";
+  }
+
+  const scheduleFields = resolveCartScheduleFields(
+    {
+      timingMode,
+      scheduledDate: storedCheckout?.scheduledDate,
+      scheduledTime: storedCheckout?.scheduledTime,
+    },
+    new Date()
+  );
 
   return {
     paymentMethod,
@@ -3570,6 +3939,10 @@ const normalizeCartCheckout = (storedCheckout = {}) => {
     deliveryAddress,
     cashChangeRequired,
     cashAmountProvided,
+    timingMode,
+    scheduledDate: scheduleFields.scheduledDate,
+    scheduledTime: scheduleFields.scheduledTime,
+    customerNotes: String(storedCheckout?.customerNotes || "").trim().slice(0, 280),
   };
 };
 
@@ -3697,6 +4070,33 @@ const getDeliveryQuoteSummaryText = (quote) => {
     .join(" | ");
 };
 
+const getScheduledOrderValidationMessage = (reason, storeContext) => {
+  if (reason === "missing_date") {
+    return "Escolha a data para agendar o pedido.";
+  }
+
+  if (reason === "missing_time") {
+    return "Escolha o horario do agendamento.";
+  }
+
+  if (reason === "invalid_time") {
+    return "Informe um horario valido para o agendamento.";
+  }
+
+  if (reason === "outside_window") {
+    return `O agendamento so aceita horarios entre ${storeContext.businessWindowLabel}.`;
+  }
+
+  if (reason === "past") {
+    return `Escolha um horario futuro dentro do funcionamento diario (${storeContext.businessWindowLabel}).`;
+  }
+
+  return "Revise a data e o horario do agendamento para continuar.";
+};
+
+const getImmediateOrderUnavailableMessage = (storeContext) =>
+  `Loja fechada agora. Agende seu pedido entre ${storeContext.businessWindowLabel}. Proxima abertura: ${storeContext.nextOpeningLabel}.`;
+
 const getCartCheckoutValidation = (
   cart,
   addons = loadCartAddons(),
@@ -3704,6 +4104,8 @@ const getCartCheckoutValidation = (
   profile = loadAuthProfile(),
   deliveryQuote = getLatestSavedDeliveryQuote(profile)
 ) => {
+  const storeContext = getStoreOperatingContext();
+
   if (cart.length === 0) {
     return {
       isValid: false,
@@ -3726,6 +4128,39 @@ const getCartCheckoutValidation = (
       tone: "warning",
       message: "Escolha se o pedido sera retirada ou entrega antes de finalizar.",
     };
+  }
+
+  if (!checkout.timingMode) {
+    return {
+      isValid: false,
+      tone: "warning",
+      message: storeContext.acceptsImmediateOrders
+        ? "Escolha se o pedido sera imediato ou agendado."
+        : `A loja esta fechada agora. Agende um horario entre ${storeContext.businessWindowLabel}.`,
+    };
+  }
+
+  if (checkout.timingMode === "immediate" && !storeContext.acceptsImmediateOrders) {
+    return {
+      isValid: false,
+      tone: "warning",
+      message: getImmediateOrderUnavailableMessage(storeContext),
+    };
+  }
+
+  if (checkout.timingMode === "scheduled") {
+    const scheduleValidation = validateStoreScheduledOrder({
+      dateValue: checkout.scheduledDate,
+      timeValue: checkout.scheduledTime,
+    });
+
+    if (!scheduleValidation.isValid) {
+      return {
+        isValid: false,
+        tone: "warning",
+        message: getScheduledOrderValidationMessage(scheduleValidation.reason, storeContext),
+      };
+    }
   }
 
   if (checkout.fulfillmentMode === "delivery") {
@@ -3790,23 +4225,36 @@ const getCartCheckoutValidation = (
       return {
         isValid: true,
         tone: "success",
-        message: `Entrega salva em modo provisorio: ${getDeliveryQuoteSummaryText(
-          deliveryQuote
-        )}. A taxa final sera confirmada no atendimento.`,
+        message:
+          checkout.timingMode === "scheduled"
+            ? `${getCartScheduledOrderSummary(checkout)} Entrega salva em modo provisorio: ${getDeliveryQuoteSummaryText(
+                deliveryQuote
+              )}. A taxa final sera confirmada no atendimento.`
+            : `Entrega salva em modo provisorio: ${getDeliveryQuoteSummaryText(
+                deliveryQuote
+              )}. A taxa final sera confirmada no atendimento.`,
       };
     }
 
     return {
       isValid: true,
       tone: "success",
-      message: `Entrega pronta: ${getDeliveryQuoteSummaryText(deliveryQuote)}.`,
+      message:
+        checkout.timingMode === "scheduled"
+          ? `${getCartScheduledOrderSummary(checkout)} Entrega pronta: ${getDeliveryQuoteSummaryText(
+              deliveryQuote
+            )}.`
+          : `Entrega pronta: ${getDeliveryQuoteSummaryText(deliveryQuote)}.`,
     };
   }
 
   return {
     isValid: true,
     tone: "success",
-    message: getPickupEstimateText(),
+    message:
+      checkout.timingMode === "scheduled"
+        ? `${getCartScheduledOrderSummary(checkout)} Retirada dentro do horario de funcionamento.`
+        : getPickupEstimateText(),
   };
 };
 
@@ -3848,17 +4296,22 @@ const getCartCheckoutToggleStatus = ({ cart, checkout, validation }) => {
     const selectedParts = [
       getCartPaymentMethodLabel(checkout.paymentMethod),
       getCartFulfillmentLabel(checkout.fulfillmentMode),
+      getCartOrderTimingLabel(checkout.timingMode),
     ].filter(Boolean);
 
     return selectedParts.length ? selectedParts.join(" | ") : "Pronto para finalizar";
   }
 
-  if (!checkout.paymentMethod && !checkout.fulfillmentMode) {
+  if (!checkout.paymentMethod && !checkout.fulfillmentMode && !checkout.timingMode) {
     return "Toque para preencher";
   }
 
-  if (!checkout.paymentMethod || !checkout.fulfillmentMode) {
+  if (!checkout.paymentMethod || !checkout.fulfillmentMode || !checkout.timingMode) {
     return "Faltam escolhas";
+  }
+
+  if (checkout.timingMode === "scheduled") {
+    return "Confirme o agendamento";
   }
 
   if (checkout.fulfillmentMode === "delivery") {
@@ -4028,6 +4481,22 @@ const getCartAddonsSummaryMarkup = (addons) => {
 
 const getProfileStorageKey = (profile) =>
   normalizePhone(profile?.phone) || normalizeEmail(profile?.email) || String(profile?.id || "");
+
+const buildCustomerSessionKey = (profile) => {
+  const normalizedPhone = normalizePhone(profile?.phone);
+  const normalizedEmail = normalizeEmail(profile?.email);
+  const normalizedProfileId = String(profile?.id || "").trim();
+
+  if (normalizedPhone) {
+    return `phone:${normalizedPhone}`;
+  }
+
+  if (normalizedEmail) {
+    return `email:${normalizedEmail}`;
+  }
+
+  return normalizedProfileId ? `profile:${normalizedProfileId}` : "";
+};
 
 const setResultCardState = (node, state) => {
   if (!node) {
@@ -4247,7 +4716,12 @@ const getAuthProviderIconMarkup = (provider) => {
   return icons[provider] || "";
 };
 
-const postJsonWithTimeout = async (url, payload, timeoutMs = PHONE_VERIFICATION_SEND_TIMEOUT_MS) => {
+const postJsonWithTimeout = async (
+  url,
+  payload,
+  timeoutMs = CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
+  requestOptions = {}
+) => {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
@@ -4257,9 +4731,11 @@ const postJsonWithTimeout = async (url, payload, timeoutMs = PHONE_VERIFICATION_
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...(requestOptions.headers || {}),
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
+      credentials: requestOptions.credentials || "same-origin",
     });
     let data = null;
 
@@ -4284,29 +4760,70 @@ const postJsonWithTimeout = async (url, payload, timeoutMs = PHONE_VERIFICATION_
   }
 };
 
-const requestPhoneVerificationDelivery = async (verification) => {
+const getJsonWithTimeout = async (
+  url,
+  timeoutMs = CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
+  requestOptions = {}
+) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const response = await postJsonWithTimeout(PHONE_VERIFICATION_SEND_ENDPOINT, {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...(requestOptions.headers || {}),
+      },
+      signal: controller.signal,
+      credentials: requestOptions.credentials || "same-origin",
+    });
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const requestError = new Error(
+        data?.error || "Nao foi possivel carregar os dados do seu pedido."
+      );
+      requestError.status = response.status;
+      requestError.code = data?.errorCode || "request_failed";
+      throw requestError;
+    }
+
+    return data || {};
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
+const requestPhoneVerificationDelivery = async (verification) => {
+  const customerClientToken = ensureCustomerClientToken();
+  const response = await postJsonWithTimeout(
+    CUSTOMER_AUTH_START_ENDPOINT,
+    {
       name: verification.name,
       phone: verification.phone,
-      code: verification.code,
-    });
+    },
+    CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
+    {
+      headers: {
+        "x-tokyo-customer-client-token": customerClientToken,
+      },
+    }
+  );
 
-    return {
-      mode: "whatsapp-api",
-      notice:
-        response.message ||
-        `Codigo enviado pelo WhatsApp para ${maskPhoneDisplay(verification.phone)}.`,
-    };
-  } catch (error) {
-    console.warn("[auth] whatsapp-code-delivery-fallback", error);
-
-    return {
-      mode: "device-fallback",
-      notice:
-        "Nao consegui enviar o codigo automaticamente pelo WhatsApp agora. Para nao travar seu acesso, usamos um codigo provisorio neste aparelho.",
-    };
-  }
+  return {
+    mode: response.deliveryMode || "whatsapp-api",
+    notice:
+      response.notice ||
+      `Codigo enviado pelo WhatsApp para ${maskPhoneDisplay(verification.phone)}.`,
+    previewCode: response.previewCode || "",
+  };
 };
 
 const getAuthProviderConfig = (provider) => {
@@ -4545,6 +5062,8 @@ const updateAuthTriggers = () => {
       subtitle.hidden = true;
     }
   });
+
+  syncHeaderOrderCta();
 };
 
 const renderAuthPanel = () => {
@@ -4697,20 +5216,20 @@ const renderAuthPanel = () => {
     const verification = authState.phoneVerification;
     const isSendingCode = authState.phoneCodeStatus === "sending";
     const usesWhatsappDelivery = verification.deliveryMode === "whatsapp-api";
-    const usesDeviceFallback = verification.deliveryMode === "device-fallback";
+    const usesDevicePreview = verification.deliveryMode === "device-preview";
     const titleText = usesWhatsappDelivery
       ? "Confirme o codigo enviado"
-      : usesDeviceFallback
+      : usesDevicePreview
         ? "Confirme o codigo provisorio"
         : "Preparando seu codigo";
     const helperText = usesWhatsappDelivery
       ? `Digite o codigo de ${PHONE_VERIFICATION_CODE_LENGTH} digitos enviado pelo WhatsApp para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`
-      : usesDeviceFallback
+      : usesDevicePreview
         ? "No momento o envio automatico pelo WhatsApp ficou indisponivel. Para nao travar o acesso, use o codigo provisorio mostrado abaixo neste aparelho."
         : `Estamos preparando o envio do codigo para ${escapeHtml(maskPhoneDisplay(verification.phone))}.`;
     const primaryStepText = usesWhatsappDelivery
       ? "Enviamos o codigo pelo WhatsApp para o numero informado."
-      : usesDeviceFallback
+      : usesDevicePreview
         ? "Geramos um codigo provisorio neste aparelho enquanto o envio automatico nao responde."
         : "Estamos tentando disparar o codigo automaticamente para o WhatsApp informado.";
     const inputLabel = usesWhatsappDelivery ? "Codigo recebido no WhatsApp" : "Codigo de verificacao";
@@ -4743,11 +5262,11 @@ const renderAuthPanel = () => {
         </div>
 
         ${
-          usesDeviceFallback
+          usesDevicePreview
             ? `
               <div class="auth-code-preview" aria-live="polite">
                 <span>Codigo provisorio</span>
-                <strong>${escapeHtml(verification.code)}</strong>
+                <strong>${escapeHtml(verification.previewCode || "")}</strong>
                 <small>Use esse codigo somente neste aparelho.</small>
               </div>
             `
@@ -4892,6 +5411,7 @@ const openAuth = (view = null, pendingHref = "") => {
   }
 
   closeMobileNavigation();
+  closeMobileCatalogSheet();
   closeCart();
   renderAuthPanel();
   shell.classList.add("is-open");
@@ -4941,17 +5461,7 @@ const runPendingAuthAction = () => {
     return;
   }
 
-  const isCartWhatsappIntent = authState.pendingIntent === "cart-whatsapp";
-
-  if (authState.pendingIntent === "cart-whatsapp") {
-    maybeRecordOrderFromCart();
-  }
-
   const pendingHref = appendProfileToWhatsappHref(authState.pendingHref);
-
-  if (isCartWhatsappIntent) {
-    resetCartAfterCheckout();
-  }
 
   authState.pendingHref = "";
   authState.pendingIntent = "";
@@ -4966,6 +5476,7 @@ const finalizeAuth = (profile, message) => {
   }
 
   saveAuthProfile(profile);
+  ensureCustomerClientToken();
   authState.error = "";
   authState.message = message;
   authState.editing = false;
@@ -4980,6 +5491,7 @@ const finalizeAuth = (profile, message) => {
   renderCart();
   renderDeliveryHistory();
   renderOrderHistoryPage();
+  void refreshCustomerTrackingState({ renderPage: true });
   renderReviewPage();
   prefillProfileForms();
 
@@ -5051,20 +5563,33 @@ const deliverPhoneVerificationCode = async (verification, options = {}) => {
     : "Enviando o codigo para o WhatsApp informado...";
   renderAuthPanel();
 
-  const delivery = await requestPhoneVerificationDelivery(verification);
+  try {
+    const delivery = await requestPhoneVerificationDelivery(verification);
 
-  if (authState.phoneVerification !== verification) {
-    return;
+    if (authState.phoneVerification !== verification) {
+      return;
+    }
+
+    authState.phoneCodeStatus = "idle";
+    authState.phoneVerification = {
+      ...verification,
+      deliveryMode: delivery.mode,
+      previewCode: delivery.previewCode || "",
+    };
+    authState.error = "";
+    authState.message = delivery.notice;
+    renderAuthPanel();
+  } catch (error) {
+    if (authState.phoneVerification !== verification) {
+      return;
+    }
+
+    authState.phoneCodeStatus = "idle";
+    authState.error =
+      error?.message || "Nao foi possivel iniciar a verificacao do seu telefone agora.";
+    authState.message = "";
+    renderAuthPanel();
   }
-
-  authState.phoneCodeStatus = "idle";
-  authState.phoneVerification = {
-    ...verification,
-    deliveryMode: delivery.mode,
-  };
-  authState.error = "";
-  authState.message = delivery.notice;
-  renderAuthPanel();
 };
 
 const startSocialVerification = () => {
@@ -5105,7 +5630,7 @@ const startPhoneVerification = async (name, phone, options = {}) => {
   const verification = {
     name,
     phone,
-    code: generateNumericCode(PHONE_VERIFICATION_CODE_LENGTH),
+    previewCode: "",
     deliveryMode: "pending",
   };
   authState.phoneVerification = verification;
@@ -5123,7 +5648,7 @@ const startPhoneVerification = async (name, phone, options = {}) => {
   await deliverPhoneVerificationCode(verification, options);
 };
 
-const confirmPhoneVerification = (code) => {
+const confirmPhoneVerification = async (code) => {
   const verification = authState.phoneVerification;
 
   if (!verification) {
@@ -5145,17 +5670,38 @@ const confirmPhoneVerification = (code) => {
     return;
   }
 
-  if (sanitizedCode !== verification.code) {
-    authState.error = `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel} e tente novamente.`;
+  authState.phoneCodeStatus = "sending";
+  authState.error = "";
+  authState.message = "Validando o codigo e liberando seu acesso...";
+  renderAuthPanel();
+
+  try {
+    const customerClientToken = ensureCustomerClientToken();
+    await postJsonWithTimeout(
+      CUSTOMER_AUTH_VERIFY_ENDPOINT,
+      {
+        code: sanitizedCode,
+      },
+      CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
+      {
+        headers: {
+          "x-tokyo-customer-client-token": customerClientToken,
+        },
+      }
+    );
+
+    const profile = upsertPhoneAccountProfile(verification.name, verification.phone);
+    authState.phoneVerification = null;
+
+    finalizeAuth(profile, `Telefone verificado com sucesso para ${getFirstName(profile.name)}.`);
+  } catch (error) {
+    authState.phoneCodeStatus = "idle";
+    authState.error =
+      error?.message ||
+      `Codigo invalido. Confira os ${PHONE_VERIFICATION_CODE_LENGTH} digitos ${codeSourceLabel} e tente novamente.`;
     authState.message = "";
     renderAuthPanel();
-    return;
   }
-
-  const profile = upsertPhoneAccountProfile(verification.name, verification.phone);
-  authState.phoneVerification = null;
-
-  finalizeAuth(profile, `Telefone verificado com sucesso para ${getFirstName(profile.name)}.`);
 };
 
 const loadCart = () => {
@@ -5174,6 +5720,545 @@ const saveCart = (cart) => {
 const getCartItemCount = (cart) =>
   cart.reduce((total, item) => total + item.quantity, 0);
 
+const getOpenOrderShortcutHref = () => "./cardapio.html#catalogo";
+
+const getClosedOrderShortcutHref = () => "./cardapio.html#catalogo";
+
+const getCustomerTrackingRequestHeaders = (profile = loadAuthProfile()) => {
+  const customerKey = buildCustomerSessionKey(profile);
+  const clientToken = getCustomerClientToken();
+
+  if (!customerKey || !clientToken) {
+    return null;
+  }
+
+  return {
+    "x-tokyo-customer-key": customerKey,
+    "x-tokyo-customer-client-token": clientToken,
+  };
+};
+
+const syncHeaderOrderCta = () => {
+  const profile = loadAuthProfile();
+  const hasActiveOrder = Boolean(customerTrackingState.activeOrder) && Boolean(profile);
+  const href = hasActiveOrder ? CUSTOMER_TRACKING_PAGE_PATH : getOpenOrderShortcutHref();
+  const label = hasActiveOrder ? "Acompanhar Pedido" : "Pedir Agora";
+
+  document.querySelectorAll("[data-order-cta]").forEach((link) => {
+    link.href = href;
+    link.textContent = label;
+    link.setAttribute("aria-label", label);
+    link.classList.toggle("is-tracking-active", hasActiveOrder);
+  });
+};
+
+const getTrackingStatusLead = (order) => {
+  if (!order) {
+    return "";
+  }
+
+  if (order.status === "Novo") {
+    return "Recebemos seu pedido e ele ja entrou na fila da loja.";
+  }
+
+  if (order.status === "Confirmado") {
+    return "Seu pedido foi confirmado e entrou oficialmente em andamento.";
+  }
+
+  if (order.status === "Em preparo") {
+    return "Nossa equipe esta preparando seu pedido agora.";
+  }
+
+  if (order.status === "Saiu para entrega") {
+    return order.fulfillmentMode === "pickup"
+      ? "Seu pedido esta pronto para retirada na loja."
+      : "Seu pedido saiu para entrega e esta a caminho.";
+  }
+
+  if (order.status === "Finalizado") {
+    return "Pedido concluido com sucesso.";
+  }
+
+  if (order.status === "Cancelado") {
+    return "Pedido cancelado. Se precisar, nossa equipe pode ajudar pelo WhatsApp.";
+  }
+
+  return "Estamos acompanhando seu pedido em tempo real.";
+};
+
+const buildTrackingProgressSteps = (order) => {
+  const currentIndex = CUSTOMER_TRACKING_PROGRESS_STATUSES.indexOf(order?.status);
+
+  return CUSTOMER_TRACKING_PROGRESS_STATUSES.map((status, index) => ({
+    status,
+    isDone: currentIndex > index,
+    isCurrent: currentIndex === index,
+    isPending: currentIndex !== -1 ? currentIndex < index : true,
+  }));
+};
+
+const renderTrackingItems = (items, itemType) => {
+  const filteredItems = Array.isArray(items) ? items.filter((item) => item.type === itemType) : [];
+
+  if (filteredItems.length === 0) {
+    return `
+      <div class="tracking-inline-empty">
+        <span>Nenhum item nesta secao.</span>
+      </div>
+    `;
+  }
+
+  return filteredItems
+    .map(
+      (item) => `
+        <article class="tracking-item-card">
+          <div>
+            <strong>${escapeHtml(item.name)}</strong>
+            <small>${escapeHtml(item.category || (item.type === "addon" ? "Complemento" : "Item principal"))}</small>
+          </div>
+          <div class="tracking-item-meta">
+            <span>${escapeHtml(`${item.quantity}x`)}</span>
+            <strong>${escapeHtml(formatPrice(Number(item.totalPrice || 0)))}</strong>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+};
+
+const renderTrackingPage = () => {
+  const trackingRoot = document.querySelector("[data-tracking-root]");
+  const trackingSummary = document.querySelector("[data-tracking-summary]");
+
+  if (!trackingRoot) {
+    return;
+  }
+
+  const profile = loadAuthProfile();
+
+  if (!profile) {
+    if (trackingSummary) {
+      trackingSummary.textContent =
+        "Entre com sua conta para acompanhar o pedido que esta em andamento neste aparelho.";
+    }
+
+    trackingRoot.innerHTML = `
+      <div class="history-lock tracking-lock">
+        <strong>Login necessario para acompanhar seu pedido.</strong>
+        <span>Assim que voce entrar, o site verifica se existe um pedido ativo vinculado a sua conta.</span>
+        <div class="history-actions">
+          <button class="button button-primary" type="button" data-auth-open>Entrar para acompanhar</button>
+          <a class="button button-secondary" href="./cardapio.html#catalogo">Ir para o cardapio</a>
+        </div>
+      </div>
+    `;
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  if (!customerTrackingState.loaded) {
+    if (trackingSummary) {
+      trackingSummary.textContent = `Procurando pedido ativo para ${getFirstName(profile.name)}...`;
+    }
+
+    trackingRoot.innerHTML = `
+      <div class="empty-panel tracking-loading-panel">
+        <strong>Buscando seu pedido</strong>
+        <span>Estamos consultando o backend para trazer o status mais atual da operacao.</span>
+      </div>
+    `;
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  if (!customerTrackingState.authenticated) {
+    if (trackingSummary) {
+      trackingSummary.textContent = `Confirme seu telefone para liberar o acompanhamento de ${getFirstName(profile.name)} neste aparelho.`;
+    }
+
+    trackingRoot.innerHTML = `
+      <div class="history-lock tracking-lock">
+        <strong>Sessao do cliente ainda nao validada no backend.</strong>
+        <span>Entre novamente e confirme o codigo enviado por WhatsApp para liberar apenas o pedido vinculado ao seu telefone neste aparelho.</span>
+        <div class="history-actions">
+          <button class="button button-primary" type="button" data-auth-open>Confirmar telefone</button>
+          <a class="button button-secondary" href="./cardapio.html#catalogo">Ir para o cardapio</a>
+        </div>
+      </div>
+    `;
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  const order = customerTrackingState.activeOrder;
+
+  if (!order) {
+    if (trackingSummary) {
+      trackingSummary.textContent = `Nenhum pedido em andamento encontrado para ${getFirstName(profile.name)} neste aparelho.`;
+    }
+
+    trackingRoot.innerHTML = `
+      <div class="empty-panel tracking-empty-panel">
+        <strong>Nenhum pedido ativo no momento.</strong>
+        <span>Quando voce finalizar um pedido pelo site, o acompanhamento aparece aqui automaticamente.</span>
+        <div class="history-actions">
+          <a class="button button-primary" href="./cardapio.html#catalogo">Fazer um novo pedido</a>
+          <a class="button button-secondary" href="./historico.html">Ver historico local</a>
+        </div>
+      </div>
+    `;
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  const progressSteps = buildTrackingProgressSteps(order);
+  const latestHistory = Array.isArray(order.statusHistory) ? order.statusHistory[0] : null;
+
+  if (trackingSummary) {
+    trackingSummary.textContent = `${getTrackingStatusLead(order)} Atualizado em ${formatDateTime(
+      latestHistory?.createdAt || order.updatedAt || order.createdAt
+    )}.`;
+  }
+
+  trackingRoot.innerHTML = `
+    <div class="tracking-page-grid">
+      <section class="tracking-hero-card glass-card">
+        <div class="tracking-hero-top">
+          <div>
+            <p class="section-tag">Pedido em andamento</p>
+            <h2>${escapeHtml(order.publicId)}</h2>
+            <p>${escapeHtml(getTrackingStatusLead(order))}</p>
+          </div>
+          <span class="tracking-status-pill is-${escapeHtml(
+            order.status.toLowerCase().replace(/\s+/g, "-")
+          )}">
+            ${escapeHtml(order.status)}
+          </span>
+        </div>
+
+        <div class="tracking-progress" role="list" aria-label="Linha de progresso do pedido">
+          ${progressSteps
+            .map(
+              (step) => `
+                <div
+                  class="tracking-progress-step${step.isDone ? " is-done" : ""}${
+                    step.isCurrent ? " is-current" : ""
+                  }${order.status === "Cancelado" ? " is-disabled" : ""}"
+                  role="listitem"
+                >
+                  <span class="tracking-progress-dot" aria-hidden="true"></span>
+                  <strong>${escapeHtml(step.status)}</strong>
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+
+        <div class="tracking-meta-grid">
+          <article>
+            <span>Horario do pedido</span>
+            <strong>${escapeHtml(formatDateTime(order.createdAt))}</strong>
+          </article>
+          <article>
+            <span>Tipo do pedido</span>
+            <strong>${escapeHtml(
+              order.orderType === "scheduled"
+                ? "Agendamento"
+                : order.fulfillmentMode === "pickup"
+                  ? "Retirada"
+                  : "Entrega"
+            )}</strong>
+          </article>
+          <article>
+            <span>Horario solicitado</span>
+            <strong>${escapeHtml(order.scheduledLabel || "Pedido imediato")}</strong>
+          </article>
+          <article>
+            <span>Previsao estimada</span>
+            <strong>${escapeHtml(order.deliveryEstimateText || "Acompanhando pela loja")}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="tracking-detail-card glass-card">
+        <div class="tracking-detail-head">
+          <div>
+            <p class="section-tag">Resumo do pedido</p>
+            <h3>Informacoes principais</h3>
+          </div>
+          <small>${escapeHtml(order.latestStatusNote || "Atualizacao operacional registrada pela loja.")}</small>
+        </div>
+
+        <div class="tracking-info-list">
+          <div>
+            <span>Forma de pagamento</span>
+            <strong>${escapeHtml(getCartPaymentMethodLabel(order.paymentMethod))}</strong>
+          </div>
+          <div>
+            <span>Valor total</span>
+            <strong>${escapeHtml(formatPrice(Number(order.totalAmount || 0)))}</strong>
+          </div>
+          <div>
+            <span>Endereco de entrega</span>
+            <strong>${escapeHtml(order.addressFull || "Retirada no local")}</strong>
+          </div>
+          <div>
+            <span>Complemento e referencia</span>
+            <strong>${escapeHtml(
+              [order.addressComplement, order.addressReference].filter(Boolean).join(" | ") ||
+                "Sem complemento informado"
+            )}</strong>
+          </div>
+          <div>
+            <span>Observacoes</span>
+            <strong>${escapeHtml(order.customerNotes || "Sem observacoes relevantes.")}</strong>
+          </div>
+          <div>
+            <span>Mensagem util</span>
+            <strong>${escapeHtml(getTrackingStatusLead(order))}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="tracking-detail-card glass-card">
+        <div class="tracking-detail-head">
+          <div>
+            <p class="section-tag">Itens</p>
+            <h3>Seu pedido</h3>
+          </div>
+          <small>${escapeHtml(`${order.itemCount || 0} item(ns) registrados`)}</small>
+        </div>
+
+        <div class="tracking-item-section">
+          <h4>Itens principais</h4>
+          <div class="tracking-item-list">${renderTrackingItems(order.items, "product")}</div>
+        </div>
+
+        <div class="tracking-item-section">
+          <h4>Complementos e adicionais</h4>
+          <div class="tracking-item-list">${renderTrackingItems(order.items, "addon")}</div>
+        </div>
+
+        <div class="tracking-total-strip">
+          <span>Subtotal: ${escapeHtml(formatPrice(Number(order.subtotal || 0)))}</span>
+          <span>Taxa de entrega: ${escapeHtml(formatPrice(Number(order.deliveryFee || 0)))}</span>
+          <strong>Total: ${escapeHtml(formatPrice(Number(order.totalAmount || 0)))}</strong>
+        </div>
+      </section>
+
+      <section class="tracking-detail-card glass-card">
+        <div class="tracking-detail-head">
+          <div>
+            <p class="section-tag">Atualizacoes</p>
+            <h3>Historico do andamento</h3>
+          </div>
+          <small>Sincronizado com o painel do gestor</small>
+        </div>
+
+        <div class="tracking-update-list">
+          ${(Array.isArray(order.statusHistory) ? order.statusHistory : [])
+            .map(
+              (entry) => `
+                <article class="tracking-update-card">
+                  <div class="tracking-update-top">
+                    <strong>${escapeHtml(entry.status)}</strong>
+                    <span>${escapeHtml(formatDateTime(entry.createdAt))}</span>
+                  </div>
+                  <p>${escapeHtml(entry.note || "Atualizacao registrada no sistema.")}</p>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+    </div>
+  `;
+
+  schedulePortugueseUiRefresh();
+};
+
+const refreshCustomerTrackingState = async ({ renderPage = true } = {}) => {
+  const profile = loadAuthProfile();
+
+  if (!profile) {
+    customerTrackingState.loading = false;
+    customerTrackingState.loaded = true;
+    customerTrackingState.authenticated = false;
+    customerTrackingState.activeOrder = null;
+    syncHeaderOrderCta();
+
+    if (renderPage) {
+      renderTrackingPage();
+    }
+
+    return;
+  }
+
+  ensureCustomerClientToken();
+  const requestHeaders = getCustomerTrackingRequestHeaders(profile);
+
+  if (!requestHeaders) {
+    customerTrackingState.loading = false;
+    customerTrackingState.loaded = true;
+    customerTrackingState.authenticated = false;
+    customerTrackingState.activeOrder = null;
+    syncHeaderOrderCta();
+
+    if (renderPage) {
+      renderTrackingPage();
+    }
+
+    return;
+  }
+
+  customerTrackingState.loading = true;
+
+  if (renderPage) {
+    renderTrackingPage();
+  }
+
+  try {
+    const response = await getJsonWithTimeout(
+      CUSTOMER_ACTIVE_ORDER_ENDPOINT,
+      ORDER_CREATE_TIMEOUT_MS,
+      {
+        headers: requestHeaders,
+      }
+    );
+
+    customerTrackingState.loading = false;
+    customerTrackingState.loaded = true;
+    customerTrackingState.authenticated = Boolean(response.authenticated);
+    customerTrackingState.activeOrder = response.hasActiveOrder ? response.order || null : null;
+  } catch (error) {
+    customerTrackingState.loading = false;
+    customerTrackingState.loaded = true;
+    customerTrackingState.authenticated = false;
+    customerTrackingState.activeOrder = null;
+  }
+
+  syncHeaderOrderCta();
+
+  if (renderPage) {
+    renderTrackingPage();
+  }
+};
+
+const createStoreStatusStrip = () => {
+  if (!siteHeader || document.querySelector("[data-store-status-strip]")) {
+    return;
+  }
+
+  siteHeader.insertAdjacentHTML(
+    "afterend",
+    `
+      <section class="store-status-strip" data-store-status-strip aria-live="polite">
+        <div class="container">
+          <div class="store-status-strip-shell" data-store-status-shell>
+            <div class="store-status-pill" data-store-status-pill>
+              <span class="store-status-pill-dot" data-store-status-dot aria-hidden="true"></span>
+              <strong data-store-status-label>Loja aberta</strong>
+            </div>
+            <p class="store-status-strip-copy" data-store-status-copy>
+              Funcionamento diario: 18:00 as 23:00.
+            </p>
+          </div>
+        </div>
+      </section>
+    `
+  );
+};
+
+const syncStoreStatusStrip = (storeContext = getStoreOperatingContext()) => {
+  createStoreStatusStrip();
+
+  const shell = document.querySelector("[data-store-status-shell]");
+  const pill = document.querySelector("[data-store-status-pill]");
+  const label = document.querySelector("[data-store-status-label]");
+  const copy = document.querySelector("[data-store-status-copy]");
+
+  if (shell) {
+    shell.classList.toggle("is-open", storeContext.statusTone === "open");
+    shell.classList.toggle("is-closed", storeContext.statusTone === "closed");
+  }
+
+  if (pill) {
+    pill.classList.toggle("is-open", storeContext.statusTone === "open");
+    pill.classList.toggle("is-closed", storeContext.statusTone === "closed");
+  }
+
+  if (label) {
+    label.textContent = storeContext.shortStatusLabel;
+  }
+
+  if (copy) {
+    copy.textContent = `Funcionamento diario: ${storeContext.businessWindowLabel}. ${storeContext.detail}`;
+  }
+};
+
+const syncStoreHeroStatus = (storeContext = getStoreOperatingContext()) => {
+  const chip = document.querySelector("[data-store-hero-chip]");
+  const dot = document.querySelector("[data-store-hero-dot]");
+
+  if (chip) {
+    chip.textContent = storeContext.shortStatusLabel;
+    chip.classList.toggle("is-closed", storeContext.statusTone === "closed");
+  }
+
+  if (dot) {
+    dot.classList.toggle("is-closed", storeContext.statusTone === "closed");
+  }
+};
+
+const syncOrderShortcutLinks = (storeContext = getStoreOperatingContext()) => {
+  const openHref = getOpenOrderShortcutHref();
+  const closedHref = getClosedOrderShortcutHref();
+
+  document.querySelectorAll("[data-order-shortcut]").forEach((link) => {
+    const openLabel = link.dataset.orderOpenLabel || "";
+    const closedLabel = link.dataset.orderClosedLabel || openLabel;
+    const isOpen = storeContext.acceptsImmediateOrders;
+
+    link.href = isOpen ? openHref : closedHref;
+    link.removeAttribute("target");
+    link.removeAttribute("rel");
+
+    if (openLabel && closedLabel) {
+      link.textContent = isOpen ? openLabel : closedLabel;
+    }
+
+    if (link.matches(".support-avatar-link")) {
+      link.setAttribute(
+        "aria-label",
+        isOpen ? "Abrir cardapio para pedir" : "Abrir cardapio para agendar pedido"
+      );
+    }
+  });
+
+  document.querySelectorAll("[data-store-footer-status]").forEach((node) => {
+    node.textContent = storeContext.shortStatusLabel;
+    node.classList.toggle("is-closed", storeContext.statusTone === "closed");
+  });
+};
+
+const refreshStoreStatusUi = ({ rerenderCartUi = true } = {}) => {
+  const storeContext = getStoreOperatingContext();
+  syncStoreStatusStrip(storeContext);
+  syncStoreHeroStatus(storeContext);
+  syncOrderShortcutLinks(storeContext);
+  schedulePortugueseUiRefresh();
+
+  if (rerenderCartUi) {
+    renderCart();
+  }
+};
+
+const startStoreStatusRefresh = () => {
+  window.setInterval(() => {
+    refreshStoreStatusUi();
+  }, STORE_STATUS_REFRESH_INTERVAL_MS);
+};
+
 const createSiteFooter = () => {
   if (document.querySelector("[data-site-footer]")) {
     return;
@@ -5188,9 +6273,7 @@ const createSiteFooter = () => {
     { href: "./avaliar.html", label: "Avaliar", page: "avaliar" },
     { href: "./trabalhe-conosco.html", label: "Trabalhe Conosco", page: "trabalhe" },
   ];
-  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    normalizePortugueseText("Ola, quero falar com a equipe do Tokyo Sushi Delivery.")
-  )}`;
+  const whatsappHref = getOpenOrderShortcutHref();
   const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     DELIVERY_STORE_ADDRESS
   )}`;
@@ -5224,18 +6307,25 @@ const createSiteFooter = () => {
               </a>
               <p class="site-footer-copy">
                 Delivery premium de culinaria japonesa em Franca, com cardapio digital,
-                calculo de entrega e pedido rapido pelo WhatsApp.
+                calculo de entrega e checkout direto pelo site.
               </p>
               <div class="site-footer-badges" aria-label="Destaques do atendimento">
                 <span>Cardapio digital</span>
                 <span>Entrega por distancia</span>
-                <span>Atendimento via WhatsApp</span>
+                <span>Gestor web de pedidos</span>
+                <span data-store-footer-status>Loja aberta</span>
               </div>
             </div>
 
             <div class="site-footer-actions">
-              <a class="button button-primary" href="${whatsappHref}" target="_blank" rel="noreferrer">
-                Pedir pelo WhatsApp
+              <a
+                class="button button-primary"
+                href="${whatsappHref}"
+                data-order-shortcut
+                data-order-open-label="Pedir agora"
+                data-order-closed-label="Agendar pedido"
+              >
+                Pedir agora
               </a>
               <a class="button button-secondary" href="./cardapio.html">
                 Abrir cardapio
@@ -5254,8 +6344,14 @@ const createSiteFooter = () => {
             <section class="site-footer-column" aria-labelledby="footer-service-title">
               <p class="site-footer-title" id="footer-service-title">Atendimento</p>
               <div class="site-footer-links">
-                <a class="site-footer-link" href="${whatsappHref}" target="_blank" rel="noreferrer">
-                  Pedidos e suporte pelo WhatsApp
+                <a
+                  class="site-footer-link"
+                  href="${whatsappHref}"
+                  data-order-shortcut
+                  data-order-open-label="Abrir cardapio para pedir"
+                  data-order-closed-label="Agendar pedido no cardapio"
+                >
+                  Abrir cardapio para pedir
                 </a>
                 <a class="site-footer-link" href="./entrega.html">
                   Calcular taxa e distancia da entrega
@@ -5282,7 +6378,7 @@ const createSiteFooter = () => {
               <p class="site-footer-title" id="footer-site-title">Experiencia do site</p>
               <div class="site-footer-info-list">
                 <p class="site-footer-info">Login local para agilizar pedidos e historico.</p>
-                <p class="site-footer-info">Complementos, sacola e envio direto pelo WhatsApp.</p>
+                <p class="site-footer-info">Complementos, sacola e envio direto para o gestor.</p>
                 <p class="site-footer-info">Informacoes sujeitas a confirmacao final no atendimento.</p>
               </div>
             </section>
@@ -5333,6 +6429,114 @@ const setupWhatsappBubble = () => {
   }, 10620);
 };
 
+const createMobileCatalogSheetShell = () => {
+  if (!catalogRoot || document.querySelector("[data-mobile-catalog-sheet]")) {
+    return;
+  }
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <div class="catalog-mobile-sheet-overlay" data-mobile-catalog-sheet-close></div>
+      <aside
+        class="catalog-mobile-sheet"
+        id="mobile-catalog-sheet"
+        data-mobile-catalog-sheet
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-catalog-sheet-title"
+      >
+        <div class="catalog-mobile-sheet-handle" aria-hidden="true"></div>
+        <div class="catalog-mobile-sheet-header">
+          <div class="catalog-mobile-sheet-header-copy">
+            <p class="catalog-kicker" data-mobile-catalog-sheet-kicker></p>
+            <h3 id="mobile-catalog-sheet-title" data-mobile-catalog-sheet-title></h3>
+            <p data-mobile-catalog-sheet-description></p>
+          </div>
+          <button
+            class="catalog-mobile-sheet-close"
+            type="button"
+            data-mobile-catalog-sheet-close
+            aria-label="Fechar lista de produtos"
+          >
+            &times;
+          </button>
+        </div>
+        <div data-mobile-catalog-sheet-filters></div>
+        <div class="catalog-mobile-sheet-content" data-mobile-catalog-sheet-content></div>
+      </aside>
+    `
+  );
+
+  schedulePortugueseUiRefresh();
+};
+
+const closeMobileCatalogSheet = () => {
+  mobileCatalogSheetState.sectionId = "";
+  mobileCatalogSheetState.groupId = "";
+  document.body.classList.remove("catalog-sheet-open");
+};
+
+const renderMobileCatalogSheet = () => {
+  const sheet = document.querySelector("[data-mobile-catalog-sheet]");
+  const kickerNode = document.querySelector("[data-mobile-catalog-sheet-kicker]");
+  const titleNode = document.querySelector("[data-mobile-catalog-sheet-title]");
+  const descriptionNode = document.querySelector("[data-mobile-catalog-sheet-description]");
+  const filtersNode = document.querySelector("[data-mobile-catalog-sheet-filters]");
+  const contentNode = document.querySelector("[data-mobile-catalog-sheet-content]");
+
+  if (!sheet || !kickerNode || !titleNode || !descriptionNode || !filtersNode || !contentNode) {
+    return;
+  }
+
+  const { section, groups, activeGroup, visibleItems } = getMobileCatalogSheetContext();
+
+  if (!section) {
+    closeMobileCatalogSheet();
+    return;
+  }
+
+  kickerNode.textContent = section.kicker;
+  titleNode.textContent = activeGroup?.title || section.title;
+  descriptionNode.textContent = activeGroup?.description || section.description;
+  filtersNode.innerHTML = getMobileCatalogSheetFiltersMarkup(section, groups, activeGroup);
+  contentNode.innerHTML = getMobileCatalogSheetItemsMarkup(section, visibleItems, activeGroup);
+  syncCatalogSelections();
+  schedulePortugueseUiRefresh(sheet);
+};
+
+const openMobileCatalogSheet = (sectionId, groupId = "") => {
+  if (!isCatalogMobileViewport()) {
+    return;
+  }
+
+  createMobileCatalogSheetShell();
+
+  if (!getCatalogSectionById(sectionId)) {
+    return;
+  }
+
+  closeMobileNavigation();
+  closeCart();
+  mobileCatalogSheetState.sectionId = sectionId;
+  mobileCatalogSheetState.groupId = groupId;
+  renderMobileCatalogSheet();
+  document.body.classList.add("catalog-sheet-open");
+
+  window.setTimeout(() => {
+    document.querySelector("[data-mobile-catalog-sheet-close]")?.focus();
+  }, 30);
+};
+
+const setMobileCatalogSheetGroup = (groupId = "") => {
+  if (!mobileCatalogSheetState.sectionId) {
+    return;
+  }
+
+  mobileCatalogSheetState.groupId = groupId;
+  renderMobileCatalogSheet();
+};
+
 const createCartShell = () => {
   if (document.querySelector("[data-cart-drawer]")) {
     return;
@@ -5371,9 +6575,9 @@ const createCartShell = () => {
               <div data-cart-checkout></div>
             </div>
           </section>
-          <a class="button button-primary full-width cart-whatsapp" data-cart-whatsapp href="#">
+          <button class="button button-primary full-width cart-submit" type="button" data-cart-submit>
             Finalizar pedido
-          </a>
+          </button>
           <div class="cart-summary">
             <strong data-cart-summary>0 itens do cardapio</strong>
             <button class="cart-clear" type="button" data-cart-clear>Limpar</button>
@@ -5381,6 +6585,7 @@ const createCartShell = () => {
           <p class="cart-note" data-cart-note>
             Os valores finais e a disponibilidade podem ser confirmados no atendimento.
           </p>
+          <div class="cart-order-feedback" data-cart-order-feedback hidden></div>
         </div>
       </aside>
     `
@@ -5389,80 +6594,129 @@ const createCartShell = () => {
   schedulePortugueseUiRefresh();
 };
 
-const getCartCheckoutWhatsappLines = (
-  checkout,
-  cart = loadCart(),
-  addons = loadCartAddons(),
-  profile = loadAuthProfile(),
-  deliveryQuote = getLatestSavedDeliveryQuote(profile)
-) => {
+const WHATSAPP_MESSAGE_SECTION_DIVIDER = "\u2501".repeat(15);
+
+const appendWhatsappSection = (lines, emoji, title, contentLines = []) => {
+  const sectionLines = contentLines.filter((line) => typeof line === "string" && line.trim());
+
+  if (!sectionLines.length) {
+    return;
+  }
+
+  lines.push("", WHATSAPP_MESSAGE_SECTION_DIVIDER, `${emoji} *${title}*`, ...sectionLines);
+};
+
+const getWhatsappPaymentMethodLabel = (paymentMethod) => {
+  if (paymentMethod === "credito") {
+    return "Cr\u00e9dito";
+  }
+
+  if (paymentMethod === "debito") {
+    return "D\u00e9bito";
+  }
+
+  return getCartPaymentMethodLabel(paymentMethod);
+};
+
+const getWhatsappOrderSummaryLabel = (checkout, now = new Date()) => {
+  if (checkout?.timingMode !== "scheduled") {
+    return "Pedido imediato";
+  }
+
+  if (!checkout?.scheduledDate || !checkout?.scheduledTime) {
+    return "Agendamento a confirmar";
+  }
+
+  const scheduleLabel = formatStoreScheduleLabel(
+    checkout.scheduledDate,
+    checkout.scheduledTime,
+    now
+  ).replace(/ as /i, " \u00e0s ");
+
+  return `Agendado para ${scheduleLabel}`;
+};
+
+const formatWhatsappCartItemLine = (item) => {
+  const quantity = Math.max(1, Number(item?.quantity) || 0);
+  const lineTotal =
+    typeof item?.price === "number" ? Number((item.price * quantity).toFixed(2)) : null;
+
+  return `\u2022 ${quantity}x ${item.name}${
+    lineTotal !== null ? ` - ${formatPrice(lineTotal)}` : ""
+  }`;
+};
+
+const formatWhatsappAddonLine = (addon) => {
+  const quantity = Math.max(0, Number(addon?.quantity) || 0);
+  const quantityLabel = quantity > 1 ? `${quantity}x ` : "";
+  const chargedQuantity = getCartAddonChargeQuantity(addon);
+  const subtotal = getCartAddonTotal(addon);
+  const freeApplied = Math.min(quantity, addon.freeUnits);
+
+  if (addon.freeUnits > 0 && chargedQuantity === 0) {
+    return `\u2022 ${quantityLabel}${addon.name} - gr\u00e1tis`;
+  }
+
+  if (addon.freeUnits > 0 && freeApplied > 0) {
+    return `\u2022 ${quantityLabel}${addon.name} - ${formatPrice(subtotal)} (${freeApplied} gr\u00e1tis)`;
+  }
+
+  return `\u2022 ${quantityLabel}${addon.name} - ${formatPrice(subtotal)}`;
+};
+
+const getWhatsappDeliveryAddressLines = (deliveryQuote) => {
+  if (!deliveryQuote) {
+    return [];
+  }
+
   const lines = [];
-  const cashDetails = getCartCashChangeDetails({
-    cart,
-    addons,
-    checkout,
-    profile,
-    deliveryQuote,
-  });
+  const street = String(deliveryQuote.street || "").trim();
+  const houseNumber = String(deliveryQuote.houseNumber || "").trim();
+  const complement = String(deliveryQuote.complement || "").trim();
+  const primaryLine = [
+    [street, houseNumber].filter(Boolean).join(", "),
+    complement,
+  ]
+    .filter(Boolean)
+    .join(" - ");
 
-  if (checkout.paymentMethod) {
-    lines.push(`Forma de pagamento: ${getCartPaymentMethodLabel(checkout.paymentMethod)}`);
+  if (primaryLine) {
+    lines.push(primaryLine);
+  }
 
-    if (checkout.paymentMethod === "dinheiro") {
-      if (typeof cashDetails.totalAmount === "number") {
-        lines.push(`Total considerado para troco: ${formatPrice(cashDetails.totalAmount)}`);
-      }
+  const addressSource = String(
+    deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel || ""
+  ).trim();
 
-      if (checkout.cashChangeRequired === "yes") {
-        lines.push("Precisa de troco: Sim");
+  if (!addressSource) {
+    return lines;
+  }
 
-        if (typeof cashDetails.amountProvided === "number") {
-          lines.push(`Valor em dinheiro: ${formatPrice(cashDetails.amountProvided)}`);
-        }
+  const addressParts = addressSource
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^(brasil|brazil)$/i.test(part));
 
-        if (typeof cashDetails.changeAmount === "number") {
-          lines.push(`Troco calculado: ${formatPrice(cashDetails.changeAmount)}`);
-        }
-      } else if (checkout.cashChangeRequired === "no") {
-        lines.push("Precisa de troco: Nao");
-      }
+  if (street && addressParts[0] && addressParts[0].toLowerCase().includes(street.toLowerCase())) {
+    addressParts.shift();
+  }
+
+  if (houseNumber && addressParts[0]) {
+    addressParts[0] = addressParts[0]
+      .replace(new RegExp(`^${escapeRegex(houseNumber)}\\s*-?\\s*`, "i"), "")
+      .trim();
+
+    if (!addressParts[0]) {
+      addressParts.shift();
     }
   }
 
-  if (checkout.fulfillmentMode === "delivery") {
-    lines.push("Recebimento: Entrega");
-
-    if (deliveryQuote) {
-      lines.push(
-        `${isManualDeliveryQuote(deliveryQuote) ? "Endereco informado" : "Endereco confirmado"}: ${
-          deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel
-        }`
-      );
-      lines.push(
-        `${isManualDeliveryQuote(deliveryQuote) ? "Taxa provisoria no site" : "Taxa de entrega"}: ${getDeliveryQuoteFeeText(
-          deliveryQuote
-        )}`
-      );
-      lines.push(
-        `${isManualDeliveryQuote(deliveryQuote) ? "Status da distancia" : "Distancia calculada"}: ${
-          deliveryQuote.distanceText || "-"
-        }`
-      );
-      lines.push(`Faixa aplicada: ${deliveryQuote.routeBand || "-"}`);
-      lines.push(`Preparo estimado: ${deliveryQuote.preparationTimeText || "-"}`);
-      lines.push(`Deslocamento estimado: ${deliveryQuote.travelTimeText || "-"}`);
-      lines.push(`Prazo total aproximado: ${deliveryQuote.totalEstimateText || "-"}`);
-
-      if (isManualDeliveryQuote(deliveryQuote)) {
-        lines.push("Observacao: taxa final e prazo exato serao confirmados no atendimento.");
-      }
-    }
-  } else if (checkout.fulfillmentMode === "pickup") {
-    lines.push("Recebimento: Retirada no local");
-    lines.push(`Tempo previsto no site: ate ${PICKUP_ESTIMATE_MINUTES} minutos.`);
+  if (addressParts.length) {
+    lines.push(addressParts.join(" - "));
   }
 
-  return lines;
+  return Array.from(new Set(lines.filter(Boolean)));
 };
 
 const formatWhatsappMessage = (
@@ -5472,59 +6726,116 @@ const formatWhatsappMessage = (
 ) => {
   const profile = loadAuthProfile();
   const deliveryQuote = getLatestSavedDeliveryQuote(profile);
-  const lines = [
-    "Ola, quero fazer um pedido no Tokyo Sushi Delivery:",
-    "",
-  ];
-
-  if (profile) {
-    lines.push(...formatProfileLines(profile));
-    lines.push("");
-  }
-
-  const checkoutLines = getCartCheckoutWhatsappLines(
-    checkout,
+  const selectedAddons = getSelectedCartAddons(addons);
+  const cashDetails = getCartCashChangeDetails({
     cart,
     addons,
+    checkout,
+    profile,
+    deliveryQuote,
+  });
+  const grandTotalAmount = getCartGrandTotalAmount(
+    cart,
+    addons,
+    checkout,
     profile,
     deliveryQuote
   );
+  const baseTotalAmount = getCartTotalAmount(cart, addons);
+  const totalLabel =
+    typeof grandTotalAmount === "number"
+      ? formatPrice(grandTotalAmount)
+      : typeof baseTotalAmount === "number"
+        ? formatPrice(baseTotalAmount)
+        : "A confirmar";
+  const displayPhone = formatPhoneDisplay(profile?.phone) || profile?.phone || "";
+  const displayEmail = getDisplayEmail(profile);
+  const lines = [`\u{1F363} *NOVO PEDIDO - Tokyo Sushi Delivery*`];
 
-  if (checkoutLines.length) {
-    lines.push("Dados para finalizar:");
-    lines.push(...checkoutLines);
-    lines.push("");
+  appendWhatsappSection(lines, "\u{1F9FE}", "RESUMO", [
+    `Pedido: ${getWhatsappOrderSummaryLabel(checkout)}`,
+    `Total: ${totalLabel}`,
+    checkout.fulfillmentMode === "pickup" ? "Retirada" : "Entrega",
+  ]);
+
+  appendWhatsappSection(lines, "\u{1F464}", "CLIENTE", [
+    profile?.name ? `Nome: ${profile.name}` : "",
+    displayPhone ? `Telefone: ${displayPhone}` : "",
+    !displayPhone && displayEmail ? `Email: ${displayEmail}` : "",
+  ]);
+
+  appendWhatsappSection(
+    lines,
+    "\u{1F363}",
+    "ITENS DO PEDIDO",
+    cart.map((item) => formatWhatsappCartItemLine(item))
+  );
+
+  appendWhatsappSection(
+    lines,
+    "\u{1F9C2}",
+    "COMPLEMENTOS",
+    selectedAddons.map((addon) => formatWhatsappAddonLine(addon))
+  );
+
+  if (checkout.fulfillmentMode === "delivery" && deliveryQuote) {
+    const deliveryLines = ["Endere\u00e7o:", ...getWhatsappDeliveryAddressLines(deliveryQuote)];
+    const deliveryFeeLabel = formatPrice(Number(deliveryQuote.fee || 0));
+
+    deliveryLines.push(
+      `Taxa: ${deliveryFeeLabel}${isManualDeliveryQuote(deliveryQuote) ? " (provis\u00f3ria)" : ""}`
+    );
+
+    appendWhatsappSection(lines, "\u{1F69A}", "ENTREGA", deliveryLines);
+  } else if (checkout.fulfillmentMode === "pickup") {
+    appendWhatsappSection(lines, "\u{1F3EA}", "RETIRADA", [
+      "Local: Retirada no balc\u00e3o",
+      checkout.timingMode === "scheduled"
+        ? `Hor\u00e1rio: ${formatStoreScheduleLabel(
+            checkout.scheduledDate,
+            checkout.scheduledTime
+          ).replace(/ as /i, " \u00e0s ")}`
+        : `Previs\u00e3o: at\u00e9 ${PICKUP_ESTIMATE_MINUTES} min`,
+    ]);
   }
 
-  cart.forEach((item) => {
-    const priceLabel = typeof item.price === "number" ? ` - ${formatPrice(item.price)}` : "";
-    lines.push(`${item.quantity}x ${item.name} - ${item.category}${priceLabel}`);
-  });
+  if (checkout.paymentMethod) {
+    const paymentLines = [`Forma: ${getWhatsappPaymentMethodLabel(checkout.paymentMethod)}`];
 
-  const selectedAddons = getSelectedCartAddons(addons);
+    if (checkout.paymentMethod === "dinheiro") {
+      if (typeof cashDetails.amountProvided === "number") {
+        paymentLines.push(`Valor pago: ${formatPrice(cashDetails.amountProvided)}`);
+      }
 
-  if (selectedAddons.length) {
-    lines.push("");
-    lines.push("Complementos do pedido:");
-    selectedAddons.forEach((addon) => {
-      lines.push(formatCartAddonWhatsappLine(addon));
-    });
+      if (typeof cashDetails.changeAmount === "number") {
+        paymentLines.push(`Troco: ${formatPrice(cashDetails.changeAmount)}`);
+      } else if (checkout.cashChangeRequired === "no") {
+        paymentLines.push("Troco: N\u00e3o precisa");
+      }
+    }
+
+    appendWhatsappSection(lines, "\u{1F4B0}", "PAGAMENTO", paymentLines);
   }
 
-  const totalAmount = getCartTotalAmount(cart, addons);
+  const observationLines = [];
 
-  if (typeof totalAmount === "number") {
-    lines.push("");
-    lines.push(`Total atual da sacola: ${formatPrice(totalAmount)}`);
+  if (checkout.fulfillmentMode === "delivery" && deliveryQuote && isManualDeliveryQuote(deliveryQuote)) {
+    observationLines.push("Taxa final e prazo ser\u00e3o confirmados no atendimento.");
   }
-
-  lines.push("");
 
   if (cart.some((item) => typeof item.price !== "number")) {
-    lines.push("Pode me confirmar os valores finais e a disponibilidade?");
-  } else {
-    lines.push("Pode confirmar esses valores de referencia e a disponibilidade?");
+    observationLines.push("Valores finais ser\u00e3o confirmados no atendimento.");
   }
+
+  appendWhatsappSection(lines, "\u{1F4CC}", "OBSERVA\u00c7\u00c3O", observationLines);
+
+  lines.push(
+    "",
+    WHATSAPP_MESSAGE_SECTION_DIVIDER,
+    cart.some((item) => typeof item.price !== "number")
+      ? "\u2705 Pode confirmar os valores finais, o pedido e a disponibilidade?"
+      : "\u2705 Pode confirmar o pedido e disponibilidade?"
+  );
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
     normalizePortugueseText(lines.join("\n"))
@@ -5575,12 +6886,11 @@ const renderCartAddons = (node, addons) => {
     .join("");
 };
 
-const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) => {
+const renderCartCheckout = (node, checkout, cart, addons, profile = loadAuthProfile()) => {
   if (!node) {
     return;
   }
 
-  const addons = loadCartAddons();
   const deliveryQuote = getLatestSavedDeliveryQuote(profile);
   const validation = getCartCheckoutValidation(cart, addons, checkout, profile, deliveryQuote);
   const cashDetails = getCartCashChangeDetails({
@@ -5590,6 +6900,9 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
     profile,
     deliveryQuote,
   });
+  const storeContext = getStoreOperatingContext();
+  const scheduleConstraints = getStoreScheduleConstraints(checkout.scheduledDate);
+  const scheduledSummary = getCartScheduledOrderSummary(checkout);
   const feedbackClass =
     validation.tone === "success"
       ? " is-success"
@@ -5597,11 +6910,28 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
         ? " is-warning"
         : "";
   const shouldShowCheckoutFeedback = !(
-    validation.tone === "success" && checkout.fulfillmentMode === "pickup"
+    validation.tone === "success" &&
+    checkout.fulfillmentMode === "pickup" &&
+    checkout.timingMode === "immediate"
   );
+  const timingSummaryText =
+    checkout.timingMode === "scheduled"
+      ? scheduledSummary
+        ? `${scheduledSummary} O horario precisa ficar entre ${storeContext.businessWindowLabel}.`
+        : `Agende um horario valido entre ${storeContext.businessWindowLabel}.`
+      : storeContext.acceptsImmediateOrders
+        ? `Pedidos imediatos liberados ate ${storeContext.businessWindowLabel.split(" as ").pop()}.`
+        : getImmediateOrderUnavailableMessage(storeContext);
 
   node.innerHTML = `
     <section class="cart-required-section">
+      <div class="cart-fulfillment-note cart-store-status is-${storeContext.statusTone}">
+        <strong>${escapeHtml(storeContext.shortStatusLabel)}</strong>
+        <span>Funcionamento diario: ${escapeHtml(storeContext.businessWindowLabel)}. ${escapeHtml(
+          storeContext.detail
+        )}</span>
+      </div>
+
       <div class="cart-checkout-group">
         <span class="cart-checkout-label">Forma de pagamento</span>
         <div class="cart-choice-grid">
@@ -5620,6 +6950,74 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
             `
           ).join("")}
         </div>
+      </div>
+
+      <div class="cart-checkout-group">
+        <span class="cart-checkout-label">Momento do pedido</span>
+        <div class="cart-choice-grid cart-choice-grid-compact">
+          ${CART_ORDER_TIMING_OPTIONS.map(
+            (option) => `
+              <label class="cart-choice-pill${checkout.timingMode === option.id ? " is-selected" : ""}${
+                option.id === "immediate" && !storeContext.acceptsImmediateOrders ? " is-disabled" : ""
+              }">
+                <input
+                  class="cart-choice-input"
+                  type="radio"
+                  name="cart_timing_mode"
+                  value="${option.id}"
+                  ${checkout.timingMode === option.id ? "checked" : ""}
+                  ${option.id === "immediate" && !storeContext.acceptsImmediateOrders ? "disabled" : ""}
+                />
+                <span>${option.label}</span>
+              </label>
+            `
+          ).join("")}
+        </div>
+
+        <div class="cart-cash-summary${
+          checkout.timingMode === "scheduled"
+            ? " is-neutral"
+            : storeContext.acceptsImmediateOrders
+              ? " is-success"
+              : " is-warning"
+        }">
+          <strong>${
+            checkout.timingMode === "scheduled" ? "Horario escolhido" : "Status do pedido imediato"
+          }</strong>
+          <span>${escapeHtml(timingSummaryText)}</span>
+        </div>
+
+        ${
+          checkout.timingMode === "scheduled"
+            ? `
+              <div class="cart-schedule-grid">
+                <label class="cart-schedule-field">
+                  <span>Data</span>
+                  <input
+                    class="cart-schedule-input"
+                    type="date"
+                    name="cart_scheduled_date"
+                    min="${escapeHtml(scheduleConstraints.minDate || "")}"
+                    value="${escapeHtml(checkout.scheduledDate || "")}"
+                  />
+                </label>
+
+                <label class="cart-schedule-field">
+                  <span>Horario</span>
+                  <input
+                    class="cart-schedule-input"
+                    type="time"
+                    name="cart_scheduled_time"
+                    min="${escapeHtml(scheduleConstraints.timeMin || "18:00")}"
+                    max="${escapeHtml(scheduleConstraints.timeMax || "23:00")}"
+                    step="${escapeHtml(String(scheduleConstraints.stepSeconds || 300))}"
+                    value="${escapeHtml(checkout.scheduledTime || "")}"
+                  />
+                </label>
+              </div>
+            `
+            : ""
+        }
       </div>
 
       ${
@@ -5768,8 +7166,12 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
           : checkout.fulfillmentMode === "pickup"
             ? `
               <div class="cart-fulfillment-note is-pickup">
-                <strong>Retirada no local</strong>
-                <span>${getPickupEstimateText()}</span>
+                <strong>${checkout.timingMode === "scheduled" ? "Retirada agendada" : "Retirada no local"}</strong>
+                <span>${
+                  checkout.timingMode === "scheduled" && scheduledSummary
+                    ? `${scheduledSummary} Compareca dentro do horario de funcionamento.`
+                    : getPickupEstimateText()
+                }</span>
               </div>
             `
             : `
@@ -5778,6 +7180,18 @@ const renderCartCheckout = (node, checkout, cart, profile = loadAuthProfile()) =
               </div>
             `
       }
+
+      <div class="cart-checkout-group">
+        <label class="cart-cash-field">
+          <span>Observacoes do pedido</span>
+          <textarea
+            class="cart-notes-input"
+            name="cart_customer_notes"
+            rows="3"
+            placeholder="Ex.: sem cebolinha, retirar molho, interfone 12..."
+          >${escapeHtml(checkout.customerNotes || "")}</textarea>
+        </label>
+      </div>
 
       ${
         shouldShowCheckoutFeedback
@@ -5798,9 +7212,10 @@ const syncCartCheckoutUi = ({
   checkout = loadCartCheckout(),
   profile = loadAuthProfile(),
 } = {}) => {
-  const whatsappLink = document.querySelector("[data-cart-whatsapp]");
+  const submitButton = document.querySelector("[data-cart-submit]");
   const cartNoteNode = document.querySelector("[data-cart-note]");
   const checkoutFeedbackNode = document.querySelector("[data-cart-checkout-feedback]");
+  const orderFeedbackNode = document.querySelector("[data-cart-order-feedback]");
   const deliveryQuote = getLatestSavedDeliveryQuote(profile);
   const validation = getCartCheckoutValidation(cart, addons, checkout, profile, deliveryQuote);
 
@@ -5812,16 +7227,26 @@ const syncCartCheckoutUi = ({
     checkoutFeedbackNode.classList.toggle("is-warning", validation.tone === "warning");
   }
 
-  if (!whatsappLink) {
+  if (orderFeedbackNode) {
+    const notice = cartUiState.orderNotice;
+    orderFeedbackNode.hidden = !notice?.message;
+    orderFeedbackNode.textContent = notice?.message || "";
+    orderFeedbackNode.classList.toggle("is-success", notice?.tone === "success");
+    orderFeedbackNode.classList.toggle("is-error", notice?.tone === "error");
+  }
+
+  if (!submitButton) {
     return;
   }
 
-  whatsappLink.removeAttribute("data-base-href");
+  const actionLabel = checkout.timingMode === "scheduled" ? "Agendar pedido" : "Finalizar pedido";
+  const authLabel =
+    checkout.timingMode === "scheduled" ? "Entrar para agendar" : "Entrar para finalizar";
 
   if (cart.length === 0) {
-    whatsappLink.href = "#";
-    whatsappLink.textContent = "Finalizar pedido";
-    whatsappLink.classList.add("is-disabled");
+    submitButton.disabled = true;
+    submitButton.textContent = "Finalizar pedido";
+    submitButton.classList.add("is-disabled");
 
     if (cartNoteNode) {
       cartNoteNode.textContent =
@@ -5831,9 +7256,9 @@ const syncCartCheckoutUi = ({
   }
 
   if (!validation.isValid) {
-    whatsappLink.href = "#";
-    whatsappLink.textContent = "Finalizar pedido";
-    whatsappLink.classList.add("is-disabled");
+    submitButton.disabled = false;
+    submitButton.textContent = actionLabel;
+    submitButton.classList.add("is-disabled");
 
     if (cartNoteNode) {
       cartNoteNode.textContent =
@@ -5842,23 +7267,42 @@ const syncCartCheckoutUi = ({
     return;
   }
 
-  whatsappLink.href = formatWhatsappMessage(cart, addons, checkout);
-  whatsappLink.textContent = profile ? "Finalizar pedido" : "Entrar para finalizar";
-  whatsappLink.classList.remove("is-disabled");
+  submitButton.disabled = cartUiState.orderSubmitting;
+  submitButton.textContent = cartUiState.orderSubmitting
+    ? "Enviando pedido..."
+    : profile
+      ? actionLabel
+      : authLabel;
+  submitButton.classList.toggle("is-disabled", cartUiState.orderSubmitting);
+  submitButton.setAttribute("aria-busy", String(cartUiState.orderSubmitting));
 
   if (cartNoteNode) {
     cartNoteNode.textContent = profile
-      ? checkout.fulfillmentMode === "delivery"
-        ? deliveryQuote
-          ? `${
-              isManualDeliveryQuote(deliveryQuote)
-                ? "Entrega salva em modo provisorio"
-                : "Entrega vinculada"
-            }: ${getDeliveryQuoteSummaryText(
-              deliveryQuote
-            )}. Os detalhes podem ser atualizados na aba Entrega.`
-          : "Abra a aba Entrega para calcular e salvar os dados desta conta antes de finalizar."
-        : getPickupEstimateText()
+      ? checkout.timingMode === "scheduled"
+        ? checkout.fulfillmentMode === "delivery"
+          ? deliveryQuote
+            ? `${getCartScheduledOrderSummary(checkout)} ${
+                isManualDeliveryQuote(deliveryQuote)
+                  ? "Entrega salva em modo provisorio"
+                  : "Entrega pronta"
+              }: ${getDeliveryQuoteSummaryText(
+                deliveryQuote
+              )}. O pedido segue direto para o gestor administrativo.`
+            : `${getCartScheduledOrderSummary(
+                checkout
+              )} Abra a aba Entrega para calcular e salvar os dados desta conta.`
+          : `${getCartScheduledOrderSummary(checkout)} Retirada pronta para envio direto ao gestor.`
+        : checkout.fulfillmentMode === "delivery"
+          ? deliveryQuote
+            ? `${
+                isManualDeliveryQuote(deliveryQuote)
+                  ? "Entrega salva em modo provisorio"
+                  : "Entrega pronta"
+              }: ${getDeliveryQuoteSummaryText(
+                deliveryQuote
+              )}. O pedido sera enviado direto para o gestor.`
+            : "Abra a aba Entrega para calcular e salvar os dados desta conta antes de finalizar."
+          : `${getPickupEstimateText()} O pedido sera enviado direto para o gestor.`
       : `${validation.message} Entre para enviar o pedido com seus dados.`;
   }
 };
@@ -5886,7 +7330,7 @@ const renderCart = () => {
   });
 
   renderCartAddons(cartAddonsPanelNode, addons);
-  renderCartCheckout(cartCheckoutNode, checkout, cart, profile);
+  renderCartCheckout(cartCheckoutNode, checkout, cart, addons, profile);
 
   if (cartAddonsTotalNode) {
     cartAddonsTotalNode.textContent = formatPrice(addonsTotalAmount);
@@ -5945,17 +7389,12 @@ const renderCart = () => {
 
   syncCartCheckoutUi({ cart, addons, checkout, profile });
   syncCatalogSelections();
-  syncCartCheckoutDock({
-    cart,
-    addons,
-    checkout,
-    validation: getCartCheckoutValidation(cart, addons, checkout, profile),
-  });
   schedulePortugueseUiRefresh();
 };
 
 const openCart = () => {
   closeMobileNavigation();
+  closeMobileCatalogSheet();
   document.body.classList.add("cart-open");
 };
 
@@ -5964,6 +7403,7 @@ const closeCart = () => {
 };
 
 const addItemToCart = (item) => {
+  setCartOrderNotice("");
   const cart = loadCart();
   const existingItem = cart.find((cartItem) => cartItem.id === item.id);
 
@@ -5978,6 +7418,7 @@ const addItemToCart = (item) => {
 };
 
 const changeCartQuantity = (id, delta) => {
+  setCartOrderNotice("");
   const cart = loadCart()
     .map((item) =>
       item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
@@ -5994,6 +7435,7 @@ const changeCartQuantity = (id, delta) => {
 };
 
 const changeCartAddonQuantity = (id, delta) => {
+  setCartOrderNotice("");
   const addons = loadCartAddons().map((addon) =>
     addon.id === id
       ? { ...addon, quantity: Math.max(0, addon.quantity + delta) }
@@ -6005,12 +7447,13 @@ const changeCartAddonQuantity = (id, delta) => {
 };
 
 const clearCart = () => {
+  setCartOrderNotice("");
   saveCart([]);
   resetCartAddons();
   renderCart();
 };
 
-const resetCartAfterCheckout = () => {
+const resetCartAfterCheckout = ({ keepOpen = false } = {}) => {
   saveCart([]);
   saveCartAddons(
     CART_REQUIRED_ADDONS.map((addon) => ({
@@ -6021,7 +7464,10 @@ const resetCartAfterCheckout = () => {
   saveCartCheckout({});
   setCartCheckoutExpanded(false);
   renderCart();
-  closeCart();
+
+  if (!keepOpen) {
+    closeCart();
+  }
 };
 
 const getCartTotalAmount = (cart, addons = loadCartAddons()) => {
@@ -6043,27 +7489,73 @@ const saveOrderHistory = (orders) => {
   saveStoredCollection(ORDER_HISTORY_STORAGE_KEY, orders.slice(0, 50));
 };
 
-const maybeRecordOrderFromCart = () => {
-  const profile = loadAuthProfile();
-  const cart = loadCart();
-  const addons = loadCartAddons();
-  const checkout = loadCartCheckout();
-  const deliveryQuote = getLatestSavedDeliveryQuote(profile);
-  const validation = getCartCheckoutValidation(cart, addons, checkout, profile, deliveryQuote);
-  const cashDetails = getCartCashChangeDetails({
-    cart,
-    addons,
-    checkout,
-    profile,
-    deliveryQuote,
-  });
+const setCartOrderNotice = (message = "", tone = "success") => {
+  cartUiState.orderNotice = message
+    ? {
+        message,
+        tone,
+      }
+    : null;
+};
 
-  if (!profile || cart.length === 0 || !validation.isValid) {
+const getSelectedCartAddonPayload = (addons = loadCartAddons()) =>
+  getSelectedCartAddons(addons).map((addon) => ({
+    id: addon.id,
+    name: addon.name,
+    quantity: addon.quantity,
+    unitPrice: addon.unitPrice,
+    freeUnits: addon.freeUnits,
+    chargedQuantity: getCartAddonChargeQuantity(addon),
+    totalPrice: getCartAddonTotal(addon),
+  }));
+
+const buildCartOrderSubmissionPayload = ({
+  cart = loadCart(),
+  addons = loadCartAddons(),
+  checkout = loadCartCheckout(),
+  profile = loadAuthProfile(),
+} = {}) => {
+  const deliveryQuote = getLatestSavedDeliveryQuote(profile);
+
+  return {
+    profile,
+    items: cart.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    addons: getSelectedCartAddonPayload(addons),
+    checkout: {
+      ...checkout,
+      customerNotes: checkout.customerNotes || "",
+    },
+    deliveryQuote: deliveryQuote
+      ? {
+          ...deliveryQuote,
+          reference: deliveryQuote.reference || "",
+          neighborhood: deliveryQuote.neighborhood || "",
+          city: deliveryQuote.city || "",
+          state: deliveryQuote.state || "",
+        }
+      : null,
+  };
+};
+
+const recordSubmittedOrderLocally = ({
+  profile = loadAuthProfile(),
+  cart = loadCart(),
+  addons = loadCartAddons(),
+  checkout = loadCartCheckout(),
+  apiOrder = null,
+} = {}) => {
+  if (!profile || cart.length === 0 || !apiOrder?.publicId) {
     return false;
   }
 
+  const deliveryQuote = getLatestSavedDeliveryQuote(profile);
   const profileKey = getProfileStorageKey(profile);
-  const now = new Date().toISOString();
   const compactItems = cart.map((item) => ({
     id: item.id,
     name: item.name,
@@ -6072,51 +7564,36 @@ const maybeRecordOrderFromCart = () => {
     price: typeof item.price === "number" ? item.price : null,
   }));
   const compactAddons = getCompactCartAddons(addons);
-  const signature = JSON.stringify({
-    items: compactItems.map((item) => [item.id, item.quantity, item.price ?? "consultar"]),
-    addons: compactAddons.map((addon) => [addon.id, addon.quantity, addon.price]),
-    paymentMethod: checkout.paymentMethod || "",
-    fulfillmentMode: checkout.fulfillmentMode || "",
-    deliveryAddress:
-      checkout.fulfillmentMode === "delivery"
-        ? normalizeCartDeliveryAddress(
-            deliveryQuote?.geocodedAddress || deliveryQuote?.destinationLabel || ""
-          )
-        : "",
-    deliveryFee: checkout.fulfillmentMode === "delivery" ? Number(deliveryQuote?.fee || 0) : 0,
-    deliveryDistance:
-      checkout.fulfillmentMode === "delivery" ? deliveryQuote?.distanceText || "" : "",
-    cashChangeRequired: checkout.paymentMethod === "dinheiro" ? checkout.cashChangeRequired : "",
-    cashAmountProvided:
-      checkout.paymentMethod === "dinheiro" ? checkout.cashAmountProvided || "" : "",
-    cashChangeAmount:
-      checkout.paymentMethod === "dinheiro" && typeof cashDetails.changeAmount === "number"
-        ? cashDetails.changeAmount
-        : null,
-  });
   const orders = loadOrderHistory();
-  const duplicateOrder = orders.find((entry) => {
-    if (entry.profileKey !== profileKey || entry.signature !== signature) {
-      return false;
-    }
-
-    return Date.now() - new Date(entry.createdAt).getTime() < 120000;
-  });
+  const duplicateOrder = orders.find((entry) => entry.publicId === apiOrder.publicId);
 
   if (duplicateOrder) {
-    return false;
+    return true;
   }
 
   orders.unshift({
-    id: `order_${Date.now()}`,
+    id: apiOrder.publicId,
+    publicId: apiOrder.publicId,
     profileKey,
     profileName: profile.name,
-    itemCount: getCartItemCount(cart),
-    totalAmount: getCartTotalAmount(cart, addons),
-    createdAt: now,
+    itemCount: Number(apiOrder.itemCount || getCartItemCount(cart)),
+    totalAmount: Number(
+      apiOrder.totalAmount ||
+        getCartGrandTotalAmount(cart, addons, checkout, profile, deliveryQuote) ||
+        0
+    ),
+    createdAt: apiOrder.createdAt || new Date().toISOString(),
+    status: apiOrder.status || "Novo",
     items: [...compactItems, ...compactAddons],
     paymentMethod: checkout.paymentMethod || "",
     fulfillmentMode: checkout.fulfillmentMode || "",
+    timingMode: checkout.timingMode || "",
+    scheduledDate: checkout.timingMode === "scheduled" ? checkout.scheduledDate || "" : "",
+    scheduledTime: checkout.timingMode === "scheduled" ? checkout.scheduledTime || "" : "",
+    scheduledLabel:
+      checkout.timingMode === "scheduled"
+        ? formatStoreScheduleLabel(checkout.scheduledDate, checkout.scheduledTime)
+        : "",
     deliveryAddress:
       checkout.fulfillmentMode === "delivery"
         ? normalizeCartDeliveryAddress(
@@ -6136,16 +7613,90 @@ const maybeRecordOrderFromCart = () => {
     cashChangeRequired: checkout.paymentMethod === "dinheiro" ? checkout.cashChangeRequired : "",
     cashAmountProvided:
       checkout.paymentMethod === "dinheiro" ? checkout.cashAmountProvided || "" : "",
-    cashChangeAmount:
-      checkout.paymentMethod === "dinheiro" && typeof cashDetails.changeAmount === "number"
-        ? cashDetails.changeAmount
-        : null,
-    signature,
+    customerNotes: checkout.customerNotes || "",
+    deliveryReference:
+      checkout.fulfillmentMode === "delivery" ? deliveryQuote?.reference || "" : "",
   });
 
   saveOrderHistory(orders);
   renderOrderHistoryPage();
   return true;
+};
+
+const submitCartOrder = async () => {
+  const profile = loadAuthProfile();
+  const cart = loadCart();
+  const addons = loadCartAddons();
+  const checkout = loadCartCheckout();
+  const deliveryQuote = getLatestSavedDeliveryQuote(profile);
+  const validation = getCartCheckoutValidation(cart, addons, checkout, profile, deliveryQuote);
+
+  if (cartUiState.orderSubmitting) {
+    return;
+  }
+
+  if (!profile) {
+    openAuth("entry");
+    return;
+  }
+
+  if (!validation.isValid) {
+    openCartCheckoutPanel();
+    return;
+  }
+
+  cartUiState.orderSubmitting = true;
+  setCartOrderNotice("");
+  renderCart();
+
+  try {
+    const customerClientToken = ensureCustomerClientToken();
+    const response = await postJsonWithTimeout(
+      ORDER_CREATE_ENDPOINT,
+      buildCartOrderSubmissionPayload({
+        cart,
+        addons,
+        checkout,
+        profile,
+      }),
+      ORDER_CREATE_TIMEOUT_MS,
+      {
+        headers: {
+          "x-tokyo-customer-client-token": customerClientToken,
+          "x-tokyo-customer-key": buildCustomerSessionKey(profile),
+        },
+      }
+    );
+
+    recordSubmittedOrderLocally({
+      profile,
+      cart,
+      addons,
+      checkout,
+      apiOrder: response.order,
+    });
+
+    resetCartAfterCheckout({
+      keepOpen: true,
+    });
+
+    setCartOrderNotice(
+      response.created
+        ? `Pedido ${response.order.publicId} enviado para o gestor.`
+        : `Pedido ${response.order.publicId} ja estava registrado e segue em processamento.`,
+      "success"
+    );
+    await refreshCustomerTrackingState({ renderPage: true });
+  } catch (error) {
+    setCartOrderNotice(
+      error?.message || "Nao foi possivel enviar o pedido agora. Tente novamente em instantes.",
+      "error"
+    );
+    openCart();
+  } finally {
+    cartUiState.orderSubmitting = false;
+    renderCart();
+  }
 };
 
 const getRecentOrdersForProfile = (profile) => {
@@ -6203,7 +7754,7 @@ const renderOrderHistoryPage = () => {
     historyRoot.innerHTML = `
       <div class="empty-panel">
         <strong>Nenhum pedido salvo ainda.</strong>
-        <span>Quando voce enviar a sacola pelo WhatsApp, o pedido ficara registrado aqui para consulta.</span>
+        <span>Quando voce finalizar um pedido no site, ele ficara registrado aqui para consulta.</span>
       </div>
     `;
     schedulePortugueseUiRefresh();
@@ -6234,12 +7785,23 @@ const renderOrderHistoryPage = () => {
                     : ""
                 }
                 ${
+                  order.timingMode
+                    ? `<span>${escapeHtml(getCartOrderTimingLabel(order.timingMode))}</span>`
+                    : ""
+                }
+                ${
                   order.paymentMethod
                     ? `<span>Pagamento: ${escapeHtml(getCartPaymentMethodLabel(order.paymentMethod))}</span>`
                     : ""
                 }
                 <span>Janela: 30 dias</span>
               </div>
+
+              ${
+                order.timingMode === "scheduled" && order.scheduledLabel
+                  ? `<p class="history-order-note">Agendado: ${escapeHtml(order.scheduledLabel)}</p>`
+                  : ""
+              }
 
               ${
                 order.fulfillmentMode === "delivery" && order.deliveryAddress
@@ -6361,6 +7923,10 @@ const buildDeliveryEstimateResult = ({
   streetLabel,
   numericHouseNumber,
   complementLabel,
+  referenceLabel = "",
+  neighborhoodLabel = "",
+  cityLabel = "",
+  stateLabel = "",
   destinationLabel,
   geocodedAddress,
   distanceKmRaw,
@@ -6398,6 +7964,10 @@ const buildDeliveryEstimateResult = ({
     street: streetLabel,
     houseNumber: numericHouseNumber,
     complement: complementLabel,
+    reference: referenceLabel,
+    neighborhood: neighborhoodLabel,
+    city: cityLabel,
+    state: stateLabel,
     destinationLabel,
     routeBand: pricingRule.bandLabel,
     distanceKm,
@@ -6420,6 +7990,10 @@ const buildManualDeliveryEstimateResult = ({
   streetLabel,
   numericHouseNumber,
   complementLabel,
+  referenceLabel = "",
+  neighborhoodLabel = "",
+  cityLabel = "",
+  stateLabel = "",
   destinationLabel,
   destinationAddress,
 }) => ({
@@ -6427,6 +8001,10 @@ const buildManualDeliveryEstimateResult = ({
   street: streetLabel,
   houseNumber: numericHouseNumber,
   complement: complementLabel,
+  reference: referenceLabel,
+  neighborhood: neighborhoodLabel,
+  city: cityLabel,
+  state: stateLabel,
   destinationLabel,
   routeBand: DELIVERY_MANUAL_ROUTE_BAND,
   distanceKm: 0,
@@ -6524,6 +8102,7 @@ const calculateDeliveryEstimate = async ({
   cep,
   houseNumber,
   complement = "",
+  reference = "",
   neighborhood = "",
   city = "",
   state = "",
@@ -6532,6 +8111,10 @@ const calculateDeliveryEstimate = async ({
   const streetLabel = String(street || "").trim();
   const numericHouseNumber = String(houseNumber || "").replace(/\D/g, "");
   const complementLabel = String(complement || "").trim();
+  const referenceLabel = String(reference || "").trim();
+  const neighborhoodLabel = String(neighborhood || "").trim();
+  const cityLabel = String(city || "").trim();
+  const stateLabel = String(state || "").trim();
   const destinationLabel = buildDeliveryDestinationLabel(
     streetLabel,
     numericHouseNumber,
@@ -6592,6 +8175,10 @@ const calculateDeliveryEstimate = async ({
       streetLabel,
       numericHouseNumber,
       complementLabel,
+      referenceLabel,
+      neighborhoodLabel,
+      cityLabel,
+      stateLabel,
       destinationLabel,
       geocodedAddress: customerGeocode.formattedAddress,
       distanceKmRaw,
@@ -6682,6 +8269,7 @@ const submitDeliveryForm = async (form) => {
   const cep = normalizeCep(formData.get("delivery_cep"));
   const houseNumber = String(formData.get("delivery_number") || "").replace(/\D/g, "");
   const complement = String(formData.get("delivery_complement") || "").trim();
+  const reference = String(formData.get("delivery_reference") || "").trim();
   const neighborhood = String(formData.get("delivery_neighborhood") || "").trim();
   const city = String(formData.get("delivery_city") || "").trim();
   const state = String(formData.get("delivery_state") || "").trim();
@@ -6717,6 +8305,7 @@ const submitDeliveryForm = async (form) => {
       cep,
       houseNumber,
       complement,
+      reference,
       neighborhood,
       city,
       state,
@@ -6735,6 +8324,10 @@ const submitDeliveryForm = async (form) => {
       streetLabel: street,
       numericHouseNumber: houseNumber,
       complementLabel: complement,
+      referenceLabel: reference,
+      neighborhoodLabel: neighborhood,
+      cityLabel: city,
+      stateLabel: state,
       destinationLabel: buildDeliveryDestinationLabel(street, houseNumber, cep, complement),
       destinationAddress: buildDeliveryDestinationAddress(
         street,
@@ -6950,6 +8543,8 @@ const flashAddedState = (button) => {
 
 const syncCatalogSelections = () => {
   const quantityById = new Map(loadCart().map((item) => [item.id, item.quantity]));
+  const hasItemsByGroup = (itemIds = []) =>
+    itemIds.some((itemId) => (quantityById.get(itemId) || 0) > 0);
 
   document.querySelectorAll("[data-item-chip]").forEach((chip) => {
     const quantity = quantityById.get(chip.dataset.itemId) || 0;
@@ -6965,6 +8560,11 @@ const syncCatalogSelections = () => {
     if (quantityNode) {
       quantityNode.textContent = quantity > 0 ? String(quantity) : "";
     }
+  });
+
+  document.querySelectorAll("[data-mobile-catalog-group-card]").forEach((card) => {
+    const itemIds = (card.dataset.mobileCatalogGroupItems || "").split(",").filter(Boolean);
+    card.classList.toggle("is-in-cart", hasItemsByGroup(itemIds));
   });
 
   syncCombinadosCartSelections(quantityById);
@@ -7002,6 +8602,10 @@ const renderCatalog = () => {
 
 catalogRoot.innerHTML = orderedSections
     .map((section) => {
+      if (isCatalogMobileViewport()) {
+        return renderMobileCatalogSection(section);
+      }
+
       if (section.id === "combinados") {
         return renderCombinadosSection(section);
       }
@@ -7147,8 +8751,13 @@ const syncCatalogResponsiveLayout = () => {
   }
 
   if (getCatalogViewportMode() !== lastCatalogViewportMode) {
+    closeMobileCatalogSheet();
     renderCatalog();
     return;
+  }
+
+  if (!isCatalogMobileViewport()) {
+    closeMobileCatalogSheet();
   }
 
   if (isCatalogMobileViewport()) {
@@ -7198,7 +8807,8 @@ const handleDocumentInput = (event) => {
   if (
     event.target.name === "cart_payment_method" ||
     event.target.name === "cart_fulfillment_mode" ||
-    event.target.name === "cart_cash_change_required"
+    event.target.name === "cart_cash_change_required" ||
+    event.target.name === "cart_timing_mode"
   ) {
     const checkout = loadCartCheckout();
     const nextCheckout = {
@@ -7213,9 +8823,43 @@ const handleDocumentInput = (event) => {
         event.target.name === "cart_cash_change_required"
           ? event.target.value
           : checkout.cashChangeRequired,
+      timingMode:
+        event.target.name === "cart_timing_mode" ? event.target.value : checkout.timingMode,
     };
 
+    setCartOrderNotice("");
     saveCartCheckout(nextCheckout);
+    renderCart();
+    return;
+  }
+
+  if (
+    event.target.name === "cart_scheduled_date" ||
+    event.target.name === "cart_scheduled_time"
+  ) {
+    const checkout = loadCartCheckout();
+
+    setCartOrderNotice("");
+    saveCartCheckout({
+      ...checkout,
+      timingMode: "scheduled",
+      scheduledDate:
+        event.target.name === "cart_scheduled_date" ? event.target.value : checkout.scheduledDate,
+      scheduledTime:
+        event.target.name === "cart_scheduled_time" ? event.target.value : checkout.scheduledTime,
+    });
+    renderCart();
+    return;
+  }
+
+  if (event.target.name === "cart_customer_notes") {
+    const checkout = loadCartCheckout();
+
+    setCartOrderNotice("");
+    saveCartCheckout({
+      ...checkout,
+      customerNotes: event.target.value,
+    });
     renderCart();
     return;
   }
@@ -7233,9 +8877,29 @@ const handleDocumentFocusOut = (event) => {
   if (event.target.name === "cart_cash_amount") {
     const checkout = loadCartCheckout();
 
+    setCartOrderNotice("");
     saveCartCheckout({
       ...checkout,
       cashAmountProvided: event.target.value,
+    });
+    renderCart();
+    return;
+  }
+
+  if (
+    event.target.name === "cart_scheduled_date" ||
+    event.target.name === "cart_scheduled_time"
+  ) {
+    const checkout = loadCartCheckout();
+
+    setCartOrderNotice("");
+    saveCartCheckout({
+      ...checkout,
+      timingMode: "scheduled",
+      scheduledDate:
+        event.target.name === "cart_scheduled_date" ? event.target.value : checkout.scheduledDate,
+      scheduledTime:
+        event.target.name === "cart_scheduled_time" ? event.target.value : checkout.scheduledTime,
     });
     renderCart();
     return;
@@ -7319,7 +8983,7 @@ const handleDocumentSubmit = async (event) => {
     ...serializeDraft(formData),
   };
 
-  confirmPhoneVerification(code);
+  await confirmPhoneVerification(code);
 };
 
 const handleDocumentClick = (event) => {
@@ -7413,7 +9077,13 @@ const handleDocumentClick = (event) => {
 
   const authLogoutButton = event.target.closest("[data-auth-logout]");
   if (authLogoutButton) {
+    void postJsonWithTimeout(CUSTOMER_LOGOUT_ENDPOINT, {}, 8000).catch(() => {});
     clearAuthProfile();
+    clearCustomerClientToken();
+    customerTrackingState.loading = false;
+    customerTrackingState.loaded = true;
+    customerTrackingState.authenticated = false;
+    customerTrackingState.activeOrder = null;
     authState.view = "entry";
     authState.socialProvider = null;
     authState.socialStatus = "idle";
@@ -7427,8 +9097,42 @@ const handleDocumentClick = (event) => {
     renderCart();
     renderDeliveryHistory();
     renderOrderHistoryPage();
+    renderTrackingPage();
     renderReviewPage();
     prefillProfileForms();
+    return;
+  }
+
+  const mobileCatalogSheetClose = event.target.closest("[data-mobile-catalog-sheet-close]");
+  if (mobileCatalogSheetClose) {
+    closeMobileCatalogSheet();
+    return;
+  }
+
+  const mobileCatalogSectionButton = event.target.closest("[data-mobile-catalog-section-open]");
+  if (mobileCatalogSectionButton) {
+    openMobileCatalogSheet(mobileCatalogSectionButton.dataset.mobileCatalogSectionOpen);
+    return;
+  }
+
+  const mobileCatalogGroupButton = event.target.closest("[data-mobile-catalog-group-open]");
+  if (mobileCatalogGroupButton) {
+    openMobileCatalogSheet(
+      mobileCatalogGroupButton.dataset.mobileCatalogGroupOpen,
+      mobileCatalogGroupButton.dataset.mobileCatalogGroupId || ""
+    );
+    return;
+  }
+
+  const mobileCatalogFilterButton = event.target.closest("[data-mobile-catalog-sheet-filter]");
+  if (mobileCatalogFilterButton) {
+    setMobileCatalogSheetGroup(mobileCatalogFilterButton.dataset.mobileCatalogSheetFilter || "");
+    return;
+  }
+
+  const cartSubmitButton = event.target.closest("[data-cart-submit]");
+  if (cartSubmitButton) {
+    void submitCartOrder();
     return;
   }
 
@@ -7436,17 +9140,11 @@ const handleDocumentClick = (event) => {
   if (whatsappLink) {
     event.preventDefault();
     const profile = loadAuthProfile();
-    const isCartWhatsappIntent = whatsappLink.matches("[data-cart-whatsapp]");
-
-    authState.pendingIntent = isCartWhatsappIntent ? "cart-whatsapp" : "";
+    authState.pendingIntent = "";
 
     if (!profile) {
       openAuth("entry", whatsappLink.href);
       return;
-    }
-
-    if (isCartWhatsappIntent) {
-      maybeRecordOrderFromCart();
     }
 
     const baseHref = whatsappLink.dataset.baseHref || whatsappLink.href;
@@ -7454,10 +9152,6 @@ const handleDocumentClick = (event) => {
 
     whatsappLink.dataset.baseHref = baseHref;
     authState.pendingIntent = "";
-
-    if (isCartWhatsappIntent) {
-      resetCartAfterCheckout();
-    }
 
     if (whatsappLink.target === "_blank") {
       const popup = window.open(preparedHref, "_blank", "noopener");
@@ -7589,13 +9283,6 @@ const handleDocumentClick = (event) => {
     );
     return;
   }
-
-  const disabledWhatsapp = event.target.closest("[data-cart-whatsapp].is-disabled");
-  if (disabledWhatsapp) {
-    event.preventDefault();
-    openCartCheckoutPanel();
-    return;
-  }
 };
 
 document.addEventListener("click", handleDocumentClick);
@@ -7614,14 +9301,17 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeMobileNavigation();
     closeAuth();
+    closeMobileCatalogSheet();
     closeCart();
   }
 });
 
 renderCatalog();
+createMobileCatalogSheetShell();
 createCartShell();
 createAuthShell();
 createSiteFooter();
+refreshStoreStatusUi({ rerenderCartUi: false });
 setupMobileNavigation();
 updateAuthTriggers();
 renderAuthPanel();
@@ -7630,12 +9320,20 @@ setActiveNavigation();
 initComboHeroImages();
 renderDeliveryHistory();
 renderOrderHistoryPage();
+renderTrackingPage();
+void refreshCustomerTrackingState({ renderPage: true });
 renderReviewPage();
 prefillProfileForms();
 setupReveal();
 updateHeaderState();
 refreshPortugueseUi(document.body);
 setupWhatsappBubble();
+startStoreStatusRefresh();
+window.setInterval(() => {
+  void refreshCustomerTrackingState({
+    renderPage: Boolean(document.querySelector("[data-tracking-root]")),
+  });
+}, CUSTOMER_TRACKING_REFRESH_INTERVAL_MS);
 window.addEventListener("scroll", updateHeaderState, { passive: true });
 window.addEventListener(
   "resize",

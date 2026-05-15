@@ -6,7 +6,7 @@
     <title>Entrega | Tokyo Sushi Delivery</title>
     <meta
       name="description"
-      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para confirmar no WhatsApp."
+      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para o gestor confirmar."
     />
     <meta name="robots" content="index,follow" />
     <meta name="theme-color" content="#080505" />
@@ -21,7 +21,7 @@
     <meta property="og:title" content="Entrega | Tokyo Sushi Delivery" />
     <meta
       property="og:description"
-      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para confirmar no WhatsApp."
+      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para o gestor confirmar."
     />
     <meta property="og:url" content="https://tokyosushidelivery.com.br/entrega.html" />
     <meta
@@ -33,13 +33,14 @@
     <meta name="twitter:title" content="Entrega | Tokyo Sushi Delivery" />
     <meta
       name="twitter:description"
-      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para confirmar no WhatsApp."
+      content="Veja a estimativa da entrega do Tokyo Sushi Delivery e, se o Google Maps estiver indisponivel, salve o endereco em modo provisorio para o gestor confirmar."
     />
     <meta
       name="twitter:image"
       content="https://tokyosushidelivery.com.br/site-images/combinado-imperial.png"
     />
-    <script src="./site-config.js"></script>
+    <script defer src="./site-config.js"></script>
+    <script defer src="./store-hours.js"></script>
 
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -71,7 +72,7 @@
         </nav>
 
         <div class="nav-actions">
-          <a class="button button-outline" href="./cardapio.html" data-auth-required>Pedir Agora</a>
+          <a class="button button-outline" href="./cardapio.html#catalogo" data-auth-required data-order-cta>Pedir Agora</a>
 
           <button
             class="account-launch"
@@ -121,7 +122,7 @@
             <p>
               Quando o Google Maps estiver disponivel, a taxa sai automatica.
               Se ele nao responder agora, o site salva seu endereco em modo
-              provisorio para o atendimento confirmar no WhatsApp.
+              provisorio para a operacao confirmar no gestor.
             </p>
 
             <div class="page-metrics">
@@ -197,6 +198,16 @@
                   type="text"
                   name="delivery_complement"
                   placeholder="Apto, bloco ou referência"
+                />
+              </label>
+
+              <label class="auth-field">
+                <span>Ponto de referência</span>
+                <input
+                  class="auth-input"
+                  type="text"
+                  name="delivery_reference"
+                  placeholder="Portaria, esquina, cor do portão ou outro apoio"
                 />
               </label>
 
@@ -331,13 +342,13 @@
       >
         <img
           class="support-avatar-image"
-          src="./site-images/support-avatar-duo.png"
+          src="./site-images/support-avatar-duo.webp"
           alt=""
         />
       </a>
     </div>
 
-    <script src="./maps-config.js"></script>
-    <script src="./script.js"></script>
+    <script defer src="./maps-config.js"></script>
+    <script defer src="./script.js"></script>
   </body>
 </html>
