@@ -17,6 +17,7 @@
     "validate:stage-3-ui-local": "node scripts/validate-stage-3-ui-local.mjs",
     "validate:admin-kanban-volume:local": "node scripts/validate-admin-kanban-volume.mjs",
     "validate:admin-local": "node scripts/validate-admin-local.mjs",
+    "validate:admin-platform-owner-local": "node scripts/validate-admin-platform-owner-local.mjs",
     "validate:permissions-local": "node scripts/validate-permissions-local.mjs",
     "validate:master-panel-local": "node scripts/validate-master-panel-local.mjs",
     "validate:platform-integration-local": "node scripts/validate-platform-integration-local.mjs",
