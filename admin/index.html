@@ -6,116 +6,286 @@
     <title>Gestor de Pedidos | Tokyo Sushi Delivery</title>
     <meta name="robots" content="noindex, nofollow" />
     <link rel="stylesheet" href="./admin.css" />
+    <script src="../site-config.js" defer></script>
     <script src="./admin.js" defer></script>
   </head>
-  <body class="admin-body" data-admin-page="dashboard">
-    <main class="admin-dashboard-shell">
-      <header class="admin-topbar">
-        <div>
-          <span class="admin-eyebrow">Gestor privado</span>
-          <h1>Gestor operacional de pedidos</h1>
-          <p data-admin-welcome>Carregando sessao administrativa...</p>
+  <body class="admin-body" data-admin-page="dashboard" data-admin-section="orders" data-admin-theme="dark">
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-brand">
+          <div class="admin-sidebar-brand-top">
+            <img
+              class="admin-brand-logo"
+              src="../assets/tokyo-logo-sidebar.png"
+              alt="Tokyo Sushi Delivery"
+            />
+          </div>
+          <div class="admin-brand-copy">
+            <span class="admin-eyebrow">Gestor privado</span>
+            <strong>Tokyo Sushi Delivery</strong>
+            <small>Gestor de pedidos</small>
+          </div>
         </div>
 
-        <div class="admin-topbar-actions">
-          <button class="admin-button admin-button-secondary" type="button" data-admin-refresh>
-            Atualizar
+        <nav class="admin-nav" data-admin-nav>
+          <button class="admin-nav-item is-active" type="button">
+            <span class="admin-nav-icon">P</span>
+            <div>
+              <strong>Pedidos</strong>
+              <small>Fila operacional</small>
+            </div>
           </button>
+        </nav>
+
+        <section class="admin-sidebar-card">
+          <span class="admin-chip">Operacao conectada</span>
+          <strong data-admin-storage-mode>Conectando...</strong>
+          <p data-admin-generated-at>Atualizando a leitura do painel.</p>
+        </section>
+
+        <section class="admin-sidebar-card admin-sidebar-card-soft">
+          <span class="admin-chip">Ritmo do turno</span>
+          <p data-admin-board-total>Aguardando pedidos ativos.</p>
+          <small data-admin-list-summary>Assim que a fila carregar, o resumo aparece aqui.</small>
+        </section>
+
+        <div class="admin-sidebar-actions">
+          <section class="admin-sidebar-operator" aria-label="Operador conectado">
+            <div class="admin-sidebar-operator-avatar" data-admin-user-initials>A</div>
+            <div class="admin-sidebar-operator-copy">
+              <strong data-admin-user-name>Administrador</strong>
+              <small><span class="admin-sidebar-operator-dot" aria-hidden="true"></span>Online</small>
+            </div>
+          </section>
           <button class="admin-button admin-button-ghost" type="button" data-admin-logout>
-            Sair
+            Sair do gestor
           </button>
         </div>
-      </header>
+      </aside>
 
-      <section class="admin-status-banner">
-        <div>
-          <strong>Operacao privada do gestor</strong>
-          <span>
-            O site publico continua separado. Esta area recebe, organiza e atualiza apenas os
-            pedidos da operacao interna.
-          </span>
-        </div>
-        <span class="admin-status-pill" data-admin-storage-mode>Conectando...</span>
-      </section>
+      <main class="admin-main-shell">
+        <header class="admin-main-topbar" data-admin-main-topbar>
+          <div class="admin-main-intro" data-admin-main-intro>
+            <span class="admin-eyebrow" data-admin-main-chip>Dashboard gerencial</span>
+            <h1 data-admin-main-title>Resumo do turno em tempo real</h1>
+            <p data-admin-welcome>Carregando sessao administrativa...</p>
+          </div>
 
-      <section class="admin-stats-grid" data-admin-stats>
-        <article class="admin-stat-card">
-          <span>Total</span>
-          <strong>--</strong>
-          <small>Pedidos registrados</small>
-        </article>
-        <article class="admin-stat-card">
-          <span>Novos</span>
-          <strong>--</strong>
-          <small>Aguardando primeira acao</small>
-        </article>
-        <article class="admin-stat-card">
-          <span>Ativos</span>
-          <strong>--</strong>
-          <small>Em andamento</small>
-        </article>
-        <article class="admin-stat-card">
-          <span>Agendados</span>
-          <strong>--</strong>
-          <small>Com horario solicitado</small>
-        </article>
-      </section>
+          <section class="admin-turn-panel-card" aria-label="Painel do turno" data-admin-turn-panel hidden>
+            <div class="admin-turn-panel-copy">
+              <span class="admin-turn-panel-label">Painel do turno</span>
+              <strong data-admin-turn-panel-primary>Turno ativo</strong>
+              <small data-admin-turn-panel-secondary>Sincronizando leitura do turno.</small>
+            </div>
+            <button
+              class="admin-top-icon-button admin-turn-panel-refresh"
+              type="button"
+              data-admin-refresh
+              aria-label="Atualizar painel do turno"
+              title="Atualizar painel do turno"
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </section>
 
-      <section class="admin-panel-card admin-toolbar-card">
-        <div class="admin-panel-head">
-          <span class="admin-chip">Operacao diaria</span>
-          <h2>Fila de pedidos por status</h2>
-          <p>Use os filtros para priorizar novos pedidos, producao, entrega e encerramentos.</p>
-        </div>
+          <section class="admin-search-card" aria-label="Painel auxiliar" data-admin-search-card>
+            <div class="admin-search-card-head">
+              <label class="admin-search-label" for="admin-order-search" data-admin-search-label>Buscar pedido</label>
+              <div class="admin-search-tools" aria-label="Acoes auxiliares">
+                <button
+                  class="admin-top-icon-button admin-top-alert-button"
+                  type="button"
+                  data-admin-notifications
+                  aria-label="Notificacoes"
+                  title="Notificacoes"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 4a4 4 0 0 0-4 4v1.1c0 .7-.2 1.38-.57 1.98L6 13.5V16h12v-2.5l-1.43-2.42A3.92 3.92 0 0 1 16 9.1V8a4 4 0 0 0-4-4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10.5 19a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                  <span class="admin-top-alert-badge" data-admin-alert-count hidden>0</span>
+                </button>
+                <button
+                  class="admin-top-icon-button"
+                  type="button"
+                  data-admin-theme-toggle
+                  aria-label="Alternar tema"
+                  aria-pressed="true"
+                  title="Alternar tema"
+                >
+                  <span class="admin-theme-toggle-icon is-sun" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.8" />
+                      <path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3 5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <span class="admin-theme-toggle-icon is-moon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path d="M19.2 14.8A7.8 7.8 0 0 1 9.2 4.8a8.2 8.2 0 1 0 10 10Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+                <button
+                  class="admin-top-icon-button"
+                  type="button"
+                  data-admin-refresh
+                  aria-label="Atualizar painel"
+                  title="Atualizar painel"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="admin-search-input-shell">
+              <span class="admin-search-input-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+                  <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+              </span>
+              <input
+                id="admin-order-search"
+                class="admin-input admin-search-input"
+                type="search"
+                placeholder="Buscar pedido, cliente, telefone..."
+                data-admin-search-input
+              />
+              <span class="admin-search-shortcut" aria-hidden="true">Ctrl + K</span>
+            </div>
+            <div class="admin-search-dashboard-summary" data-admin-search-dashboard-summary hidden>
+              <strong data-admin-search-dashboard-primary>Resumo do turno</strong>
+              <p data-admin-search-dashboard-secondary>Indicadores e leitura gerencial do turno atual.</p>
+            </div>
+            <small data-admin-search-summary>Buscando na operacao ativa e nos pedidos recentes.</small>
+          </section>
+        </header>
 
-        <div class="admin-filter-strip" data-admin-status-filters>
-          <button class="admin-filter-chip is-active" type="button">
-            <span>Todos</span>
+        <section class="admin-stats-grid" data-admin-stats>
+          <article class="admin-stat-card">
+            <span>Pedidos do dia</span>
             <strong>--</strong>
+            <small>Volume operacional</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Em preparo</span>
+            <strong>--</strong>
+            <small>Cozinha em execucao</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Em rota</span>
+            <strong>--</strong>
+            <small>Pedidos com motoboy</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Faturamento</span>
+            <strong>--</strong>
+            <small>Total do dia</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Valor bruto vendido</span>
+            <strong>--</strong>
+            <small>Receita valida do recorte</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Finalizados</span>
+            <strong>--</strong>
+            <small>Pedidos concluidos</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Cancelados</span>
+            <strong>--</strong>
+            <small>Perdas operacionais</small>
+          </article>
+          <article class="admin-stat-card">
+            <span>Ticket medio</span>
+            <strong>--</strong>
+            <small>Media por pedido valido</small>
+          </article>
+        </section>
+
+        <section class="admin-ops-ribbon" data-admin-ops-ribbon>
+          <article class="admin-ribbon-card">
+            <span class="admin-chip">Turno</span>
+            <strong>Operacao do delivery</strong>
+            <p>Carregando o panorama tatico do gestor.</p>
+          </article>
+        </section>
+
+        <section class="admin-workspace" data-admin-workspace>
+          <section class="admin-board-panel" data-admin-board-panel>
+            <div class="admin-module-shell" data-admin-module-content>
+              <div class="admin-empty-state">
+                <strong>Carregando modulo</strong>
+                <span>Assim que o painel sincronizar, a visao operacional aparece aqui.</span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="admin-detail-panel" data-admin-detail-panel>
+            <header class="admin-detail-head">
+              <span class="admin-chip">Detalhes do pedido</span>
+              <h2 data-admin-detail-title>Selecione um pedido</h2>
+              <p data-admin-detail-subtitle>
+                Abra um card do kanban para ver cliente, endereco, itens, pagamento e historico.
+              </p>
+            </header>
+
+            <div class="admin-order-detail" data-admin-order-detail>
+              <div class="admin-empty-state admin-empty-state-soft">
+                <strong>Nenhum pedido aberto</strong>
+                <span>Escolha um card para trabalhar no pedido e avancar o status.</span>
+              </div>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <div
+      class="admin-board-modal"
+      data-admin-board-modal
+      hidden
+      aria-hidden="true"
+    >
+      <button
+        class="admin-board-modal-backdrop"
+        type="button"
+        aria-label="Fechar modal de pedidos"
+        data-admin-board-modal-close
+      ></button>
+
+      <section
+        class="admin-board-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-board-modal-title"
+      >
+        <header class="admin-board-modal-head">
+          <div>
+            <span class="admin-chip" data-admin-board-modal-chip>Pedidos da coluna</span>
+            <h2 id="admin-board-modal-title" data-admin-board-modal-title>Todos os pedidos</h2>
+            <p data-admin-board-modal-subtitle>
+              Veja a lista completa desta etapa mantendo o kanban principal resumido.
+            </p>
+          </div>
+
+          <button
+            class="admin-board-modal-close"
+            type="button"
+            aria-label="Fechar modal"
+            data-admin-board-modal-close
+          >
+            Fechar
           </button>
-        </div>
+        </header>
 
-        <div class="admin-panel-meta">
-          <span data-admin-generated-at>Atualizando...</span>
-          <span data-admin-list-summary>Preparando a leitura operacional do painel.</span>
-        </div>
+        <div class="admin-board-modal-summary" data-admin-board-modal-summary></div>
+        <div class="admin-board-modal-list" data-admin-board-modal-list></div>
       </section>
-
-      <section class="admin-operations-grid">
-        <article class="admin-panel-card admin-panel-card-large admin-orders-panel">
-          <div class="admin-panel-head">
-            <span class="admin-chip">Entrada do site</span>
-            <h2>Pedidos recebidos</h2>
-            <p>
-              Lista operacional com destaque para pedidos novos e leitura rapida para a rotina.
-            </p>
-          </div>
-
-          <div class="admin-order-list" data-admin-order-list>
-            <div class="admin-empty-state">
-              <strong>Aguardando dados</strong>
-              <span>Assim que o painel carregar, os pedidos operacionais aparecem aqui.</span>
-            </div>
-          </div>
-        </article>
-
-        <aside class="admin-panel-card admin-detail-panel">
-          <div class="admin-panel-head">
-            <span class="admin-chip">Detalhes</span>
-            <h2 data-admin-detail-title>Selecione um pedido</h2>
-            <p data-admin-detail-subtitle>
-              Abra um pedido da lista para revisar itens, endereco, pagamento e status.
-            </p>
-          </div>
-
-          <div class="admin-order-detail" data-admin-order-detail>
-            <div class="admin-empty-state admin-empty-state-soft">
-              <strong>Nenhum pedido aberto</strong>
-              <span>Escolha um pedido na lista para trabalhar na operacao.</span>
-            </div>
-          </div>
-        </aside>
-      </section>
-    </main>
+    </div>
   </body>
 </html>

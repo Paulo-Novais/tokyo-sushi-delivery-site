@@ -1,7 +1,20 @@
-const WHATSAPP_NUMBER = "5516990507398";
-const CART_STORAGE_KEY = "tokyo_sushi_delivery_cart";
-const AUTH_PROFILE_KEY = "tokyo_sushi_profile";
-const AUTH_ACCOUNTS_KEY = "tokyo_sushi_accounts";
+const TOKYO_RUNTIME_CONFIG =
+  typeof window === "object" && window.TOKYO_SITE_CONFIG ? window.TOKYO_SITE_CONFIG : {};
+const TOKYO_APP_BRANDING = Object.freeze(TOKYO_RUNTIME_CONFIG.appBranding || {});
+const TOKYO_RESTAURANT_BRAND = Object.freeze(TOKYO_RUNTIME_CONFIG.restaurantBrand || {});
+const TOKYO_FEATURES = Object.freeze(TOKYO_RUNTIME_CONFIG.features || {});
+const TOKYO_ASSETS = Object.freeze(TOKYO_RUNTIME_CONFIG.assets || {});
+const TOKYO_IDENTIFIERS = Object.freeze(TOKYO_RUNTIME_CONFIG.identifiers || {});
+const TOKYO_STORAGE_KEYS = Object.freeze(TOKYO_IDENTIFIERS.storageKeys || {});
+const TOKYO_HEADER_NAMES = Object.freeze(TOKYO_IDENTIFIERS.headerNames || {});
+const TOKYO_GLOBAL_NAMES = Object.freeze(TOKYO_IDENTIFIERS.globalNames || {});
+const TOKYO_WHATSAPP_TEMPLATES = Object.freeze(TOKYO_RUNTIME_CONFIG.whatsappTemplates || {});
+const TOKYO_PUBLIC_TEXT = Object.freeze(TOKYO_RUNTIME_CONFIG.publicText || {});
+const TOKYO_SITE_APPEARANCE = Object.freeze(TOKYO_RUNTIME_CONFIG.siteAppearance || {});
+const FALLBACK_WHATSAPP_NUMBER = TOKYO_APP_BRANDING.defaultWhatsapp || "5516990507398";
+const CART_STORAGE_KEY = TOKYO_STORAGE_KEYS.cart || "tokyo_sushi_delivery_cart";
+const AUTH_PROFILE_KEY = TOKYO_STORAGE_KEYS.authProfile || "tokyo_sushi_profile";
+const AUTH_ACCOUNTS_KEY = TOKYO_STORAGE_KEYS.authAccounts || "tokyo_sushi_accounts";
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
 const CUSTOMER_AUTH_START_ENDPOINT = "/api/customer/auth/start";
 const CUSTOMER_AUTH_VERIFY_ENDPOINT = "/api/customer/auth/verify";
@@ -10,24 +23,39 @@ const ORDER_CREATE_ENDPOINT = "/api/orders/create";
 const ORDER_CREATE_TIMEOUT_MS = 15000;
 const CUSTOMER_ACTIVE_ORDER_ENDPOINT = "/api/customer/orders/active";
 const CUSTOMER_LOGOUT_ENDPOINT = "/api/customer/logout";
-const CUSTOMER_CLIENT_TOKEN_KEY = "tokyo_customer_client_token";
-const ORDER_HISTORY_STORAGE_KEY = "tokyo_sushi_order_history";
-const CART_ADDONS_STORAGE_KEY = "tokyo_sushi_delivery_cart_addons";
-const CART_CHECKOUT_STORAGE_KEY = "tokyo_sushi_cart_checkout";
-const DELIVERY_HISTORY_STORAGE_KEY = "tokyo_sushi_delivery_quotes";
-const REVIEW_STORAGE_KEY = "tokyo_sushi_site_reviews";
-const CAREER_STORAGE_KEY = "tokyo_sushi_career_forms";
-const CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY = "tokyo_sushi_catalog_collapsed_sections";
+const PUBLIC_CATALOG_STATE_ENDPOINT = "/api/catalog";
+const PUBLIC_REVIEWS_ENDPOINT = "/api/reviews";
+const PUBLIC_DELIVERY_SETTINGS_ENDPOINT = "/api/delivery-settings";
+const PUBLIC_RESTAURANT_SETTINGS_ENDPOINT = "/api/restaurant-settings";
+const PUBLIC_REVIEW_ROTATION_INTERVAL_MS = 6200;
+const PUBLIC_REVIEW_HOME_VISIBLE_COUNT = 2;
+const PUBLIC_REVIEW_SHORT_COMMENT_LENGTH = 118;
+const CUSTOMER_CLIENT_TOKEN_KEY =
+  TOKYO_STORAGE_KEYS.customerClientToken || "tokyo_customer_client_token";
+const ORDER_HISTORY_STORAGE_KEY = TOKYO_STORAGE_KEYS.orderHistory || "tokyo_sushi_order_history";
+const CART_ADDONS_STORAGE_KEY =
+  TOKYO_STORAGE_KEYS.cartAddons || "tokyo_sushi_delivery_cart_addons";
+const CART_CHECKOUT_STORAGE_KEY =
+  TOKYO_STORAGE_KEYS.cartCheckout || "tokyo_sushi_cart_checkout";
+const DELIVERY_HISTORY_STORAGE_KEY =
+  TOKYO_STORAGE_KEYS.deliveryHistory || "tokyo_sushi_delivery_quotes";
+const CAREER_STORAGE_KEY = TOKYO_STORAGE_KEYS.careerForms || "tokyo_sushi_career_forms";
+const CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY =
+  TOKYO_STORAGE_KEYS.catalogCollapsedSections || "tokyo_sushi_catalog_collapsed_sections";
+const CUSTOMER_CLIENT_TOKEN_HEADER =
+  TOKYO_HEADER_NAMES.customerClientToken || "x-tokyo-customer-client-token";
+const CUSTOMER_KEY_HEADER = TOKYO_HEADER_NAMES.customerKey || "x-tokyo-customer-key";
+const SOCIAL_EMAIL_DOMAIN = TOKYO_IDENTIFIERS.socialEmailDomain || "social.tokyo";
 const ORDER_HISTORY_WINDOW_DAYS = 30;
 const CUSTOMER_TRACKING_REFRESH_INTERVAL_MS = 25000;
 const CUSTOMER_TRACKING_PAGE_PATH = "./acompanhar.html";
-const CUSTOMER_TRACKING_PROGRESS_STATUSES = Object.freeze([
-  "Novo",
-  "Confirmado",
+const CUSTOMER_TRACKING_BASE_STATUSES = Object.freeze([
+  "Recebido",
+  "Aceito",
   "Em preparo",
-  "Saiu para entrega",
-  "Finalizado",
+  "Pronto",
 ]);
+const LEGACY_FINALIZED_STATUS = "Finalizado";
 const PICKUP_ESTIMATE_MINUTES = 25;
 const DELIVERY_PREPARATION_TIME_MINUTES = PICKUP_ESTIMATE_MINUTES;
 const DELIVERY_ROUTE_STRETCH_FACTOR = 1.22;
@@ -73,16 +101,99 @@ const CART_REQUIRED_ADDONS = Object.freeze([
     defaultQuantity: 0,
   },
 ]);
-const DELIVERY_STORE_ADDRESS = "Rua General Osório, 2165, Franca - SP, 14400-520, Brasil";
-const DELIVERY_STORE_LABEL = "R. General Osório, 2165 - CEP 14400-520";
+const DELIVERY_STORE_ADDRESS =
+  TOKYO_APP_BRANDING.defaultAddress?.full ||
+  "Rua General Osório, 2165, Franca - SP, 14400-520, Brasil";
+const DELIVERY_STORE_LABEL =
+  TOKYO_APP_BRANDING.defaultAddress?.label || "R. General Osório, 2165 - CEP 14400-520";
 const DELIVERY_STORE_COORDINATES = {
   lat: -20.536416983482,
   lng: -47.393922026918,
 };
-const DELIVERY_SERVICE_CITY_STATE = "Franca - SP";
+const normalizeStatusKey = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const resolveCanonicalOrderStatus = (status, fulfillmentMode = "") => {
+  const normalizedStatus = normalizeStatusKey(status);
+  const normalizedFulfillmentMode = String(fulfillmentMode || "").trim().toLowerCase();
+
+  if (!normalizedStatus) {
+    return "";
+  }
+
+  if (normalizedStatus === "novo" || normalizedStatus === "recebido") {
+    return "Recebido";
+  }
+
+  if (normalizedStatus === "confirmado" || normalizedStatus === "aceito") {
+    return "Aceito";
+  }
+
+  if (normalizedStatus === "em preparo") {
+    return "Em preparo";
+  }
+
+  if (normalizedStatus === "pronto") {
+    return "Pronto";
+  }
+
+  if (normalizedStatus === "saiu para entrega") {
+    return "Saiu para entrega";
+  }
+
+  if (normalizedStatus === normalizeStatusKey(LEGACY_FINALIZED_STATUS)) {
+    return normalizedFulfillmentMode === "pickup" ? "Retirada concluida" : "Entregue";
+  }
+
+  if (normalizedStatus === "entregue") {
+    return "Entregue";
+  }
+
+  if (normalizedStatus === "retirada concluida") {
+    return "Retirada concluida";
+  }
+
+  if (normalizedStatus === "cancelado") {
+    return "Cancelado";
+  }
+
+  return "";
+};
+
+const getTrackingProgressStatuses = (order) =>
+  order?.fulfillmentMode === "pickup"
+    ? [...CUSTOMER_TRACKING_BASE_STATUSES, "Retirada concluida"]
+    : [...CUSTOMER_TRACKING_BASE_STATUSES, "Saiu para entrega", "Entregue"];
+
+const normalizeTrackingOrder = (order) => {
+  if (!order || typeof order !== "object") {
+    return order;
+  }
+
+  const fulfillmentMode = String(order.fulfillmentMode || "").trim().toLowerCase();
+
+  return {
+    ...order,
+    fulfillmentMode,
+    status: resolveCanonicalOrderStatus(order.status, fulfillmentMode) || String(order.status || "").trim(),
+    statusHistory: Array.isArray(order.statusHistory)
+      ? order.statusHistory.map((entry) => ({
+          ...entry,
+          status: resolveCanonicalOrderStatus(entry?.status, fulfillmentMode) || String(entry?.status || "").trim(),
+        }))
+      : order.statusHistory,
+  };
+};
+const DELIVERY_SERVICE_CITY_STATE = TOKYO_APP_BRANDING.defaultAddress?.cityState || "Franca - SP";
 const GOOGLE_MAPS_LANGUAGE = "pt-BR";
 const GOOGLE_MAPS_REGION = "br";
-const GOOGLE_MAPS_API_KEY_STORAGE_KEY = "tokyo_google_maps_api_key";
+const GOOGLE_MAPS_API_KEY_STORAGE_KEY =
+  TOKYO_STORAGE_KEYS.googleMapsApiKey || "tokyo_google_maps_api_key";
 const GOOGLE_MAPS_LOADER_TIMEOUT_MS = 12000;
 const GOOGLE_MAPS_REQUEST_TIMEOUT_MS = 10000;
 const DELIVERY_CEP_LOOKUP_TIMEOUT_MS = 8000;
@@ -112,10 +223,196 @@ const DELIVERY_FEE_RULES = [
     description: "R$ 15,00 para entregas de ate 14,9 km.",
   },
 ];
+const DELIVERY_SETTINGS_DEFAULTS = Object.freeze({
+  distanceBands: DELIVERY_FEE_RULES.map((rule, index, rules) => ({
+    id: `legacy-band-${index + 1}`,
+    minKm: index === 0 ? 0 : rules[index - 1].maxDistanceKm,
+    maxKm: rule.maxDistanceKm,
+    label: rule.bandLabel,
+    customerFee: rule.fee,
+    courierFee: 0,
+    minimumOrder: 0,
+    isActive: true,
+  })),
+  deliveryTime: {
+    minMinutes: 40,
+    maxMinutes: 60,
+    message: "Entrega estimada entre 40 e 60 minutos",
+  },
+  serviceArea: {
+    maxRadiusKm: 14.9,
+    servedNeighborhoods: [],
+    blockedNeighborhoods: [],
+    outOfAreaMessage: "No momento nao entregamos nessa regiao.",
+  },
+  freeShipping: {
+    enabled: false,
+    minimumOrder: 120,
+    appliesToAllBands: true,
+    bandIds: [],
+  },
+  pickup: {
+    enabled: true,
+    estimateMinutes: PICKUP_ESTIMATE_MINUTES,
+    message: "Retirada disponivel em 25 minutos",
+  },
+  status: {
+    deliveriesEnabled: true,
+    pausedMessage: "Entregas pausadas temporariamente. Retirada no balcao disponivel.",
+  },
+  updatedAt: "",
+});
+const BUSINESS_SCHEDULE_DAY_KEYS = Object.freeze([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+]);
+const BUSINESS_SCHEDULE_DAY_LABELS = Object.freeze({
+  monday: "Segunda",
+  tuesday: "Terca",
+  wednesday: "Quarta",
+  thursday: "Quinta",
+  friday: "Sexta",
+  saturday: "Sabado",
+  sunday: "Domingo",
+});
+const BUSINESS_SCHEDULE_DAY_SHORT_LABELS = Object.freeze({
+  monday: "Seg",
+  tuesday: "Ter",
+  wednesday: "Qua",
+  thursday: "Qui",
+  friday: "Sex",
+  saturday: "Sab",
+  sunday: "Dom",
+});
+const createDefaultBusinessScheduleDays = () =>
+  BUSINESS_SCHEDULE_DAY_KEYS.reduce((days, dayKey) => {
+    days[dayKey] = {
+      isOpen: true,
+      openTime: "18:00",
+      closeTime: "23:00",
+      pauseStart: "",
+      pauseEnd: "",
+    };
+
+    return days;
+  }, {});
+const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
+  restaurantKey: "default",
+  restaurantName: TOKYO_RESTAURANT_BRAND.name || "Tokyo Sushi Delivery",
+  logoUrl:
+    TOKYO_RESTAURANT_BRAND.logo ||
+    TOKYO_ASSETS.publicLogo ||
+    "./site-images/tokyo-logo-premium-transparent.png",
+  bannerUrl:
+    TOKYO_RESTAURANT_BRAND.banner ||
+    TOKYO_ASSETS.publicBanner ||
+    "./site-images/combinado-imperial.png",
+  primaryColor: TOKYO_RESTAURANT_BRAND.primaryColor || "#e83637",
+  secondaryColor: TOKYO_RESTAURANT_BRAND.secondaryColor || "#f5c3d3",
+  accentColor: TOKYO_SITE_APPEARANCE.colors?.accent || "#f2b649",
+  gradientStart:
+    TOKYO_SITE_APPEARANCE.colors?.gradientStart ||
+    TOKYO_RESTAURANT_BRAND.primaryColor ||
+    "#e83637",
+  gradientEnd: TOKYO_SITE_APPEARANCE.colors?.gradientEnd || "#2b1214",
+  useGradient: TOKYO_SITE_APPEARANCE.colors?.useGradient !== false,
+  siteLayout: TOKYO_SITE_APPEARANCE.layout || "MODERN",
+  siteTheme: TOKYO_SITE_APPEARANCE.theme || "DARK",
+  slogan:
+    TOKYO_SITE_APPEARANCE.identity?.slogan ||
+    TOKYO_RESTAURANT_BRAND.slogan ||
+    TOKYO_APP_BRANDING.brandTagline ||
+    "Delivery Premium",
+  description:
+    TOKYO_SITE_APPEARANCE.identity?.description ||
+    TOKYO_RESTAURANT_BRAND.description ||
+    "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
+  instagram: TOKYO_SITE_APPEARANCE.social?.instagram || "",
+  facebook: TOKYO_SITE_APPEARANCE.social?.facebook || "",
+  tiktok: TOKYO_SITE_APPEARANCE.social?.tiktok || "",
+  site: TOKYO_SITE_APPEARANCE.social?.site || TOKYO_APP_BRANDING.companyWebsite || "",
+  seoTitle: TOKYO_SITE_APPEARANCE.seo?.title || TOKYO_RESTAURANT_BRAND.name || "Tokyo Sushi Delivery",
+  seoDescription:
+    TOKYO_SITE_APPEARANCE.seo?.description ||
+    "Tokyo Sushi Delivery com experiencia premium, cardapio sofisticado e pedidos direto pelo site.",
+  seoShareImage:
+    TOKYO_SITE_APPEARANCE.seo?.shareImage ||
+    TOKYO_ASSETS.socialImage ||
+    "/site-images/combinado-imperial.png",
+  seoKeywords: Array.isArray(TOKYO_SITE_APPEARANCE.seo?.keywords)
+    ? TOKYO_SITE_APPEARANCE.seo.keywords
+    : ["Tokyo Sushi", "sushi delivery", "delivery japones"],
+  seoOpenGraph: {
+    title: TOKYO_SITE_APPEARANCE.seo?.openGraph?.title || TOKYO_SITE_APPEARANCE.seo?.title || "",
+    description:
+      TOKYO_SITE_APPEARANCE.seo?.openGraph?.description ||
+      TOKYO_SITE_APPEARANCE.seo?.description ||
+      "",
+    image:
+      TOKYO_SITE_APPEARANCE.seo?.openGraph?.image ||
+      TOKYO_SITE_APPEARANCE.seo?.shareImage ||
+      TOKYO_ASSETS.socialImage ||
+      "/site-images/combinado-imperial.png",
+    type: TOKYO_SITE_APPEARANCE.seo?.openGraph?.type || "website",
+  },
+  platformFooter: {
+    showPlatformBranding: TOKYO_SITE_APPEARANCE.platformFooter?.showPlatformBranding !== false,
+    brandName: TOKYO_SITE_APPEARANCE.platformFooter?.brandName || "INovas Food",
+    headline: TOKYO_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INovas Food",
+    description:
+      TOKYO_SITE_APPEARANCE.platformFooter?.description ||
+      "Plataforma profissional para restaurantes",
+    url: TOKYO_SITE_APPEARANCE.platformFooter?.url || "https://www.inovasfood.com.br",
+    displayUrl: TOKYO_SITE_APPEARANCE.platformFooter?.displayUrl || "www.inovasfood.com.br",
+  },
+  whatsapp: FALLBACK_WHATSAPP_NUMBER,
+  address: DELIVERY_STORE_ADDRESS,
+  addressFields: {
+    postalCode: TOKYO_APP_BRANDING.defaultAddress?.postalCode || "14400-520",
+    street: TOKYO_APP_BRANDING.defaultAddress?.street || "Rua General Osorio",
+    number: TOKYO_APP_BRANDING.defaultAddress?.number || "2165",
+    complement: TOKYO_APP_BRANDING.defaultAddress?.complement || "",
+    neighborhood: TOKYO_APP_BRANDING.defaultAddress?.neighborhood || "",
+    city: TOKYO_APP_BRANDING.defaultAddress?.city || "Franca",
+    state: TOKYO_APP_BRANDING.defaultAddress?.state || "SP",
+  },
+  deliveryBase: {
+    latitude: null,
+    longitude: null,
+    maxDeliveryRadiusKm: 14.9,
+    fixedDeliveryFee: DELIVERY_FEE_RULES[0]?.fee || 9,
+    pricePerKm: 1,
+    minimumDeliveryOrder: 0,
+    pickupEnabled: true,
+    deliveryEnabled: true,
+  },
+  businessHours: "18:00 as 23:00",
+  businessSchedule: {
+    timeZone: "America/Sao_Paulo",
+    acceptOrdersOutsideHours: false,
+    closedMessage:
+      "Estamos fechados agora. Voce pode agendar seu pedido para o proximo horario de atendimento.",
+    peakPreparationExtraMinutes: 0,
+    specialDates: [],
+    days: createDefaultBusinessScheduleDays(),
+  },
+  hasStructuredBusinessSchedule: true,
+  defaultDeliveryFee: DELIVERY_FEE_RULES[0]?.fee || 9,
+  averagePreparationTimeMinutes: PICKUP_ESTIMATE_MINUTES,
+  presentationText:
+    "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
+  updatedAt: "",
+});
 const DELIVERY_MANUAL_FALLBACK_FEE = DELIVERY_FEE_RULES[0]?.fee || 9;
 const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
 const DELIVERY_MANUAL_TIME_TEXT = "Confirmar com a loja";
-const STORE_HOURS_API = window.TokyoStoreHours;
+const BUSINESS_HOURS_API = window[TOKYO_GLOBAL_NAMES.businessHoursApi || "TokyoBusinessHours"];
+const STORE_HOURS_API = window[TOKYO_GLOBAL_NAMES.storeHoursApi || "TokyoStoreHours"];
 const STORE_STATUS_REFRESH_INTERVAL_MS = 60000;
 const CART_ORDER_TIMING_OPTIONS = Object.freeze([
   { id: "immediate", label: "Pedido imediato" },
@@ -144,6 +441,35 @@ const customerTrackingState = {
   loaded: false,
   authenticated: false,
   activeOrder: null,
+};
+const reviewPageState = {
+  loading: false,
+  loaded: false,
+  error: "",
+  rotationIndex: 0,
+  rotationIntervalId: 0,
+  summary: {
+    displayAverage: 0,
+    displayAverageLabel: "Sem avaliacoes",
+    publicReviewCount: 0,
+    publicCountLabel: "0 avaliacoes publicadas",
+    recentCountLabel: "Baseado em 0 avaliacoes recentes",
+  },
+  reviews: [],
+};
+const deliverySettingsState = {
+  loading: false,
+  loaded: false,
+  error: "",
+  summary: null,
+  settings: null,
+};
+const restaurantSettingsState = {
+  loading: false,
+  loaded: false,
+  error: "",
+  summary: null,
+  settings: null,
 };
 const cartUiState = {
   checkoutExpanded: false,
@@ -1159,6 +1485,7 @@ const MENU_SECTION_DISPLAY_ORDER = Object.freeze([
   "combinados",
   "porcoes-sushis",
 ]);
+let menuSectionDisplayOrder = [...MENU_SECTION_DISPLAY_ORDER];
 
 const MENU_PRICE_DISCOUNT_RATE = 0.1;
 const TEMAKI_NO_RICE_EXTRA_PRICE = 12;
@@ -1250,6 +1577,349 @@ const MENU_ITEM_LOOKUP = new Map(
   MENU_SECTIONS.flatMap((section) => section.items).map((item) => [item.id, item])
 );
 
+const syncMenuItemLookup = () => {
+  MENU_ITEM_LOOKUP.clear();
+
+  MENU_SECTIONS.forEach((section) => {
+    (Array.isArray(section?.items) ? section.items : []).forEach((item) => {
+      const itemId = String(item?.id || "").trim();
+
+      if (itemId) {
+        MENU_ITEM_LOOKUP.set(itemId, item);
+      }
+    });
+  });
+};
+
+const normalizeMenuSectionDisplayOrder = (sectionOrder = MENU_SECTION_DISPLAY_ORDER) => {
+  const validSectionIds = new Set(
+    MENU_SECTIONS.map((section) => String(section?.id || "").trim()).filter(Boolean)
+  );
+  const preferredSectionIds = Array.isArray(sectionOrder) ? sectionOrder : MENU_SECTION_DISPLAY_ORDER;
+  const normalizedSectionOrder = preferredSectionIds.filter((sectionId) => validSectionIds.has(sectionId));
+
+  MENU_SECTIONS.forEach((section) => {
+    const sectionId = String(section?.id || "").trim();
+
+    if (sectionId && !normalizedSectionOrder.includes(sectionId)) {
+      normalizedSectionOrder.push(sectionId);
+    }
+  });
+
+  menuSectionDisplayOrder = normalizedSectionOrder;
+};
+
+const normalizeCollapsedCatalogSections = (sections = MENU_SECTIONS) => {
+  const validSectionIds = new Set(
+    (Array.isArray(sections) ? sections : [])
+      .map((section) => String(section?.id || "").trim())
+      .filter(Boolean)
+  );
+  const nextCollapsedSectionIds = [...collapsedCatalogSections].filter((sectionId) =>
+    validSectionIds.has(sectionId)
+  );
+
+  if (validSectionIds.size > 0 && nextCollapsedSectionIds.length >= validSectionIds.size) {
+    nextCollapsedSectionIds.length = 0;
+  }
+
+  const hasChanged =
+    nextCollapsedSectionIds.length !== collapsedCatalogSections.size ||
+    nextCollapsedSectionIds.some((sectionId) => !collapsedCatalogSections.has(sectionId));
+
+  if (hasChanged) {
+    collapsedCatalogSections = new Set(nextCollapsedSectionIds);
+    saveStoredCollection(CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY, nextCollapsedSectionIds);
+  }
+};
+
+const getCatalogAvailabilityState = (item) => {
+  if (item?.isPaused) {
+    return "paused";
+  }
+
+  if (item?.isAvailable === false) {
+    return "unavailable";
+  }
+
+  return "active";
+};
+
+const getCatalogAvailabilityLabel = (item) => {
+  const state = typeof item === "string" ? item : getCatalogAvailabilityState(item);
+
+  if (state === "paused") {
+    return "Pausado";
+  }
+
+  if (state === "unavailable") {
+    return "Indisponivel";
+  }
+
+  return "Ativo";
+};
+
+const isMenuItemOrderable = (itemOrId) => {
+  const item =
+    typeof itemOrId === "string" ? MENU_ITEM_LOOKUP.get(String(itemOrId || "").trim()) : itemOrId;
+
+  return Boolean(item) && item.isAvailable !== false && item.isPaused !== true && typeof item.price === "number";
+};
+
+const getCatalogItemActionLabel = (item, { short = false } = {}) => {
+  if (item?.isPaused) {
+    return short ? "Pausado" : "Pausado no momento";
+  }
+
+  if (item?.isAvailable === false) {
+    return short ? "Indisponivel" : "Indisponivel agora";
+  }
+
+  if (typeof item?.price !== "number") {
+    return short ? "Sem preco" : "Preco indisponivel";
+  }
+
+  return short ? "Adicionar" : "Adicionar a sacola";
+};
+
+const hasCatalogItemOriginalPrice = (item) =>
+  typeof item?.originalPrice === "number" &&
+  typeof item?.price === "number" &&
+  item.originalPrice > item.price;
+
+const getCatalogItemPriceMarkup = (
+  item,
+  { tagName = "span", className = "catalog-option-price" } = {}
+) => {
+  const currentPriceLabel = getPriceLabel(item?.price);
+
+  if (!hasCatalogItemOriginalPrice(item)) {
+    return `<${tagName} class="${className}">${currentPriceLabel}</${tagName}>`;
+  }
+
+  return `
+    <${tagName} class="${className} catalog-price-stack is-promotional">
+      <span class="catalog-price-current">${currentPriceLabel}</span>
+      <span class="catalog-price-original">${getPriceLabel(item.originalPrice)}</span>
+    </${tagName}>
+  `;
+};
+
+const getCatalogItemStatusMarkup = (item) => {
+  if (item?.isPromoted && isMenuItemOrderable(item)) {
+    return `<span class="catalog-option-status is-promoted">${escapeHtml(
+      item?.activePromotion?.badgeLabel || item?.badge || "Promocao"
+    )}</span>`;
+  }
+
+  if (item?.isPaused || item?.isAvailable === false || typeof item?.price !== "number") {
+    return `<span class="catalog-option-status is-disabled">${escapeHtml(
+      getCatalogItemActionLabel(item)
+    )}</span>`;
+  }
+
+  return "";
+};
+
+const applyRuntimeCatalogState = (items = []) => {
+  const stateById = new Map(
+    (Array.isArray(items) ? items : [])
+      .map((item) => [String(item?.id || "").trim(), item])
+      .filter(([id]) => id)
+  );
+
+  MENU_SECTIONS.forEach((section) => {
+    section.items.forEach((item) => {
+      if (!Object.prototype.hasOwnProperty.call(item, "basePrice")) {
+        item.basePrice = typeof item.price === "number" ? item.price : null;
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(item, "baseBadge")) {
+        item.baseBadge = item.badge || "";
+      }
+
+      const runtimeState = stateById.get(item.id) || null;
+
+      item.price =
+        runtimeState && typeof runtimeState.price === "number"
+          ? Number(runtimeState.price.toFixed(2))
+          : item.basePrice;
+      item.regularPrice =
+        runtimeState && typeof runtimeState.regularPrice === "number"
+          ? Number(runtimeState.regularPrice.toFixed(2))
+          : item.basePrice;
+      item.originalPrice =
+        runtimeState && typeof runtimeState.originalPrice === "number"
+          ? Number(runtimeState.originalPrice.toFixed(2))
+          : null;
+      item.hasActivePromotion = Boolean(runtimeState?.hasActivePromotion);
+      item.activePromotion = runtimeState?.activePromotion || null;
+      item.isAvailable = runtimeState ? runtimeState.isAvailable !== false : true;
+      item.isPaused = runtimeState ? runtimeState.isPaused === true : false;
+      item.isPromoted = runtimeState ? runtimeState.isPromoted === true : false;
+      item.availabilityState = runtimeState?.availabilityState || getCatalogAvailabilityState(item);
+      item.availabilityLabel =
+        runtimeState?.availabilityLabel || getCatalogAvailabilityLabel(item.availabilityState);
+      item.isOrderable =
+        typeof runtimeState?.isOrderable === "boolean"
+          ? runtimeState.isOrderable
+          : isMenuItemOrderable(item);
+      item.badge =
+        runtimeState?.badge ||
+        (item.isPromoted
+          ? "Promocao"
+          : item.availabilityState === "paused"
+            ? "Pausado"
+            : item.availabilityState === "unavailable"
+              ? "Indisponivel"
+              : item.baseBadge || "");
+    });
+  });
+};
+
+const applyRuntimeCatalogSections = (sections = []) => {
+  if (!Array.isArray(sections) || sections.length === 0) {
+    return;
+  }
+
+  const localSectionsById = new Map(
+    MENU_SECTIONS.map((section) => [String(section?.id || "").trim(), section])
+  );
+  const nextSections = [];
+  const seenSectionIds = new Set();
+
+  sections.forEach((runtimeSection) => {
+    const sectionId = String(runtimeSection?.id || "").trim();
+
+    if (!sectionId) {
+      return;
+    }
+
+    const localSection = localSectionsById.get(sectionId) || null;
+    const localItemsById = new Map(
+      (Array.isArray(localSection?.items) ? localSection.items : []).map((item) => [
+        String(item?.id || "").trim(),
+        item,
+      ])
+    );
+    const runtimeItems = Array.isArray(runtimeSection?.items) ? runtimeSection.items : [];
+    const nextItemsSource =
+      runtimeItems.length > 0
+        ? runtimeItems
+        : Array.isArray(localSection?.items)
+          ? localSection.items
+          : [];
+
+    nextSections.push({
+      ...(localSection || {}),
+      ...runtimeSection,
+      items: nextItemsSource.map((runtimeItem) => {
+        const itemId = String(runtimeItem?.id || "").trim();
+        const localItem = itemId ? localItemsById.get(itemId) || null : null;
+        const basePrice =
+          typeof runtimeItem?.basePrice === "number"
+            ? Number(runtimeItem.basePrice.toFixed(2))
+            : typeof localItem?.basePrice === "number"
+              ? Number(localItem.basePrice.toFixed(2))
+              : typeof localItem?.price === "number"
+                ? Number(localItem.price.toFixed(2))
+                : null;
+
+        return {
+          ...(localItem || {}),
+          ...runtimeItem,
+          basePrice,
+          baseBadge:
+            typeof runtimeItem?.baseBadge === "string"
+              ? runtimeItem.baseBadge
+              : typeof localItem?.baseBadge === "string"
+                ? localItem.baseBadge
+                : localItem?.badge || "",
+        };
+      }),
+    });
+
+    seenSectionIds.add(sectionId);
+  });
+
+  MENU_SECTIONS.forEach((section) => {
+    const sectionId = String(section?.id || "").trim();
+
+    if (!sectionId || seenSectionIds.has(sectionId)) {
+      return;
+    }
+
+    nextSections.push(section);
+  });
+
+  MENU_SECTIONS.length = 0;
+  nextSections.forEach((section) => {
+    MENU_SECTIONS.push(section);
+  });
+  syncMenuItemLookup();
+  normalizeMenuSectionDisplayOrder(menuSectionDisplayOrder);
+  normalizeCollapsedCatalogSections(nextSections);
+};
+
+let catalogRuntimeHydrationPromise;
+let publicReviewsHydrationPromise;
+let runtimeFeaturedCatalogItem = null;
+let runtimeFeaturedCatalogItems = [];
+let heroFeaturedRotationItems = [];
+let heroFeaturedRotationIntervalId = null;
+let heroFeaturedTransitionTimeoutId = null;
+let heroFeaturedActiveIndex = 0;
+const HERO_FEATURED_ROTATION_INTERVAL_MS = 7800;
+const HERO_FEATURED_TRANSITION_DELAY_MS = 210;
+
+const shouldHydrateCatalogRuntimeState = () =>
+  Boolean(catalogRoot) ||
+  ["cardapio", "index", "inicio"].includes(String(document.body?.dataset?.page || "").trim().toLowerCase()) ||
+  Boolean(document.querySelector(".hero-order-card"));
+
+const hydrateCatalogRuntimeState = async () => {
+  if (!shouldHydrateCatalogRuntimeState()) {
+    return Promise.resolve();
+  }
+
+  if (catalogRuntimeHydrationPromise) {
+    return catalogRuntimeHydrationPromise;
+  }
+
+  catalogRuntimeHydrationPromise = (async () => {
+    try {
+      const response = await fetch(PUBLIC_CATALOG_STATE_ENDPOINT, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("catalog_runtime_fetch_failed");
+      }
+
+      const payload = await response.json();
+      normalizeMenuSectionDisplayOrder(payload?.sectionDisplayOrder);
+      applyRuntimeCatalogSections(payload?.sections);
+      applyRuntimeCatalogState(payload?.items);
+      runtimeFeaturedCatalogItems = Array.isArray(payload?.featuredItems)
+        ? payload.featuredItems.filter((item) => item && typeof item === "object")
+        : [];
+      runtimeFeaturedCatalogItem =
+        runtimeFeaturedCatalogItems[0] ||
+        (payload?.featuredItem && typeof payload.featuredItem === "object" ? payload.featuredItem : null);
+      saveCart(loadCart());
+      renderCatalog();
+      renderCart();
+      initComboHeroImages();
+    } catch (error) {
+      catalogRuntimeHydrationPromise = null;
+    }
+  })();
+
+  return catalogRuntimeHydrationPromise;
+};
+
 const groupMediaControllers = new Map();
 let collapsedCatalogSections = new Set();
 let revealObserver;
@@ -1257,7 +1927,7 @@ const PLACEHOLDER_PRICE_LABEL = "R$: 00,00";
 const EMPTY_GROUP_TOTAL_LABEL = "R$ 00,00";
 const GROUP_MEDIA_CYCLE_MS = 2800;
 const GROUP_MEDIA_FADE_MS = 620;
-const TOKYO_SITE_CONFIG = window.TOKYO_SITE_CONFIG || {};
+const TOKYO_SITE_CONFIG = TOKYO_RUNTIME_CONFIG;
 const DELIVERY_DEBUG_ENABLED = Boolean(TOKYO_SITE_CONFIG.debugDelivery);
 const normalizeSiteHostnameList = (value) =>
   Array.isArray(value)
@@ -1528,7 +2198,8 @@ const syncDeliveryCepLookup = async (form, force = false) => {
 };
 
 const getGoogleMapsApiKey = () => {
-  const runtimeKey = String(window.TOKYO_GOOGLE_MAPS_API_KEY || "").trim();
+  const googleMapsApiKeyGlobal = TOKYO_GLOBAL_NAMES.googleMapsApiKey || "TOKYO_GOOGLE_MAPS_API_KEY";
+  const runtimeKey = String(window[googleMapsApiKeyGlobal] || "").trim();
 
   if (runtimeKey) {
     return runtimeKey;
@@ -1587,10 +2258,11 @@ const buildDeliveryDestinationAddress = (
   return addressParts.join(", ");
 };
 
-const createDeliveryEstimateError = (message, mapsUrl = "") => {
+const createDeliveryEstimateError = (message, mapsUrl = "", options = {}) => {
   const error = new Error(message);
   error.userMessage = message;
   error.mapsUrl = mapsUrl;
+  Object.assign(error, options);
   return error;
 };
 
@@ -1691,7 +2363,7 @@ const loadGoogleMapsApi = async () => {
 
   if (!apiKey) {
     throw createDeliveryEstimateError(
-      "Configure uma chave do Google Maps em maps-config.js ou defina window.TOKYO_GOOGLE_MAPS_API_KEY antes de calcular a distancia.",
+      `Configure uma chave do Google Maps em maps-config.js ou defina window.${TOKYO_GLOBAL_NAMES.googleMapsApiKey || "TOKYO_GOOGLE_MAPS_API_KEY"} antes de calcular a distancia.`,
       ""
     );
   }
@@ -1815,7 +2487,7 @@ const getMenuItemsTotalAmount = (itemIds, quantityById) =>
 const normalizeCartItem = (item) => {
   const menuItem = MENU_ITEM_LOOKUP.get(item.id);
 
-  if (!menuItem) {
+  if (!menuItem || !isMenuItemOrderable(menuItem)) {
     return null;
   }
 
@@ -1936,6 +2608,7 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
   const contentsMarkup = getComboContentsMarkup(section, selectedCombo);
   const unitsLabel = getCombinadoUnitsLabel(selectedCombo);
   const categoryLabel = category.label || category.title;
+  const isOrderable = isMenuItemOrderable(selectedCombo);
 
   return `
     <article class="catalog-combinados-spotlight-card">
@@ -1948,18 +2621,22 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
         />
       </figure>
       <div class="catalog-combinados-spotlight-body">
-        <div class="catalog-combinados-spotlight-head">
+          <div class="catalog-combinados-spotlight-head">
           <div class="catalog-combinados-spotlight-heading">
             <p class="catalog-combinados-spotlight-category">${categoryLabel}</p>
             <h3>${selectedCombo.name}</h3>
             ${unitsLabel ? `<p class="catalog-combinados-spotlight-units">(${unitsLabel})</p>` : ""}
           </div>
-          <p class="catalog-combinados-spotlight-price">${getCombinadoPriceLabel(selectedCombo)}</p>
+          ${getCatalogItemPriceMarkup(selectedCombo, {
+            tagName: "p",
+            className: "catalog-combinados-spotlight-price",
+          })}
         </div>
         ${contentsMarkup ? `<div class="catalog-combinados-spotlight-contents">${contentsMarkup}</div>` : ""}
+        ${getCatalogItemReviewMarkup(selectedCombo, { mode: "spotlight" })}
         <div class="catalog-card-actions catalog-combinados-spotlight-actions">
           <div
-            class="catalog-option catalog-option-preview"
+            class="catalog-option catalog-option-preview${selectedCombo.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}"
             data-item-chip
             data-item-id="${selectedCombo.id}"
             data-item-name="${escapeHtml(selectedCombo.name)}"
@@ -1971,11 +2648,16 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
               data-item-button
               data-add-to-cart
               aria-pressed="false"
-              aria-label="Adicionar ${escapeHtml(selectedCombo.name)} a sacola"
+              aria-label="${escapeHtml(getCatalogItemActionLabel(selectedCombo))}: ${escapeHtml(selectedCombo.name)}"
+              ${isOrderable ? "" : "disabled"}
             >
               <span class="catalog-option-copy">
-                <span class="catalog-option-label">Adicionar a Sacola</span>
-                <span class="catalog-option-price">${getCombinadoPriceLabel(selectedCombo)}</span>
+                <span class="catalog-option-label">${escapeHtml(getCatalogItemActionLabel(selectedCombo))}</span>
+                ${getCatalogItemPriceMarkup(selectedCombo, {
+                  tagName: "span",
+                  className: "catalog-option-price",
+                })}
+                ${getCatalogItemStatusMarkup(selectedCombo)}
               </span>
             </button>
             <div class="catalog-option-controls" aria-label="Controle de quantidade">
@@ -1993,6 +2675,7 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
                 type="button"
                 data-item-increase
                 aria-label="Aumentar ${escapeHtml(selectedCombo.name)}"
+                ${isOrderable ? "" : "disabled"}
               >
                 +
               </button>
@@ -2063,10 +2746,11 @@ const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
           const isExpanded = item.id === selectedComboId;
           const unitsLabel = getCombinadoUnitsLabel(item);
           const detailsMarkup = getCombinadosMobileDetailsMarkup(section, item);
+          const isOrderable = isMenuItemOrderable(item);
 
           return `
             <article
-              class="catalog-combinados-mobile-card${isExpanded ? " is-open" : ""}"
+              class="catalog-combinados-mobile-card${isExpanded ? " is-open" : ""}${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}"
               data-combinado-mobile-card="${item.id}"
             >
               <figure class="catalog-combinados-mobile-media">
@@ -2083,11 +2767,15 @@ const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
                     <h4>${escapeHtml(item.name)}</h4>
                     ${unitsLabel ? `<p class="catalog-combinados-mobile-units">Pecas: ${escapeHtml(unitsLabel)}</p>` : ""}
                   </div>
-                  <p class="catalog-combinados-mobile-price">${getCombinadoPriceLabel(item)}</p>
+                  ${getCatalogItemPriceMarkup(item, {
+                    tagName: "p",
+                    className: "catalog-combinados-mobile-price",
+                  })}
                 </div>
+                ${getCatalogItemReviewMarkup(item, { mode: "sheet" })}
                 <div class="catalog-combinados-mobile-actions">
                   <div
-                    class="catalog-option catalog-option-preview catalog-combinados-mobile-purchase"
+                    class="catalog-option catalog-option-preview catalog-combinados-mobile-purchase${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}"
                     data-item-chip
                     data-item-id="${item.id}"
                     data-item-name="${escapeHtml(item.name)}"
@@ -2099,10 +2787,14 @@ const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
                       data-item-button
                       data-add-to-cart
                       aria-pressed="false"
-                      aria-label="Adicionar ${escapeHtml(item.name)} a sacola"
+                      aria-label="${escapeHtml(getCatalogItemActionLabel(item))}: ${escapeHtml(item.name)}"
+                      ${isOrderable ? "" : "disabled"}
                     >
                       <span class="catalog-option-copy">
-                        <span class="catalog-option-label">Adicionar</span>
+                        <span class="catalog-option-label">${escapeHtml(
+                          getCatalogItemActionLabel(item, { short: true })
+                        )}</span>
+                        ${getCatalogItemStatusMarkup(item)}
                       </span>
                     </button>
                     <div class="catalog-option-controls" aria-label="Controle de quantidade">
@@ -2120,6 +2812,7 @@ const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
                         type="button"
                         data-item-increase
                         aria-label="Aumentar ${escapeHtml(item.name)}"
+                        ${isOrderable ? "" : "disabled"}
                       >
                         +
                       </button>
@@ -2177,8 +2870,12 @@ const getCombinadosItemsMarkup = (section, category, selectedComboId) => {
                 <div class="catalog-combinados-combo-copy">
                   <span class="catalog-combinados-combo-name">${item.name}</span>
                   <span class="catalog-combinados-combo-units">${getCombinadoUnitsLabel(item)}</span>
+                  ${getCatalogItemReviewMarkup(item, { mode: "compact" })}
                 </div>
-                <span class="catalog-combinados-combo-price">${getCombinadoPriceLabel(item)}</span>
+                ${getCatalogItemPriceMarkup(item, {
+                  tagName: "span",
+                  className: "catalog-combinados-combo-price",
+                })}
               </button>
             `;
           })
@@ -2524,6 +3221,9 @@ normalizeImageFields(MENU_COMBINADOS_CATEGORY_IMAGES);
 normalizeImageFields(MENU_SECTIONS);
 normalizeImageFields(GROUP_COVER_IMAGES);
 
+const GROUP_MEDIA_PLACEHOLDER_SRC =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+
 const stopGroupMediaCycle = (groupId) => {
   const controller = groupMediaControllers.get(groupId);
 
@@ -2548,7 +3248,7 @@ const stopGroupMediaCycle = (groupId) => {
 
     if (nextImage) {
       nextImage.classList.remove("is-visible");
-      nextImage.removeAttribute("src");
+      nextImage.src = GROUP_MEDIA_PLACEHOLDER_SRC;
       nextImage.alt = "";
       nextImage.dataset.mediaSrc = "";
     }
@@ -2856,6 +3556,136 @@ const groupCatalogItems = (section) => {
 const getCatalogSectionById = (sectionId) =>
   MENU_SECTIONS.find((section) => section.id === sectionId) || null;
 
+const getCatalogTargetItemId = () => {
+  if (document.body.dataset.page !== "cardapio") {
+    return "";
+  }
+
+  const itemParam = new URLSearchParams(window.location.search).get("item");
+  if (itemParam) {
+    return decodeURIComponent(itemParam).trim();
+  }
+
+  const hash = String(window.location.hash || "").trim();
+  if (!hash.startsWith("#item-")) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(hash.slice("#item-".length)).trim();
+  } catch (error) {
+    return hash.slice("#item-".length).trim();
+  }
+};
+
+const findCatalogItemLocation = (itemId) => {
+  const normalizedItemId = String(itemId || "").trim();
+
+  if (!normalizedItemId) {
+    return null;
+  }
+
+  for (const section of MENU_SECTIONS) {
+    const item = section.items.find((entry) => entry.id === normalizedItemId);
+
+    if (!item) {
+      continue;
+    }
+
+    if (section.id !== "combinados") {
+      return {
+        item,
+        section,
+        category: null,
+      };
+    }
+
+    const category =
+      getCombinadosCategories(section).find((entry) =>
+        entry.items.some((categoryItem) => categoryItem.id === normalizedItemId)
+      ) || null;
+
+    return {
+      item,
+      section,
+      category,
+    };
+  }
+
+  return null;
+};
+
+const prepareCatalogTargetItem = () => {
+  const targetItemId = getCatalogTargetItemId();
+  const location = findCatalogItemLocation(targetItemId);
+
+  if (!location) {
+    return null;
+  }
+
+  if (isCatalogMobileViewport()) {
+    mobileExpandedCatalogSectionId = location.section.id;
+  } else {
+    collapsedCatalogSections.delete(location.section.id);
+  }
+
+  if (location.section.id === "combinados") {
+    selectedCombinadosCategoryId = location.category?.id || location.item.category || selectedCombinadosCategoryId;
+    selectedCombinadosComboId = targetItemId;
+  }
+
+  return location;
+};
+
+const getCatalogTargetSelector = (itemId) => {
+  const normalizedItemId = String(itemId || "").trim();
+
+  if (!normalizedItemId) {
+    return "";
+  }
+
+  const escapedItemId =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(normalizedItemId)
+      : normalizedItemId.replace(/"/g, '\\"');
+
+  return [
+    `[data-item-chip][data-item-id="${escapedItemId}"]`,
+    `[data-combinado-mobile-card="${escapedItemId}"]`,
+    `[data-combinado-item-id="${escapedItemId}"]`,
+  ].join(", ");
+};
+
+const scrollToCatalogTargetItem = () => {
+  const targetItemId = getCatalogTargetItemId();
+  const selector = getCatalogTargetSelector(targetItemId);
+
+  if (!selector) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    const target =
+      document.querySelector(selector)?.closest(
+        ".catalog-combinados-spotlight-card, .catalog-mobile-sheet-card, .catalog-combinados-mobile-card, .catalog-card, [data-item-chip], [data-combinado-item-id]"
+      ) || document.querySelector(selector);
+
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    target.classList.add("is-catalog-target");
+
+    window.setTimeout(() => {
+      target.classList.remove("is-catalog-target");
+    }, 1800);
+  }, 180);
+};
+
 const getMobileCatalogGroups = (section) => {
   if (!section) {
     return [];
@@ -2975,9 +3805,10 @@ const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) =>
           const groupLabel = getMobileCatalogItemGroupLabel(item);
           const showGroupLabel = !activeGroup || activeGroup.title !== groupLabel;
           const description = getMobileCatalogItemDescription(section, item);
+          const isOrderable = isMenuItemOrderable(item);
 
           return `
-            <article class="catalog-mobile-sheet-card">
+            <article class="catalog-mobile-sheet-card${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}">
               <figure class="catalog-mobile-sheet-media">
                 <img
                   src="${item.image}"
@@ -2996,13 +3827,17 @@ const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) =>
                     }
                     <h4>${escapeHtml(item.name)}</h4>
                     ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+                    ${getCatalogItemReviewMarkup(item, { mode: "sheet" })}
                   </div>
-                  <strong class="catalog-mobile-sheet-price">${getPriceLabel(item.price)}</strong>
+                  ${getCatalogItemPriceMarkup(item, {
+                    tagName: "strong",
+                    className: "catalog-mobile-sheet-price",
+                  })}
                 </div>
 
                 <div class="catalog-mobile-sheet-actions">
                   <div
-                    class="catalog-option catalog-option-preview catalog-mobile-sheet-purchase"
+                    class="catalog-option catalog-option-preview catalog-mobile-sheet-purchase${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}"
                     data-item-chip
                     data-item-id="${item.id}"
                     data-item-name="${escapeHtml(item.name)}"
@@ -3014,13 +3849,15 @@ const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) =>
                       data-item-button
                       data-add-to-cart
                       aria-pressed="false"
-                      aria-label="Adicionar ${escapeHtml(item.name)} a sacola"
+                      aria-label="${escapeHtml(getCatalogItemActionLabel(item))}: ${escapeHtml(item.name)}"
+                      ${isOrderable ? "" : "disabled"}
                     >
                       <span class="catalog-option-copy">
-                        <span class="catalog-option-label">${
-                          typeof item.price === "number" ? "Adicionar" : "Selecionar"
-                        }</span>
-                        <span class="catalog-option-price">Toque para incluir</span>
+                        <span class="catalog-option-label">${escapeHtml(
+                          getCatalogItemActionLabel(item, { short: true })
+                        )}</span>
+                        ${isOrderable ? '<span class="catalog-option-price">Toque para incluir</span>' : ""}
+                        ${getCatalogItemStatusMarkup(item)}
                       </span>
                     </button>
                     <div class="catalog-option-controls" aria-label="Controle de quantidade">
@@ -3038,6 +3875,7 @@ const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) =>
                         type="button"
                         data-item-increase
                         aria-label="Aumentar ${escapeHtml(item.name)}"
+                        ${isOrderable ? "" : "disabled"}
                       >
                         +
                       </button>
@@ -3686,6 +4524,8 @@ collapsedCatalogSections = new Set(
     (sectionId) => typeof sectionId === "string" && sectionId.trim()
   )
 );
+normalizeMenuSectionDisplayOrder();
+normalizeCollapsedCatalogSections();
 
 const normalizeCartAddonQuantity = (value, fallback = 0) => {
   const quantity = Number.isFinite(Number(value)) ? Math.round(Number(value)) : fallback;
@@ -3789,8 +4629,14 @@ const parseCurrencyAmount = (value) => {
   return Number.isFinite(amount) && amount >= 0 ? Number(amount.toFixed(2)) : null;
 };
 
-const getStoreOperatingContext = (now = new Date()) =>
-  STORE_HOURS_API?.getCurrentContext?.(now) || {
+const getStoreOperatingContext = (now = new Date()) => {
+  const structuredContext = getPublicBusinessScheduleStatus(now);
+
+  if (structuredContext) {
+    return structuredContext;
+  }
+
+  const context = STORE_HOURS_API?.getCurrentContext?.(now) || {
     isOpen: true,
     acceptsImmediateOrders: true,
     statusTone: "open",
@@ -3805,13 +4651,21 @@ const getStoreOperatingContext = (now = new Date()) =>
     detail: "Pedidos imediatos liberados ate 23:00.",
   };
 
+  return {
+    ...context,
+    businessWindowLabel: getPublicBusinessHoursLabel(context.businessWindowLabel),
+  };
+};
+
 const getStoreDefaultSchedule = (now = new Date()) =>
+  getPublicBusinessScheduleDefaultSchedule(now) ||
   STORE_HOURS_API?.getDefaultSchedule?.(now) || {
     dateValue: "",
     timeValue: "",
   };
 
 const getStoreScheduleConstraints = (selectedDate = "", now = new Date()) =>
+  getPublicBusinessScheduleConstraints(selectedDate, now) ||
   STORE_HOURS_API?.getScheduleConstraints?.(selectedDate, now) || {
     minDate: "",
     timeMin: "18:00",
@@ -3823,6 +4677,7 @@ const getStoreScheduleConstraints = (selectedDate = "", now = new Date()) =>
   };
 
 const validateStoreScheduledOrder = (schedule, now = new Date()) =>
+  validatePublicBusinessScheduleOrder(schedule, now) ||
   STORE_HOURS_API?.validateSchedule?.(schedule, now) || {
     isValid: Boolean(schedule?.dateValue && schedule?.timeValue),
     reason: schedule?.dateValue && schedule?.timeValue ? "" : "missing_time",
@@ -3966,13 +4821,18 @@ const getCartFulfillmentLabel = (id) =>
   CART_FULFILLMENT_OPTIONS.find((option) => option.id === id)?.label || "";
 
 const getPickupEstimateText = () =>
-  `Retirada prevista em ate ${PICKUP_ESTIMATE_MINUTES} minutos, conforme o prazo mostrado no site.`;
+  getDeliverySettings().pickup?.message ||
+  `Retirada prevista em ate ${getPublicAveragePreparationMinutes()} minutos, conforme o prazo mostrado no site.`;
 
 const isManualDeliveryQuote = (quote) => Boolean(quote?.isManualEstimate);
 
 const getDeliveryQuoteFeeText = (quote) => {
   if (!quote) {
     return "";
+  }
+
+  if (quote.freeShippingApplied) {
+    return "Gratis";
   }
 
   const feeText = formatPrice(Number(quote.fee || 0));
@@ -4087,6 +4947,14 @@ const getScheduledOrderValidationMessage = (reason, storeContext) => {
     return `O agendamento so aceita horarios entre ${storeContext.businessWindowLabel}.`;
   }
 
+  if (reason === "closed_day") {
+    return "Esse dia esta marcado como fechado. Escolha outro dia de atendimento.";
+  }
+
+  if (reason === "pause") {
+    return `Esse horario cai em uma pausa de atendimento. Escolha outro horario dentro de ${storeContext.businessWindowLabel}.`;
+  }
+
   if (reason === "past") {
     return `Escolha um horario futuro dentro do funcionamento diario (${storeContext.businessWindowLabel}).`;
   }
@@ -4095,6 +4963,7 @@ const getScheduledOrderValidationMessage = (reason, storeContext) => {
 };
 
 const getImmediateOrderUnavailableMessage = (storeContext) =>
+  storeContext.warningMessage ||
   `Loja fechada agora. Agende seu pedido entre ${storeContext.businessWindowLabel}. Proxima abertura: ${storeContext.nextOpeningLabel}.`;
 
 const getCartCheckoutValidation = (
@@ -4128,6 +4997,30 @@ const getCartCheckoutValidation = (
       tone: "warning",
       message: "Escolha se o pedido sera retirada ou entrega antes de finalizar.",
     };
+  }
+
+  if (checkout.fulfillmentMode === "delivery") {
+    const deliveryAvailability = getFulfillmentOptionAvailability("delivery");
+
+    if (!deliveryAvailability.available) {
+      return {
+        isValid: false,
+        tone: "warning",
+        message: deliveryAvailability.message || "Entrega indisponivel no momento.",
+      };
+    }
+  }
+
+  if (checkout.fulfillmentMode === "pickup") {
+    const pickupAvailability = getFulfillmentOptionAvailability("pickup");
+
+    if (!pickupAvailability.available) {
+      return {
+        isValid: false,
+        tone: "warning",
+        message: pickupAvailability.message || "Retirada indisponivel no momento.",
+      };
+    }
   }
 
   if (!checkout.timingMode) {
@@ -4171,6 +5064,24 @@ const getCartCheckoutValidation = (
         message: profile
           ? "Calcule a entrega na aba Entrega para salvar os dados nesta conta antes de finalizar."
           : "Abra a aba Entrega para calcular a taxa e salvar os dados da entrega antes de finalizar.",
+      };
+    }
+
+    if (deliveryQuote.deliveryUnavailableMessage) {
+      return {
+        isValid: false,
+        tone: "warning",
+        message: deliveryQuote.deliveryUnavailableMessage,
+      };
+    }
+
+    if (deliveryQuote.isMinimumOrderMet === false) {
+      return {
+        isValid: false,
+        tone: "warning",
+        message:
+          deliveryQuote.minimumOrderMessage ||
+          "O pedido ainda nao atingiu o minimo da faixa de entrega.",
       };
     }
   }
@@ -4519,6 +5430,159 @@ const buildRatingStars = (rating) => {
   return `${"&#9733;".repeat(safeRating)}${"&#9734;".repeat(5 - safeRating)}`;
 };
 
+const normalizePublicReviewText = (value = "") =>
+  String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getPublicReviewCount = () => {
+  const summaryCount = Number(reviewPageState.summary?.publicReviewCount);
+
+  if (Number.isFinite(summaryCount) && summaryCount >= 0) {
+    return summaryCount;
+  }
+
+  return Array.isArray(reviewPageState.reviews) ? reviewPageState.reviews.length : 0;
+};
+
+const formatPublicReviewCountLabel = (count) =>
+  `${count} avaliac${count === 1 ? "ao publicada" : "oes publicadas"}`;
+
+const getPublicReviewAverageLabel = () => {
+  const average = Number(reviewPageState.summary?.displayAverage || 0);
+
+  if (!Number.isFinite(average) || average <= 0 || getPublicReviewCount() <= 0) {
+    return "Sem avaliacoes";
+  }
+
+  return `${average.toFixed(1)} \u2605`;
+};
+
+const getPublicReviewCountLabel = () =>
+  reviewPageState.summary?.publicCountLabel || formatPublicReviewCountLabel(getPublicReviewCount());
+
+const getPublicReviews = () =>
+  (Array.isArray(reviewPageState.reviews) ? reviewPageState.reviews : []).filter(
+    (review) => review && typeof review === "object" && normalizePublicReviewText(review.message)
+  );
+
+const getPublicReviewerName = (name = "") => {
+  const parts = normalizePublicReviewText(name).split(" ").filter(Boolean);
+
+  if (parts.length === 0) {
+    return "Cliente";
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+};
+
+const getPublicReviewerInitial = (name = "") =>
+  (getPublicReviewerName(name).match(/[A-Za-zÀ-ÿ0-9]/)?.[0] || "T").toUpperCase();
+
+const getShortPublicReviewMessage = (message = "", maxLength = PUBLIC_REVIEW_SHORT_COMMENT_LENGTH) => {
+  const normalizedMessage = normalizePublicReviewText(message);
+
+  if (normalizedMessage.length <= maxLength) {
+    return normalizedMessage;
+  }
+
+  const compactMessage = normalizedMessage.slice(0, maxLength + 1);
+  const lastSpaceIndex = compactMessage.lastIndexOf(" ");
+  const trimmedMessage = compactMessage.slice(0, lastSpaceIndex > 72 ? lastSpaceIndex : maxLength).trim();
+
+  return `${trimmedMessage.replace(/[.,;:!?]$/, "")}...`;
+};
+
+const getPublicReviewWindow = (reviews = getPublicReviews(), offset = 0, limit = 1) => {
+  if (!reviews.length || limit <= 0) {
+    return [];
+  }
+
+  const visibleCount = Math.min(limit, reviews.length);
+  return Array.from({ length: visibleCount }, (_, index) => reviews[(offset + index) % reviews.length]);
+};
+
+const normalizeCatalogReviewTargetId = (value = "") =>
+  normalizePublicReviewText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const publicReviewTargetsItem = (review, item) => {
+  const itemId = normalizeCatalogReviewTargetId(item?.id);
+  const itemName = normalizeCatalogReviewTargetId(item?.name);
+  const target = review?.target && typeof review.target === "object" ? review.target : {};
+  const targetIds = Array.isArray(target.itemIds) ? target.itemIds : [target.itemId];
+  const normalizedTargetIds = targetIds.map(normalizeCatalogReviewTargetId).filter(Boolean);
+  const targetName = normalizeCatalogReviewTargetId(target.itemName);
+
+  return Boolean(
+    (itemId && normalizedTargetIds.includes(itemId)) ||
+      (itemName && targetName && targetName === itemName)
+  );
+};
+
+const publicReviewHasItemTarget = (review) => {
+  const target = review?.target && typeof review.target === "object" ? review.target : {};
+  return Boolean(
+    normalizePublicReviewText(target.itemId) ||
+      (Array.isArray(target.itemIds) && target.itemIds.some((itemId) => normalizePublicReviewText(itemId))) ||
+      normalizePublicReviewText(target.itemName)
+  );
+};
+
+const getCatalogReviewForItem = (item) => {
+  const reviews = getPublicReviews();
+
+  if (!reviews.length) {
+    return null;
+  }
+
+  const itemReview = reviews.find((review) => publicReviewTargetsItem(review, item));
+
+  if (itemReview) {
+    return {
+      review: itemReview,
+      source: "item",
+    };
+  }
+
+  return {
+    review: reviews.find((review) => !publicReviewHasItemTarget(review)) || reviews[0],
+    source: "general",
+  };
+};
+
+const getCatalogItemReviewMarkup = (item, { mode = "inline" } = {}) => {
+  const reviewContext = getCatalogReviewForItem(item);
+
+  if (!reviewContext?.review) {
+    return "";
+  }
+
+  const { review, source } = reviewContext;
+  const reviewerName = getPublicReviewerName(review.name);
+  const commentLimit = mode === "spotlight" ? 132 : 76;
+  const sourceLabel = source === "item" ? "Avaliacao do item" : "Avaliacao geral";
+
+  return `
+    <div class="catalog-item-review catalog-item-review-${mode}${source === "general" ? " is-general" : ""}">
+      <div class="catalog-item-review-top">
+        <span class="catalog-item-review-stars">${buildRatingStars(review.rating)}</span>
+        <span class="catalog-item-review-source">${sourceLabel}</span>
+      </div>
+      <p>
+        <strong>${escapeHtml(reviewerName)}</strong>
+        <span>${escapeHtml(getShortPublicReviewMessage(review.message, commentLimit))}</span>
+      </p>
+    </div>
+  `;
+};
+
 const setActiveNavigation = () => {
   const currentPage = document.body.dataset.page || "";
 
@@ -4535,38 +5599,252 @@ const setActiveNavigation = () => {
   });
 };
 
-const initComboHeroImages = () => {
-  const currentPage = document.body.dataset.page || "";
-  if (currentPage !== "index" && currentPage !== "inicio") {
-    return;
+const getHeroFeaturedItemComposition = (item) => {
+  const rawDescription = String(item?.description || "").trim();
+
+  if (!rawDescription) {
+    return [];
+  }
+
+  const normalizedEntries = rawDescription
+    .replace(/\s+e\s+/gi, ", ")
+    .split(/\s*,\s*/)
+    .map((entry) =>
+      entry
+        .replace(/^[\u2022\-]\s*/, "")
+        .replace(/\.$/, "")
+        .trim()
+    )
+    .filter(Boolean);
+
+  if (normalizedEntries.length > 1) {
+    return normalizedEntries.slice(0, 8);
+  }
+
+  return [rawDescription.replace(/\.$/, "").trim()];
+};
+
+const clearHeroFeaturedRotationTimers = () => {
+  if (heroFeaturedRotationIntervalId) {
+    window.clearInterval(heroFeaturedRotationIntervalId);
+    heroFeaturedRotationIntervalId = null;
+  }
+
+  if (heroFeaturedTransitionTimeoutId) {
+    window.clearTimeout(heroFeaturedTransitionTimeoutId);
+    heroFeaturedTransitionTimeoutId = null;
+  }
+};
+
+const getHomeFeaturedCatalogItems = () => {
+  const runtimeItems = [];
+
+  (Array.isArray(runtimeFeaturedCatalogItems) ? runtimeFeaturedCatalogItems : []).forEach((item) => {
+    const itemKey = String(item?.id || item?.name || "").trim();
+
+    if (!item || typeof item !== "object" || !itemKey || runtimeItems.some((entry) => entry.id === itemKey)) {
+      return;
+    }
+
+    runtimeItems.push({
+      ...item,
+      id: itemKey,
+    });
+  });
+
+  if (runtimeItems.length > 0) {
+    return runtimeItems.slice(0, 3);
+  }
+
+  if (runtimeFeaturedCatalogItem && typeof runtimeFeaturedCatalogItem === "object") {
+    return [runtimeFeaturedCatalogItem];
   }
 
   const comboSection = MENU_SECTIONS.find((section) => section.id === "combinados");
-  if (!comboSection) {
+  const fallbackItem =
+    comboSection?.items.find((item) => item.id === "sakura-20") ||
+    comboSection?.items.find((item) => item.image);
+
+  return fallbackItem ? [fallbackItem] : [];
+};
+
+const getCatalogItemDeepLink = (itemId) => {
+  const normalizedItemId = String(itemId || "").trim();
+  return normalizedItemId
+    ? `./cardapio.html#item-${encodeURIComponent(normalizedItemId)}`
+    : "./cardapio.html#catalogo";
+};
+
+const renderHeroFeaturedIndicators = (items, activeIndex) => {
+  const navRoot = document.querySelector("[data-hero-featured-nav]");
+  const dotsRoot = navRoot?.querySelector("[data-hero-featured-dots]");
+  const counterNode = navRoot?.querySelector("[data-hero-featured-counter]");
+
+  if (!navRoot || !dotsRoot || !counterNode) {
     return;
   }
 
-  const featuredCombo =
-    comboSection.items.find((item) => item.id === "sakura-20") ||
-    comboSection.items.find((item) => item.image);
-  if (!featuredCombo) {
+  navRoot.hidden = items.length <= 1;
+
+  if (items.length <= 1) {
+    dotsRoot.innerHTML = "";
+    counterNode.textContent = "";
     return;
   }
 
+  dotsRoot.innerHTML = items
+    .map(
+      (_, index) => `
+        <button
+          class="hero-featured-dot${index === activeIndex ? " is-active" : ""}"
+          type="button"
+          data-hero-featured-dot="${index}"
+          aria-label="Mostrar destaque ${index + 1} de ${items.length}"
+          aria-pressed="${index === activeIndex ? "true" : "false"}"
+        ></button>
+      `
+    )
+    .join("");
+  counterNode.textContent = `${activeIndex + 1} / ${items.length}`;
+
+  if (!navRoot.dataset.rotationBound) {
+    navRoot.dataset.rotationBound = "true";
+    navRoot.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-hero-featured-dot]");
+
+      if (!button) {
+        return;
+      }
+
+      event.preventDefault();
+      const nextIndex = Number(button.dataset.heroFeaturedDot || 0);
+      setHeroFeaturedIndex(nextIndex, { animate: true, force: true });
+      startHeroFeaturedRotation();
+    });
+  }
+};
+
+const applyHeroFeaturedItem = (item) => {
   const heroImage = document.querySelector(".hero-image img");
   const heroCategory = document.querySelector(".hero-order-card .section-tag");
   const heroTitle = document.querySelector(".hero-order-card h2");
-  const heroPrice = document.querySelector(".hero-order-card strong");
+  const heroPrice = document.querySelector("[data-hero-featured-link]");
+  const heroOrderList = document.querySelector(".hero-order-list");
+  const compositionEntries = getHeroFeaturedItemComposition(item);
+  const portionLabel = String(item?.detail || item?.unitsLabel || "").trim();
 
-  if (!heroImage || !heroCategory || !heroTitle || !heroPrice) {
+  if (!heroImage || !heroCategory || !heroTitle || !heroPrice || !heroOrderList) {
     return;
   }
 
-  heroImage.src = featuredCombo.image;
-  heroImage.alt = `${featuredCombo.name} do Tokyo Sushi Delivery`;
-  heroCategory.textContent = featuredCombo.category;
-  heroTitle.innerHTML = `${featuredCombo.name} <span class="portion-label">(${featuredCombo.detail})</span>`;
-  heroPrice.textContent = featuredCombo.badge || "Consulte";
+  heroImage.src = item.image;
+  heroImage.alt = (TOKYO_PUBLIC_TEXT.menuItemAltTemplate || "{itemName} do Tokyo Sushi Delivery").replace(
+    "{itemName}",
+    item.name
+  );
+  heroCategory.textContent = item.category || "Destaque do cardapio";
+  heroTitle.innerHTML = portionLabel
+    ? `${item.name} <span class="portion-label">(${portionLabel})</span>`
+    : item.name;
+  heroPrice.textContent = "Consulte";
+  heroPrice.href = getCatalogItemDeepLink(item.id);
+  heroPrice.setAttribute("aria-label", `Consultar ${item.name} no cardapio`);
+  heroOrderList.innerHTML = compositionEntries
+    .map((entry) => `<span>${escapeHtml(entry)}</span>`)
+    .join("");
+};
+
+const setHeroFeaturedIndex = (nextIndex, options = {}) => {
+  const items = heroFeaturedRotationItems;
+  const phoneCard = document.querySelector(".phone-card");
+
+  if (!items.length) {
+    return;
+  }
+
+  const normalizedIndex = ((Number(nextIndex) || 0) + items.length) % items.length;
+  const shouldAnimate =
+    options.animate !== false &&
+    Boolean(phoneCard?.dataset.heroFeaturedReady) &&
+    (options.force === true || heroFeaturedActiveIndex !== normalizedIndex);
+  const nextItem = items[normalizedIndex];
+
+  heroFeaturedActiveIndex = normalizedIndex;
+  renderHeroFeaturedIndicators(items, heroFeaturedActiveIndex);
+
+  if (!nextItem) {
+    return;
+  }
+
+  if (!shouldAnimate || !phoneCard) {
+    applyHeroFeaturedItem(nextItem);
+    if (phoneCard) {
+      phoneCard.dataset.heroFeaturedReady = "true";
+    }
+    return;
+  }
+
+  if (heroFeaturedTransitionTimeoutId) {
+    window.clearTimeout(heroFeaturedTransitionTimeoutId);
+  }
+
+  phoneCard.classList.add("is-featured-transitioning");
+  heroFeaturedTransitionTimeoutId = window.setTimeout(() => {
+    applyHeroFeaturedItem(nextItem);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        phoneCard.classList.remove("is-featured-transitioning");
+      });
+    });
+  }, HERO_FEATURED_TRANSITION_DELAY_MS);
+};
+
+const startHeroFeaturedRotation = () => {
+  if (heroFeaturedRotationIntervalId) {
+    window.clearInterval(heroFeaturedRotationIntervalId);
+    heroFeaturedRotationIntervalId = null;
+  }
+
+  if (heroFeaturedRotationItems.length <= 1) {
+    return;
+  }
+
+  heroFeaturedRotationIntervalId = window.setInterval(() => {
+    setHeroFeaturedIndex(heroFeaturedActiveIndex + 1, { animate: true });
+  }, HERO_FEATURED_ROTATION_INTERVAL_MS);
+};
+
+const initComboHeroImages = () => {
+  const currentPage = document.body.dataset.page || "";
+  if (currentPage !== "index" && currentPage !== "inicio") {
+    clearHeroFeaturedRotationTimers();
+    return;
+  }
+
+  const featuredItems = getHomeFeaturedCatalogItems();
+
+  if (!featuredItems.length) {
+    clearHeroFeaturedRotationTimers();
+    return;
+  }
+
+  if (!document.querySelector(".hero-image img")) {
+    return;
+  }
+
+  const previousItemId = heroFeaturedRotationItems[heroFeaturedActiveIndex]?.id || "";
+  const preservedIndex = previousItemId
+    ? featuredItems.findIndex((item) => item.id === previousItemId)
+    : -1;
+
+  heroFeaturedRotationItems = featuredItems;
+  heroFeaturedActiveIndex = preservedIndex >= 0 ? preservedIndex : 0;
+
+  setHeroFeaturedIndex(heroFeaturedActiveIndex, {
+    animate: Boolean(document.querySelector(".phone-card")?.dataset.heroFeaturedReady),
+    force: true,
+  });
+  startHeroFeaturedRotation();
 };
 
 const prefillProfileForms = () => {
@@ -4638,13 +5916,13 @@ const getAuthProviderLabel = (provider) => {
     return "Instagram";
   }
 
-  return "Acesso Tokyo";
+  return TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo";
 };
 
 const getDisplayEmail = (profile) => {
   const email = normalizeEmail(profile?.email);
 
-  if (!email || email.endsWith("@social.tokyo")) {
+  if (!email || email.endsWith(`@${SOCIAL_EMAIL_DOMAIN}`)) {
     return "";
   }
 
@@ -4801,6 +6079,2282 @@ const getJsonWithTimeout = async (
   }
 };
 
+const normalizePublicSettingsText = (value, fallback = "", maxLength = 420) => {
+  const normalizedValue = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+
+  return normalizedValue || fallback;
+};
+
+const normalizePublicAssetUrl = (value, fallback = "") => {
+  const normalizedValue = normalizePublicSettingsText(value, "", 2048);
+
+  if (!normalizedValue) {
+    return fallback;
+  }
+
+  if (
+    normalizedValue.startsWith("./") ||
+    normalizedValue.startsWith("/") ||
+    /^https?:\/\//i.test(normalizedValue) ||
+    /^[\w./-]+\.(png|jpe?g|webp|gif|svg)$/i.test(normalizedValue) ||
+    /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/i.test(normalizedValue)
+  ) {
+    return normalizedValue;
+  }
+
+  return fallback;
+};
+
+const normalizePublicHexColor = (value, fallback) => {
+  const normalizedValue = normalizePublicSettingsText(value, "", 32).toLowerCase();
+
+  if (/^#[0-9a-f]{6}$/i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (/^#[0-9a-f]{3}$/i.test(normalizedValue)) {
+    return `#${normalizedValue
+      .slice(1)
+      .split("")
+      .map((character) => `${character}${character}`)
+      .join("")}`;
+  }
+
+  return fallback;
+};
+
+const normalizePublicSettingsNumber = (value, fallback = 0, precision = 2, maximum = 9999) => {
+  const normalizedValue = String(value ?? "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=.*\.)/g, "")
+    .replace(",", ".");
+  const numericValue = Number(normalizedValue);
+  const resolvedValue = Number.isFinite(numericValue) ? numericValue : Number(fallback || 0);
+
+  return Number(Math.max(0, Math.min(maximum, resolvedValue)).toFixed(precision));
+};
+
+const normalizePublicBoolean = (value, fallback = false) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  const normalizedValue = String(value || "").trim().toLowerCase();
+
+  if (["true", "1", "yes", "sim", "on"].includes(normalizedValue)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "nao", "off"].includes(normalizedValue)) {
+    return false;
+  }
+
+  return fallback;
+};
+
+const normalizePublicObject = (value) =>
+  value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+const normalizePublicOption = (value, allowedValues, fallback) => {
+  const normalizedValue = normalizePublicSettingsText(value, "", 40).toUpperCase();
+  return allowedValues.includes(normalizedValue) ? normalizedValue : fallback;
+};
+
+const normalizePublicKeywords = (value, fallback = []) => {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(",")
+        .map((entry) => entry.trim());
+  const keywords = source
+    .map((entry) => normalizePublicSettingsText(entry, "", 48))
+    .filter(Boolean)
+    .slice(0, 16);
+
+  return keywords.length ? keywords : [...fallback];
+};
+
+const normalizePublicMultilineText = (value, fallback = "", maxLength = 900) => {
+  const normalizedValue = String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
+
+  return normalizedValue || fallback;
+};
+
+const normalizePublicSeoSettings = (source = {}, defaults = RESTAURANT_SETTINGS_DEFAULTS) => {
+  const seo = normalizePublicObject(source.seo || source.appearance?.seo);
+  const openGraph = normalizePublicObject(source.seoOpenGraph || seo.openGraph);
+  const title = normalizePublicSettingsText(
+    source.seoTitle || seo.title,
+    defaults.seoTitle || defaults.restaurantName,
+    180
+  );
+  const description = normalizePublicMultilineText(
+    source.seoDescription || seo.description,
+    defaults.seoDescription || defaults.description || defaults.presentationText,
+    320
+  );
+  const shareImage = normalizePublicAssetUrl(
+    source.seoShareImage || source.seoImage || seo.shareImage || seo.image,
+    defaults.seoShareImage || defaults.bannerUrl
+  );
+
+  return {
+    title,
+    description,
+    shareImage,
+    keywords: normalizePublicKeywords(source.seoKeywords || seo.keywords, defaults.seoKeywords),
+    openGraph: {
+      title: normalizePublicSettingsText(openGraph.title, title, 180),
+      description: normalizePublicMultilineText(openGraph.description, description, 320),
+      image: normalizePublicAssetUrl(openGraph.image, shareImage),
+      type: normalizePublicSettingsText(openGraph.type, defaults.seoOpenGraph?.type || "website", 60),
+    },
+  };
+};
+
+const normalizePublicPlatformFooter = (source = {}, defaults = RESTAURANT_SETTINGS_DEFAULTS) => {
+  const footer = normalizePublicObject(source.platformFooter || source.appearance?.platformFooter);
+  const fallback = defaults.platformFooter || {};
+
+  return {
+    showPlatformBranding: normalizePublicBoolean(
+      footer.showPlatformBranding,
+      fallback.showPlatformBranding !== false
+    ),
+    brandName: normalizePublicSettingsText(footer.brandName, fallback.brandName || "INovas Food", 80),
+    headline: normalizePublicSettingsText(
+      footer.headline,
+      fallback.headline || "Desenvolvido por INovas Food",
+      120
+    ),
+    description: normalizePublicSettingsText(
+      footer.description,
+      fallback.description || "Plataforma profissional para restaurantes",
+      180
+    ),
+    url: normalizePublicSettingsText(
+      footer.url,
+      fallback.url || "https://www.inovasfood.com.br",
+      2048
+    ),
+    displayUrl: normalizePublicSettingsText(
+      footer.displayUrl,
+      fallback.displayUrl || "www.inovasfood.com.br",
+      120
+    ),
+  };
+};
+
+const normalizePublicAppearance = (source = {}, defaults = RESTAURANT_SETTINGS_DEFAULTS) => {
+  const appearance = normalizePublicObject(source.appearance);
+  const colorsSource = normalizePublicObject(appearance.colors || source.colors);
+  const identitySource = normalizePublicObject(appearance.identity || source.identity);
+  const socialSource = normalizePublicObject(appearance.social || source.social);
+  const colors = {
+    primary: normalizePublicHexColor(
+      source.primaryColor || colorsSource.primary,
+      defaults.primaryColor
+    ),
+    secondary: normalizePublicHexColor(
+      source.secondaryColor || colorsSource.secondary,
+      defaults.secondaryColor
+    ),
+    accent: normalizePublicHexColor(source.accentColor || colorsSource.accent, defaults.accentColor),
+    gradientStart: normalizePublicHexColor(
+      source.gradientStart || colorsSource.gradientStart,
+      defaults.gradientStart
+    ),
+    gradientEnd: normalizePublicHexColor(
+      source.gradientEnd || colorsSource.gradientEnd,
+      defaults.gradientEnd
+    ),
+    useGradient: normalizePublicBoolean(
+      source.useGradient ?? colorsSource.useGradient,
+      defaults.useGradient
+    ),
+  };
+
+  return {
+    layout: normalizePublicOption(
+      source.siteLayout || source.layout || appearance.layout,
+      ["MODERN", "CATALOGO", "PREMIUM"],
+      defaults.siteLayout
+    ),
+    theme: normalizePublicOption(
+      source.siteTheme || source.theme || appearance.theme,
+      ["LIGHT", "DARK", "AUTO"],
+      defaults.siteTheme
+    ),
+    colors,
+    identity: {
+      slogan: normalizePublicSettingsText(
+        source.slogan || identitySource.slogan,
+        defaults.slogan,
+        140
+      ),
+      description: normalizePublicMultilineText(
+        source.description || identitySource.description || source.presentationText,
+        defaults.description || defaults.presentationText,
+        900
+      ),
+    },
+    social: {
+      instagram: normalizePublicSettingsText(source.instagram || socialSource.instagram, "", 2048),
+      facebook: normalizePublicSettingsText(source.facebook || socialSource.facebook, "", 2048),
+      tiktok: normalizePublicSettingsText(source.tiktok || socialSource.tiktok, "", 2048),
+      site: normalizePublicSettingsText(source.site || socialSource.site, defaults.site, 2048),
+    },
+    seo: normalizePublicSeoSettings(source, defaults),
+    platformFooter: normalizePublicPlatformFooter(source, defaults),
+  };
+};
+
+const normalizePublicPostalCode = (value, fallback = "") => {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+
+  if (digits.length !== 8) {
+    return fallback;
+  }
+
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};
+
+const normalizePublicStateCode = (value, fallback = "") => {
+  const normalizedValue = normalizePublicSettingsText(value, "", 2)
+    .replace(/[^a-z]/gi, "")
+    .toUpperCase();
+
+  return normalizedValue.length === 2 ? normalizedValue : fallback;
+};
+
+const normalizePublicCoordinate = (value, minimum, maximum) => {
+  const normalizedValue = String(value ?? "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=.*\.)/g, "")
+    .replace(",", ".");
+  const numericValue = Number(normalizedValue);
+
+  if (!Number.isFinite(numericValue) || numericValue < minimum || numericValue > maximum) {
+    return null;
+  }
+
+  return Number(numericValue.toFixed(8));
+};
+
+const normalizePublicAddressFields = (addressFields = {}, fallback = RESTAURANT_SETTINGS_DEFAULTS.addressFields) => {
+  const source = addressFields && typeof addressFields === "object" ? addressFields : {};
+
+  return {
+    postalCode: normalizePublicPostalCode(source.postalCode || source.cep, fallback.postalCode),
+    street: normalizePublicSettingsText(source.street || source.rua, fallback.street, 160),
+    number: normalizePublicSettingsText(source.number || source.numero, fallback.number, 40),
+    complement: normalizePublicSettingsText(source.complement || source.complemento, "", 120),
+    neighborhood: normalizePublicSettingsText(
+      source.neighborhood || source.bairro,
+      fallback.neighborhood,
+      120
+    ),
+    city: normalizePublicSettingsText(source.city || source.cidade, fallback.city, 120),
+    state: normalizePublicStateCode(source.state || source.estado, fallback.state),
+  };
+};
+
+const buildPublicFriendlyAddress = (addressFields = {}, fallback = "") => {
+  const primaryLine = [addressFields.street, addressFields.number].filter(Boolean).join(", ");
+  const address = [
+    primaryLine,
+    addressFields.complement,
+    addressFields.neighborhood,
+    [addressFields.city, addressFields.state].filter(Boolean).join(" - "),
+    addressFields.postalCode ? `CEP ${addressFields.postalCode}` : "",
+    "Brasil",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return address || fallback;
+};
+
+const normalizePublicDeliveryBase = (deliveryBase = {}, fallback = RESTAURANT_SETTINGS_DEFAULTS.deliveryBase) => {
+  const source = deliveryBase && typeof deliveryBase === "object" ? deliveryBase : {};
+
+  return {
+    latitude: normalizePublicCoordinate(source.latitude, -90, 90),
+    longitude: normalizePublicCoordinate(source.longitude, -180, 180),
+    maxDeliveryRadiusKm: normalizePublicSettingsNumber(
+      source.maxDeliveryRadiusKm,
+      fallback.maxDeliveryRadiusKm,
+      2,
+      999
+    ),
+    fixedDeliveryFee: normalizePublicSettingsNumber(
+      source.fixedDeliveryFee ?? source.defaultDeliveryFee,
+      fallback.fixedDeliveryFee,
+      2,
+      500
+    ),
+    pricePerKm: normalizePublicSettingsNumber(source.pricePerKm, fallback.pricePerKm, 2, 500),
+    minimumDeliveryOrder: normalizePublicSettingsNumber(
+      source.minimumDeliveryOrder,
+      fallback.minimumDeliveryOrder,
+      2,
+      5000
+    ),
+    pickupEnabled: normalizePublicBoolean(source.pickupEnabled, fallback.pickupEnabled),
+    deliveryEnabled: normalizePublicBoolean(source.deliveryEnabled, fallback.deliveryEnabled),
+  };
+};
+
+const normalizePublicTimeValue = (value, fallback = "") => {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+
+  if (!match) {
+    return fallback;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return fallback;
+  }
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+
+const parsePublicTimeToMinutes = (value) => {
+  if (BUSINESS_HOURS_API?.parseTimeToMinutes) {
+    return BUSINESS_HOURS_API.parseTimeToMinutes(value);
+  }
+
+  const normalizedTime = normalizePublicTimeValue(value, "");
+
+  if (!normalizedTime) {
+    return NaN;
+  }
+
+  const [hours, minutes] = normalizedTime.split(":").map((part) => Number(part));
+  return hours * 60 + minutes;
+};
+
+const formatPublicMinutesAsTime = (totalMinutes) => {
+  if (BUSINESS_HOURS_API?.formatMinutesAsTime) {
+    return BUSINESS_HOURS_API.formatMinutesAsTime(totalMinutes);
+  }
+
+  const safeMinutes = Math.max(0, Math.min(23 * 60 + 59, Math.round(Number(totalMinutes) || 0)));
+  const hours = Math.floor(safeMinutes / 60);
+  const minutes = safeMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+
+const normalizePublicBusinessScheduleDay = (
+  day = {},
+  fallback = { isOpen: true, openTime: "18:00", closeTime: "23:00", pauseStart: "", pauseEnd: "" }
+) => {
+  const source = day && typeof day === "object" ? day : {};
+  const fallbackOpenTime = normalizePublicTimeValue(fallback.openTime, "18:00");
+  const fallbackCloseTime = normalizePublicTimeValue(fallback.closeTime, "23:00");
+  const openTime = normalizePublicTimeValue(
+    source.openTime || source.openingTime || source.abertura,
+    fallbackOpenTime
+  );
+  let closeTime = normalizePublicTimeValue(
+    source.closeTime || source.closingTime || source.fechamento,
+    fallbackCloseTime
+  );
+
+  if (parsePublicTimeToMinutes(closeTime) <= parsePublicTimeToMinutes(openTime)) {
+    closeTime = fallbackCloseTime;
+  }
+
+  let pauseStart = normalizePublicTimeValue(
+    source.pauseStart || source.breakStart || source.pause1Start || source.pausaInicio,
+    fallback.pauseStart || ""
+  );
+  let pauseEnd = normalizePublicTimeValue(
+    source.pauseEnd || source.breakEnd || source.pause1End || source.pausaFim,
+    fallback.pauseEnd || ""
+  );
+  const pauseStartMinutes = parsePublicTimeToMinutes(pauseStart);
+  const pauseEndMinutes = parsePublicTimeToMinutes(pauseEnd);
+  const openMinutes = parsePublicTimeToMinutes(openTime);
+  const closeMinutes = parsePublicTimeToMinutes(closeTime);
+
+  if (
+    !pauseStart ||
+    !pauseEnd ||
+    pauseStartMinutes < openMinutes ||
+    pauseEndMinutes > closeMinutes ||
+    pauseEndMinutes <= pauseStartMinutes
+  ) {
+    pauseStart = "";
+    pauseEnd = "";
+  }
+
+  return {
+    isOpen: normalizePublicBoolean(source.isOpen ?? source.open ?? source.aberto, fallback.isOpen !== false),
+    openTime,
+    closeTime,
+    pauseStart,
+    pauseEnd,
+  };
+};
+
+const normalizePublicDateValue = (value, fallback = "") => {
+  const normalizedValue = String(value || "").trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return fallback;
+};
+
+const normalizePublicBusinessSpecialDate = (entry = {}) => {
+  const source = entry && typeof entry === "object" ? entry : {};
+  const date = normalizePublicDateValue(source.date || source.dateValue, "");
+
+  if (!date) {
+    return null;
+  }
+
+  const normalizedDay = normalizePublicBusinessScheduleDay(source, {
+    isOpen: false,
+    openTime: "18:00",
+    closeTime: "23:00",
+    pauseStart: "",
+    pauseEnd: "",
+  });
+
+  return {
+    id: normalizePublicSettingsText(source.id, `special-${date}`, 80),
+    date,
+    name: normalizePublicSettingsText(source.name || source.description || source.descricao, "", 120),
+    ...normalizedDay,
+    message: normalizePublicSettingsText(
+      source.message || source.customerMessage || source.mensagem,
+      "",
+      360
+    ),
+  };
+};
+
+const normalizePublicBusinessSpecialDates = (specialDates = []) => {
+  if (!Array.isArray(specialDates)) {
+    return [];
+  }
+
+  const byDate = new Map();
+
+  specialDates.forEach((entry) => {
+    const normalizedEntry = normalizePublicBusinessSpecialDate(entry);
+
+    if (normalizedEntry) {
+      byDate.set(normalizedEntry.date, normalizedEntry);
+    }
+  });
+
+  return Array.from(byDate.values()).sort((left, right) => left.date.localeCompare(right.date));
+};
+
+const normalizePublicBusinessSchedule = (
+  businessSchedule = {},
+  fallback = RESTAURANT_SETTINGS_DEFAULTS.businessSchedule
+) => {
+  const source = businessSchedule && typeof businessSchedule === "object" ? businessSchedule : {};
+  const sourceDays =
+    source.days && typeof source.days === "object"
+      ? source.days
+      : source.weekdays && typeof source.weekdays === "object"
+        ? source.weekdays
+        : {};
+  const fallbackDays = fallback.days || createDefaultBusinessScheduleDays();
+  const days = BUSINESS_SCHEDULE_DAY_KEYS.reduce((normalizedDays, dayKey) => {
+    normalizedDays[dayKey] = normalizePublicBusinessScheduleDay(
+      sourceDays[dayKey],
+      fallbackDays[dayKey] || RESTAURANT_SETTINGS_DEFAULTS.businessSchedule.days[dayKey]
+    );
+
+    return normalizedDays;
+  }, {});
+
+  return {
+    timeZone: normalizePublicSettingsText(
+      source.timeZone || source.timezone,
+      fallback.timeZone || "America/Sao_Paulo",
+      80
+    ),
+    acceptOrdersOutsideHours: normalizePublicBoolean(
+      source.acceptOrdersOutsideHours ?? source.acceptOutsideHours,
+      fallback.acceptOrdersOutsideHours
+    ),
+    closedMessage: normalizePublicSettingsText(
+      source.closedMessage,
+      fallback.closedMessage,
+      360
+    ),
+    peakPreparationExtraMinutes: Math.round(
+      normalizePublicSettingsNumber(
+        source.peakPreparationExtraMinutes,
+        fallback.peakPreparationExtraMinutes,
+        0,
+        240
+      )
+    ),
+    specialDates: normalizePublicBusinessSpecialDates(
+      source.specialDates || source.exceptionDates || source.holidays
+    ),
+    days,
+  };
+};
+
+const formatPublicBusinessDayHours = (day = {}) => {
+  if (day.isOpen === false) {
+    return "Fechado";
+  }
+
+  const pauseLabel =
+    day.pauseStart && day.pauseEnd ? ` (pausa ${day.pauseStart} as ${day.pauseEnd})` : "";
+
+  return `${day.openTime || "18:00"} as ${day.closeTime || "23:00"}${pauseLabel}`;
+};
+
+const getPublicBusinessDaySignature = (day = {}) =>
+  day.isOpen === false
+    ? "closed"
+    : [
+        day.openTime || "",
+        day.closeTime || "",
+        day.pauseStart || "",
+        day.pauseEnd || "",
+      ].join("|");
+
+const formatPublicBusinessDayRange = (startKey, endKey) =>
+  startKey === endKey
+    ? BUSINESS_SCHEDULE_DAY_SHORT_LABELS[startKey] || startKey
+    : `${BUSINESS_SCHEDULE_DAY_SHORT_LABELS[startKey] || startKey} a ${
+        BUSINESS_SCHEDULE_DAY_SHORT_LABELS[endKey] || endKey
+      }`;
+
+const formatPublicBusinessScheduleLabel = (schedule = {}) => {
+  const days = schedule.days || {};
+  const groups = [];
+
+  BUSINESS_SCHEDULE_DAY_KEYS.forEach((dayKey) => {
+    const day = days[dayKey] || {};
+    const signature = getPublicBusinessDaySignature(day);
+    const lastGroup = groups[groups.length - 1];
+
+    if (lastGroup && lastGroup.signature === signature) {
+      lastGroup.endKey = dayKey;
+      return;
+    }
+
+    groups.push({
+      signature,
+      startKey: dayKey,
+      endKey: dayKey,
+      label: formatPublicBusinessDayHours(day),
+    });
+  });
+
+  if (groups.length === 1) {
+    return `Todos os dias: ${groups[0].label}`;
+  }
+
+  return groups
+    .map((group) => `${formatPublicBusinessDayRange(group.startKey, group.endKey)}: ${group.label}`)
+    .join("; ");
+};
+
+const buildPublicDateFromDateValue = (dateValue) => {
+  const [year, month, day] = String(dateValue || "")
+    .split("-")
+    .map((part) => Number(part));
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+};
+
+const addDaysToPublicDateValue = (dateValue, days) => {
+  if (BUSINESS_HOURS_API?.addDaysToDateValue) {
+    return BUSINESS_HOURS_API.addDaysToDateValue(dateValue, days);
+  }
+
+  const baseDate = buildPublicDateFromDateValue(dateValue);
+
+  if (!baseDate) {
+    return "";
+  }
+
+  const nextDate = new Date(baseDate);
+  nextDate.setUTCDate(nextDate.getUTCDate() + Number(days || 0));
+
+  return [
+    nextDate.getUTCFullYear(),
+    String(nextDate.getUTCMonth() + 1).padStart(2, "0"),
+    String(nextDate.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+const formatPublicDateValue = (dateValue) => {
+  if (BUSINESS_HOURS_API?.formatDateValue) {
+    return BUSINESS_HOURS_API.formatDateValue(dateValue);
+  }
+
+  const date = buildPublicDateFromDateValue(dateValue);
+
+  if (!date) {
+    return dateValue;
+  }
+
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "UTC",
+      dateStyle: "short",
+    }).format(date);
+  } catch (error) {
+    return dateValue;
+  }
+};
+
+const getPublicNowParts = (now = new Date(), timeZone = "America/Sao_Paulo") => {
+  if (BUSINESS_HOURS_API?.getNowParts) {
+    return BUSINESS_HOURS_API.getNowParts(now, timeZone);
+  }
+
+  let formatter;
+
+  try {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  } catch (error) {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+  }
+
+  const parts = formatter.formatToParts(now).reduce((accumulator, part) => {
+    if (part.type !== "literal") {
+      accumulator[part.type] = part.value;
+    }
+
+    return accumulator;
+  }, {});
+  const year = parts.year || "0000";
+  const month = parts.month || "01";
+  const day = parts.day || "01";
+  const hour = parts.hour || "00";
+  const minute = parts.minute || "00";
+  const second = parts.second || "00";
+  const hoursNumber = Number(hour);
+  const minutesNumber = Number(minute);
+  const secondsNumber = Number(second);
+
+  return {
+    dateValue: `${year}-${month}-${day}`,
+    timeValue: `${hour}:${minute}`,
+    hours: hoursNumber,
+    minutes: minutesNumber,
+    seconds: secondsNumber,
+    minuteOfDay: hoursNumber * 60 + minutesNumber,
+    dateTimeKey: `${year}-${month}-${day}T${hour}:${minute}`,
+  };
+};
+
+const getPublicWeekdayKeyForDateValue = (dateValue, timeZone = "America/Sao_Paulo") => {
+  if (BUSINESS_HOURS_API?.getWeekdayKeyForDateValue) {
+    return BUSINESS_HOURS_API.getWeekdayKeyForDateValue(dateValue, timeZone);
+  }
+
+  const date = buildPublicDateFromDateValue(dateValue);
+
+  if (!date) {
+    return "monday";
+  }
+
+  try {
+    const weekday = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "long",
+    })
+      .format(date)
+      .toLowerCase();
+
+    return BUSINESS_SCHEDULE_DAY_KEYS.includes(weekday) ? weekday : "monday";
+  } catch (error) {
+    return "monday";
+  }
+};
+
+const formatPublicRelativeDateLabel = (dateValue, nowParts) => {
+  if (!dateValue) {
+    return "";
+  }
+
+  if (dateValue === nowParts.dateValue) {
+    return "hoje";
+  }
+
+  if (dateValue === addDaysToPublicDateValue(nowParts.dateValue, 1)) {
+    return "amanha";
+  }
+
+  return formatPublicDateValue(dateValue);
+};
+
+const getPublicSpecialDateForDate = (schedule = {}, dateValue = "") =>
+  BUSINESS_HOURS_API?.getSpecialDateForDate
+    ? BUSINESS_HOURS_API.getSpecialDateForDate(schedule, dateValue)
+    : (Array.isArray(schedule.specialDates) ? schedule.specialDates : []).find(
+        (entry) => entry.date === dateValue
+      ) || null;
+
+const getPublicBusinessDayForDate = (schedule = {}, dateValue = "") => {
+  if (BUSINESS_HOURS_API?.getBusinessDayForDate) {
+    const result = BUSINESS_HOURS_API.getBusinessDayForDate(schedule, dateValue, schedule.timeZone);
+    return {
+      dayKey: result.dayKey,
+      day: result.day,
+      specialDate: result.activeSpecialDate,
+    };
+  }
+
+  const dayKey = getPublicWeekdayKeyForDateValue(dateValue, schedule.timeZone);
+  const specialDate = getPublicSpecialDateForDate(schedule, dateValue);
+
+  return {
+    dayKey,
+    day: specialDate || schedule.days?.[dayKey] || null,
+    specialDate,
+  };
+};
+
+const getPublicNextBusinessOpening = (schedule = {}, now = new Date(), nowParts = null) => {
+  if (BUSINESS_HOURS_API?.getNextOpening) {
+    const result = BUSINESS_HOURS_API.getNextOpening(schedule, now, nowParts, {
+      includeCurrentOpenUntil: true,
+    });
+
+    return {
+      dateValue: result.dateValue,
+      timeValue: result.timeValue,
+    };
+  }
+
+  const effectiveNowParts = nowParts || getPublicNowParts(now, schedule.timeZone);
+
+  for (let offset = 0; offset < 14; offset += 1) {
+    const dateValue = addDaysToPublicDateValue(effectiveNowParts.dateValue, offset);
+    const { day } = getPublicBusinessDayForDate(schedule, dateValue);
+
+    if (!day || day.isOpen === false) {
+      continue;
+    }
+
+    const openMinutes = parsePublicTimeToMinutes(day.openTime);
+    const closeMinutes = parsePublicTimeToMinutes(day.closeTime);
+    const pauseStartMinutes = parsePublicTimeToMinutes(day.pauseStart);
+    const pauseEndMinutes = parsePublicTimeToMinutes(day.pauseEnd);
+
+    if (!Number.isFinite(openMinutes) || !Number.isFinite(closeMinutes)) {
+      continue;
+    }
+
+    if (offset === 0) {
+      if (effectiveNowParts.minuteOfDay < openMinutes) {
+        return { dateValue, timeValue: day.openTime };
+      }
+
+      if (
+        Number.isFinite(pauseStartMinutes) &&
+        Number.isFinite(pauseEndMinutes) &&
+        effectiveNowParts.minuteOfDay >= pauseStartMinutes &&
+        effectiveNowParts.minuteOfDay < pauseEndMinutes
+      ) {
+        return { dateValue, timeValue: day.pauseEnd };
+      }
+
+      if (effectiveNowParts.minuteOfDay >= closeMinutes) {
+        continue;
+      }
+
+      return { dateValue, timeValue: day.closeTime };
+    }
+
+    return { dateValue, timeValue: day.openTime };
+  }
+
+  return {
+    dateValue: "",
+    timeValue: "",
+  };
+};
+
+const getPublicBusinessScheduleStatus = (now = new Date()) => {
+  const settings = getRestaurantSettings();
+
+  if (!settings.hasStructuredBusinessSchedule || !settings.businessSchedule) {
+    return null;
+  }
+
+  const schedule = settings.businessSchedule;
+  const status = BUSINESS_HOURS_API?.getBusinessHoursStatus
+    ? BUSINESS_HOURS_API.getBusinessHoursStatus(schedule, now, schedule.timeZone, {
+        includeCurrentOpenUntil: true,
+      })
+    : null;
+
+  if (!status) {
+    return null;
+  }
+
+  const nowParts = {
+    dateValue: status.localDate,
+    timeValue: status.localTime,
+  };
+  const { dayKey, day, specialDate } = {
+    dayKey: status.dayKey,
+    day: status.day,
+    specialDate: status.activeSpecialDate,
+  };
+  const todayLabel = specialDate?.name || BUSINESS_SCHEDULE_DAY_LABELS[dayKey] || "Hoje";
+  const todayHoursLabel = day ? formatPublicBusinessDayHours(day) : settings.businessHours;
+  const isOpen = Boolean(status.isOpen);
+  const closedReason = status.closedReason || (specialDate ? "special_date_closed" : "closed_day");
+  const closeTimeLabel =
+    closedReason === "pause" ? day?.pauseEnd || "" : day?.closeTime || status.closeTime || "";
+  const nextOpening = {
+    dateValue: status.nextOpeningDate,
+    timeValue: status.nextOpeningTime,
+  };
+  const nextOpeningLabel =
+    nextOpening.dateValue && nextOpening.timeValue
+      ? `${formatPublicRelativeDateLabel(nextOpening.dateValue, nowParts)} as ${nextOpening.timeValue}`
+      : "sem horario cadastrado";
+  const closedMessage =
+    specialDate?.message ||
+    schedule.closedMessage ||
+    RESTAURANT_SETTINGS_DEFAULTS.businessSchedule.closedMessage;
+  const acceptsOutsideHours = schedule.acceptOrdersOutsideHours === true;
+  const acceptsImmediateOrders = isOpen || acceptsOutsideHours;
+  const specialDateLabel = specialDate
+    ? specialDate.name
+      ? `Data especial: ${specialDate.name}.`
+      : "Data especial ativa."
+    : "";
+  const specialDateNotice = [specialDateLabel, specialDate?.message || ""]
+    .filter(Boolean)
+    .join(" ");
+  const closedDetail =
+    closedReason === "pause"
+      ? `Estamos em pausa agora. Retorno previsto: ${nextOpeningLabel}.`
+      : `${closedMessage} Proxima abertura: ${nextOpeningLabel}.`;
+
+  return {
+    isOpen,
+    isSpecialDateActive: Boolean(specialDate),
+    specialDate: specialDate
+      ? {
+          date: specialDate.date,
+          name: specialDate.name || "",
+          message: specialDate.message || "",
+          isOpen: specialDate.isOpen !== false,
+          openTime: specialDate.openTime || "",
+          closeTime: specialDate.closeTime || "",
+          pauseStart: specialDate.pauseStart || "",
+          pauseEnd: specialDate.pauseEnd || "",
+        }
+      : null,
+    specialDateNotice,
+    acceptsImmediateOrders,
+    acceptsOrdersOutsideHours: acceptsOutsideHours,
+    statusTone: isOpen ? "open" : "closed",
+    statusLabel: isOpen ? "Loja aberta" : "Loja fechada",
+    shortStatusLabel: isOpen ? "Aberta agora" : "Fechada agora",
+    businessWindowLabel: todayHoursLabel,
+    businessScheduleLabel: formatPublicBusinessScheduleLabel(schedule),
+    todayLabel,
+    todayHoursLabel,
+    nowDateValue: nowParts.dateValue,
+    nowTimeValue: nowParts.timeValue,
+    nextOpeningDateValue: nextOpening.dateValue,
+    nextOpeningTimeValue: nextOpening.timeValue,
+    nextOpeningLabel,
+    closeTimeLabel,
+    closedReason,
+    closedMessage,
+    warningMessage: isOpen ? "" : closedDetail,
+    detail: isOpen
+      ? `${specialDateNotice ? `${specialDateNotice} ` : ""}Pedidos imediatos liberados ate ${closeTimeLabel}.`
+      : acceptsOutsideHours
+        ? `${specialDateLabel ? `${specialDateLabel} ` : ""}${closedDetail} Ainda aceitamos pedidos fora do horario.`
+        : `${specialDateLabel ? `${specialDateLabel} ` : ""}${closedDetail}`,
+  };
+};
+
+const getPublicBusinessScheduleDefaultSchedule = (now = new Date()) => {
+  const status = getPublicBusinessScheduleStatus(now);
+
+  if (!status) {
+    return null;
+  }
+
+  const settings = getRestaurantSettings();
+  const schedule = settings.businessSchedule;
+  const nowParts = getPublicNowParts(now, schedule.timeZone);
+  const { day } = getPublicBusinessDayForDate(schedule, nowParts.dateValue);
+  const step = 5;
+
+  if (status.isOpen && day) {
+    const closeMinutes = parsePublicTimeToMinutes(day.closeTime);
+    const pauseStartMinutes = parsePublicTimeToMinutes(day.pauseStart);
+    const pauseEndMinutes = parsePublicTimeToMinutes(day.pauseEnd);
+    let nextMinutes = Math.ceil((nowParts.minuteOfDay + 1) / step) * step;
+
+    if (
+      Number.isFinite(pauseStartMinutes) &&
+      Number.isFinite(pauseEndMinutes) &&
+      nextMinutes >= pauseStartMinutes &&
+      nextMinutes < pauseEndMinutes
+    ) {
+      nextMinutes = pauseEndMinutes;
+    }
+
+    if (nextMinutes <= closeMinutes) {
+      return {
+        dateValue: nowParts.dateValue,
+        timeValue: formatPublicMinutesAsTime(nextMinutes),
+      };
+    }
+  }
+
+  return {
+    dateValue: status.nextOpeningDateValue,
+    timeValue: status.nextOpeningTimeValue,
+  };
+};
+
+const getPublicBusinessScheduleConstraints = (selectedDate = "", now = new Date()) => {
+  const status = getPublicBusinessScheduleStatus(now);
+
+  if (!status) {
+    return null;
+  }
+
+  const settings = getRestaurantSettings();
+  const schedule = settings.businessSchedule;
+  const nowParts = getPublicNowParts(now, schedule.timeZone);
+  const defaultSchedule = getPublicBusinessScheduleDefaultSchedule(now);
+  const effectiveDate = selectedDate || defaultSchedule.dateValue;
+  const { day } = getPublicBusinessDayForDate(schedule, effectiveDate);
+  const stepSeconds = 300;
+
+  if (!day || day.isOpen === false) {
+    return {
+      minDate: nowParts.dateValue,
+      timeMin: defaultSchedule.timeValue || "",
+      timeMax: defaultSchedule.timeValue || "",
+      stepSeconds,
+      defaultDate: defaultSchedule.dateValue,
+      defaultTime: defaultSchedule.timeValue,
+      selectedDateAvailable: false,
+    };
+  }
+
+  const openMinutes = parsePublicTimeToMinutes(day.openTime);
+  const closeMinutes = parsePublicTimeToMinutes(day.closeTime);
+  const pauseStartMinutes = parsePublicTimeToMinutes(day.pauseStart);
+  const pauseEndMinutes = parsePublicTimeToMinutes(day.pauseEnd);
+  let timeMin = day.openTime;
+  let selectedDateAvailable = true;
+
+  if (effectiveDate === nowParts.dateValue) {
+    let nextTodayMinutes = Math.max(openMinutes, Math.ceil((nowParts.minuteOfDay + 1) / 5) * 5);
+
+    if (
+      Number.isFinite(pauseStartMinutes) &&
+      Number.isFinite(pauseEndMinutes) &&
+      nextTodayMinutes >= pauseStartMinutes &&
+      nextTodayMinutes < pauseEndMinutes
+    ) {
+      nextTodayMinutes = pauseEndMinutes;
+    }
+
+    if (nextTodayMinutes > closeMinutes) {
+      selectedDateAvailable = false;
+    } else {
+      timeMin = formatPublicMinutesAsTime(nextTodayMinutes);
+    }
+  }
+
+  return {
+    minDate: nowParts.dateValue,
+    timeMin,
+    timeMax: day.closeTime,
+    stepSeconds,
+    defaultDate: defaultSchedule.dateValue,
+    defaultTime: defaultSchedule.timeValue,
+    selectedDateAvailable,
+  };
+};
+
+const validatePublicBusinessScheduleOrder = ({ dateValue = "", timeValue = "" } = {}, now = new Date()) => {
+  const status = getPublicBusinessScheduleStatus(now);
+
+  if (!status) {
+    return null;
+  }
+
+  if (!dateValue) {
+    return { isValid: false, reason: "missing_date" };
+  }
+
+  if (!timeValue) {
+    return { isValid: false, reason: "missing_time" };
+  }
+
+  const settings = getRestaurantSettings();
+  const schedule = settings.businessSchedule;
+  const nowParts = getPublicNowParts(now, schedule.timeZone);
+  const minutes = parsePublicTimeToMinutes(timeValue);
+
+  if (!Number.isFinite(minutes)) {
+    return { isValid: false, reason: "invalid_time" };
+  }
+
+  const { day } = getPublicBusinessDayForDate(schedule, dateValue);
+
+  if (!day || day.isOpen === false) {
+    return { isValid: false, reason: "closed_day" };
+  }
+
+  const openMinutes = parsePublicTimeToMinutes(day.openTime);
+  const closeMinutes = parsePublicTimeToMinutes(day.closeTime);
+  const pauseStartMinutes = parsePublicTimeToMinutes(day.pauseStart);
+  const pauseEndMinutes = parsePublicTimeToMinutes(day.pauseEnd);
+
+  if (minutes < openMinutes || minutes > closeMinutes) {
+    return { isValid: false, reason: "outside_window" };
+  }
+
+  if (
+    Number.isFinite(pauseStartMinutes) &&
+    Number.isFinite(pauseEndMinutes) &&
+    minutes >= pauseStartMinutes &&
+    minutes < pauseEndMinutes
+  ) {
+    return { isValid: false, reason: "pause" };
+  }
+
+  if (`${dateValue}T${timeValue}` <= nowParts.dateTimeKey) {
+    return { isValid: false, reason: "past" };
+  }
+
+  return { isValid: true, reason: "" };
+};
+
+const normalizePublicRestaurantSettingsPayload = (settings = {}) => {
+  const source = settings && typeof settings === "object" ? settings : {};
+  const defaults = RESTAURANT_SETTINGS_DEFAULTS;
+  const hasStructuredAddressSource =
+    Boolean(source.addressFields && typeof source.addressFields === "object") ||
+    ["postalCode", "cep", "street", "rua", "number", "numero", "city", "cidade", "state", "estado"].some(
+      (fieldName) => normalizePublicSettingsText(source[fieldName], "", 160)
+    );
+  const addressFields = normalizePublicAddressFields(
+    hasStructuredAddressSource ? source.addressFields : defaults.addressFields,
+    defaults.addressFields
+  );
+  const deliveryBase = normalizePublicDeliveryBase(
+    {
+      ...(source.deliveryBase && typeof source.deliveryBase === "object" ? source.deliveryBase : {}),
+      fixedDeliveryFee:
+        source.deliveryBase?.fixedDeliveryFee ?? source.defaultDeliveryFee ?? undefined,
+    },
+    defaults.deliveryBase
+  );
+  const hasStructuredBusinessSchedule =
+    Boolean(source.businessSchedule && typeof source.businessSchedule === "object") ||
+    Boolean(source.weeklySchedule && typeof source.weeklySchedule === "object") ||
+    source.hasStructuredBusinessSchedule === true;
+  const businessSchedule = normalizePublicBusinessSchedule(
+    source.businessSchedule || source.weeklySchedule || defaults.businessSchedule,
+    defaults.businessSchedule
+  );
+  const structuredAddress = buildPublicFriendlyAddress(addressFields, defaults.address);
+  const address = normalizePublicSettingsText(
+    source.address,
+    hasStructuredAddressSource ? structuredAddress : defaults.address,
+    260
+  );
+  const appearance = normalizePublicAppearance(source, defaults);
+
+  return {
+    restaurantKey: "default",
+    restaurantName: normalizePublicSettingsText(source.restaurantName, defaults.restaurantName, 120),
+    logoUrl: normalizePublicAssetUrl(source.logoUrl, defaults.logoUrl),
+    bannerUrl: normalizePublicAssetUrl(source.bannerUrl, defaults.bannerUrl),
+    primaryColor: appearance.colors.primary,
+    secondaryColor: appearance.colors.secondary,
+    accentColor: appearance.colors.accent,
+    gradientStart: appearance.colors.gradientStart,
+    gradientEnd: appearance.colors.gradientEnd,
+    useGradient: appearance.colors.useGradient,
+    siteLayout: appearance.layout,
+    siteTheme: appearance.theme,
+    slogan: appearance.identity.slogan,
+    description: appearance.identity.description,
+    instagram: appearance.social.instagram,
+    facebook: appearance.social.facebook,
+    tiktok: appearance.social.tiktok,
+    site: appearance.social.site,
+    seoTitle: appearance.seo.title,
+    seoDescription: appearance.seo.description,
+    seoShareImage: appearance.seo.shareImage,
+    seoKeywords: [...appearance.seo.keywords],
+    seoOpenGraph: { ...appearance.seo.openGraph },
+    platformFooter: { ...appearance.platformFooter },
+    appearance,
+    whatsapp:
+      String(source.whatsapp || defaults.whatsapp || "")
+        .replace(/\D/g, "")
+        .slice(0, 18) || defaults.whatsapp,
+    address,
+    addressFields,
+    deliveryBase,
+    businessHours: normalizePublicSettingsText(source.businessHours, defaults.businessHours, 160),
+    businessSchedule,
+    hasStructuredBusinessSchedule,
+    defaultDeliveryFee: normalizePublicSettingsNumber(
+      source.defaultDeliveryFee ?? deliveryBase.fixedDeliveryFee,
+      deliveryBase.fixedDeliveryFee,
+      2,
+      500
+    ),
+    averagePreparationTimeMinutes: Math.round(
+      normalizePublicSettingsNumber(
+        source.averagePreparationTimeMinutes,
+        defaults.averagePreparationTimeMinutes,
+        0,
+        360
+      )
+    ),
+    presentationText: String(
+      source.presentationText || appearance.identity.description || defaults.presentationText || ""
+    )
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .slice(0, 900),
+    updatedAt: normalizePublicSettingsText(source.updatedAt, "", 80),
+  };
+};
+
+const getRestaurantSettings = () =>
+  restaurantSettingsState.settings ||
+  normalizePublicRestaurantSettingsPayload(RESTAURANT_SETTINGS_DEFAULTS);
+
+const getPublicRestaurantName = () => getRestaurantSettings().restaurantName;
+const getPublicStoreAddress = () => getRestaurantSettings().address || DELIVERY_STORE_ADDRESS;
+const getPublicStoreLabel = () => getPublicStoreAddress();
+const getPublicBusinessHoursLabel = (fallback = "18:00 as 23:00") => {
+  const settings = getRestaurantSettings();
+
+  if (settings.hasStructuredBusinessSchedule && settings.businessSchedule) {
+    return formatPublicBusinessScheduleLabel(settings.businessSchedule) || settings.businessHours || fallback;
+  }
+
+  return settings.businessHours || fallback;
+};
+const getPublicWhatsappNumber = () => getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER;
+const getPublicWhatsappSupportHref = () => {
+  const settings = getRestaurantSettings();
+  const template =
+    TOKYO_WHATSAPP_TEMPLATES.orderSupport ||
+    "Ola, quero fazer um pedido no {restaurantName}.";
+  const message = template.replace("{restaurantName}", settings.restaurantName);
+
+  return `https://wa.me/${getPublicWhatsappNumber()}?text=${encodeURIComponent(message)}`;
+};
+const getPublicDefaultDeliveryFee = () =>
+  Number(
+    getRestaurantSettings().deliveryBase?.fixedDeliveryFee ||
+      getRestaurantSettings().defaultDeliveryFee ||
+      DELIVERY_MANUAL_FALLBACK_FEE
+  );
+const getPublicDeliveryPricePerKm = () =>
+  Number(getRestaurantSettings().deliveryBase?.pricePerKm || 0);
+const getPublicMinimumDeliveryOrder = () =>
+  Number(getRestaurantSettings().deliveryBase?.minimumDeliveryOrder || 0);
+const getPublicMaxDeliveryRadiusKm = () =>
+  Number(getRestaurantSettings().deliveryBase?.maxDeliveryRadiusKm || 0);
+const getPublicAveragePreparationMinutes = () =>
+  Number(getRestaurantSettings().averagePreparationTimeMinutes || PICKUP_ESTIMATE_MINUTES);
+const isPublicPickupEnabled = () => getRestaurantSettings().deliveryBase?.pickupEnabled !== false;
+const isPublicDeliveryEnabled = () => getRestaurantSettings().deliveryBase?.deliveryEnabled !== false;
+const getConfiguredPublicStoreCoordinates = () => {
+  const deliveryBase = getRestaurantSettings().deliveryBase || {};
+  const latitude = Number(deliveryBase.latitude);
+  const longitude = Number(deliveryBase.longitude);
+
+  if (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  ) {
+    return {
+      lat: latitude,
+      lng: longitude,
+    };
+  }
+
+  return null;
+};
+const getPublicStoreCoordinates = () =>
+  getConfiguredPublicStoreCoordinates() || DELIVERY_STORE_COORDINATES;
+
+const hexToRgba = (hexColor, alpha = 1) => {
+  const normalizedColor = normalizePublicHexColor(hexColor, "#000000").slice(1);
+  const red = Number.parseInt(normalizedColor.slice(0, 2), 16);
+  const green = Number.parseInt(normalizedColor.slice(2, 4), 16);
+  const blue = Number.parseInt(normalizedColor.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${Math.max(0, Math.min(1, Number(alpha) || 0))})`;
+};
+
+const resolvePublicAssetUrl = (value) => {
+  const normalizedValue = String(value || "").trim();
+
+  if (!normalizedValue || normalizedValue.startsWith("/") || /^[a-z]+:\/\//i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return normalizedValue;
+};
+
+const setNodeText = (selector, value) => {
+  document.querySelectorAll(selector).forEach((node) => {
+    node.textContent = value;
+  });
+};
+
+const setMetaContent = (selector, value, createOptions = null) => {
+  if (!value) {
+    return;
+  }
+
+  let nodes = Array.from(document.querySelectorAll(selector));
+
+  if (!nodes.length && createOptions) {
+    const meta = document.createElement("meta");
+    Object.entries(createOptions).forEach(([key, optionValue]) => {
+      meta.setAttribute(key, optionValue);
+    });
+    document.head.appendChild(meta);
+    nodes = [meta];
+  }
+
+  nodes.forEach((node) => node.setAttribute("content", value));
+};
+
+const applyRestaurantMetaTags = (settings) => {
+  const restaurantName = settings.restaurantName || RESTAURANT_SETTINGS_DEFAULTS.restaurantName;
+  const pageTitle = document.title || restaurantName;
+  const seo = settings.appearance?.seo || {
+    title: settings.seoTitle,
+    description: settings.seoDescription,
+    shareImage: settings.seoShareImage,
+    keywords: settings.seoKeywords,
+    openGraph: settings.seoOpenGraph,
+  };
+  const seoTitle = seo.title || restaurantName;
+  const seoDescription = seo.description || settings.description || settings.presentationText || "";
+  const seoImage = seo.openGraph?.image || seo.shareImage || settings.bannerUrl;
+
+  document
+    .querySelectorAll('meta[name="application-name"], meta[property="og:site_name"]')
+    .forEach((node) => node.setAttribute("content", restaurantName));
+
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+
+  if (themeColor) {
+    themeColor.setAttribute("content", settings.primaryColor);
+  }
+
+  if (document.body?.dataset.page === "inicio") {
+    document.title = seoTitle;
+  } else {
+    const legacySiteName = TOKYO_RUNTIME_CONFIG.siteName || "Tokyo Sushi Delivery";
+
+    if (pageTitle.includes(legacySiteName)) {
+      document.title = pageTitle.replace(new RegExp(escapeRegex(legacySiteName), "g"), seoTitle);
+    } else if (pageTitle.includes(restaurantName)) {
+      document.title = pageTitle.replace(new RegExp(escapeRegex(restaurantName), "g"), seoTitle);
+    }
+  }
+
+  setMetaContent('meta[name="description"]', seoDescription, { name: "description" });
+  setMetaContent('meta[name="twitter:description"]', seoDescription, {
+    name: "twitter:description",
+  });
+  setMetaContent('meta[property="og:description"]', seo.openGraph?.description || seoDescription, {
+    property: "og:description",
+  });
+  setMetaContent('meta[property="og:title"], meta[name="twitter:title"]', seo.openGraph?.title || seoTitle);
+  setMetaContent('meta[property="og:type"]', seo.openGraph?.type || "website", {
+    property: "og:type",
+  });
+  setMetaContent('meta[name="keywords"]', (seo.keywords || []).join(", "), {
+    name: "keywords",
+  });
+  setMetaContent('meta[property="og:image"], meta[name="twitter:image"]', seoImage);
+};
+
+const resolvePublicTheme = (theme) => {
+  const normalizedTheme = String(theme || "").trim().toUpperCase();
+
+  if (normalizedTheme === "LIGHT" || normalizedTheme === "DARK") {
+    return normalizedTheme;
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: light)")?.matches ? "LIGHT" : "DARK";
+};
+
+const applyPublicSiteAppearance = (settings) => {
+  const appearance = settings.appearance || normalizePublicAppearance(settings);
+  const layout = String(appearance.layout || settings.siteLayout || "MODERN").toLowerCase();
+  const themeMode = String(appearance.theme || settings.siteTheme || "DARK").toLowerCase();
+  const resolvedTheme = resolvePublicTheme(appearance.theme || settings.siteTheme).toLowerCase();
+  const colors = appearance.colors || {};
+  const root = document.documentElement;
+
+  root.dataset.siteLayout = layout;
+  root.dataset.siteTheme = resolvedTheme;
+  root.dataset.siteThemeMode = themeMode;
+  root.style.setProperty("--primary", colors.primary || settings.primaryColor);
+  root.style.setProperty("--primary-dark", colors.primary || settings.primaryColor);
+  root.style.setProperty("--gold", colors.secondary || settings.secondaryColor);
+  root.style.setProperty("--gold-soft", hexToRgba(colors.secondary || settings.secondaryColor, 0.18));
+  root.style.setProperty("--site-primary", colors.primary || settings.primaryColor);
+  root.style.setProperty("--site-secondary", colors.secondary || settings.secondaryColor);
+  root.style.setProperty("--site-accent", colors.accent || settings.accentColor);
+  root.style.setProperty("--site-gradient-start", colors.gradientStart || settings.gradientStart);
+  root.style.setProperty("--site-gradient-end", colors.gradientEnd || settings.gradientEnd);
+};
+
+const syncRestaurantBranding = (settings) => {
+  document.documentElement.style.setProperty("--primary", settings.primaryColor);
+  document.documentElement.style.setProperty("--primary-dark", settings.primaryColor);
+  document.documentElement.style.setProperty("--gold", settings.secondaryColor);
+  document.documentElement.style.setProperty("--gold-soft", hexToRgba(settings.secondaryColor, 0.18));
+
+  const logoUrl = resolvePublicAssetUrl(settings.logoUrl);
+  const restaurantName = settings.restaurantName || RESTAURANT_SETTINGS_DEFAULTS.restaurantName;
+
+  document.querySelectorAll(".brand-mark img").forEach((image) => {
+    if (logoUrl) {
+      image.src = logoUrl;
+    }
+
+    image.alt = `Logo ${restaurantName}`;
+  });
+
+  setNodeText(".brand-meta strong", restaurantName);
+  setNodeText(".brand-meta small", settings.slogan || TOKYO_APP_BRANDING.brandTagline || "Delivery Premium");
+  setNodeText("[data-public-restaurant-name]", restaurantName);
+  setNodeText("[data-public-slogan]", settings.slogan || "");
+};
+
+const syncRestaurantBanner = (settings) => {
+  const bannerUrl = resolvePublicAssetUrl(settings.bannerUrl);
+
+  if (!bannerUrl) {
+    return;
+  }
+
+  const heroCopy = document.querySelector(".hero-copy");
+
+  if (heroCopy) {
+    let banner = heroCopy.querySelector("[data-public-hero-banner]");
+
+    if (!banner) {
+      banner = document.createElement("figure");
+      banner.className = "hero-brand-banner";
+      banner.dataset.publicHeroBanner = "true";
+      banner.innerHTML = '<img alt="" loading="lazy" decoding="async" />';
+      const heroParagraph = heroCopy.querySelector("p");
+      heroParagraph?.insertAdjacentElement("afterend", banner);
+    }
+
+    const image = banner.querySelector("img");
+
+    if (image) {
+      image.src = bannerUrl;
+      image.alt = `${settings.restaurantName} - banner principal`;
+    }
+  }
+
+  const catalogCopy = document.querySelector(".catalog-hero-copy");
+
+  if (catalogCopy) {
+    let banner = catalogCopy.querySelector("[data-public-catalog-banner]");
+
+    if (!banner) {
+      banner = document.createElement("figure");
+      banner.className = "catalog-brand-banner";
+      banner.dataset.publicCatalogBanner = "true";
+      banner.innerHTML = '<img alt="" loading="lazy" decoding="async" />';
+      catalogCopy.appendChild(banner);
+    }
+
+    const image = banner.querySelector("img");
+
+    if (image) {
+      image.src = bannerUrl;
+      image.alt = `${settings.restaurantName} - banner do cardapio`;
+    }
+  }
+};
+
+const syncRestaurantCopy = (settings) => {
+  const presentationText =
+    settings.presentationText ||
+    settings.description ||
+    RESTAURANT_SETTINGS_DEFAULTS.presentationText;
+  const businessHours = getPublicBusinessHoursLabel();
+  const address = getPublicStoreAddress();
+
+  setNodeText(".hero-copy > p", presentationText);
+  setNodeText(".site-footer-copy", presentationText);
+  setNodeText("[data-public-description]", settings.description || presentationText);
+  setNodeText("[data-public-address]", address);
+  setNodeText("[data-public-business-hours]", businessHours);
+
+  const footerAddress = document.querySelector(
+    '.site-footer-column[aria-labelledby="footer-location-title"] .site-footer-info-list p:first-child'
+  );
+  if (footerAddress) {
+    footerAddress.textContent = address;
+  }
+
+  const footerHours = document.querySelector(
+    '.site-footer-column[aria-labelledby="footer-location-title"] .site-footer-info-list p:nth-child(2)'
+  );
+  if (footerHours) {
+    footerHours.textContent = `Funcionamento: ${businessHours}`;
+  }
+
+  const deliveryOriginNote = document.querySelector(".delivery-origin-note span");
+  if (deliveryOriginNote) {
+    deliveryOriginNote.textContent = address;
+  }
+
+  const deliveryOriginMetric = document.querySelector(".page-metrics article:first-child span");
+  if (deliveryOriginMetric && document.body?.dataset.page === "entrega") {
+    deliveryOriginMetric.textContent = address;
+  }
+
+  const footerBottom = document.querySelector("[data-public-footer-bottom-address]");
+  if (footerBottom) {
+    footerBottom.textContent = address;
+  }
+
+  const legacyFooterBottom = document.querySelector(".site-footer-bottom span:last-child");
+  if (legacyFooterBottom) {
+    legacyFooterBottom.textContent = address;
+  }
+
+  const footerCopyright = document.querySelector(".site-footer-bottom span:first-child");
+  if (footerCopyright) {
+    footerCopyright.textContent = `\u00a9 ${new Date().getFullYear()} ${settings.restaurantName}.`;
+  }
+};
+
+const syncRestaurantWhatsappLinks = (settings) => {
+  const href = getPublicWhatsappSupportHref();
+
+  document.querySelectorAll('a[href*="wa.me"]').forEach((link) => {
+    link.href = href;
+    link.dataset.baseHref = href;
+  });
+};
+
+const normalizePublicExternalHref = (value) => {
+  const normalizedValue = String(value || "").trim();
+
+  if (!normalizedValue) {
+    return "";
+  }
+
+  if (/^(https?:|mailto:|tel:)/i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (normalizedValue.startsWith("@")) {
+    return `https://instagram.com/${normalizedValue.slice(1)}`;
+  }
+
+  return `https://${normalizedValue.replace(/^\/+/, "")}`;
+};
+
+const renderPublicSocialLinks = (settings) => {
+  const links = [
+    { label: "Instagram", href: settings.instagram },
+    { label: "Facebook", href: settings.facebook },
+    { label: "TikTok", href: settings.tiktok },
+    { label: "Site", href: settings.site },
+  ]
+    .map((link) => ({
+      ...link,
+      href: normalizePublicExternalHref(link.href),
+    }))
+    .filter((link) => link.href);
+
+  if (!links.length) {
+    return '<p class="site-footer-info">Redes sociais ainda nao configuradas.</p>';
+  }
+
+  return links
+    .map(
+      (link) => `
+        <a class="site-footer-link" href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(link.label)}
+        </a>
+      `
+    )
+    .join("");
+};
+
+const syncRestaurantSocialLinks = (settings) => {
+  document.querySelectorAll("[data-public-social-links]").forEach((node) => {
+    node.innerHTML = renderPublicSocialLinks(settings);
+  });
+};
+
+const getPublicPlatformFooter = (settings) =>
+  settings.platformFooter || settings.appearance?.platformFooter || RESTAURANT_SETTINGS_DEFAULTS.platformFooter;
+
+const syncPlatformFooter = (settings) => {
+  const footer = getPublicPlatformFooter(settings);
+
+  document.querySelectorAll("[data-platform-branding]").forEach((node) => {
+    node.hidden = false;
+    const headline = node.querySelector("[data-platform-branding-headline]");
+    const description = node.querySelector("[data-platform-branding-description]");
+    const link = node.querySelector("[data-platform-branding-link]");
+
+    if (headline) {
+      headline.textContent = footer.headline || "Desenvolvido por INovas Food";
+    }
+
+    if (description) {
+      description.textContent = footer.description || "Plataforma profissional para restaurantes";
+    }
+
+    if (link) {
+      link.textContent = footer.displayUrl || "www.inovasfood.com.br";
+      link.href = normalizePublicExternalHref(footer.url || "https://www.inovasfood.com.br");
+    }
+  });
+};
+
+const syncPublicLayoutNavigation = () => {
+  const catalogContainer = document.querySelector(".catalog-section .container");
+
+  if (!catalogContainer || !Array.isArray(MENU_SECTIONS) || !MENU_SECTIONS.length) {
+    return;
+  }
+
+  let nav = catalogContainer.querySelector("[data-public-layout-nav]");
+
+  if (!nav) {
+    nav = document.createElement("nav");
+    nav.className = "public-layout-nav";
+    nav.dataset.publicLayoutNav = "true";
+    nav.setAttribute("aria-label", "Categorias do cardapio");
+    const heading = catalogContainer.querySelector(".section-heading");
+    heading?.insertAdjacentElement("afterend", nav);
+  }
+
+  nav.innerHTML = MENU_SECTIONS.map(
+    (section) => `
+      <a href="#${escapeHtml(section.id)}">
+        <span>${escapeHtml(section.kicker || "Categoria")}</span>
+        <strong>${escapeHtml(section.title || section.id)}</strong>
+      </a>
+    `
+  ).join("");
+};
+
+const applyRestaurantSettingsToPublicSite = () => {
+  const settings = getRestaurantSettings();
+
+  applyPublicSiteAppearance(settings);
+  applyRestaurantMetaTags(settings);
+  syncRestaurantBranding(settings);
+  syncRestaurantBanner(settings);
+  syncRestaurantCopy(settings);
+  syncRestaurantWhatsappLinks(settings);
+  syncRestaurantSocialLinks(settings);
+  syncPlatformFooter(settings);
+  syncPublicLayoutNavigation();
+  refreshStoreStatusUi({ rerenderCartUi: false });
+};
+
+const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
+  if (restaurantSettingsState.loading && !force) {
+    return;
+  }
+
+  if (restaurantSettingsState.loaded && !force) {
+    return;
+  }
+
+  restaurantSettingsState.loading = true;
+  restaurantSettingsState.error = "";
+
+  try {
+    const payload = await getJsonWithTimeout(
+      PUBLIC_RESTAURANT_SETTINGS_ENDPOINT,
+      CUSTOMER_AUTH_REQUEST_TIMEOUT_MS
+    );
+
+    restaurantSettingsState.summary = payload.summary || null;
+    restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(payload.settings || {});
+    restaurantSettingsState.loaded = true;
+  } catch (error) {
+    restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(
+      RESTAURANT_SETTINGS_DEFAULTS
+    );
+    restaurantSettingsState.error = error?.message || "Nao foi possivel carregar o restaurante.";
+  } finally {
+    restaurantSettingsState.loading = false;
+    if (deliverySettingsState.settings) {
+      deliverySettingsState.settings = normalizeDeliverySettingsPayload(deliverySettingsState.settings);
+    } else if (deliverySettingsState.error && !deliverySettingsState.loaded) {
+      deliverySettingsState.settings = normalizeDeliverySettingsPayload(DELIVERY_SETTINGS_DEFAULTS);
+    }
+    applyRestaurantSettingsToPublicSite();
+    renderCart();
+  }
+};
+
+const cloneDeliverySettingsDefaults = () => {
+  const defaults = JSON.parse(JSON.stringify(DELIVERY_SETTINGS_DEFAULTS));
+  const restaurantSettings = getRestaurantSettings();
+  const defaultDeliveryFee = getPublicDefaultDeliveryFee();
+  const averagePreparationMinutes = getPublicAveragePreparationMinutes();
+  const maxDeliveryRadiusKm = getPublicMaxDeliveryRadiusKm();
+
+  defaults.distanceBands = defaults.distanceBands.map((band, index) =>
+    index === 0
+      ? {
+          ...band,
+          customerFee: defaultDeliveryFee,
+          minimumOrder: getPublicMinimumDeliveryOrder(),
+        }
+      : band
+  );
+  defaults.serviceArea = {
+    ...defaults.serviceArea,
+    maxRadiusKm: maxDeliveryRadiusKm || defaults.serviceArea.maxRadiusKm,
+  };
+  defaults.deliveryTime = {
+    ...defaults.deliveryTime,
+    minMinutes: averagePreparationMinutes,
+    maxMinutes: Math.max(averagePreparationMinutes, Number(defaults.deliveryTime.maxMinutes || 0)),
+  };
+  defaults.pickup = {
+    ...defaults.pickup,
+    enabled: isPublicPickupEnabled(),
+    estimateMinutes: averagePreparationMinutes,
+    message: `Retirada disponivel em ${averagePreparationMinutes} minutos`,
+  };
+  defaults.status = {
+    ...defaults.status,
+    deliveriesEnabled: isPublicDeliveryEnabled(),
+  };
+
+  if (restaurantSettings.averagePreparationTimeMinutes) {
+    defaults.deliveryTime.message = `Entrega estimada a partir de ${averagePreparationMinutes} minutos`;
+  }
+
+  return defaults;
+};
+
+const normalizeDeliverySettingsNumber = (value, fallback = 0) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const normalizedValue = String(value || "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=.*\.)/g, "")
+    .replace(",", ".");
+  const numericValue = Number(normalizedValue);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const normalizeDeliverySettingsBoolean = (value, fallback = false) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  const normalizedValue = String(value || "").trim().toLowerCase();
+
+  if (["true", "1", "yes", "sim", "on"].includes(normalizedValue)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "nao", "off"].includes(normalizedValue)) {
+    return false;
+  }
+
+  return fallback;
+};
+
+const normalizeDeliverySettingsTextList = (value) => {
+  const source = Array.isArray(value) ? value : String(value || "").split(/\r?\n|;|,/g);
+
+  return [
+    ...new Set(
+      source
+        .map((entry) => String(entry || "").replace(/^[-*]\s*/, "").trim())
+        .filter(Boolean)
+    ),
+  ];
+};
+
+const normalizeDeliverySettingsPayload = (settings = {}) => {
+  const defaults = cloneDeliverySettingsDefaults();
+  const source = settings && typeof settings === "object" ? settings : {};
+  const distanceBands = (
+    Array.isArray(source.distanceBands) ? source.distanceBands : defaults.distanceBands
+  )
+    .map((band, index) => {
+      const defaultBand = defaults.distanceBands[index] || {};
+      const minKm = Math.max(0, normalizeDeliverySettingsNumber(band?.minKm, defaultBand.minKm || 0));
+      const rawMaxKm =
+        band?.maxKm === null || typeof band?.maxKm === "undefined" || band?.maxKm === ""
+          ? null
+          : normalizeDeliverySettingsNumber(band.maxKm, defaultBand.maxKm || minKm);
+      const maxKm = rawMaxKm === null ? null : Math.max(minKm, rawMaxKm);
+
+      return {
+        id: String(band?.id || defaultBand.id || `band-${index + 1}`).trim(),
+        minKm,
+        maxKm,
+        label: String(band?.label || "").trim(),
+        customerFee: Math.max(
+          0,
+          normalizeDeliverySettingsNumber(band?.customerFee, defaultBand.customerFee || 0)
+        ),
+        courierFee: Math.max(
+          0,
+          normalizeDeliverySettingsNumber(band?.courierFee, defaultBand.courierFee || 0)
+        ),
+        minimumOrder: Math.max(
+          0,
+          normalizeDeliverySettingsNumber(band?.minimumOrder, defaultBand.minimumOrder || 0)
+        ),
+        isActive: normalizeDeliverySettingsBoolean(band?.isActive, defaultBand.isActive !== false),
+      };
+    })
+    .filter((band) => band.id)
+    .sort((left, right) => left.minKm - right.minKm || (left.maxKm ?? 9999) - (right.maxKm ?? 9999));
+  const deliveryTime = source.deliveryTime && typeof source.deliveryTime === "object" ? source.deliveryTime : {};
+  const serviceArea = source.serviceArea && typeof source.serviceArea === "object" ? source.serviceArea : {};
+  const freeShipping = source.freeShipping && typeof source.freeShipping === "object" ? source.freeShipping : {};
+  const pickup = source.pickup && typeof source.pickup === "object" ? source.pickup : {};
+  const status = source.status && typeof source.status === "object" ? source.status : {};
+  const maxDeliveryRadiusKm = getPublicMaxDeliveryRadiusKm();
+  const minMinutes = Math.max(
+    0,
+    Math.round(normalizeDeliverySettingsNumber(deliveryTime.minMinutes, defaults.deliveryTime.minMinutes))
+  );
+  const maxMinutes = Math.max(
+    minMinutes,
+    Math.round(normalizeDeliverySettingsNumber(deliveryTime.maxMinutes, defaults.deliveryTime.maxMinutes))
+  );
+
+  return {
+    distanceBands: distanceBands.length ? distanceBands : defaults.distanceBands,
+    deliveryTime: {
+      minMinutes,
+      maxMinutes,
+      message: String(deliveryTime.message || defaults.deliveryTime.message || "").trim(),
+    },
+    serviceArea: {
+      maxRadiusKm:
+        maxDeliveryRadiusKm > 0
+          ? maxDeliveryRadiusKm
+          : Math.max(
+              0,
+              normalizeDeliverySettingsNumber(serviceArea.maxRadiusKm, defaults.serviceArea.maxRadiusKm)
+            ),
+      servedNeighborhoods: normalizeDeliverySettingsTextList(serviceArea.servedNeighborhoods),
+      blockedNeighborhoods: normalizeDeliverySettingsTextList(serviceArea.blockedNeighborhoods),
+      outOfAreaMessage:
+        String(serviceArea.outOfAreaMessage || defaults.serviceArea.outOfAreaMessage || "").trim(),
+    },
+    freeShipping: {
+      enabled: normalizeDeliverySettingsBoolean(freeShipping.enabled, defaults.freeShipping.enabled),
+      minimumOrder: Math.max(
+        0,
+        normalizeDeliverySettingsNumber(freeShipping.minimumOrder, defaults.freeShipping.minimumOrder)
+      ),
+      appliesToAllBands: normalizeDeliverySettingsBoolean(
+        freeShipping.appliesToAllBands,
+        defaults.freeShipping.appliesToAllBands
+      ),
+      bandIds: normalizeDeliverySettingsTextList(freeShipping.bandIds),
+    },
+    pickup: {
+      enabled:
+        isPublicPickupEnabled() &&
+        normalizeDeliverySettingsBoolean(pickup.enabled, defaults.pickup.enabled),
+      estimateMinutes: Math.max(
+        0,
+        Math.round(normalizeDeliverySettingsNumber(pickup.estimateMinutes, defaults.pickup.estimateMinutes))
+      ),
+      message: String(pickup.message || defaults.pickup.message || "").trim(),
+    },
+    status: {
+      deliveriesEnabled:
+        isPublicDeliveryEnabled() &&
+        normalizeDeliverySettingsBoolean(
+          status.deliveriesEnabled,
+          defaults.status.deliveriesEnabled
+        ),
+      pausedMessage: String(status.pausedMessage || defaults.status.pausedMessage || "").trim(),
+    },
+    updatedAt: String(source.updatedAt || "").trim(),
+  };
+};
+
+const getDeliverySettings = () =>
+  deliverySettingsState.settings || normalizeDeliverySettingsPayload(DELIVERY_SETTINGS_DEFAULTS);
+
+const getDeliveryTimeText = () => {
+  const settings = getDeliverySettings();
+  const message = String(settings.deliveryTime?.message || "").trim();
+  const minMinutes = Number(settings.deliveryTime?.minMinutes || 0);
+  const maxMinutes = Number(settings.deliveryTime?.maxMinutes || minMinutes || 0);
+
+  if (message) {
+    return message
+      .replace(/\{min\}/g, String(minMinutes))
+      .replace(/\{max\}/g, String(maxMinutes));
+  }
+
+  return `Entrega estimada entre ${minMinutes} e ${maxMinutes} minutos`;
+};
+
+const getDeliveryAreaKey = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const getDeliveryBandLabel = (band) => {
+  if (band?.label) {
+    return band.label;
+  }
+
+  const minKm = Number(band?.minKm || 0);
+  const maxKm =
+    band?.maxKm === null || typeof band?.maxKm === "undefined" ? null : Number(band.maxKm);
+
+  if (maxKm === null || !Number.isFinite(maxKm)) {
+    return `Acima de ${String(minKm).replace(".", ",")} km`;
+  }
+
+  if (minKm <= 0) {
+    return `Ate ${String(maxKm).replace(".", ",")} km`;
+  }
+
+  return `${String(minKm).replace(".", ",")} a ${String(maxKm).replace(".", ",")} km`;
+};
+
+const getActiveDeliveryBands = (settings = getDeliverySettings()) =>
+  (Array.isArray(settings.distanceBands) ? settings.distanceBands : [])
+    .filter((band) => band?.isActive !== false)
+    .sort((left, right) => left.minKm - right.minKm || (left.maxKm ?? 9999) - (right.maxKm ?? 9999));
+
+const findDeliveryBandForDistance = (distanceKm, settings = getDeliverySettings()) => {
+  const numericDistance = Math.max(0, Number(distanceKm) || 0);
+
+  return (
+    getActiveDeliveryBands(settings).find((band) => {
+      const minKm = Math.max(0, Number(band.minKm || 0));
+      const maxKm =
+        band.maxKm === null || typeof band.maxKm === "undefined" ? null : Number(band.maxKm);
+
+      return numericDistance + 0.0001 >= minKm && (maxKm === null || numericDistance <= maxKm + 0.0001);
+    }) || null
+  );
+};
+
+const getDeliveryOutOfAreaMessage = (settings = getDeliverySettings()) =>
+  settings.serviceArea?.outOfAreaMessage || "No momento nao entregamos nessa regiao.";
+
+const getDeliveryOperationalMessage = () => {
+  const settings = getDeliverySettings();
+
+  if (!isPublicDeliveryEnabled()) {
+    return "Entregas indisponiveis no momento.";
+  }
+
+  if (settings.status?.deliveriesEnabled === false) {
+    return settings.status?.pausedMessage || "Entregas pausadas temporariamente.";
+  }
+
+  return "";
+};
+
+const getFulfillmentOptionAvailability = (optionId) => {
+  const settings = getDeliverySettings();
+
+  if (optionId === "delivery" && !isPublicDeliveryEnabled()) {
+    return {
+      available: false,
+      message: "Entregas indisponiveis no momento.",
+    };
+  }
+
+  if (optionId === "delivery" && settings.status?.deliveriesEnabled === false) {
+    return {
+      available: false,
+      message: getDeliveryOperationalMessage(),
+    };
+  }
+
+  if (optionId === "pickup" && !isPublicPickupEnabled()) {
+    return {
+      available: false,
+      message: "Retirada no balcao indisponivel no momento.",
+    };
+  }
+
+  if (optionId === "pickup" && settings.pickup?.enabled === false) {
+    return {
+      available: false,
+      message: "Retirada no balcao indisponivel no momento.",
+    };
+  }
+
+  return {
+    available: true,
+    message: "",
+  };
+};
+
+const isFreeShippingApplicable = (band, cartSubtotal, settings = getDeliverySettings()) => {
+  const freeShipping = settings.freeShipping || {};
+  const minimumOrder = Number(freeShipping.minimumOrder || 0);
+
+  if (!freeShipping.enabled || !Number.isFinite(cartSubtotal) || cartSubtotal < minimumOrder) {
+    return false;
+  }
+
+  if (freeShipping.appliesToAllBands !== false) {
+    return true;
+  }
+
+  return (Array.isArray(freeShipping.bandIds) ? freeShipping.bandIds : []).includes(band?.id);
+};
+
+const resolveConfiguredDeliveryPricing = ({
+  distanceKm,
+  neighborhood = "",
+  cartSubtotal = getCartTotalAmount(loadCart(), loadCartAddons()),
+  settings = getDeliverySettings(),
+} = {}) => {
+  if (!isPublicDeliveryEnabled()) {
+    return {
+      deliverable: false,
+      reason: "restaurant_delivery_disabled",
+      message: getDeliveryOperationalMessage(),
+    };
+  }
+
+  if (settings.status?.deliveriesEnabled === false) {
+    return {
+      deliverable: false,
+      reason: "paused",
+      message: getDeliveryOperationalMessage(),
+    };
+  }
+
+  const numericDistance = Math.max(0, Number(distanceKm) || 0);
+  const serviceArea = settings.serviceArea || {};
+  const outOfAreaMessage = getDeliveryOutOfAreaMessage(settings);
+  const configuredMaxRadiusKm = getPublicMaxDeliveryRadiusKm();
+  const maxRadiusKm = Number(configuredMaxRadiusKm || serviceArea.maxRadiusKm || 0);
+
+  if (maxRadiusKm > 0 && numericDistance > maxRadiusKm + 0.0001) {
+    return {
+      deliverable: false,
+      reason: "out_of_radius",
+      message: outOfAreaMessage,
+    };
+  }
+
+  const neighborhoodKey = getDeliveryAreaKey(neighborhood);
+  const blockedNeighborhoodKeys = normalizeDeliverySettingsTextList(serviceArea.blockedNeighborhoods).map(
+    getDeliveryAreaKey
+  );
+  const servedNeighborhoodKeys = normalizeDeliverySettingsTextList(serviceArea.servedNeighborhoods).map(
+    getDeliveryAreaKey
+  );
+
+  if (neighborhoodKey && blockedNeighborhoodKeys.includes(neighborhoodKey)) {
+    return {
+      deliverable: false,
+      reason: "blocked_neighborhood",
+      message: outOfAreaMessage,
+    };
+  }
+
+  if (servedNeighborhoodKeys.length > 0 && (!neighborhoodKey || !servedNeighborhoodKeys.includes(neighborhoodKey))) {
+    return {
+      deliverable: false,
+      reason: "not_served_neighborhood",
+      message: outOfAreaMessage,
+    };
+  }
+
+  const band = findDeliveryBandForDistance(numericDistance, settings);
+  const buildMatchedPricing = ({
+    matchedBand,
+    bandLabel,
+    regularFee,
+    courierFee = 0,
+    minimumOrder = 0,
+  }) => {
+    const effectiveMinimumOrder = Math.max(
+      Number(minimumOrder || 0),
+      getPublicMinimumDeliveryOrder()
+    );
+    const isMinimumOrderMet =
+      !effectiveMinimumOrder ||
+      (Number.isFinite(cartSubtotal) && cartSubtotal >= effectiveMinimumOrder);
+    const minimumOrderDifference = isMinimumOrderMet
+      ? 0
+      : Number((effectiveMinimumOrder - (Number.isFinite(cartSubtotal) ? cartSubtotal : 0)).toFixed(2));
+    const freeShippingApplied = isFreeShippingApplicable(matchedBand, cartSubtotal, settings);
+
+    return {
+      deliverable: true,
+      reason: "matched",
+      band: matchedBand,
+      bandLabel,
+      regularFee,
+      fee: freeShippingApplied ? 0 : regularFee,
+      courierFee,
+      minimumOrder: effectiveMinimumOrder,
+      isMinimumOrderMet,
+      minimumOrderDifference,
+      minimumOrderMessage:
+        effectiveMinimumOrder > 0
+          ? isMinimumOrderMet
+            ? `Pedido minimo para entrega atingido (${formatPrice(effectiveMinimumOrder)}).`
+            : `Pedido minimo para entrega: ${formatPrice(effectiveMinimumOrder)}. Faltam ${formatPrice(
+                minimumOrderDifference
+              )}.`
+          : "",
+      freeShippingApplied,
+      freeShippingMessage: freeShippingApplied
+        ? `Frete gratis aplicado em pedidos acima de ${formatPrice(settings.freeShipping?.minimumOrder || 0)}.`
+        : "",
+    };
+  };
+
+  if (!band) {
+    const fixedDeliveryFee = getPublicDefaultDeliveryFee();
+    const pricePerKm = getPublicDeliveryPricePerKm();
+
+    if (fixedDeliveryFee > 0 || pricePerKm > 0) {
+      const regularFee = Number((fixedDeliveryFee + numericDistance * pricePerKm).toFixed(2));
+      const fallbackBand = {
+        id: "restaurant-base-price-per-km",
+        minKm: 0,
+        maxKm: maxRadiusKm || null,
+        label:
+          pricePerKm > 0
+            ? `Taxa base + ${formatPrice(pricePerKm)} por km`
+            : "Taxa fixa padrao",
+        customerFee: regularFee,
+        courierFee: 0,
+        minimumOrder: getPublicMinimumDeliveryOrder(),
+        isActive: true,
+      };
+
+      return buildMatchedPricing({
+        matchedBand: fallbackBand,
+        bandLabel: fallbackBand.label,
+        regularFee,
+        courierFee: 0,
+        minimumOrder: fallbackBand.minimumOrder,
+      });
+    }
+
+    return {
+      deliverable: false,
+      reason: "no_band",
+      message: outOfAreaMessage,
+    };
+  }
+
+  return buildMatchedPricing({
+    matchedBand: band,
+    bandLabel: getDeliveryBandLabel(band),
+    regularFee: Number(band.customerFee || 0),
+    courierFee: Number(band.courierFee || 0),
+    minimumOrder: Number(band.minimumOrder || 0),
+  });
+};
+
+const applyDeliveryPricingToQuote = (quote) => {
+  if (!quote) {
+    return null;
+  }
+
+  const cartSubtotal = getCartTotalAmount(loadCart(), loadCartAddons());
+  const pricing = resolveConfiguredDeliveryPricing({
+    distanceKm: Number(quote.distanceKm || 0),
+    neighborhood: quote.neighborhood || "",
+    cartSubtotal,
+  });
+
+  if (!pricing.deliverable) {
+    return {
+      ...quote,
+      deliveryUnavailableMessage: pricing.message,
+      deliveryUnavailableReason: pricing.reason,
+      isMinimumOrderMet: false,
+    };
+  }
+
+  return {
+    ...quote,
+    routeBand: pricing.bandLabel,
+    fee: pricing.fee,
+    regularFee: pricing.regularFee,
+    courierFee: pricing.courierFee,
+    minimumOrder: pricing.minimumOrder,
+    isMinimumOrderMet: pricing.isMinimumOrderMet,
+    minimumOrderDifference: pricing.minimumOrderDifference,
+    minimumOrderMessage: pricing.minimumOrderMessage,
+    freeShippingApplied: pricing.freeShippingApplied,
+    freeShippingMessage: pricing.freeShippingMessage,
+    pricingRuleLabel: pricing.freeShippingApplied
+      ? pricing.freeShippingMessage
+      : `${pricing.bandLabel}: ${formatPrice(pricing.regularFee)}.`,
+    totalEstimateText: getDeliveryTimeText(),
+    deliverySettingsUpdatedAt: getDeliverySettings().updatedAt || "",
+    deliveryUnavailableMessage: "",
+    deliveryUnavailableReason: "",
+  };
+};
+
+const reconcileCartFulfillmentSelection = () => {
+  const checkout = loadCartCheckout();
+
+  if (checkout.fulfillmentMode === "delivery" && !getFulfillmentOptionAvailability("delivery").available) {
+    saveCartCheckout({
+      ...checkout,
+      fulfillmentMode: getFulfillmentOptionAvailability("pickup").available ? "pickup" : "",
+    });
+    return;
+  }
+
+  if (checkout.fulfillmentMode === "pickup" && !getFulfillmentOptionAvailability("pickup").available) {
+    saveCartCheckout({
+      ...checkout,
+      fulfillmentMode: getFulfillmentOptionAvailability("delivery").available ? "delivery" : "",
+    });
+  }
+};
+
+const loadPublicDeliverySettings = async ({ force = false } = {}) => {
+  if (deliverySettingsState.loading && !force) {
+    return;
+  }
+
+  if (deliverySettingsState.loaded && !force) {
+    return;
+  }
+
+  deliverySettingsState.loading = true;
+  deliverySettingsState.error = "";
+
+  try {
+    const payload = await getJsonWithTimeout(PUBLIC_DELIVERY_SETTINGS_ENDPOINT, CUSTOMER_AUTH_REQUEST_TIMEOUT_MS);
+
+    deliverySettingsState.summary = payload.summary || null;
+    deliverySettingsState.settings = normalizeDeliverySettingsPayload(payload.settings || {});
+    deliverySettingsState.loaded = true;
+  } catch (error) {
+    deliverySettingsState.settings = normalizeDeliverySettingsPayload(DELIVERY_SETTINGS_DEFAULTS);
+    deliverySettingsState.error = error?.message || "Nao foi possivel carregar as entregas.";
+  } finally {
+    deliverySettingsState.loading = false;
+    reconcileCartFulfillmentSelection();
+    renderDeliveryHistory();
+    renderCart();
+  }
+};
+
 const requestPhoneVerificationDelivery = async (verification) => {
   const customerClientToken = ensureCustomerClientToken();
   const response = await postJsonWithTimeout(
@@ -4812,7 +8366,7 @@ const requestPhoneVerificationDelivery = async (verification) => {
     CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
     {
       headers: {
-        "x-tokyo-customer-client-token": customerClientToken,
+        [CUSTOMER_CLIENT_TOKEN_HEADER]: customerClientToken,
       },
     }
   );
@@ -4933,7 +8487,7 @@ const createSocialAccountProfile = (provider) => {
   const account = {
     id: `social_${provider}_${timestamp}`,
     name: `Conta ${config?.label || "Social"}`,
-    email: `${provider}.${timestamp}@social.tokyo`,
+    email: `${provider}.${timestamp}@${SOCIAL_EMAIL_DOMAIN}`,
     phone: "",
     provider,
     password: "",
@@ -5018,8 +8572,8 @@ const createAuthShell = () => {
           <button class="auth-close" type="button" data-auth-close aria-label="Fechar login">&times;</button>
           <figure class="auth-media">
             <img
-              src="./site-images/login-cover-floating.png"
-              alt="Arte de login Tokyo Sushi com cerejeiras, logo e combinado de sushi"
+              src="${escapeHtml(TOKYO_ASSETS.loginCover || "./site-images/login-cover-floating.png")}"
+              alt="${escapeHtml(TOKYO_PUBLIC_TEXT.loginCoverAlt || "Arte de login Tokyo Sushi com cerejeiras, logo e combinado de sushi")}"
             />
           </figure>
           <div class="auth-panel" data-auth-panel></div>
@@ -5334,7 +8888,7 @@ const renderAuthPanel = () => {
 
   panel.innerHTML = `
     <div class="auth-panel-head">
-      <p class="section-tag">${authState.editing ? "Editar dados" : "Acesso Tokyo"}</p>
+      <p class="section-tag">${authState.editing ? "Editar dados" : TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo"}</p>
       <h2 id="auth-title">${
         authState.editing ? "Atualize seu nome e telefone" : "Bem-vindo de volta!"
       }</h2>
@@ -5492,7 +9046,7 @@ const finalizeAuth = (profile, message) => {
   renderDeliveryHistory();
   renderOrderHistoryPage();
   void refreshCustomerTrackingState({ renderPage: true });
-  renderReviewPage();
+  void loadReviewPage();
   prefillProfileForms();
 
   if (authState.pendingHref) {
@@ -5684,9 +9238,9 @@ const confirmPhoneVerification = async (code) => {
       },
       CUSTOMER_AUTH_REQUEST_TIMEOUT_MS,
       {
-        headers: {
-          "x-tokyo-customer-client-token": customerClientToken,
-        },
+          headers: {
+            [CUSTOMER_CLIENT_TOKEN_HEADER]: customerClientToken,
+          },
       }
     );
 
@@ -5733,8 +9287,8 @@ const getCustomerTrackingRequestHeaders = (profile = loadAuthProfile()) => {
   }
 
   return {
-    "x-tokyo-customer-key": customerKey,
-    "x-tokyo-customer-client-token": clientToken,
+    [CUSTOMER_KEY_HEADER]: customerKey,
+    [CUSTOMER_CLIENT_TOKEN_HEADER]: clientToken,
   };
 };
 
@@ -5757,11 +9311,11 @@ const getTrackingStatusLead = (order) => {
     return "";
   }
 
-  if (order.status === "Novo") {
+  if (order.status === "Recebido") {
     return "Recebemos seu pedido e ele ja entrou na fila da loja.";
   }
 
-  if (order.status === "Confirmado") {
+  if (order.status === "Aceito") {
     return "Seu pedido foi confirmado e entrou oficialmente em andamento.";
   }
 
@@ -5769,14 +9323,22 @@ const getTrackingStatusLead = (order) => {
     return "Nossa equipe esta preparando seu pedido agora.";
   }
 
-  if (order.status === "Saiu para entrega") {
+  if (order.status === "Pronto") {
     return order.fulfillmentMode === "pickup"
       ? "Seu pedido esta pronto para retirada na loja."
-      : "Seu pedido saiu para entrega e esta a caminho.";
+      : "Seu pedido esta pronto e aguardando saida para entrega.";
   }
 
-  if (order.status === "Finalizado") {
-    return "Pedido concluido com sucesso.";
+  if (order.status === "Saiu para entrega") {
+    return "Seu pedido saiu para entrega e esta a caminho.";
+  }
+
+  if (order.status === "Entregue") {
+    return "Pedido entregue com sucesso.";
+  }
+
+  if (order.status === "Retirada concluida") {
+    return "Retirada concluida com sucesso.";
   }
 
   if (order.status === "Cancelado") {
@@ -5787,9 +9349,10 @@ const getTrackingStatusLead = (order) => {
 };
 
 const buildTrackingProgressSteps = (order) => {
-  const currentIndex = CUSTOMER_TRACKING_PROGRESS_STATUSES.indexOf(order?.status);
+  const progressStatuses = getTrackingProgressStatuses(order);
+  const currentIndex = progressStatuses.indexOf(order?.status);
 
-  return CUSTOMER_TRACKING_PROGRESS_STATUSES.map((status, index) => ({
+  return progressStatuses.map((status, index) => ({
     status,
     isDone: currentIndex > index,
     isCurrent: currentIndex === index,
@@ -5810,18 +9373,35 @@ const renderTrackingItems = (items, itemType) => {
 
   return filteredItems
     .map(
-      (item) => `
-        <article class="tracking-item-card">
-          <div>
-            <strong>${escapeHtml(item.name)}</strong>
-            <small>${escapeHtml(item.category || (item.type === "addon" ? "Complemento" : "Item principal"))}</small>
-          </div>
-          <div class="tracking-item-meta">
-            <span>${escapeHtml(`${item.quantity}x`)}</span>
-            <strong>${escapeHtml(formatPrice(Number(item.totalPrice || 0)))}</strong>
-          </div>
-        </article>
-      `
+      (item) => {
+        const promotionLabel =
+          item.type === "product" && item?.metadata?.promotion?.name
+            ? [
+                `Promocao: ${item.metadata.promotion.name}`,
+                typeof item.metadata.promotion.promotionalUnitPrice === "number"
+                  ? `Unitario ${formatPrice(Number(item.metadata.promotion.promotionalUnitPrice || 0))}`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" | ")
+            : "";
+        const secondaryLabel = [item.category || (item.type === "addon" ? "Complemento" : "Item principal"), promotionLabel]
+          .filter(Boolean)
+          .join(" | ");
+
+        return `
+          <article class="tracking-item-card">
+            <div>
+              <strong>${escapeHtml(item.name)}</strong>
+              <small>${escapeHtml(secondaryLabel)}</small>
+            </div>
+            <div class="tracking-item-meta">
+              <span>${escapeHtml(`${item.quantity}x`)}</span>
+              <strong>${escapeHtml(formatPrice(Number(item.totalPrice || 0)))}</strong>
+            </div>
+          </article>
+        `;
+      }
     )
     .join("");
 };
@@ -6129,7 +9709,9 @@ const refreshCustomerTrackingState = async ({ renderPage = true } = {}) => {
     customerTrackingState.loading = false;
     customerTrackingState.loaded = true;
     customerTrackingState.authenticated = Boolean(response.authenticated);
-    customerTrackingState.activeOrder = response.hasActiveOrder ? response.order || null : null;
+    customerTrackingState.activeOrder = response.hasActiveOrder
+      ? normalizeTrackingOrder(response.order || null)
+      : null;
   } catch (error) {
     customerTrackingState.loading = false;
     customerTrackingState.loaded = true;
@@ -6160,7 +9742,7 @@ const createStoreStatusStrip = () => {
               <strong data-store-status-label>Loja aberta</strong>
             </div>
             <p class="store-status-strip-copy" data-store-status-copy>
-              Funcionamento diario: 18:00 as 23:00.
+              Funcionamento: 18:00 as 23:00.
             </p>
           </div>
         </div>
@@ -6192,7 +9774,10 @@ const syncStoreStatusStrip = (storeContext = getStoreOperatingContext()) => {
   }
 
   if (copy) {
-    copy.textContent = `Funcionamento diario: ${storeContext.businessWindowLabel}. ${storeContext.detail}`;
+    const scheduleLabel = storeContext.isSpecialDateActive
+      ? `${storeContext.todayLabel || "Data especial"}: ${storeContext.todayHoursLabel || storeContext.businessWindowLabel}`
+      : storeContext.businessScheduleLabel || storeContext.businessWindowLabel;
+    copy.textContent = `Funcionamento: ${scheduleLabel}. ${storeContext.detail}`;
   }
 };
 
@@ -6219,6 +9804,16 @@ const syncOrderShortcutLinks = (storeContext = getStoreOperatingContext()) => {
     const closedLabel = link.dataset.orderClosedLabel || openLabel;
     const isOpen = storeContext.acceptsImmediateOrders;
 
+    if (link.matches(".support-avatar-link")) {
+      const supportHref = getPublicWhatsappSupportHref();
+      link.href = supportHref;
+      link.dataset.baseHref = supportHref;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.setAttribute("aria-label", "Falar no WhatsApp");
+      return;
+    }
+
     link.href = isOpen ? openHref : closedHref;
     link.removeAttribute("target");
     link.removeAttribute("rel");
@@ -6227,12 +9822,6 @@ const syncOrderShortcutLinks = (storeContext = getStoreOperatingContext()) => {
       link.textContent = isOpen ? openLabel : closedLabel;
     }
 
-    if (link.matches(".support-avatar-link")) {
-      link.setAttribute(
-        "aria-label",
-        isOpen ? "Abrir cardapio para pedir" : "Abrir cardapio para agendar pedido"
-      );
-    }
   });
 
   document.querySelectorAll("[data-store-footer-status]").forEach((node) => {
@@ -6265,6 +9854,23 @@ const createSiteFooter = () => {
   }
 
   const currentPage = document.body.dataset.page || "inicio";
+  const restaurantSettings = getRestaurantSettings();
+  const restaurantName = getPublicRestaurantName();
+  const publicAddress = getPublicStoreAddress();
+  const publicAddressFields = restaurantSettings.addressFields || RESTAURANT_SETTINGS_DEFAULTS.addressFields;
+  const footerStreetLine =
+    TOKYO_APP_BRANDING.defaultAddress?.footerStreetLine ||
+    [publicAddressFields.street, publicAddressFields.number].filter(Boolean).join(", ");
+  const footerCityLine =
+    TOKYO_APP_BRANDING.defaultAddress?.footerCityLine ||
+    `${publicAddressFields.city} - ${publicAddressFields.state}, CEP ${publicAddressFields.postalCode}`;
+  const footerBottomAddress =
+    TOKYO_APP_BRANDING.defaultAddress?.footerBottomLine ||
+    `${footerStreetLine} - ${publicAddressFields.city} - ${publicAddressFields.state}.`;
+  const logoUrl = resolvePublicAssetUrl(restaurantSettings.logoUrl);
+  const presentationText =
+    restaurantSettings.presentationText || RESTAURANT_SETTINGS_DEFAULTS.presentationText;
+  const platformFooter = getPublicPlatformFooter(restaurantSettings);
   const footerNavLinks = [
     { href: "./index.html", label: "Inicio", page: "inicio" },
     { href: "./cardapio.html", label: "Cardapio", page: "cardapio" },
@@ -6275,7 +9881,7 @@ const createSiteFooter = () => {
   ];
   const whatsappHref = getOpenOrderShortcutHref();
   const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    DELIVERY_STORE_ADDRESS
+    publicAddress
   )}`;
   const navMarkup = footerNavLinks
     .map(
@@ -6296,18 +9902,17 @@ const createSiteFooter = () => {
               <a class="footer-brand" href="./index.html" aria-label="Voltar para a pagina inicial">
                 <span class="brand-mark">
                   <img
-                    src="./site-images/tokyo-logo-premium-transparent.png"
-                    alt="Logo Tokyo Sushi Delivery Premium"
+                    src="${escapeHtml(logoUrl || RESTAURANT_SETTINGS_DEFAULTS.logoUrl)}"
+                    alt="Logo ${escapeHtml(restaurantName)}"
                   />
                 </span>
                 <span class="brand-meta">
-                  <strong>Tokyo Sushi</strong>
-                  <small>Delivery Premium</small>
+                  <strong>${escapeHtml(restaurantName)}</strong>
+                  <small>${escapeHtml(TOKYO_APP_BRANDING.brandTagline || "Delivery Premium")}</small>
                 </span>
               </a>
               <p class="site-footer-copy">
-                Delivery premium de culinaria japonesa em Franca, com cardapio digital,
-                calculo de entrega e checkout direto pelo site.
+                ${escapeHtml(presentationText)}
               </p>
               <div class="site-footer-badges" aria-label="Destaques do atendimento">
                 <span>Cardapio digital</span>
@@ -6365,8 +9970,8 @@ const createSiteFooter = () => {
             <section class="site-footer-column" aria-labelledby="footer-location-title">
               <p class="site-footer-title" id="footer-location-title">Endereco</p>
               <div class="site-footer-info-list">
-                <p class="site-footer-info">Rua General Osório, 2165</p>
-                <p class="site-footer-info">Franca - SP, CEP 14400-520</p>
+                <p class="site-footer-info">${escapeHtml(footerStreetLine || "Rua General Osório, 2165")}</p>
+                <p class="site-footer-info">${escapeHtml(footerCityLine || "Franca - SP, CEP 14400-520")}</p>
                 <p class="site-footer-info">Origem fixa usada no calculo da entrega.</p>
                 <a class="site-footer-link" href="${mapsHref}" target="_blank" rel="noreferrer">
                   Abrir localizacao no Google Maps
@@ -6375,18 +9980,25 @@ const createSiteFooter = () => {
             </section>
 
             <section class="site-footer-column" aria-labelledby="footer-site-title">
-              <p class="site-footer-title" id="footer-site-title">Experiencia do site</p>
-              <div class="site-footer-info-list">
-                <p class="site-footer-info">Login local para agilizar pedidos e historico.</p>
-                <p class="site-footer-info">Complementos, sacola e envio direto para o gestor.</p>
-                <p class="site-footer-info">Informacoes sujeitas a confirmacao final no atendimento.</p>
+              <p class="site-footer-title" id="footer-site-title">Redes e site</p>
+              <div class="site-footer-links" data-public-social-links>
+                ${renderPublicSocialLinks(restaurantSettings)}
               </div>
             </section>
           </div>
 
           <div class="site-footer-bottom">
-            <span>&copy; ${new Date().getFullYear()} Tokyo Sushi Delivery Premium.</span>
-            <span>Rua General Osório, 2165 - Franca - SP.</span>
+            <span>&copy; ${new Date().getFullYear()} ${escapeHtml(TOKYO_APP_BRANDING.footerPoweredBy || "Tokyo Sushi Delivery Premium")}.</span>
+            <span>${escapeHtml(footerBottomAddress || "Rua General Osório, 2165 - Franca - SP.")}</span>
+          </div>
+          <div class="inovas-platform-footer" data-platform-branding>
+            <div>
+              <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INovas Food")}</strong>
+              <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
+            </div>
+            <a href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://www.inovasfood.com.br"))}" target="_blank" rel="noreferrer" data-platform-branding-link>
+              ${escapeHtml(platformFooter.displayUrl || "www.inovasfood.com.br")}
+            </a>
           </div>
         </div>
       </div>
@@ -6475,6 +10087,15 @@ const closeMobileCatalogSheet = () => {
   mobileCatalogSheetState.sectionId = "";
   mobileCatalogSheetState.groupId = "";
   document.body.classList.remove("catalog-sheet-open");
+};
+
+const closeMobileCatalogSheetAfterCartSelection = (triggerNode) => {
+  if (
+    isCatalogMobileViewport() &&
+    triggerNode?.closest?.("[data-mobile-catalog-sheet]")
+  ) {
+    closeMobileCatalogSheet();
+  }
 };
 
 const renderMobileCatalogSheet = () => {
@@ -6750,7 +10371,7 @@ const formatWhatsappMessage = (
         : "A confirmar";
   const displayPhone = formatPhoneDisplay(profile?.phone) || profile?.phone || "";
   const displayEmail = getDisplayEmail(profile);
-  const lines = [`\u{1F363} *NOVO PEDIDO - Tokyo Sushi Delivery*`];
+  const lines = [`\u{1F363} *NOVO PEDIDO - ${getPublicRestaurantName()}*`];
 
   appendWhatsappSection(lines, "\u{1F9FE}", "RESUMO", [
     `Pedido: ${getWhatsappOrderSummaryLabel(checkout)}`,
@@ -6795,7 +10416,7 @@ const formatWhatsappMessage = (
             checkout.scheduledDate,
             checkout.scheduledTime
           ).replace(/ as /i, " \u00e0s ")}`
-        : `Previs\u00e3o: at\u00e9 ${PICKUP_ESTIMATE_MINUTES} min`,
+        : `Previs\u00e3o: at\u00e9 ${getPublicAveragePreparationMinutes()} min`,
     ]);
   }
 
@@ -6837,7 +10458,7 @@ const formatWhatsappMessage = (
       : "\u2705 Pode confirmar o pedido e disponibilidade?"
   );
 
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  return `https://wa.me/${getPublicWhatsappNumber()}?text=${encodeURIComponent(
     normalizePortugueseText(lines.join("\n"))
   )}`;
 };
@@ -6920,14 +10541,25 @@ const renderCartCheckout = (node, checkout, cart, addons, profile = loadAuthProf
         ? `${scheduledSummary} O horario precisa ficar entre ${storeContext.businessWindowLabel}.`
         : `Agende um horario valido entre ${storeContext.businessWindowLabel}.`
       : storeContext.acceptsImmediateOrders
-        ? `Pedidos imediatos liberados ate ${storeContext.businessWindowLabel.split(" as ").pop()}.`
+        ? storeContext.isOpen
+          ? `Pedidos imediatos liberados ate ${storeContext.closeTimeLabel || storeContext.businessWindowLabel.split(" as ").pop()}.`
+          : storeContext.warningMessage || storeContext.detail
         : getImmediateOrderUnavailableMessage(storeContext);
+  const fulfillmentOptions = CART_FULFILLMENT_OPTIONS.map((option) => ({
+    ...option,
+    availability: getFulfillmentOptionAvailability(option.id),
+  }));
+  const fulfillmentNotice = fulfillmentOptions
+    .map((option) => option.availability)
+    .find((availability) => !availability.available && availability.message)?.message;
 
   node.innerHTML = `
     <section class="cart-required-section">
       <div class="cart-fulfillment-note cart-store-status is-${storeContext.statusTone}">
         <strong>${escapeHtml(storeContext.shortStatusLabel)}</strong>
-        <span>Funcionamento diario: ${escapeHtml(storeContext.businessWindowLabel)}. ${escapeHtml(
+        <span>Funcionamento: ${escapeHtml(
+          storeContext.businessScheduleLabel || storeContext.businessWindowLabel
+        )}. ${escapeHtml(
           storeContext.detail
         )}</span>
       </div>
@@ -7103,21 +10735,34 @@ const renderCartCheckout = (node, checkout, cart, addons, profile = loadAuthProf
       <div class="cart-checkout-group">
         <span class="cart-checkout-label">Recebimento</span>
         <div class="cart-choice-grid cart-choice-grid-compact">
-          ${CART_FULFILLMENT_OPTIONS.map(
+          ${fulfillmentOptions.map(
             (option) => `
-              <label class="cart-choice-pill${checkout.fulfillmentMode === option.id ? " is-selected" : ""}">
+              <label class="cart-choice-pill${checkout.fulfillmentMode === option.id ? " is-selected" : ""}${
+                !option.availability.available ? " is-disabled" : ""
+              }">
                 <input
                   class="cart-choice-input"
                   type="radio"
                   name="cart_fulfillment_mode"
                   value="${option.id}"
                   ${checkout.fulfillmentMode === option.id ? "checked" : ""}
+                  ${!option.availability.available ? "disabled" : ""}
                 />
                 <span>${option.label}</span>
               </label>
             `
           ).join("")}
         </div>
+        ${
+          fulfillmentNotice
+            ? `
+              <div class="cart-cash-summary is-warning">
+                <strong>Status da entrega</strong>
+                <span>${escapeHtml(fulfillmentNotice)}</span>
+              </div>
+            `
+            : ""
+        }
       </div>
 
       ${
@@ -7142,6 +10787,21 @@ const renderCartCheckout = (node, checkout, cart, addons, profile = loadAuthProf
                       <p class="cart-delivery-address">${escapeHtml(
                         deliveryQuote.geocodedAddress || deliveryQuote.destinationLabel || ""
                       )}</p>
+                      ${
+                        deliveryQuote.freeShippingApplied || deliveryQuote.minimumOrderMessage
+                          ? `
+                            <div class="cart-delivery-rule-note${
+                              deliveryQuote.isMinimumOrderMet === false ? " is-warning" : " is-success"
+                            }">
+                              ${escapeHtml(
+                                deliveryQuote.freeShippingApplied
+                                  ? deliveryQuote.freeShippingMessage || "Frete gratis aplicado."
+                                  : deliveryQuote.minimumOrderMessage || ""
+                              )}
+                            </div>
+                          `
+                          : ""
+                      }
                       <a class="button button-secondary cart-delivery-link" href="./entrega.html">
                         Atualizar na aba Entrega
                       </a>
@@ -7404,13 +11064,30 @@ const closeCart = () => {
 
 const addItemToCart = (item) => {
   setCartOrderNotice("");
+  const menuItem = MENU_ITEM_LOOKUP.get(item.id);
+
+  if (!menuItem || !isMenuItemOrderable(menuItem)) {
+    setCartOrderNotice(
+      `${menuItem?.name || "Este item"} nao esta disponivel para pedido agora.`,
+      "error"
+    );
+    renderCart();
+    return;
+  }
+
   const cart = loadCart();
   const existingItem = cart.find((cartItem) => cartItem.id === item.id);
 
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
-    cart.push({ ...item, quantity: 1 });
+    cart.push({
+      id: menuItem.id,
+      name: menuItem.name,
+      category: formatGroupTitle(menuItem.category),
+      price: menuItem.price,
+      quantity: 1,
+    });
   }
 
   saveCart(cart);
@@ -7483,10 +11160,19 @@ const getCartTotalAmount = (cart, addons = loadCartAddons()) => {
   return Number((cartTotal + getCartAddonsTotalAmount(addons)).toFixed(2));
 };
 
-const loadOrderHistory = () => loadStoredCollection(ORDER_HISTORY_STORAGE_KEY);
+const normalizeOrderHistoryEntry = (order) =>
+  normalizeTrackingOrder({
+    ...order,
+    status: resolveCanonicalOrderStatus(order?.status, order?.fulfillmentMode) || String(order?.status || "").trim(),
+  });
+
+const loadOrderHistory = () => loadStoredCollection(ORDER_HISTORY_STORAGE_KEY).map(normalizeOrderHistoryEntry);
 
 const saveOrderHistory = (orders) => {
-  saveStoredCollection(ORDER_HISTORY_STORAGE_KEY, orders.slice(0, 50));
+  saveStoredCollection(
+    ORDER_HISTORY_STORAGE_KEY,
+    orders.slice(0, 50).map(normalizeOrderHistoryEntry)
+  );
 };
 
 const setCartOrderNotice = (message = "", tone = "success") => {
@@ -7496,6 +11182,51 @@ const setCartOrderNotice = (message = "", tone = "success") => {
         tone,
       }
     : null;
+};
+
+const shouldUseManualWhatsappOrderFallback = (error) => {
+  const status = Number(error?.status || 0);
+  const code = String(error?.code || "").trim().toLowerCase();
+
+  if (error?.name === "AbortError") {
+    return true;
+  }
+
+  if (!status) {
+    return true;
+  }
+
+  if (status >= 500) {
+    return true;
+  }
+
+  return ["internal_error", "request_failed"].includes(code);
+};
+
+const triggerManualWhatsappOrderFallback = ({
+  cart = loadCart(),
+  addons = loadCartAddons(),
+  checkout = loadCartCheckout(),
+  error = null,
+} = {}) => {
+  const fallbackUrl = formatWhatsappMessage(cart, addons, checkout);
+
+  if (!fallbackUrl) {
+    return false;
+  }
+
+  console.error("[order-submit] automatic-flow-unavailable", {
+    status: Number(error?.status || 0),
+    code: String(error?.code || ""),
+    message: String(error?.message || ""),
+    fallback: "manual_whatsapp",
+  });
+
+  window.setTimeout(() => {
+    window.location.assign(fallbackUrl);
+  }, 180);
+
+  return true;
 };
 
 const getSelectedCartAddonPayload = (addons = loadCartAddons()) =>
@@ -7583,7 +11314,7 @@ const recordSubmittedOrderLocally = ({
         0
     ),
     createdAt: apiOrder.createdAt || new Date().toISOString(),
-    status: apiOrder.status || "Novo",
+    status: resolveCanonicalOrderStatus(apiOrder.status, checkout.fulfillmentMode) || "Recebido",
     items: [...compactItems, ...compactAddons],
     paymentMethod: checkout.paymentMethod || "",
     fulfillmentMode: checkout.fulfillmentMode || "",
@@ -7662,8 +11393,8 @@ const submitCartOrder = async () => {
       ORDER_CREATE_TIMEOUT_MS,
       {
         headers: {
-          "x-tokyo-customer-client-token": customerClientToken,
-          "x-tokyo-customer-key": buildCustomerSessionKey(profile),
+          [CUSTOMER_CLIENT_TOKEN_HEADER]: customerClientToken,
+          [CUSTOMER_KEY_HEADER]: buildCustomerSessionKey(profile),
         },
       }
     );
@@ -7688,8 +11419,19 @@ const submitCartOrder = async () => {
     );
     await refreshCustomerTrackingState({ renderPage: true });
   } catch (error) {
+    const fallbackTriggered = shouldUseManualWhatsappOrderFallback(error)
+      ? triggerManualWhatsappOrderFallback({
+          cart,
+          addons,
+          checkout,
+          error,
+        })
+      : false;
+
     setCartOrderNotice(
-      error?.message || "Nao foi possivel enviar o pedido agora. Tente novamente em instantes.",
+      fallbackTriggered
+        ? "O envio automatico ficou indisponivel. Vamos abrir o WhatsApp com a mensagem do seu pedido pronta para voce nao perder o atendimento."
+        : error?.message || "Nao foi possivel enviar o pedido agora. Tente novamente em instantes.",
       "error"
     );
     openCart();
@@ -7861,7 +11603,7 @@ const getDeliveryHistoryForProfile = (profile = loadAuthProfile()) => {
 };
 
 const getLatestSavedDeliveryQuote = (profile = loadAuthProfile()) =>
-  getDeliveryHistoryForProfile(profile)[0] || null;
+  applyDeliveryPricingToQuote(getDeliveryHistoryForProfile(profile)[0] || null);
 
 const getDeliveryFeeRule = (distanceKm) => {
   const matchedRule = DELIVERY_FEE_RULES.find((rule) => distanceKm <= rule.maxDistanceKm);
@@ -7934,24 +11676,46 @@ const buildDeliveryEstimateResult = ({
   partialMatch = false,
 }) => {
   const distanceKm = Number(distanceKmRaw.toFixed(1));
-  const pricingRule = getDeliveryFeeRule(distanceKmRaw);
-  const preparationMinutes = DELIVERY_PREPARATION_TIME_MINUTES;
+  const cartSubtotal = getCartTotalAmount(loadCart(), loadCartAddons());
+  const pricingRule = resolveConfiguredDeliveryPricing({
+    distanceKm: distanceKmRaw,
+    neighborhood: neighborhoodLabel,
+    cartSubtotal,
+  });
+
+  if (!pricingRule.deliverable) {
+    throw createDeliveryEstimateError(pricingRule.message, "", {
+      preventManualFallback: true,
+      deliveryReason: pricingRule.reason,
+    });
+  }
+
+  const deliverySettings = getDeliverySettings();
+  const preparationMinutes = Number(
+    deliverySettings.deliveryTime?.minMinutes || getPublicAveragePreparationMinutes()
+  );
   const travelMinutes = calculateEstimatedDeliveryTravelMinutes(distanceKmRaw);
-  const totalEstimateMinutes = preparationMinutes + travelMinutes;
+  const totalEstimateMinutes = Number(deliverySettings.deliveryTime?.maxMinutes || preparationMinutes + travelMinutes);
   const preparationTimeText = formatDeliveryMinutesLabel(preparationMinutes);
   const travelTimeText = formatDeliveryMinutesLabel(travelMinutes);
-  const totalEstimateText = `${formatDeliveryMinutesLabel(totalEstimateMinutes)} aprox.`;
+  const totalEstimateText = getDeliveryTimeText();
+  const originSourceLabel = getConfiguredPublicStoreCoordinates()
+    ? "Origem configurada do delivery"
+    : "Origem legada do delivery";
   const routeSteps = [
-    `Origem fixa do delivery: ${DELIVERY_STORE_LABEL}.`,
+    `${originSourceLabel}: ${getPublicStoreLabel()}.`,
     `Destino informado: ${destinationLabel}.`,
     `Endereco confirmado pelo Google Maps: ${geocodedAddress}.`,
     `Distancia calculada entre a loja e o cliente: ${distanceText}.`,
-    pricingRule.description,
+    pricingRule.freeShippingApplied
+      ? pricingRule.freeShippingMessage
+      : `${pricingRule.bandLabel}: taxa de entrega de ${formatPrice(pricingRule.regularFee)}.`,
+    pricingRule.minimumOrderMessage,
     `Tempo estimado de preparo: ${preparationTimeText}.`,
     `Tempo estimado de deslocamento ate o cliente: ${travelTimeText}.`,
-    `Prazo total aproximado considerando preparo + entrega: ${totalEstimateText}.`,
+    `Mensagem de prazo exibida no checkout: ${totalEstimateText}.`,
     "Em dias chuvosos, o prazo total pode aumentar por causa do deslocamento.",
-  ];
+  ].filter(Boolean);
 
   if (partialMatch) {
     routeSteps.push(
@@ -7973,7 +11737,17 @@ const buildDeliveryEstimateResult = ({
     distanceKm,
     distanceText,
     fee: pricingRule.fee,
-    pricingRuleLabel: pricingRule.description,
+    regularFee: pricingRule.regularFee,
+    courierFee: pricingRule.courierFee,
+    minimumOrder: pricingRule.minimumOrder,
+    isMinimumOrderMet: pricingRule.isMinimumOrderMet,
+    minimumOrderDifference: pricingRule.minimumOrderDifference,
+    minimumOrderMessage: pricingRule.minimumOrderMessage,
+    freeShippingApplied: pricingRule.freeShippingApplied,
+    freeShippingMessage: pricingRule.freeShippingMessage,
+    pricingRuleLabel: pricingRule.freeShippingApplied
+      ? pricingRule.freeShippingMessage
+      : `${pricingRule.bandLabel}: ${formatPrice(pricingRule.regularFee)}.`,
     preparationMinutes,
     preparationTimeText,
     travelMinutes,
@@ -7982,6 +11756,7 @@ const buildDeliveryEstimateResult = ({
     totalEstimateText,
     geocodedAddress,
     routeSteps,
+    deliverySettingsUpdatedAt: deliverySettings.updatedAt || "",
   };
 };
 
@@ -7996,39 +11771,81 @@ const buildManualDeliveryEstimateResult = ({
   stateLabel = "",
   destinationLabel,
   destinationAddress,
-}) => ({
-  cep: formatCepDisplay(cepDigits),
-  street: streetLabel,
-  houseNumber: numericHouseNumber,
-  complement: complementLabel,
-  reference: referenceLabel,
-  neighborhood: neighborhoodLabel,
-  city: cityLabel,
-  state: stateLabel,
-  destinationLabel,
-  routeBand: DELIVERY_MANUAL_ROUTE_BAND,
-  distanceKm: 0,
-  distanceText: "Distancia em confirmacao",
-  fee: DELIVERY_MANUAL_FALLBACK_FEE,
-  pricingRuleLabel: `Taxa minima provisoria de ${formatPrice(
-    DELIVERY_MANUAL_FALLBACK_FEE
-  )} enquanto o Google Maps estiver indisponivel.`,
-  preparationMinutes: DELIVERY_PREPARATION_TIME_MINUTES,
-  preparationTimeText: DELIVERY_MANUAL_TIME_TEXT,
-  travelMinutes: 0,
-  travelTimeText: DELIVERY_MANUAL_TIME_TEXT,
-  totalEstimateMinutes: DELIVERY_PREPARATION_TIME_MINUTES,
-  totalEstimateText: DELIVERY_MANUAL_TIME_TEXT,
-  geocodedAddress: destinationAddress,
-  routeSteps: [
-    `Origem fixa do delivery: ${DELIVERY_STORE_LABEL}.`,
+}) => {
+  const deliverySettings = getDeliverySettings();
+  const activeBand = getActiveDeliveryBands(deliverySettings)[0] || null;
+  const pricingRule = activeBand
+    ? resolveConfiguredDeliveryPricing({
+        distanceKm: Number(activeBand.minKm || 0),
+        neighborhood: neighborhoodLabel,
+        cartSubtotal: getCartTotalAmount(loadCart(), loadCartAddons()),
+        settings: deliverySettings,
+      })
+    : null;
+  const manualFallbackFee = getPublicDefaultDeliveryFee();
+  const fee = pricingRule?.deliverable ? pricingRule.fee : manualFallbackFee;
+  const regularFee = pricingRule?.deliverable ? pricingRule.regularFee : manualFallbackFee;
+  const routeBand = pricingRule?.deliverable ? pricingRule.bandLabel : DELIVERY_MANUAL_ROUTE_BAND;
+  const totalEstimateText = pricingRule?.deliverable ? getDeliveryTimeText() : DELIVERY_MANUAL_TIME_TEXT;
+  const originSourceLabel = getConfiguredPublicStoreCoordinates()
+    ? "Origem configurada do delivery"
+    : "Origem legada do delivery";
+  const routeSteps = [
+    `${originSourceLabel}: ${getPublicStoreLabel()}.`,
     `Destino informado: ${destinationLabel}.`,
     `Endereco salvo para atendimento: ${destinationAddress}.`,
-    `Taxa minima provisoria mostrada no site: ${formatPrice(DELIVERY_MANUAL_FALLBACK_FEE)}.`,
+    pricingRule?.deliverable && pricingRule.freeShippingApplied
+      ? pricingRule.freeShippingMessage
+      : `Taxa provisoria mostrada no site: ${formatPrice(fee)}.`,
+    pricingRule?.deliverable ? pricingRule.minimumOrderMessage : "",
     "A taxa final e o prazo exato serao confirmados pelo atendimento no WhatsApp antes do envio.",
-  ],
-  isManualEstimate: true,
-});
+  ].filter(Boolean);
+
+  return {
+    cep: formatCepDisplay(cepDigits),
+    street: streetLabel,
+    houseNumber: numericHouseNumber,
+    complement: complementLabel,
+    reference: referenceLabel,
+    neighborhood: neighborhoodLabel,
+    city: cityLabel,
+    state: stateLabel,
+    destinationLabel,
+    routeBand,
+    distanceKm: Number(activeBand?.minKm || 0),
+    distanceText: "Distancia em confirmacao",
+    fee,
+    regularFee,
+    courierFee: pricingRule?.deliverable ? pricingRule.courierFee : 0,
+    minimumOrder: pricingRule?.deliverable ? pricingRule.minimumOrder : 0,
+    isMinimumOrderMet: pricingRule?.deliverable ? pricingRule.isMinimumOrderMet : true,
+    minimumOrderDifference: pricingRule?.deliverable ? pricingRule.minimumOrderDifference : 0,
+    minimumOrderMessage: pricingRule?.deliverable ? pricingRule.minimumOrderMessage : "",
+    freeShippingApplied: pricingRule?.deliverable ? pricingRule.freeShippingApplied : false,
+    freeShippingMessage: pricingRule?.deliverable ? pricingRule.freeShippingMessage : "",
+    pricingRuleLabel: pricingRule?.deliverable
+      ? pricingRule.freeShippingApplied
+        ? pricingRule.freeShippingMessage
+        : `${pricingRule.bandLabel}: ${formatPrice(regularFee)}.`
+      : `Taxa minima provisoria de ${formatPrice(
+          manualFallbackFee
+        )} enquanto o Google Maps estiver indisponivel.`,
+    preparationMinutes: Number(
+      deliverySettings.deliveryTime?.minMinutes || getPublicAveragePreparationMinutes()
+    ),
+    preparationTimeText: DELIVERY_MANUAL_TIME_TEXT,
+    travelMinutes: 0,
+    travelTimeText: DELIVERY_MANUAL_TIME_TEXT,
+    totalEstimateMinutes: Number(
+      deliverySettings.deliveryTime?.maxMinutes || getPublicAveragePreparationMinutes()
+    ),
+    totalEstimateText,
+    geocodedAddress: destinationAddress,
+    routeSteps,
+    isManualEstimate: true,
+    deliverySettingsUpdatedAt: deliverySettings.updatedAt || "",
+  };
+};
 
 const saveDeliveryEstimate = (estimate, profile = loadAuthProfile()) => {
   const quotes = loadDeliveryHistory();
@@ -8058,17 +11875,21 @@ const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
         "Endereco salvo",
         addressLabel,
         estimate.routeBand,
-        `Taxa minima: ${feeLabel}`,
+        estimate.freeShippingApplied ? "Frete gratis aplicado" : `Taxa minima: ${feeLabel}`,
+        estimate.minimumOrderMessage,
         `Prazo: ${estimate.totalEstimateText || DELIVERY_MANUAL_TIME_TEXT}`,
       ]
     : [
         "Distancia calculada",
         estimate.distanceText,
         estimate.routeBand,
+        estimate.freeShippingApplied ? "Frete gratis aplicado" : "",
+        estimate.minimumOrderMessage,
         `Preparo: ${estimate.preparationTimeText}`,
         `Deslocamento: ${estimate.travelTimeText}`,
         `Prazo total: ${estimate.totalEstimateText}`,
       ];
+  const visibleMetaLines = metaLines.filter(Boolean);
 
   resultNode.innerHTML = `
     <div class="delivery-summary">
@@ -8087,7 +11908,7 @@ const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
       )}</p>
 
       <div class="delivery-meta">
-        ${metaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
+        ${visibleMetaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
       </div>
 
       <ul class="delivery-route">
@@ -8130,6 +11951,16 @@ const calculateDeliveryEstimate = async ({
     city,
     state
   );
+  const deliveryAvailability = getFulfillmentOptionAvailability("delivery");
+
+  if (!deliveryAvailability.available) {
+    throw createDeliveryEstimateError(
+      deliveryAvailability.message || "Entrega indisponivel no momento.",
+      "",
+      { preventManualFallback: true, deliveryReason: "paused" }
+    );
+  }
+
   lastGoogleMapsApiErrorMessage = "";
   logDeliveryDebug("delivery-calc-start", {
     origin: getCurrentPageOrigin(),
@@ -8156,14 +11987,17 @@ const calculateDeliveryEstimate = async ({
       destinationAddress,
       "O Google Maps demorou demais para localizar o endereco do cliente."
     );
+    const storeCoordinates = getPublicStoreCoordinates();
     const distanceKmRaw = calculateGeodesicDistanceKm(
-      DELIVERY_STORE_COORDINATES,
+      storeCoordinates,
       customerGeocode.location
     );
     const distanceText = `${String(Number(distanceKmRaw.toFixed(1))).replace(".", ",")} km`;
     logDeliveryDebug("delivery-calc-success", {
       origin: getCurrentPageOrigin(),
       destinationAddress,
+      storeCoordinates,
+      usesConfiguredStoreCoordinates: Boolean(getConfiguredPublicStoreCoordinates()),
       geocodedAddress: customerGeocode.formattedAddress,
       partialMatch: customerGeocode.partialMatch,
       distanceKmRaw,
@@ -8319,6 +12153,19 @@ const submitDeliveryForm = async (form) => {
     renderCart();
     schedulePortugueseUiRefresh();
   } catch (error) {
+    if (error?.preventManualFallback) {
+      setResultCardState(resultNode, "error");
+
+      if (resultNode) {
+        resultNode.innerHTML = `<p>${escapeHtml(
+          error.userMessage || error.message || "Entrega indisponivel para este endereco."
+        )}</p>`;
+      }
+
+      schedulePortugueseUiRefresh();
+      return;
+    }
+
     const estimate = buildManualDeliveryEstimateResult({
       cepDigits: cep,
       streetLabel: street,
@@ -8358,58 +12205,183 @@ const submitDeliveryForm = async (form) => {
   }
 };
 
-const loadReviews = () => loadStoredCollection(REVIEW_STORAGE_KEY);
+const clearPublicReviewRotation = () => {
+  if (reviewPageState.rotationIntervalId) {
+    window.clearInterval(reviewPageState.rotationIntervalId);
+    reviewPageState.rotationIntervalId = 0;
+  }
+};
 
-const saveReviews = (reviews) => {
-  saveStoredCollection(REVIEW_STORAGE_KEY, reviews.slice(0, 12));
+const renderHomeSocialProof = () => {
+  const root = document.querySelector("[data-home-social-proof]");
+  const reviewListNode = document.querySelector("[data-home-review-list]");
+  const reviewCount = getPublicReviewCount();
+  const reviews = getPublicReviews();
+  const averageLabel = getPublicReviewAverageLabel();
+  const countLabel = getPublicReviewCountLabel();
+
+  document.querySelectorAll("[data-home-review-average]").forEach((node) => {
+    node.textContent = reviewCount > 0 ? averageLabel : "--";
+  });
+
+  document.querySelectorAll("[data-home-review-count]").forEach((node) => {
+    node.textContent = reviewCount > 0 ? countLabel : "Avaliacoes reais";
+  });
+
+  if (!root || !reviewListNode) {
+    clearPublicReviewRotation();
+    return;
+  }
+
+  if (!reviews.length || reviewCount <= 0) {
+    root.hidden = true;
+    reviewListNode.innerHTML = "";
+    clearPublicReviewRotation();
+    schedulePortugueseUiRefresh(document.body);
+    return;
+  }
+
+  const visibleReviews = getPublicReviewWindow(
+    reviews,
+    reviewPageState.rotationIndex,
+    PUBLIC_REVIEW_HOME_VISIBLE_COUNT
+  );
+
+  root.hidden = false;
+  root.querySelectorAll("[data-home-social-average]").forEach((node) => {
+    node.textContent = averageLabel;
+  });
+  root.querySelectorAll("[data-home-social-count]").forEach((node) => {
+    node.textContent = countLabel;
+  });
+  reviewListNode.innerHTML = visibleReviews
+    .map(
+      (review) => `
+        <article class="hero-social-review">
+          <span class="hero-social-avatar" aria-hidden="true">${escapeHtml(
+            getPublicReviewerInitial(review.name)
+          )}</span>
+          <div class="hero-social-review-copy">
+            <div class="hero-social-review-top">
+              <strong>${escapeHtml(getPublicReviewerName(review.name))}</strong>
+              <span class="review-stars">${buildRatingStars(review.rating)}</span>
+            </div>
+            <p>${escapeHtml(getShortPublicReviewMessage(review.message, 96))}</p>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+
+  schedulePortugueseUiRefresh(document.body);
+};
+
+const startPublicReviewRotation = () => {
+  const root = document.querySelector("[data-home-social-proof]");
+  const reviews = getPublicReviews();
+
+  clearPublicReviewRotation();
+
+  if (!root || reviews.length <= PUBLIC_REVIEW_HOME_VISIBLE_COUNT) {
+    return;
+  }
+
+  reviewPageState.rotationIntervalId = window.setInterval(() => {
+    const currentReviews = getPublicReviews();
+
+    if (currentReviews.length <= PUBLIC_REVIEW_HOME_VISIBLE_COUNT) {
+      clearPublicReviewRotation();
+      renderHomeSocialProof();
+      return;
+    }
+
+    reviewPageState.rotationIndex = (reviewPageState.rotationIndex + 1) % currentReviews.length;
+    renderHomeSocialProof();
+  }, PUBLIC_REVIEW_ROTATION_INTERVAL_MS);
+};
+
+const renderPublicReviewSurfaces = ({ rerenderCatalog = false, restartRotation = false } = {}) => {
+  renderReviewPage();
+  renderHomeSocialProof();
+
+  if (restartRotation) {
+    startPublicReviewRotation();
+  }
+
+  if (rerenderCatalog && catalogRoot) {
+    renderCatalog();
+    renderMobileCatalogSheet();
+  }
 };
 
 const renderReviewPage = () => {
   const averageNode = document.querySelector("[data-review-average]");
+  const averageCopyNode = document.querySelector("[data-review-average-copy]");
   const countNode = document.querySelector("[data-review-count]");
+  const countCopyNode = document.querySelector("[data-review-count-copy]");
   const listRoot = document.querySelector("[data-review-list]");
-  const reviews = loadReviews();
-  const average = reviews.length
-    ? (
-        reviews.reduce((sum, entry) => sum + Number(entry.rating || 0), 0) / reviews.length
-      ).toFixed(1)
-    : "0.0";
+  const publicReviewCount = getPublicReviewCount();
+  const publicReviews = getPublicReviews();
+
+  if (!averageNode && !countNode && !listRoot) {
+    return;
+  }
 
   if (averageNode) {
-    averageNode.textContent = average;
+    averageNode.textContent =
+      publicReviewCount > 0 ? getPublicReviewAverageLabel() : "Sem avaliacoes";
+  }
+
+  if (averageCopyNode) {
+    averageCopyNode.textContent = "Media das avaliacoes publicadas";
   }
 
   if (countNode) {
-    countNode.textContent = String(reviews.length);
+    countNode.textContent = getPublicReviewCountLabel();
+  }
+
+  if (countCopyNode) {
+    countCopyNode.textContent = "Somente avaliacoes visiveis no site";
   }
 
   if (!listRoot) {
     return;
   }
 
-  if (reviews.length === 0) {
+  if (reviewPageState.loading && publicReviews.length === 0) {
     listRoot.innerHTML = `
       <div class="empty-panel">
-        <strong>Nenhuma avaliacao enviada ainda.</strong>
-        <span>Quando o primeiro formulario for preenchido, ele aparecera aqui.</span>
+        <strong>Carregando avaliacoes</strong>
+        <span>Estamos buscando as publicacoes reais do site.</span>
       </div>
     `;
     schedulePortugueseUiRefresh();
     return;
   }
 
-  listRoot.innerHTML = reviews
+  if (publicReviews.length === 0) {
+    listRoot.innerHTML = `
+      <div class="empty-panel">
+        <strong>Nenhuma avaliacao publicada ainda.</strong>
+        <span>Quando as primeiras respostas entrarem na janela ativa, elas aparecerao aqui.</span>
+      </div>
+    `;
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  listRoot.innerHTML = publicReviews
     .map(
       (entry) => `
         <article class="review-card">
           <div class="review-card-top">
             <div>
-              <strong>${escapeHtml(entry.name)}</strong>
+              <strong>${escapeHtml(getPublicReviewerName(entry.name))}</strong>
               <p>${escapeHtml(formatDateTime(entry.createdAt))}</p>
             </div>
             <span class="review-stars">${buildRatingStars(entry.rating)}</span>
           </div>
-          <p>${escapeHtml(entry.message)}</p>
+          <p>${escapeHtml(getShortPublicReviewMessage(entry.message, 180))}</p>
         </article>
       `
     )
@@ -8418,10 +12390,76 @@ const renderReviewPage = () => {
   schedulePortugueseUiRefresh();
 };
 
-const submitReviewForm = (form) => {
+const shouldLoadPublicReviews = () =>
+  Boolean(
+    document.querySelector("[data-review-average]") ||
+      document.querySelector("[data-review-count]") ||
+      document.querySelector("[data-review-list]") ||
+      document.querySelector("[data-home-social-proof]") ||
+      document.querySelector("[data-home-review-average]") ||
+      catalogRoot
+  );
+
+const loadReviewPage = async ({ force = false } = {}) => {
+  if (!shouldLoadPublicReviews()) {
+    return;
+  }
+
+  if (publicReviewsHydrationPromise && !force) {
+    return publicReviewsHydrationPromise;
+  }
+
+  if (reviewPageState.loaded && !force) {
+    renderPublicReviewSurfaces();
+    return;
+  }
+
+  reviewPageState.loading = true;
+  reviewPageState.error = "";
+  renderPublicReviewSurfaces();
+
+  publicReviewsHydrationPromise = (async () => {
+    try {
+      const payload = await getJsonWithTimeout(PUBLIC_REVIEWS_ENDPOINT);
+
+      reviewPageState.summary = payload.summary || {
+        displayAverage: 0,
+        displayAverageLabel: "Sem avaliacoes",
+        publicReviewCount: 0,
+        publicCountLabel: "0 avaliacoes publicadas",
+        recentCountLabel: "Baseado em 0 avaliacoes recentes",
+      };
+      reviewPageState.reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
+      reviewPageState.loaded = true;
+      reviewPageState.rotationIndex = 0;
+    } catch (error) {
+      reviewPageState.summary = {
+        displayAverage: 0,
+        displayAverageLabel: "Sem avaliacoes",
+        publicReviewCount: 0,
+        publicCountLabel: "0 avaliacoes publicadas",
+        recentCountLabel: "Baseado em 0 avaliacoes recentes",
+      };
+      reviewPageState.reviews = [];
+      reviewPageState.error = error?.message || "Nao foi possivel carregar as avaliacoes.";
+    } finally {
+      reviewPageState.loading = false;
+      publicReviewsHydrationPromise = null;
+      renderPublicReviewSurfaces({
+        rerenderCatalog: Boolean(catalogRoot),
+        restartRotation: true,
+      });
+    }
+  })();
+
+  return publicReviewsHydrationPromise;
+};
+
+const submitReviewForm = async (form) => {
   const feedbackNode = document.querySelector("[data-review-feedback]");
   const formData = new FormData(form);
   const profile = loadAuthProfile();
+  const submitButton = form.querySelector("button[type='submit']");
   const rating = Number(formData.get("review_rating") || 0);
   const name = String(formData.get("review_name") || profile?.name || "").trim();
   const contact = String(formData.get("review_contact") || "").trim();
@@ -8439,30 +12477,67 @@ const submitReviewForm = (form) => {
     return;
   }
 
-  const reviews = loadReviews();
-  reviews.unshift({
-    id: `review_${Date.now()}`,
-    name,
-    contact,
-    rating,
-    message,
-    createdAt: new Date().toISOString(),
-  });
-  saveReviews(reviews);
-  setResultCardState(feedbackNode, "success");
-
-  if (feedbackNode) {
-    feedbackNode.innerHTML = `
-      <p>
-        Avaliacao enviada com sucesso. Obrigado por dar ${rating} estrela${rating === 1 ? "" : "s"} para o site.
-      </p>
-    `;
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Enviando avaliacao...";
   }
 
-  form.reset();
-  renderReviewPage();
-  prefillProfileForms();
-  schedulePortugueseUiRefresh();
+  try {
+    const payload = await postJsonWithTimeout(PUBLIC_REVIEWS_ENDPOINT, {
+      name,
+      contact,
+      rating,
+      message,
+      profile: profile
+        ? {
+            id: profile.id || "",
+            phone: profile.phone || "",
+            email: profile.email || "",
+            customerKey:
+              normalizePhone(profile?.phone) ||
+              normalizeEmail(profile?.email) ||
+              String(profile?.id || ""),
+          }
+        : {},
+    });
+
+    reviewPageState.summary = payload.summary || reviewPageState.summary;
+    reviewPageState.reviews = Array.isArray(payload.reviews) ? payload.reviews : reviewPageState.reviews;
+    reviewPageState.loaded = true;
+    reviewPageState.rotationIndex = 0;
+    setResultCardState(feedbackNode, "success");
+
+    if (feedbackNode) {
+      feedbackNode.innerHTML = `
+        <p>
+          Avaliacao enviada com sucesso. Obrigado por dar ${rating} estrela${rating === 1 ? "" : "s"} para o site.
+        </p>
+      `;
+    }
+
+    form.reset();
+    renderPublicReviewSurfaces({
+      rerenderCatalog: Boolean(catalogRoot),
+      restartRotation: true,
+    });
+    prefillProfileForms();
+    schedulePortugueseUiRefresh();
+  } catch (error) {
+    setResultCardState(feedbackNode, "error");
+
+    if (feedbackNode) {
+      feedbackNode.innerHTML = `<p>${escapeHtml(
+        error?.message || "Nao foi possivel enviar sua avaliacao agora."
+      )}</p>`;
+    }
+
+    schedulePortugueseUiRefresh();
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Enviar avaliacao";
+    }
+  }
 };
 
 const submitCareerForm = (form) => {
@@ -8585,9 +12660,12 @@ const renderCatalog = () => {
   }
 
   lastCatalogViewportMode = getCatalogViewportMode();
+  normalizeMenuSectionDisplayOrder();
+  normalizeCollapsedCatalogSections(MENU_SECTIONS);
+  prepareCatalogTargetItem();
 
   const sectionOrder = new Map(
-    MENU_SECTION_DISPLAY_ORDER.map((sectionId, index) => [sectionId, index])
+    menuSectionDisplayOrder.map((sectionId, index) => [sectionId, index])
   );
   const orderedSections = [...MENU_SECTIONS].sort(
     (left, right) =>
@@ -8600,7 +12678,7 @@ const renderCatalog = () => {
   });
   groupMediaControllers.clear();
 
-catalogRoot.innerHTML = orderedSections
+  catalogRoot.innerHTML = orderedSections
     .map((section) => {
       if (isCatalogMobileViewport()) {
         return renderMobileCatalogSection(section);
@@ -8645,7 +12723,14 @@ catalogRoot.innerHTML = orderedSections
                       loading="lazy"
                       decoding="async"
                     />
-                    <img class="catalog-media-image" data-group-media-next data-media-src="" alt="" />
+                    <img
+                      class="catalog-media-image"
+                      data-group-media-next
+                      data-media-src=""
+                      src="${GROUP_MEDIA_PLACEHOLDER_SRC}"
+                      alt=""
+                      aria-hidden="true"
+                    />
                     <figcaption class="catalog-media-caption" data-group-media-caption>
                       Destaque de ${group.title}
                     </figcaption>
@@ -8670,14 +12755,16 @@ catalogRoot.innerHTML = orderedSections
                   ${section.id === "combinados" ? getComboContentsMarkup(section, group) : `<p>${group.description}</p>`}
                   <div class="catalog-options" aria-label="Opcoes de ${group.title}">
                     ${group.items
-                      .map(
-                        (item) => `
+                      .map((item) => {
+                        const isOrderable = isMenuItemOrderable(item);
+
+                        return `
                           <div
-                            class="catalog-option${isTemakiPremiumOption(item) ? " catalog-option-premium" : ""}"
+                            class="catalog-option${isTemakiPremiumOption(item) ? " catalog-option-premium" : ""}${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}"
                             data-item-chip
                             data-item-id="${item.id}"
-                            data-item-name="${item.name}"
-                            data-item-category="${group.title}"
+                            data-item-name="${escapeHtml(item.name)}"
+                            data-item-category="${escapeHtml(group.title)}"
                           >
                             <button
                               class="catalog-option-main"
@@ -8685,16 +12772,20 @@ catalogRoot.innerHTML = orderedSections
                               data-item-button
                               data-add-to-cart
                               aria-pressed="false"
-                              aria-label="Adicionar ${item.name} a sacola"
+                              aria-label="${escapeHtml(getCatalogItemActionLabel(item))}: ${escapeHtml(item.name)}"
+                              ${isOrderable ? "" : "disabled"}
                             >
                               <span class="catalog-option-copy">
                                 <span class="catalog-option-label">${getCatalogOptionLabel(
                                   item,
                                   group.title
                                 )}</span>
-                                <span class="catalog-option-price">${getPriceLabel(
-                                  item.price
-                                )}</span>
+                                ${getCatalogItemPriceMarkup(item, {
+                                  tagName: "span",
+                                  className: "catalog-option-price",
+                                })}
+                                ${getCatalogItemStatusMarkup(item)}
+                                ${getCatalogItemReviewMarkup(item)}
                               </span>
                             </button>
                             <div class="catalog-option-controls" aria-label="Controle de quantidade">
@@ -8702,7 +12793,7 @@ catalogRoot.innerHTML = orderedSections
                                 class="catalog-stepper"
                                 type="button"
                                 data-item-decrease
-                                aria-label="Diminuir ${item.name}"
+                                aria-label="Diminuir ${escapeHtml(item.name)}"
                               >
                                 -
                               </button>
@@ -8711,7 +12802,8 @@ catalogRoot.innerHTML = orderedSections
                                 class="catalog-stepper"
                                 type="button"
                                 data-item-increase
-                                aria-label="Aumentar ${item.name}"
+                                aria-label="Aumentar ${escapeHtml(item.name)}"
+                                ${isOrderable ? "" : "disabled"}
                               >
                                 +
                               </button>
@@ -8722,8 +12814,8 @@ catalogRoot.innerHTML = orderedSections
                               ? '<div class="catalog-option-divider" aria-hidden="true"></div>'
                               : ""
                           }
-                        `
-                      )
+                        `;
+                      })
                       .join("")}
                   </div>
                   <div class="catalog-footer catalog-footer-group">
@@ -8742,6 +12834,9 @@ catalogRoot.innerHTML = orderedSections
     .join("");
 
   syncCatalogSelections();
+  syncPublicLayoutNavigation();
+  setupReveal();
+  scrollToCatalogTargetItem();
   schedulePortugueseUiRefresh();
 };
 
@@ -8810,6 +12905,16 @@ const handleDocumentInput = (event) => {
     event.target.name === "cart_cash_change_required" ||
     event.target.name === "cart_timing_mode"
   ) {
+    if (event.target.name === "cart_fulfillment_mode") {
+      const availability = getFulfillmentOptionAvailability(event.target.value);
+
+      if (!availability.available) {
+        setCartOrderNotice(availability.message || "Esta opcao esta indisponivel agora.", "error");
+        renderCart();
+        return;
+      }
+    }
+
     const checkout = loadCartCheckout();
     const nextCheckout = {
       ...checkout,
@@ -9098,7 +13203,7 @@ const handleDocumentClick = (event) => {
     renderDeliveryHistory();
     renderOrderHistoryPage();
     renderTrackingPage();
-    renderReviewPage();
+    void loadReviewPage();
     prefillProfileForms();
     return;
   }
@@ -9217,6 +13322,7 @@ const handleDocumentClick = (event) => {
         id: itemChip.dataset.itemId,
       });
       flashAddedState(increaseButton);
+      closeMobileCatalogSheetAfterCartSelection(increaseButton);
     }
     return;
   }
@@ -9263,6 +13369,7 @@ const handleDocumentClick = (event) => {
       id: itemChip.dataset.itemId,
     });
     flashAddedState(addButton);
+    closeMobileCatalogSheetAfterCartSelection(addButton);
     return;
   }
 
@@ -9311,18 +13418,22 @@ createMobileCatalogSheetShell();
 createCartShell();
 createAuthShell();
 createSiteFooter();
+applyRestaurantSettingsToPublicSite();
 refreshStoreStatusUi({ rerenderCartUi: false });
 setupMobileNavigation();
 updateAuthTriggers();
 renderAuthPanel();
 renderCart();
+void loadPublicRestaurantSettings();
+void loadPublicDeliverySettings();
+void hydrateCatalogRuntimeState();
 setActiveNavigation();
 initComboHeroImages();
 renderDeliveryHistory();
 renderOrderHistoryPage();
 renderTrackingPage();
 void refreshCustomerTrackingState({ renderPage: true });
-renderReviewPage();
+void loadReviewPage();
 prefillProfileForms();
 setupReveal();
 updateHeaderState();

@@ -1,0 +1,38 @@
+# Changelog
+
+## [1.0.0] - 2026-06-28
+
+Status: Production Ready (Pilot)
+
+### Added
+
+- TenantContext por request com `default_only`, `pilot` e `strict`.
+- Isolamento logico e fisico por tenant para stores operacionais.
+- Security Guardian para rotas sensiveis, com rate limit, RBAC, plano, assinatura, risco e logs sanitizados.
+- Onboarding Master para restaurante piloto real.
+- Criacao de admin `OWNER` vinculado ao restaurante.
+- Planos V1 `START`, `BUSINESS` e `PRO`, com `PREMIUM` preservado como alias legado completo.
+- Assinaturas `TRIAL`, `ACTIVE`, `EXPIRED`, `BLOCKED` e `CANCELED`.
+- Exportacao minima por tenant via backend.
+- Validadores V1 locais: release, hardening, onboarding, subscription, RBAC, audit, export, pilot journey e final.
+
+### Changed
+
+- Scripts de validacao destrutivos antigos permanecem bloqueados por padrao.
+- `validate:stage-3-ui` agora aponta para validacao local isolada, sem depender de servidor externo em `localhost:3000`.
+- Contrato de dominios atualizado para aceitar escopo fisico V1 com `tenantId` e `restaurantId`.
+- `.gitignore` passa a ignorar o arquivo especial `NUL` gerado em ambiente Windows.
+
+### Fixed
+
+- Validador de dominios ainda refletia contrato antigo que proibia campo fisico de restaurante.
+- Validador de Kanban usava mock antigo sem sessao/plano/permissoes V1.
+- Suite UI nominal dependia de servidor externo e nao era reproduzivel em preparacao de producao.
+
+### Known Limitations
+
+- Billing real/gateway de pagamento nao faz parte da V1.
+- Exportacao V1 e JSON minimo por tenant.
+- Perfis operacionais nomeados sao representados por `CUSTOM` + permissoes.
+- `pilot` deve ser ativado somente de forma explicita e controlada.
+- `strict` fica reservado para cutover futuro, nao para o primeiro piloto.

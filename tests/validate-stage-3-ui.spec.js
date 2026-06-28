@@ -151,7 +151,7 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
   await expect(page.locator("[data-order-cta]").first()).toHaveText("Acompanhar Pedido", {
     timeout: 15000,
   });
-  await expect(page.locator("[data-tracking-root]")).toContainText("Novo");
+  await expect(page.locator("[data-tracking-root]")).toContainText("Recebido");
 
   const adminApi = await request.newContext({
     baseURL,

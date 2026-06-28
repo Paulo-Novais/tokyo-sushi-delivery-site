@@ -6,7 +6,7 @@
     <title>Avaliar | Tokyo Sushi Delivery</title>
     <meta
       name="description"
-      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opinião."
+      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opiniao."
     />
     <meta name="robots" content="index,follow" />
     <meta name="theme-color" content="#080505" />
@@ -21,7 +21,7 @@
     <meta property="og:title" content="Avaliar | Tokyo Sushi Delivery" />
     <meta
       property="og:description"
-      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opinião."
+      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opiniao."
     />
     <meta property="og:url" content="https://tokyosushidelivery.com.br/avaliar.html" />
     <meta
@@ -33,7 +33,7 @@
     <meta name="twitter:title" content="Avaliar | Tokyo Sushi Delivery" />
     <meta
       name="twitter:description"
-      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opinião."
+      content="Avalie o site Tokyo Sushi Delivery com nota de 1 a 5 estrelas e envie sua opiniao."
     />
     <meta
       name="twitter:image"
@@ -41,6 +41,7 @@
     />
     <script defer src="./site-config.js"></script>
     <script defer src="./store-hours.js"></script>
+    <script defer src="./lib/business-hours.cjs"></script>
 
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -50,7 +51,7 @@
 
     <header class="site-header reveal">
       <div class="container nav-shell">
-        <a class="brand" href="./index.html" aria-label="Voltar para a página inicial">
+        <a class="brand" href="./index.html" aria-label="Voltar para a pagina inicial">
           <span class="brand-mark">
             <img
               src="./site-images/tokyo-logo-premium-transparent.png"
@@ -63,16 +64,22 @@
           </span>
         </a>
 
-        <nav class="nav-links" aria-label="Navegação principal">
-          <a href="./cardapio.html" data-nav-page="cardapio">Cardápio</a>
+        <nav class="nav-links" aria-label="Navegacao principal">
+          <a href="./cardapio.html" data-nav-page="cardapio">Cardapio</a>
           <a href="./entrega.html" data-nav-page="entrega">Entrega</a>
-          <a href="./historico.html" data-nav-page="historico">Histórico</a>
+          <a href="./historico.html" data-nav-page="historico">Historico</a>
           <a href="./avaliar.html" data-nav-page="avaliar">Avaliar</a>
           <a href="./trabalhe-conosco.html" data-nav-page="trabalhe">Trabalhe Conosco</a>
         </nav>
 
         <div class="nav-actions">
-          <a class="button button-outline" href="./cardapio.html#catalogo" data-auth-required data-order-cta>Pedir Agora</a>
+          <a
+            class="button button-outline"
+            href="./cardapio.html#catalogo"
+            data-auth-required
+            data-order-cta
+            >Pedir Agora</a
+          >
 
           <button
             class="account-launch"
@@ -116,29 +123,29 @@
           <div class="page-copy reveal">
             <div class="eyebrow">
               <span></span>
-              Avaliação do site
+              Avaliacao do site
             </div>
-            <h1>Conte como foi a sua experiência no site do Tokyo Sushi.</h1>
+            <h1>Conte como foi a sua experiencia no site do Tokyo Sushi.</h1>
             <p>
-              Avalie de 1 a 5 estrelas, deixe um comentário rápido e ajude a
-              melhorar navegação, visual e clareza do pedido.
+              Avalie de 1 a 5 estrelas, deixe um comentario rapido e ajude a
+              melhorar navegacao, visual e clareza do pedido.
             </p>
 
             <div class="page-metrics stats-grid">
               <article class="glass-card stat-card">
-                <strong data-review-average>0.0</strong>
-                <span>Média atual das avaliações</span>
+                <strong data-review-average>4.2 de 5</strong>
+                <span data-review-average-copy>Media visual das avaliacoes recentes</span>
               </article>
               <article class="glass-card stat-card">
-                <strong data-review-count>0</strong>
-                <span>Total de respostas enviadas</span>
+                <strong data-review-count>Baseado em 0 avaliacoes recentes</strong>
+                <span data-review-count-copy>Recorte movel dos ultimos 60 dias</span>
               </article>
             </div>
           </div>
 
           <section class="glass-card form-card reveal">
-            <p class="section-tag">Formulário de avaliação</p>
-            <h2>Diga o que você achou do site</h2>
+            <p class="section-tag">Formulario de avaliacao</p>
+            <h2>Diga o que voce achou do site</h2>
             <form class="auth-form form-layout" data-review-form>
               <label class="auth-field">
                 <span>Seu nome</span>
@@ -178,23 +185,23 @@
               </div>
 
               <label class="auth-field">
-                <span>Comentário</span>
+                <span>Comentario</span>
                 <textarea
                   class="auth-input textarea-input"
                   name="review_message"
                   rows="5"
-                  placeholder="O que você gostou e o que ainda pode melhorar?"
+                  placeholder="O que voce gostou e o que ainda pode melhorar?"
                   required
                 ></textarea>
               </label>
 
               <button class="button button-primary full-width" type="submit">
-                Enviar avaliação
+                Enviar avaliacao
               </button>
             </form>
 
             <div class="result-card" data-review-feedback>
-              <p>Sua avaliação aparecerá aqui depois do envio.</p>
+              <p>Sua avaliacao aparecera aqui depois do envio.</p>
             </div>
           </section>
         </div>
@@ -204,17 +211,17 @@
         <div class="container">
           <div class="section-heading reveal">
             <p class="section-tag">Feedback recente</p>
-            <h2>Últimas avaliações recebidas neste aparelho</h2>
+            <h2>Ultimas avaliacoes publicadas no site</h2>
             <p>
-              As respostas ficam salvas localmente para você acompanhar a
-              percepção sobre o site.
+              As respostas entram no gestor com persistencia real e aparecem aqui
+              enquanto estiverem dentro da janela ativa de publicacao.
             </p>
           </div>
 
           <div class="reviews-grid" data-review-list>
             <div class="empty-panel">
-              <strong>Nenhuma avaliação enviada ainda.</strong>
-              <span>Quando o primeiro formulário for preenchido, ele aparecerá aqui.</span>
+              <strong>Nenhuma avaliacao publicada ainda.</strong>
+              <span>Quando as primeiras respostas entrarem na janela ativa, elas aparecerao aqui.</span>
             </div>
           </div>
         </div>

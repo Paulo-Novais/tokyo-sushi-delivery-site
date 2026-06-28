@@ -10,6 +10,7 @@ const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
+  [".cjs", "application/javascript; charset=utf-8"],
   [".gif", "image/gif"],
   [".html", "text/html; charset=utf-8"],
   [".ico", "image/x-icon"],
@@ -32,6 +33,137 @@ const customer = {
   name: "Cliente UI Local",
   phone: "(11) 96666-3311",
   email: "cliente-ui-local@teste.com",
+};
+
+const publicDeliverySettingsMock = {
+  ok: true,
+  storageMode: "validation-mock",
+  generatedAt: "2026-04-11T20:30:00.000Z",
+  summary: {
+    totalBands: 4,
+    activeBands: 4,
+    inactiveBands: 0,
+    activeCouriers: 0,
+    totalCouriers: 0,
+    deliveriesEnabled: true,
+    pickupEnabled: true,
+    freeShippingEnabled: false,
+    maxRadiusKm: 14.9,
+  },
+  settings: {
+    distanceBands: [
+      {
+        id: "band-up-to-1-9",
+        minKm: 0,
+        maxKm: 1.9,
+        label: "Ate 1,9 km",
+        customerFee: 9,
+        courierFee: 0,
+        minimumOrder: 0,
+        isActive: true,
+      },
+      {
+        id: "band-up-to-6-9",
+        minKm: 1.9,
+        maxKm: 6.9,
+        label: "1,9 a 6,9 km",
+        customerFee: 10,
+        courierFee: 0,
+        minimumOrder: 0,
+        isActive: true,
+      },
+      {
+        id: "band-up-to-10-9",
+        minKm: 6.9,
+        maxKm: 10.9,
+        label: "6,9 a 10,9 km",
+        customerFee: 12,
+        courierFee: 0,
+        minimumOrder: 0,
+        isActive: true,
+      },
+      {
+        id: "band-up-to-14-9",
+        minKm: 10.9,
+        maxKm: 14.9,
+        label: "10,9 a 14,9 km",
+        customerFee: 15,
+        courierFee: 0,
+        minimumOrder: 0,
+        isActive: true,
+      },
+    ],
+    deliveryTime: {
+      minMinutes: 40,
+      maxMinutes: 60,
+      message: "Entrega estimada entre 40 e 60 minutos",
+    },
+    serviceArea: {
+      maxRadiusKm: 14.9,
+      servedNeighborhoods: [],
+      blockedNeighborhoods: [],
+      outOfAreaMessage: "No momento nao entregamos nessa regiao.",
+    },
+    freeShipping: {
+      enabled: false,
+      minimumOrder: 120,
+      appliesToAllBands: true,
+      bandIds: [],
+    },
+    pickup: {
+      enabled: true,
+      estimateMinutes: 25,
+      message: "Retirada disponivel em 25 minutos",
+    },
+    status: {
+      deliveriesEnabled: true,
+      pausedMessage: "Entregas pausadas temporariamente. Retirada no balcao disponivel.",
+    },
+    updatedAt: "2026-04-11T20:30:00.000Z",
+  },
+};
+
+const publicRestaurantSettingsMock = {
+  ok: true,
+  storageMode: "validation-mock",
+  generatedAt: "2026-04-11T20:30:00.000Z",
+  summary: {
+    restaurantKey: "default",
+    restaurantName: "Tokyo Sushi Delivery",
+    hasStructuredBusinessSchedule: true,
+  },
+  settings: {
+    restaurantKey: "default",
+    restaurantName: "Tokyo Sushi Delivery",
+    logoUrl: "./site-images/tokyo-logo-premium-transparent.png",
+    bannerUrl: "./site-images/combinado-imperial.png",
+    primaryColor: "#e83637",
+    secondaryColor: "#f5c3d3",
+    whatsapp: "5516990507398",
+    address: "Rua General Osorio, 2165, Franca - SP, 14400-520, Brasil",
+    businessHours: "18:00 as 23:00",
+    businessSchedule: {
+      timeZone: "America/Sao_Paulo",
+      acceptOrdersOutsideHours: false,
+      specialDates: [],
+      days: {},
+    },
+    hasStructuredBusinessSchedule: true,
+  },
+};
+
+const publicCatalogMock = {
+  ok: true,
+  storageMode: "validation-mock",
+  generatedAt: "2026-04-11T20:30:00.000Z",
+  summary: {
+    totalItems: 0,
+    totalSections: 0,
+  },
+  items: [],
+  sections: [],
+  featuredItemId: "",
+  featuredItemIds: [],
 };
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "").slice(-11);
@@ -58,7 +190,7 @@ const buildTrackingOrder = () => {
   return {
     id: "order-stage3-local",
     publicId: "TKY-LOCAL-0001",
-    status: "Novo",
+    status: "Recebido",
     orderType: "scheduled",
     fulfillmentMode: "delivery",
     timingMode: "scheduled",
@@ -111,7 +243,7 @@ const buildTrackingOrder = () => {
     statusHistory: [
       {
         id: "status-stage3-local-1",
-        status: "Novo",
+        status: "Recebido",
         note: "Pedido criado pelo site.",
         source: "system",
         createdAt,
@@ -160,6 +292,41 @@ const createStaticServer = (rootDirectory) =>
     try {
       const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
       let pathname = decodeURIComponent(requestUrl.pathname);
+
+      if (
+        pathname === "/api/delivery-settings" ||
+        pathname === "/api/restaurant-settings" ||
+        pathname === "/api/catalog"
+      ) {
+        if (req.method !== "GET") {
+          res.writeHead(405, {
+            "Allow": "GET",
+            "Content-Type": "application/json; charset=utf-8",
+          });
+          res.end(
+            JSON.stringify({
+              error: "Metodo nao permitido.",
+              errorCode: "method_not_allowed",
+            })
+          );
+          return;
+        }
+
+        res.writeHead(200, {
+          "Cache-Control": "no-store",
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        res.end(
+          JSON.stringify(
+            pathname === "/api/restaurant-settings"
+              ? publicRestaurantSettingsMock
+              : pathname === "/api/catalog"
+                ? publicCatalogMock
+                : publicDeliverySettingsMock
+          )
+        );
+        return;
+      }
 
       if (pathname === "/") {
         pathname = "/index.html";
@@ -408,7 +575,7 @@ const main = async () => {
     await waitForText(
       page,
       trackingRootSelector,
-      "Novo",
+      "Recebido",
       "O acompanhamento deveria refletir o status inicial do pedido."
     );
     await waitForText(

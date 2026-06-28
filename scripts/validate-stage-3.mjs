@@ -11,11 +11,11 @@ const adminAuth = require("../lib/admin-auth.cjs");
 const customerAuth = require("../lib/customer-auth.cjs");
 const { buildCustomerKey } = require("../lib/order-payload.cjs");
 const createOrderHandler = require("../api/orders/create.js");
-const adminLoginHandler = require("../api/admin/login.js");
-const adminOrderActionHandler = require("../api/admin/orders/[action].js");
-const customerAuthActionHandler = require("../api/customer/auth/[action].js");
-const customerActiveOrderHandler = require("../api/customer/orders/active.js");
-const customerLogoutHandler = require("../api/customer/logout.js");
+const adminApiHandler = require("../api/admin/[...action].js");
+const adminAuthHandler = adminApiHandler;
+const adminOrderActionHandler = adminApiHandler;
+const customerActionHandler = require("../api/customer/[...action].js");
+const customerAuthActionHandler = customerActionHandler;
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const localDataDirectory = path.join(workspaceRoot, ".data");
@@ -287,8 +287,8 @@ const run = async () => {
     body: JSON.stringify(
       buildSampleOrderPayload({
         ...customerA,
-        productId: "combo-stage3-a",
-        productName: "Combinado Tracking A",
+        productId: "carpaccio-salmao",
+        productName: "Carpaccio de Salmao",
       })
     ),
   });
@@ -311,14 +311,14 @@ const run = async () => {
     body: JSON.stringify(
       buildSampleOrderPayload({
         ...customerB,
-        productId: "combo-stage3-b",
-        productName: "Combinado Tracking B",
+        productId: "ceviche-salmao",
+        productName: "Ceviche Salmao",
       })
     ),
   });
   assert.equal(createdOrderB.res.statusCode, 200, "O pedido do cliente B deve ser criado.");
 
-  const adminLogin = await runHandler(adminLoginHandler, {
+  const adminLogin = await runHandler(adminAuthHandler, {
     method: "POST",
     url: "http://localhost:3000/api/admin/login",
     headers: buildPublicJsonHeaders({
@@ -408,7 +408,7 @@ const run = async () => {
     "O desafio temporario precisa ser limpo depois que o login do cliente conclui."
   );
 
-  const activeOrderA = await runHandler(customerActiveOrderHandler, {
+  const activeOrderA = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({
@@ -432,7 +432,7 @@ const run = async () => {
     "O pedido do outro cliente nao pode aparecer na area publica."
   );
 
-  const forcedForeignQueryA = await runHandler(customerActiveOrderHandler, {
+  const forcedForeignQueryA = await runHandler(customerActionHandler, {
     method: "GET",
     url: `http://localhost:3000/api/customer/orders/active?orderId=${createdOrderB.res.payload?.order?.id}`,
     headers: buildCustomerTrackingHeaders({
@@ -448,7 +448,7 @@ const run = async () => {
     "Mesmo forçando um orderId na URL, a area publica deve continuar presa ao pedido do proprio cliente."
   );
 
-  const wrongCustomerKeyAttempt = await runHandler(customerActiveOrderHandler, {
+  const wrongCustomerKeyAttempt = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({
@@ -531,7 +531,7 @@ const run = async () => {
   });
   assert.equal(statusUpdate.res.statusCode, 200, "O gestor deve conseguir atualizar o status.");
 
-  const syncedActiveOrderA = await runHandler(customerActiveOrderHandler, {
+  const syncedActiveOrderA = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({
@@ -585,7 +585,7 @@ const run = async () => {
   });
   customerBCookies = mergeCookieHeader(customerBCookies, loginVerifyB.res.headers["Set-Cookie"]);
 
-  const activeOrderB = await runHandler(customerActiveOrderHandler, {
+  const activeOrderB = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({
@@ -606,7 +606,7 @@ const run = async () => {
     "O cliente B nao pode enxergar o pedido do cliente A."
   );
 
-  const logoutA = await runHandler(customerLogoutHandler, {
+  const logoutA = await runHandler(customerActionHandler, {
     method: "POST",
     url: "http://localhost:3000/api/customer/logout",
     headers: buildPublicJsonHeaders({
@@ -618,7 +618,7 @@ const run = async () => {
   assert.equal(logoutA.res.statusCode, 200, "O logout publico do cliente deve responder.");
   customerACookies = mergeCookieHeader(customerACookies, logoutA.res.headers["Set-Cookie"]);
 
-  const afterLogoutActiveOrderA = await runHandler(customerActiveOrderHandler, {
+  const afterLogoutActiveOrderA = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({

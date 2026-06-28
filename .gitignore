@@ -1,5 +1,18 @@
 _tmp_*
 _tmp_chunks/
+.tmp/
+NUL
+test-results/
+playwright-report/
+.codex-tools/
+__pycache__/
+*.pyc
+*.log
+*.dump
+*.bak
+*.backup
+*.tmp
+*.temp
 .vercel/
 node_modules/
 .data/
@@ -8,4 +21,7 @@ node_modules/
 .netlify
 
 .vercel
+.env
+.env.*
+!.env.example
 .env*.local

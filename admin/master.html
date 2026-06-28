@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Master | INovas Food</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="./admin.css" />
+    <script src="../site-config.js" defer></script>
+    <script src="./master.js" defer></script>
+  </head>
+  <body class="admin-body master-body" data-admin-page="master" data-master-section="dashboard">
+    <div class="master-shell">
+      <aside class="master-sidebar">
+        <header class="master-brand">
+          <span class="admin-eyebrow">INovas Food</span>
+          <strong>Painel Master</strong>
+          <small data-master-storage-mode>Conectando...</small>
+        </header>
+
+        <nav class="master-nav" data-master-nav aria-label="Menu Master"></nav>
+
+        <footer class="master-sidebar-footer">
+          <div class="master-operator">
+            <span class="master-operator-avatar" data-master-user-initials>M</span>
+            <div>
+              <strong data-master-user-name>Master</strong>
+              <small data-master-user-type>MASTER</small>
+            </div>
+          </div>
+          <button class="admin-button admin-button-ghost" type="button" data-master-logout>
+            Sair
+          </button>
+        </footer>
+      </aside>
+
+      <main class="master-main">
+        <header class="master-topbar">
+          <div>
+            <span class="admin-chip" data-master-chip>Dashboard Geral</span>
+            <h1 data-master-title>Dashboard Geral</h1>
+            <p data-master-subtitle>Base superior da plataforma INovas Food.</p>
+          </div>
+
+          <div class="master-topbar-actions">
+            <a class="admin-button admin-button-ghost" href="/admin/">Gestor Tokyo</a>
+            <button class="admin-button admin-button-primary" type="button" data-master-refresh>
+              Atualizar
+            </button>
+          </div>
+        </header>
+
+        <section class="master-kpi-grid" data-master-kpis></section>
+        <section class="master-content" data-master-content>
+          <div class="admin-empty-state">
+            <strong>Carregando Painel Master</strong>
+            <span>Sincronizando dados da plataforma.</span>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

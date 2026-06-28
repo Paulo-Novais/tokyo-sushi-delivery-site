@@ -41,6 +41,7 @@
     />
     <script defer src="./site-config.js"></script>
     <script defer src="./store-hours.js"></script>
+    <script defer src="./lib/business-hours.cjs"></script>
 
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -145,10 +146,19 @@
               </a>
             </div>
 
+            <div class="hero-social-proof reveal" data-home-social-proof hidden>
+              <div class="hero-social-summary">
+                <span>Clientes avaliando agora</span>
+                <strong data-home-social-average>--</strong>
+                <small data-home-social-count>Avaliacoes reais</small>
+              </div>
+              <div class="hero-social-list" data-home-review-list></div>
+            </div>
+
             <div class="hero-metrics reveal">
               <article>
-                <strong>4.9</strong>
-                <span>Avaliação média</span>
+                <strong data-home-review-average>--</strong>
+                <span data-home-review-count>Avaliacoes reais</span>
               </article>
               <article>
                 <strong>25min</strong>
@@ -180,7 +190,13 @@
                   <p class="section-tag">Categoria Samurai</p>
                   <h2>Combinado Imperial <span class="portion-label">(25 unid)</span></h2>
                 </div>
-                <strong>R$ 89,90</strong>
+                <a
+                  class="hero-featured-link"
+                  href="./cardapio.html#catalogo"
+                  data-hero-featured-link
+                >
+                  Consulte
+                </a>
               </div>
 
               <div class="hero-order-list">
@@ -188,6 +204,11 @@
                 <span>6 Eby Especial</span>
                 <span>6 Joe Flambado</span>
                 <span>5 Camarão Recheado</span>
+              </div>
+
+              <div class="hero-featured-nav" data-hero-featured-nav hidden>
+                <div class="hero-featured-dots" data-hero-featured-dots aria-label="Destaques da home"></div>
+                <span class="hero-featured-counter" data-hero-featured-counter aria-live="polite"></span>
               </div>
             </div>
           </div>

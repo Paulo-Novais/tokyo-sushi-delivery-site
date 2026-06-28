@@ -1,6 +1,93 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/admin/login",
+      "destination": "/api/admin/[...action]?action=auth/login"
+    },
+    {
+      "source": "/api/admin/logout",
+      "destination": "/api/admin/[...action]?action=auth/logout"
+    },
+    {
+      "source": "/api/admin/session",
+      "destination": "/api/admin/[...action]?action=auth/session"
+    },
+    {
+      "source": "/api/admin/auth/:action",
+      "destination": "/api/admin/[...action]?action=auth/:action"
+    },
+    {
+      "source": "/api/admin/orders/:action",
+      "destination": "/api/admin/[...action]?action=orders/:action"
+    },
+    {
+      "source": "/api/admin/catalog/:action",
+      "destination": "/api/admin/[...action]?action=catalog/:action"
+    },
+    {
+      "source": "/api/admin/promotions/:action",
+      "destination": "/api/admin/[...action]?action=promotions/:action"
+    },
+    {
+      "source": "/api/admin/reviews/:action",
+      "destination": "/api/admin/[...action]?action=reviews/:action"
+    },
+    {
+      "source": "/api/admin/delivery-settings/:action",
+      "destination": "/api/admin/[...action]?action=delivery-settings/:action"
+    },
+    {
+      "source": "/api/admin/settings/:action",
+      "destination": "/api/admin/[...action]?action=settings/:action"
+    },
+    {
+      "source": "/api/admin/customers/:action",
+      "destination": "/api/admin/[...action]?action=customers/:action"
+    },
+    {
+      "source": "/api/admin/inventory/:action",
+      "destination": "/api/admin/[...action]?action=inventory/:action"
+    },
+    {
+      "source": "/api/admin/finance",
+      "destination": "/api/admin/[...action]?action=finance"
+    },
+    {
+      "source": "/api/customer/auth/:action",
+      "destination": "/api/customer/[...action]?action=auth/:action"
+    },
+    {
+      "source": "/api/customer/orders/active",
+      "destination": "/api/customer/[...action]?action=orders/active"
+    },
+    {
+      "source": "/api/reviews",
+      "destination": "/api/catalog?publicView=reviews"
+    },
+    {
+      "source": "/api/admin/audit",
+      "destination": "/api/admin/dashboard?adminView=audit"
+    },
+    {
+      "source": "/api/admin/scheduled",
+      "destination": "/api/admin/dashboard?adminView=scheduled"
+    },
+    {
+      "source": "/api/admin/metrics",
+      "destination": "/api/admin/dashboard?adminView=metrics"
+    }
+  ],
   "headers": [
+    {
+      "source": "/lib/business-hours.cjs",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript; charset=utf-8"
+        }
+      ]
+    },
     {
       "source": "/admin/(.*)",
       "headers": [

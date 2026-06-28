@@ -9,8 +9,9 @@ import middleware from "../middleware.js";
 const require = createRequire(import.meta.url);
 const adminAuth = require("../lib/admin-auth.cjs");
 const createOrderHandler = require("../api/orders/create.js");
-const adminDashboardHandler = require("../api/admin/dashboard.js");
-const adminLoginHandler = require("../api/admin/login.js");
+const adminApiHandler = require("../api/admin/[...action].js");
+const adminDashboardHandler = adminApiHandler;
+const adminAuthHandler = adminApiHandler;
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const localDataDirectory = path.join(workspaceRoot, ".data");
@@ -86,11 +87,11 @@ const buildSampleOrderPayload = () => ({
   },
   items: [
     {
-      id: "combo-1",
-      name: "Combinado Premium",
-      category: "Combinados",
+      id: "carpaccio-salmao",
+      name: "Carpaccio de Salmao",
+      category: "Carpaccio",
       quantity: 2,
-      price: 79.9,
+      price: 58.5,
     },
   ],
   addons: [
@@ -172,7 +173,7 @@ const run = async () => {
     "Pedidos sem Content-Type JSON devem ser bloqueados."
   );
 
-  const localLogin = await runHandler(adminLoginHandler, {
+  const localLogin = await runHandler(adminAuthHandler, {
     method: "POST",
     url: "http://localhost:3000/api/admin/login",
     headers: {
@@ -207,7 +208,7 @@ const run = async () => {
     "Com sessao valida, o admin deve continuar acessivel."
   );
 
-  const productionLogin = await runHandler(adminLoginHandler, {
+  const productionLogin = await runHandler(adminAuthHandler, {
     method: "POST",
     url: "https://tokyosushidelivery.com.br/api/admin/login",
     headers: {
@@ -244,8 +245,8 @@ const run = async () => {
   assert.equal(validOrderRequest.res.payload?.ok, true, "A API deve confirmar o pedido.");
   assert.equal(
     validOrderRequest.res.payload?.order?.status,
-    "Novo",
-    "O pedido deve nascer com status Novo."
+    "Recebido",
+    "O pedido deve nascer com status Recebido."
   );
 
   const dashboardRequest = await runHandler(adminDashboardHandler, {
@@ -259,12 +260,12 @@ const run = async () => {
   });
   assert.equal(dashboardRequest.res.statusCode, 200, "O dashboard admin deve carregar com sessao.");
   assert.ok(
-    Array.isArray(dashboardRequest.res.payload?.recentOrders) &&
-      dashboardRequest.res.payload.recentOrders.length >= 1,
+    Array.isArray(dashboardRequest.res.payload?.orders) &&
+      dashboardRequest.res.payload.orders.length >= 1,
     "O painel admin deve listar o pedido criado."
   );
   assert.equal(
-    dashboardRequest.res.payload.recentOrders[0]?.publicId,
+    dashboardRequest.res.payload.orders[0]?.publicId,
     validOrderRequest.res.payload.order.publicId,
     "O pedido criado deve aparecer no painel admin."
   );

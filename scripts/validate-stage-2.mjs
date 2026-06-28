@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const adminAuth = require("../lib/admin-auth.cjs");
 const createOrderHandler = require("../api/orders/create.js");
-const adminLoginHandler = require("../api/admin/login.js");
-const adminDashboardHandler = require("../api/admin/dashboard.js");
-const adminOrderActionHandler = require("../api/admin/orders/[action].js");
+const adminApiHandler = require("../api/admin/[...action].js");
+const adminAuthHandler = adminApiHandler;
+const adminDashboardHandler = adminApiHandler;
+const adminOrderActionHandler = adminApiHandler;
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const localDataDirectory = path.join(workspaceRoot, ".data");
@@ -85,11 +86,11 @@ const buildSampleOrderPayload = () => ({
   },
   items: [
     {
-      id: "combo-2",
-      name: "Combinado Executivo",
-      category: "Combinados",
+      id: "carpaccio-especial",
+      name: "Carpaccio Especial",
+      category: "Carpaccio",
       quantity: 1,
-      price: 89.9,
+      price: 60.3,
     },
   ],
   addons: [
@@ -150,9 +151,13 @@ const run = async () => {
     body: JSON.stringify(buildSampleOrderPayload()),
   });
   assert.equal(createdOrder.res.statusCode, 200, "O pedido da ETAPA 2 deve ser criado.");
-  assert.equal(createdOrder.res.payload?.order?.status, "Novo", "O pedido deve nascer como Novo.");
+  assert.equal(
+    createdOrder.res.payload?.order?.status,
+    "Recebido",
+    "O pedido deve nascer como Recebido."
+  );
 
-  const login = await runHandler(adminLoginHandler, {
+  const login = await runHandler(adminAuthHandler, {
     method: "POST",
     url: "http://localhost:3000/api/admin/login",
     headers: {
