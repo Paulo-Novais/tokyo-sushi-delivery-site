@@ -99,6 +99,32 @@ const run = async () => {
         restaurantId: "restaurant_default",
       },
     ]);
+    await fs.writeFile(
+      path.join(tempRoot, ".data", "admin-users.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          users: [
+            {
+              id: "legacy_fabianepv_outlook_com",
+              login: "fabianepv@outlook.com",
+              email: "fabianepv@outlook.com",
+              name: "Fabiane legado",
+              passwordHash: adminAuth.createPasswordHash("senha-fabiane-local"),
+              status: "ACTIVE",
+              userType: "MASTER",
+              restaurantKey: "default",
+              tenantId: "tenant_default",
+              restaurantId: "restaurant_default",
+              permissions: {},
+              source: "legacy_env",
+            },
+          ],
+        },
+        null,
+        2
+      )
+    );
 
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
     const { getConfiguredAdminUsers } = adminAuth;
@@ -109,6 +135,21 @@ const run = async () => {
       configuredUsers.some((user) => user.login === "fabianepv@outlook.com"),
       false,
       "Fabiane nao deve permanecer em ADMIN_USERS"
+    );
+
+    const removedLegacyLogin = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://localhost:3000/api/admin/login",
+      body: {
+        identifier: "fabianepv@outlook.com",
+        password: "senha-fabiane-local",
+      },
+    });
+
+    assert.equal(
+      removedLegacyLogin.statusCode,
+      401,
+      "usuario legacy_env removido de ADMIN_USERS nao deve autenticar"
     );
 
     const masterLogin = await runAdminApi(adminApi, {
@@ -133,6 +174,14 @@ const run = async () => {
     });
 
     assert.equal(masterPanel.statusCode, 200, "MASTER deve acessar Painel Master");
+    const syncedLocalStore = JSON.parse(
+      await fs.readFile(path.join(tempRoot, ".data", "admin-users.json"), "utf8")
+    );
+    assert.equal(
+      syncedLocalStore.users.some((user) => user.login === "fabianepv@outlook.com"),
+      false,
+      "store local nao deve manter usuario legacy_env removido"
+    );
 
     const ownerLogin = await runAdminApi(adminApi, {
       method: "POST",
