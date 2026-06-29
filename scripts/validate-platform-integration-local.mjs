@@ -405,6 +405,7 @@ const validateApiMatrix = async (adminApi) => {
     name: "Owner Local",
     login: PROFILE_FIXTURES.owner.login,
     email: "owner.local@teste.local",
+    phone: "5511999911111",
     password: PROFILE_FIXTURES.owner.password,
     status: "ACTIVE",
     userType: "OWNER",

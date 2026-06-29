@@ -1,13 +1,29 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+import { chromium } from "@playwright/test";
+
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const realDataDirectory = path.join(workspaceRoot, ".data");
+
+const MIME_TYPES = new Map([
+  [".css", "text/css; charset=utf-8"],
+  [".html", "text/html; charset=utf-8"],
+  [".js", "application/javascript; charset=utf-8"],
+  [".json", "application/json; charset=utf-8"],
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".svg", "image/svg+xml; charset=utf-8"],
+  [".webp", "image/webp"],
+  [".webmanifest", "application/manifest+json; charset=utf-8"],
+]);
 
 const buildMockResponse = () => {
   const headers = {};
@@ -59,6 +75,135 @@ const runAdminApi = async (
 const extractCookieHeader = (response) => {
   const setCookie = String(response.headers["Set-Cookie"] || response.headers["set-cookie"] || "");
   return setCookie.split(";")[0];
+};
+
+const readRequestBody = (req) =>
+  new Promise((resolve, reject) => {
+    const chunks = [];
+
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("error", reject);
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+  });
+
+const handleAdminApiRequest = async (adminApi, req, res) => {
+  req.body = await readRequestBody(req);
+  const apiResponse = {
+    setHeader(name, value) {
+      res.setHeader(name, value);
+    },
+    status(code) {
+      res.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      if (!res.hasHeader("Content-Type")) {
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+      }
+
+      res.end(JSON.stringify(payload));
+      return payload;
+    },
+  };
+
+  await adminApi(req, apiResponse);
+};
+
+const createStaticServer = (rootDirectory, adminApi) =>
+  http.createServer(async (req, res) => {
+    try {
+      const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
+
+      if (requestUrl.pathname.startsWith("/api/admin")) {
+        await handleAdminApiRequest(adminApi, req, res);
+        return;
+      }
+
+      if (requestUrl.pathname === "/api/catalog") {
+        res.writeHead(200, {
+          "Cache-Control": "no-store",
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        res.end(JSON.stringify({ ok: true, sections: [], items: [] }));
+        return;
+      }
+
+      let pathname = decodeURIComponent(requestUrl.pathname);
+
+      if (pathname === "/") {
+        pathname = "/index.html";
+      }
+
+      if (pathname === "/admin/" || pathname === "/admin") {
+        pathname = "/admin/index.html";
+      }
+
+      const requestedPath = path.resolve(rootDirectory, `.${pathname}`);
+
+      if (!requestedPath.startsWith(rootDirectory)) {
+        res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Forbidden");
+        return;
+      }
+
+      const stats = await fs.stat(requestedPath).catch(() => null);
+
+      if (!stats || !stats.isFile()) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Not found");
+        return;
+      }
+
+      const extension = path.extname(requestedPath).toLowerCase();
+      const contentType = MIME_TYPES.get(extension) || "application/octet-stream";
+      const body = await fs.readFile(requestedPath);
+
+      res.writeHead(200, {
+        "Cache-Control": "no-store",
+        "Content-Type": contentType,
+      });
+      res.end(body);
+    } catch (error) {
+      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end(String(error?.message || "Internal server error"));
+    }
+  });
+
+const listen = (server) =>
+  new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      resolve({ port: Number(address.port) });
+    });
+  });
+
+const closeServer = (server) =>
+  new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForCondition = async (predicate, message, timeoutMs = 12000, intervalMs = 100) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    if (await predicate()) {
+      return;
+    }
+
+    await sleep(intervalMs);
+  }
+
+  throw new Error(message);
 };
 
 const getDirectoryFingerprint = async (directoryPath) => {
@@ -165,6 +310,111 @@ const restaurantPayload = ({ key = "usuarios-a", plan = "PRO" } = {}) => ({
     password: "SenhaOwnerV11",
   },
 });
+
+const readWorkspaceFile = async (relativePath) =>
+  fs.readFile(path.join(workspaceRoot, relativePath), "utf8");
+
+const loginBrowser = async (page, baseURL, identifier, password) => {
+  await page.goto(`${baseURL}/admin/login.html?next=%2Fadmin%2F`, { waitUntil: "domcontentloaded" });
+  await waitForCondition(
+    async () => (await page.locator("[data-admin-login-form]").count()) === 1,
+    `Login deveria carregar para ${identifier}.`
+  );
+  await page.locator('input[name="identifier"]').fill(identifier);
+  await page.locator('input[name="password"]').fill(password);
+  await page.locator("[data-admin-login-submit]").click();
+  await waitForCondition(
+    async () => (await page.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "dashboard",
+    `Gestor deveria abrir para ${identifier}.`
+  );
+};
+
+const openUsersModule = async (page) => {
+  await page.locator('[data-admin-section="users"]').click();
+  await waitForCondition(
+    async () => (await page.locator(".admin-users-table").count()) === 1,
+    "Modulo Usuarios deveria renderizar tabela."
+  );
+};
+
+const validateUsersBrowser = async (adminApi) => {
+  const server = createStaticServer(workspaceRoot, adminApi);
+  const { port } = await listen(server);
+  const baseURL = `http://usuarios-a.localhost:${port}`;
+  const browser = await chromium.launch({ headless: true });
+  const consoleErrors = [];
+  const pageErrors = [];
+
+  try {
+    const desktopContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
+    const desktopPage = await desktopContext.newPage();
+    desktopPage.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(`desktop:${message.text()}`);
+      }
+    });
+    desktopPage.on("pageerror", (error) => pageErrors.push(`desktop:${String(error?.message || error)}`));
+
+    await loginBrowser(desktopPage, baseURL, "owner@usuarios-a.local", "SenhaOwnerV11");
+    await openUsersModule(desktopPage);
+
+    const headers = await desktopPage.locator(".admin-users-table thead th").allTextContents();
+    assert.deepEqual(
+      headers.map((header) => header.replace(/\s+/g, " ").trim().replace(/[\\^v]+$/g, "").trim()),
+      ["ID", "Nome", "Restaurante", "Plano", "Status", "Acoes"],
+      "Tabela Usuarios deve seguir a ordem obrigatoria"
+    );
+    await desktopPage.locator("[data-user-inline-search]").fill("Owner");
+    await waitForCondition(
+      async () => (await desktopPage.locator(".admin-users-table tbody tr").count()) >= 1,
+      "Busca por nome deveria manter resultado visivel."
+    );
+    await desktopPage.locator('[data-user-sort="name"]').click();
+    await desktopPage.locator('[data-user-filter="status"]').selectOption("ACTIVE");
+    await desktopPage.locator("[data-user-page-size]").selectOption("10");
+    assert.equal(await desktopPage.locator("[data-user-page]").count(), 2, "Paginacao deve expor anterior/proxima.");
+    assert.equal(
+      await desktopPage.locator(".admin-users-permissions").isHidden(),
+      true,
+      "Permissoes avancadas devem permanecer ocultas."
+    );
+    await desktopContext.close();
+
+    const mobileContext = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
+    const mobilePage = await mobileContext.newPage();
+    mobilePage.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(`mobile:${message.text()}`);
+      }
+    });
+    mobilePage.on("pageerror", (error) => pageErrors.push(`mobile:${String(error?.message || error)}`));
+
+    await loginBrowser(mobilePage, baseURL, "owner@usuarios-a.local", "SenhaOwnerV11");
+    await openUsersModule(mobilePage);
+    const mobileLayout = await mobilePage.evaluate(() => {
+      const tableWrap = document.querySelector(".admin-users-table-wrap");
+      const form = document.querySelector(".admin-users-form-card");
+      const bodyOverflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+
+      return {
+        hasTableScroll: tableWrap ? tableWrap.scrollWidth >= tableWrap.clientWidth : false,
+        formWidth: form ? form.getBoundingClientRect().width : 0,
+        viewportWidth: window.innerWidth,
+        bodyOverflow,
+      };
+    });
+    assert.equal(mobileLayout.hasTableScroll, true, "Tabela mobile deve ficar dentro de wrapper rolavel.");
+    assert.ok(mobileLayout.formWidth <= mobileLayout.viewportWidth, "Formulario mobile nao deve exceder viewport.");
+    assert.ok(mobileLayout.bodyOverflow <= 4, "Pagina mobile nao deve gerar overflow horizontal relevante.");
+    await mobileContext.close();
+
+    assert.deepEqual(consoleErrors, [], "Tela Usuarios nao deve emitir erros no console.");
+    assert.deepEqual(pageErrors, [], "Tela Usuarios nao deve disparar erros de execucao.");
+  } finally {
+    await browser.close();
+    await closeServer(server);
+  }
+};
 
 const run = async () => {
   const originalCwd = process.cwd();
@@ -274,6 +524,20 @@ const run = async () => {
       "busca deve cobrir ID e CNPJ/MEI"
     );
 
+    const adminUiSource = await readWorkspaceFile("admin/admin.js");
+    assert.ok(
+      adminUiSource.includes('{ key: "id", label: "ID"') &&
+        adminUiSource.includes('{ key: "name", label: "Nome"') &&
+        adminUiSource.includes('{ key: "restaurant", label: "Restaurante"') &&
+        adminUiSource.includes('{ key: "plan", label: "Plano"') &&
+        adminUiSource.includes('{ key: "status", label: "Status"') &&
+        adminUiSource.includes('{ key: "actions", label: "Acoes"'),
+      "UI deve declarar tabela na ordem ID/Nome/Restaurante/Plano/Status/Acoes"
+    );
+    assert.ok(adminUiSource.includes("data-user-sort"), "UI deve expor ordenacao por colunas");
+    assert.ok(adminUiSource.includes("data-user-page"), "UI deve expor paginacao");
+    assert.ok(adminUiSource.includes("data-user-inline-search"), "UI deve expor busca da tela Usuarios");
+
     const owner = await loginAdmin(adminApi, {
       host: "usuarios-a.localhost",
       identifier: "owner@usuarios-a.local",
@@ -308,6 +572,7 @@ const run = async () => {
           name: "Caixa Usuarios A",
           login: "caixa@usuarios-a.local",
           email: "caixa@usuarios-a.local",
+          phone: "5511999933333",
           password: "SenhaCaixaV11",
           status: "ACTIVE",
           userType: "CAIXA",
@@ -329,6 +594,121 @@ const run = async () => {
       "perfil CAIXA nao deve herdar administracao de usuarios"
     );
 
+    const duplicateCashier = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/save",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.31",
+      body: {
+        user: {
+          name: "Caixa Duplicado",
+          login: "caixa-duplicado@usuarios-a.local",
+          email: "caixa@usuarios-a.local",
+          phone: "5511999933334",
+          password: "SenhaCaixaV11",
+          status: "ACTIVE",
+          userType: "CAIXA",
+          restaurantKey: "usuarios-a",
+        },
+      },
+    });
+    assert.equal(duplicateCashier.statusCode, 409, "API deve impedir duplicidade de e-mail");
+    assert.equal(duplicateCashier.payload?.errorCode, "duplicate_user_email");
+
+    const invalidCashier = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/save",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.32",
+      body: {
+        user: {
+          name: "Caixa Invalido",
+          login: "caixa-invalido@usuarios-a.local",
+          email: "email-invalido",
+          phone: "123",
+          password: "123",
+          status: "ACTIVE",
+          userType: "CAIXA",
+          restaurantKey: "usuarios-a",
+        },
+      },
+    });
+    assert.equal(invalidCashier.statusCode, 400, "API deve validar e-mail, telefone e senha");
+
+    const editCashier = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/save",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.33",
+      body: {
+        user: {
+          id: createCashier.payload?.user?.id,
+          name: "Caixa Usuarios A Editado",
+          login: "caixa@usuarios-a.local",
+          email: "caixa-editado@usuarios-a.local",
+          phone: "5511999944444",
+          status: "ACTIVE",
+          userType: "CAIXA",
+          restaurantKey: "usuarios-a",
+        },
+      },
+    });
+    assert.equal(editCashier.statusCode, 200, "OWNER deve editar usuario interno do proprio restaurante");
+    assert.equal(editCashier.payload?.user?.name, "Caixa Usuarios A Editado");
+    assert.equal(editCashier.payload?.user?.phone, "5511999944444");
+
+    const createManager = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/save",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.34",
+      body: {
+        user: {
+          name: "Gerente Usuarios A",
+          login: "gerente@usuarios-a.local",
+          email: "gerente@usuarios-a.local",
+          phone: "5511999955555",
+          password: "SenhaGerenteV11",
+          status: "ACTIVE",
+          userType: "GERENTE",
+          restaurantKey: "usuarios-a",
+        },
+      },
+    });
+    assert.equal(createManager.statusCode, 200, "OWNER deve criar GERENTE interno");
+
+    const manager = await loginAdmin(adminApi, {
+      host: "usuarios-a.localhost",
+      identifier: "gerente@usuarios-a.local",
+      password: "SenhaGerenteV11",
+      ip: "127.0.3.35",
+    });
+    const managerWriteDenied = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/save",
+      host: "usuarios-a.localhost",
+      cookie: manager.cookie,
+      ip: "127.0.3.36",
+      body: {
+        user: {
+          name: "Caixa Gerente Indevido",
+          login: "caixa-gerente@usuarios-a.local",
+          email: "caixa-gerente@usuarios-a.local",
+          phone: "5511999966666",
+          password: "SenhaCaixaV11",
+          status: "ACTIVE",
+          userType: "CAIXA",
+          restaurantKey: "usuarios-a",
+        },
+      },
+    });
+    assert.equal(managerWriteDenied.statusCode, 403, "GERENTE nao deve alterar usuarios via API");
+    assert.equal(managerWriteDenied.payload?.errorCode, "user_profile_view_only");
+
     const createMasterDenied = await runAdminApi(adminApi, {
       method: "POST",
       url: "http://usuarios-a.localhost/api/admin/users/save",
@@ -340,6 +720,7 @@ const run = async () => {
           name: "Master Indevido",
           login: "master-indevido@usuarios-a.local",
           email: "master-indevido@usuarios-a.local",
+          phone: "5511999977777",
           password: "SenhaMasterIndevida",
           status: "ACTIVE",
           userType: "MASTER",
@@ -361,6 +742,7 @@ const run = async () => {
           name: "Caixa Outro Tenant",
           login: "caixa@outro-tenant.local",
           email: "caixa@outro-tenant.local",
+          phone: "5511999988888",
           password: "SenhaCaixaOutro",
           status: "ACTIVE",
           userType: "CAIXA",
@@ -398,6 +780,37 @@ const run = async () => {
     });
     assert.equal(unblockCashier.statusCode, 200, "OWNER deve desbloquear usuario interno");
     assert.equal(unblockCashier.payload?.user?.status, "ACTIVE");
+
+    const deleteCashier = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/delete",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.8",
+      body: {
+        login: "caixa@usuarios-a.local",
+      },
+    });
+    assert.equal(deleteCashier.statusCode, 200, "OWNER deve excluir usuario interno");
+    assert.equal(
+      deleteCashier.payload?.users?.some((user) => user.login === "caixa@usuarios-a.local"),
+      false,
+      "usuario excluido nao deve permanecer na lista"
+    );
+
+    const deleteManager = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://usuarios-a.localhost/api/admin/users/delete",
+      host: "usuarios-a.localhost",
+      cookie: owner.cookie,
+      ip: "127.0.3.9",
+      body: {
+        login: "gerente@usuarios-a.local",
+      },
+    });
+    assert.equal(deleteManager.statusCode, 200, "OWNER deve excluir GERENTE interno");
+
+    await validateUsersBrowser(adminApi);
 
     const originalMode = process.env.INOVAS_TENANT_MODE;
     process.env.INOVAS_TENANT_MODE = "default_only";

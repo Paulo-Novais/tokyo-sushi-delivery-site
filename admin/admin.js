@@ -119,22 +119,31 @@ const SECTION_FEATURE_MAP = Object.freeze({
   reviews: "reviews",
 });
 const USER_TYPE_OPTIONS = Object.freeze([
+  { key: "MASTER", label: "MASTER" },
+  { key: "OWNER", label: "OWNER" },
   { key: "GERENTE", label: "Gerente" },
-  { key: "SUBGERENTE", label: "Subgerente" },
   { key: "CAIXA", label: "Caixa" },
   { key: "COZINHA", label: "Cozinha" },
-  { key: "BAR", label: "Bar" },
   { key: "ESTOQUE", label: "Estoque" },
-  { key: "FINANCEIRO", label: "Financeiro" },
   { key: "ENTREGADOR", label: "Entregador" },
-  { key: "ATENDENTE", label: "Atendente" },
-  { key: "CUSTOM", label: "Personalizado" },
 ]);
+const OWNER_USER_TYPE_OPTIONS = Object.freeze(
+  USER_TYPE_OPTIONS.filter((option) => !["MASTER", "OWNER"].includes(option.key))
+);
 const USER_STATUS_OPTIONS = Object.freeze([
   { key: "ACTIVE", label: "Ativo" },
   { key: "BLOCKED", label: "Bloqueado" },
 ]);
 const NEW_ADMIN_USER_LOGIN = "__new_admin_user__";
+const USER_PAGE_SIZE_OPTIONS = Object.freeze([10, 20, 50]);
+const USER_TABLE_COLUMNS = Object.freeze([
+  { key: "id", label: "ID", sortable: true },
+  { key: "name", label: "Nome", sortable: true },
+  { key: "restaurant", label: "Restaurante", sortable: true },
+  { key: "plan", label: "Plano", sortable: true },
+  { key: "status", label: "Status", sortable: true },
+  { key: "actions", label: "Acoes", sortable: false },
+]);
 const USER_PERMISSION_ACTIONS_FALLBACK = Object.freeze([
   { key: "view", label: "Visualizar" },
   { key: "create", label: "Criar" },
@@ -640,6 +649,7 @@ const adminState = {
   inventorySnapshot: null,
   adminDisplayName: "",
   adminUserType: "MASTER",
+  adminRestaurantKey: "default",
   adminPermissions: null,
   adminPermissionModules: USER_PERMISSION_MODULES_FALLBACK,
   commercialAccess: null,
@@ -714,6 +724,16 @@ const adminState = {
   userBusyLogin: "",
   selectedUserLogin: "",
   userDraft: null,
+  userFilters: {
+    profile: "",
+    status: "",
+  },
+  userSort: {
+    key: "id",
+    direction: "asc",
+  },
+  userPage: 1,
+  userPageSize: 10,
   isLoadingFinance: false,
   isSavingFinanceClosing: false,
   isLoadingInventory: false,
@@ -871,6 +891,10 @@ const syncAdminAccessFromPayload = (admin = {}) => {
 
   if (admin.userType || admin.tipo_usuario) {
     adminState.adminUserType = admin.userType || admin.tipo_usuario;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(admin, "restaurantKey")) {
+    adminState.adminRestaurantKey = admin.restaurantKey || "default";
   }
 
   const permissions = normalizeAdminPermissionsPayload(admin.permissions);
@@ -3298,6 +3322,33 @@ const syncSelectionForActiveSection = () => {
         null;
 
     adminState.selectedInventoryItemId = preferredItem?.id || INVENTORY_NEW_ITEM_ID;
+    return;
+  }
+
+  if (adminState.activeSection === "users") {
+    normalizeUsersPage();
+    adminState.selectedOrderId = "";
+    adminState.selectedOrder = null;
+
+    if (adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN) {
+      return;
+    }
+
+    const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
+    const visibleUsers = getPaginatedAdminUsers();
+    const selectedUserStillVisible = visibleUsers.some((user) => user.login === adminState.selectedUserLogin);
+    const selectedUserStillAvailable = users.some((user) => user.login === adminState.selectedUserLogin);
+    const preferredUser = selectedUserStillVisible
+      ? users.find((user) => user.login === adminState.selectedUserLogin) || null
+      : visibleUsers[0] ||
+        (selectedUserStillAvailable
+          ? users.find((user) => user.login === adminState.selectedUserLogin) || null
+          : null) ||
+        getSortedAdminUsers()[0] ||
+        users[0] ||
+        null;
+
+    adminState.selectedUserLogin = preferredUser?.login || "";
     return;
   }
 
@@ -8791,9 +8842,22 @@ const getUserProfilePermissions = (userType) => {
   return profile?.permissions && typeof profile.permissions === "object" ? profile.permissions : {};
 };
 
-const getAdminUserTypeOptions = (selectedType = "CUSTOM") => {
-  const normalizedSelectedType = String(selectedType || "CUSTOM").trim().toUpperCase();
-  const options = [...USER_TYPE_OPTIONS];
+const getAdminUserActorType = () => String(adminState.adminUserType || "").trim().toUpperCase();
+
+const canManageAdminUsers = () => ["MASTER", "OWNER"].includes(getAdminUserActorType());
+
+const canManagePlatformUsers = () => getAdminUserActorType() === "MASTER";
+
+const canCreateAdminUsers = () => canManageAdminUsers() && hasAdminPermission("users_create");
+
+const canEditAdminUsers = () => canManageAdminUsers() && hasAdminPermission("users_edit");
+
+const canDeleteAdminUsers = () => canManageAdminUsers() && hasAdminPermission("users_delete");
+
+const getAdminUserTypeOptions = (selectedType = "GERENTE") => {
+  const normalizedSelectedType = String(selectedType || "GERENTE").trim().toUpperCase();
+  const baseOptions = canManagePlatformUsers() ? USER_TYPE_OPTIONS : OWNER_USER_TYPE_OPTIONS;
+  const options = [...baseOptions];
 
   if (normalizedSelectedType && !options.some((option) => option.key === normalizedSelectedType)) {
     options.unshift({
@@ -8806,32 +8870,153 @@ const getAdminUserTypeOptions = (selectedType = "CUSTOM") => {
 };
 
 const canSubmitSelectedAdminUser = (user) => {
-  const userType = String(user?.userType || user?.tipo_usuario || "CUSTOM").trim().toUpperCase();
-  return USER_TYPE_OPTIONS.some((option) => option.key === userType);
-};
+  const userType = String(user?.userType || user?.tipo_usuario || "GERENTE").trim().toUpperCase();
 
-const getVisibleAdminUsers = () => {
-  const query = normalizeInventorySearchValue(adminState.searchQuery);
-  const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
-
-  if (!query) {
-    return users;
+  if (!getAdminUserTypeOptions(userType).some((option) => option.key === userType)) {
+    return false;
   }
 
-  return users.filter((user) =>
-    normalizeInventorySearchValue(
-      [
-        user.name,
-        user.nome,
-        user.login,
-        user.email,
-        user.userType,
-        user.tipo_usuario,
-        user.status,
-        user.statusLabel,
-      ].join(" ")
-    ).includes(query)
+  if (!canManagePlatformUsers() && ["MASTER", "OWNER"].includes(userType)) {
+    return false;
+  }
+
+  return true;
+};
+
+const getCurrentUsersRestaurantKey = () => {
+  const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
+  const firstRestaurantKey = users.find((user) => user.restaurantKey)?.restaurantKey || "";
+
+  return (
+    adminState.adminRestaurantKey ||
+    getUsersSnapshot().restaurantKey ||
+    adminState.commercialAccess?.restaurantKey ||
+    adminState.commercialAccess?.key ||
+    firstRestaurantKey ||
+    "default"
   );
+};
+
+const getAdminUserId = (user = {}) => user.id || user.directoryId || user.login || "";
+
+const getAdminUserRestaurantName = (user = {}) => {
+  const type = String(user.userType || user.tipo_usuario || "").toUpperCase();
+
+  if (type === "MASTER" && user.platformScope === true) {
+    return "Plataforma INovas Food";
+  }
+
+  return user.restaurantName || user.restaurant || user.tradeName || user.restaurantKey || getCurrentUsersRestaurantKey();
+};
+
+const getAdminUserPlan = (user = {}) => {
+  const type = String(user.userType || user.tipo_usuario || "").toUpperCase();
+
+  if (type === "MASTER" && user.platformScope === true) {
+    return "PLATAFORMA";
+  }
+
+  return (
+    user.planName ||
+    user.plan ||
+    adminState.commercialAccess?.planName ||
+    adminState.commercialAccess?.planKey ||
+    adminState.commercialAccess?.plan ||
+    "--"
+  );
+};
+
+const getAdminUserCnpj = (user = {}) => user.cnpjMei || user.taxId || user.document || "";
+
+const getAdminUserSearchText = (user = {}) =>
+  normalizeInventorySearchValue(
+    [
+      user.searchIndex,
+      getAdminUserId(user),
+      user.name,
+      user.nome,
+      getAdminUserRestaurantName(user),
+      user.restaurantKey,
+      user.email,
+      user.login,
+      user.phone,
+      user.telefone,
+      getAdminUserCnpj(user),
+      getAdminUserPlan(user),
+      user.userType,
+      user.tipo_usuario,
+      user.status,
+      user.statusLabel,
+    ].join(" ")
+  );
+
+const getFilteredAdminUsers = () => {
+  const query = normalizeInventorySearchValue(adminState.searchQuery);
+  const profileFilter = String(adminState.userFilters.profile || "").trim().toUpperCase();
+  const statusFilter = String(adminState.userFilters.status || "").trim().toUpperCase();
+  const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
+
+  return users.filter((user) => {
+    const userType = String(user.userType || user.tipo_usuario || "").trim().toUpperCase();
+    const userStatus = String(user.status || "").trim().toUpperCase();
+    const matchesSearch = !query || getAdminUserSearchText(user).includes(query);
+    const matchesProfile = !profileFilter || userType === profileFilter;
+    const matchesStatus = !statusFilter || userStatus === statusFilter;
+
+    return matchesSearch && matchesProfile && matchesStatus;
+  });
+};
+
+const getAdminUserSortValue = (user = {}, key = "id") => {
+  if (key === "name") {
+    return user.name || user.nome || user.email || user.login || "";
+  }
+
+  if (key === "restaurant") {
+    return getAdminUserRestaurantName(user);
+  }
+
+  if (key === "plan") {
+    return getAdminUserPlan(user);
+  }
+
+  if (key === "status") {
+    return user.statusLabel || user.status || "";
+  }
+
+  return getAdminUserId(user);
+};
+
+const getSortedAdminUsers = () => {
+  const sortKey = USER_TABLE_COLUMNS.some((column) => column.key === adminState.userSort.key)
+    ? adminState.userSort.key
+    : "id";
+  const direction = adminState.userSort.direction === "desc" ? -1 : 1;
+
+  return [...getFilteredAdminUsers()].sort((left, right) =>
+    String(getAdminUserSortValue(left, sortKey)).localeCompare(
+      String(getAdminUserSortValue(right, sortKey)),
+      "pt-BR",
+      { numeric: true, sensitivity: "base" }
+    ) * direction
+  );
+};
+
+const getUsersPageCount = () => {
+  const total = getSortedAdminUsers().length;
+  return Math.max(1, Math.ceil(total / adminState.userPageSize));
+};
+
+const normalizeUsersPage = () => {
+  const pageCount = getUsersPageCount();
+  adminState.userPage = Math.min(Math.max(1, Number(adminState.userPage || 1)), pageCount);
+};
+
+const getPaginatedAdminUsers = () => {
+  normalizeUsersPage();
+  const sortedUsers = getSortedAdminUsers();
+  const start = (adminState.userPage - 1) * adminState.userPageSize;
+  return sortedUsers.slice(start, start + adminState.userPageSize);
 };
 
 const getBlankAdminUser = () => ({
@@ -8839,9 +9024,12 @@ const getBlankAdminUser = () => ({
   name: "",
   login: "",
   email: "",
+  phone: "",
+  telefone: "",
+  restaurantKey: getCurrentUsersRestaurantKey(),
   status: "ACTIVE",
-  userType: "CUSTOM",
-  tipo_usuario: "CUSTOM",
+  userType: "GERENTE",
+  tipo_usuario: "GERENTE",
   permissions: {},
   effectivePermissions: {},
   createdAt: "",
@@ -8859,7 +9047,8 @@ const getSelectedAdminUser = () => {
   const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
   const selectedUser =
     users.find((user) => user.login === adminState.selectedUserLogin) ||
-    getVisibleAdminUsers()[0] ||
+    getPaginatedAdminUsers()[0] ||
+    getSortedAdminUsers()[0] ||
     users[0] ||
     null;
 
@@ -8881,31 +9070,71 @@ const renderAdminUserStatus = (user) => {
   `;
 };
 
-const renderAdminUserRow = (user) => {
-  const isSelected = adminState.selectedUserLogin === user.login;
-  const isBlocked = user.status === "BLOCKED";
+const renderAdminUserSortButton = (column) => {
+  if (!column.sortable) {
+    return escapeHtml(column.label);
+  }
+
+  const isActive = adminState.userSort.key === column.key;
+  const direction = adminState.userSort.direction === "desc" ? "desc" : "asc";
+  const indicator = isActive ? (direction === "desc" ? "v" : "^") : "";
 
   return `
-    <button
-      class="admin-user-row${isSelected ? " is-selected" : ""}"
-      type="button"
-      data-user-select="${escapeHtml(user.login)}"
-    >
-      <span>
-        <strong>${escapeHtml(user.name || user.nome || user.login)}</strong>
-        <small>${escapeHtml(user.email || "Sem email")}</small>
-      </span>
-      <span>${escapeHtml(user.login)}</span>
-      <span>${escapeHtml(user.userType || user.tipo_usuario || "CUSTOM")}</span>
-      <span>${renderAdminUserStatus(user)}</span>
-      <span>${escapeHtml(user.lastAccessAt || user.ultimo_acesso ? formatDateTime(user.lastAccessAt || user.ultimo_acesso) : "Nunca")}</span>
-      <span class="admin-user-row-actions">
-        <span class="admin-inline-chip">${isSelected ? "Editando" : "Editar"}</span>
-        <span class="admin-inline-chip ${isBlocked ? "is-promo" : "is-warning"}">
-          ${isBlocked ? "Desbloquear" : "Bloquear"}
-        </span>
-      </span>
+    <button class="admin-users-sort-button" type="button" data-user-sort="${escapeHtml(column.key)}">
+      <span>${escapeHtml(column.label)}</span>
+      <span aria-hidden="true">${escapeHtml(indicator)}</span>
     </button>
+  `;
+};
+
+const renderAdminUserActions = (user) => {
+  const login = user.login || "";
+  const isSelected = adminState.selectedUserLogin === login;
+  const canEditUser = canEditAdminUsers() && canSubmitSelectedAdminUser(user);
+  const canDeleteUser = canDeleteAdminUsers() && canSubmitSelectedAdminUser(user);
+  const isBusy = adminState.userBusyLogin === login || adminState.userSaving;
+
+  return `
+    <div class="admin-user-row-actions">
+      <button class="admin-action-button is-compact" type="button" data-user-select="${escapeHtml(login)}">
+        ${escapeHtml(canEditUser ? (isSelected ? "Editando" : "Editar") : "Visualizar")}
+      </button>
+      <button
+        class="admin-action-button is-compact is-danger"
+        type="button"
+        data-user-delete="${escapeHtml(login)}"
+        ${isBusy || !canDeleteUser ? "disabled" : ""}
+      >
+        ${adminState.userBusyLogin === login ? "Excluindo..." : "Excluir"}
+      </button>
+    </div>
+  `;
+};
+
+const renderAdminUserRow = (user) => {
+  const isSelected = adminState.selectedUserLogin === user.login;
+
+  return `
+    <tr class="${isSelected ? "is-selected" : ""}" data-user-row="${escapeHtml(user.login || "")}">
+      <td>
+        <strong>${escapeHtml(getAdminUserId(user) || "--")}</strong>
+        <small>${escapeHtml(user.login || "--")}</small>
+      </td>
+      <td>
+        <strong>${escapeHtml(user.name || user.nome || user.email || "--")}</strong>
+        <small>${escapeHtml(user.email || "Sem e-mail")}</small>
+      </td>
+      <td>
+        <strong>${escapeHtml(getAdminUserRestaurantName(user) || "--")}</strong>
+        <small>${escapeHtml(user.phone || user.telefone || getAdminUserCnpj(user) || "--")}</small>
+      </td>
+      <td>
+        <strong>${escapeHtml(getAdminUserPlan(user) || "--")}</strong>
+        <small>${escapeHtml(user.userTypeLabel || user.userType || user.tipo_usuario || "--")}</small>
+      </td>
+      <td>${renderAdminUserStatus(user)}</td>
+      <td>${renderAdminUserActions(user)}</td>
+    </tr>
   `;
 };
 
@@ -8960,6 +9189,110 @@ const renderAdminUserPermissions = (user, isBusy = false) => {
   `;
 };
 
+const renderAdminUsersTable = () => {
+  const paginatedUsers = getPaginatedAdminUsers();
+
+  return `
+    <div class="admin-users-table-wrap">
+      <table class="admin-users-table">
+        <thead>
+          <tr>
+            ${USER_TABLE_COLUMNS.map((column) => `<th scope="col">${renderAdminUserSortButton(column)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            paginatedUsers.length
+              ? paginatedUsers.map(renderAdminUserRow).join("")
+              : `
+                <tr>
+                  <td colspan="${escapeHtml(String(USER_TABLE_COLUMNS.length))}">
+                    <div class="admin-empty-state admin-empty-state-soft">
+                      <strong>Nenhum usuario encontrado</strong>
+                      <span>Ajuste a busca ou os filtros ativos.</span>
+                    </div>
+                  </td>
+                </tr>
+              `
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+};
+
+const renderAdminUsersPagination = () => {
+  const filteredCount = getFilteredAdminUsers().length;
+  const pageCount = getUsersPageCount();
+  const start = filteredCount ? (adminState.userPage - 1) * adminState.userPageSize + 1 : 0;
+  const end = Math.min(filteredCount, adminState.userPage * adminState.userPageSize);
+
+  return `
+    <footer class="admin-users-pagination">
+      <div>
+        <strong>${escapeHtml(String(start))}-${escapeHtml(String(end))}</strong>
+        <span>de ${escapeHtml(String(filteredCount))}</span>
+      </div>
+      <label>
+        <span>Por pagina</span>
+        <select class="admin-input" data-user-page-size>
+          ${USER_PAGE_SIZE_OPTIONS.map((size) => `
+            <option value="${escapeHtml(String(size))}" ${size === adminState.userPageSize ? "selected" : ""}>
+              ${escapeHtml(String(size))}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+      <div class="admin-users-page-actions">
+        <button class="admin-action-button is-compact" type="button" data-user-page="prev" ${adminState.userPage <= 1 ? "disabled" : ""}>
+          Anterior
+        </button>
+        <span>${escapeHtml(String(adminState.userPage))}/${escapeHtml(String(pageCount))}</span>
+        <button class="admin-action-button is-compact" type="button" data-user-page="next" ${adminState.userPage >= pageCount ? "disabled" : ""}>
+          Proxima
+        </button>
+      </div>
+    </footer>
+  `;
+};
+
+const renderAdminUsersFilters = () => `
+  <div class="admin-users-toolbar">
+    <label class="admin-delivery-field">
+      <span>Busca</span>
+      <input
+        class="admin-input"
+        type="search"
+        value="${escapeHtml(adminState.searchQuery)}"
+        placeholder="ID, nome, restaurante, e-mail, telefone ou CNPJ"
+        data-user-inline-search
+      />
+    </label>
+    <label class="admin-delivery-field">
+      <span>Perfil</span>
+      <select class="admin-input" data-user-filter="profile">
+        <option value="">Todos</option>
+        ${USER_TYPE_OPTIONS.map((option) => `
+          <option value="${escapeHtml(option.key)}" ${adminState.userFilters.profile === option.key ? "selected" : ""}>
+            ${escapeHtml(option.label)}
+          </option>
+        `).join("")}
+      </select>
+    </label>
+    <label class="admin-delivery-field">
+      <span>Status</span>
+      <select class="admin-input" data-user-filter="status">
+        <option value="">Todos</option>
+        ${USER_STATUS_OPTIONS.map((option) => `
+          <option value="${escapeHtml(option.key)}" ${adminState.userFilters.status === option.key ? "selected" : ""}>
+            ${escapeHtml(option.label)}
+          </option>
+        `).join("")}
+      </select>
+    </label>
+  </div>
+`;
+
 const renderUsersModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -8969,25 +9302,28 @@ const renderUsersModule = () => {
 
   const snapshot = getUsersSnapshot();
   const users = Array.isArray(snapshot.users) ? snapshot.users : [];
-  const visibleUsers = getVisibleAdminUsers();
+  const visibleUsers = getFilteredAdminUsers();
   const selectedUser = getSelectedAdminUser();
   const isCreating = adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN || !selectedUser.login;
   const isBusy = adminState.isLoadingUsers || adminState.userSaving;
   const activeCount = users.filter((user) => user.status !== "BLOCKED").length;
   const blockedCount = users.filter((user) => user.status === "BLOCKED").length;
-  const selectedUserType = selectedUser.userType || selectedUser.tipo_usuario || "CUSTOM";
-  const selectedUserCanSubmit = canSubmitSelectedAdminUser(selectedUser);
+  const selectedUserType = selectedUser.userType || selectedUser.tipo_usuario || "GERENTE";
+  const selectedUserCanSubmit =
+    (isCreating ? canCreateAdminUsers() : canEditAdminUsers()) && canSubmitSelectedAdminUser(selectedUser);
+  const formDisabled = isBusy || !selectedUserCanSubmit;
+  const selectedRestaurantKey = selectedUser.restaurantKey || getCurrentUsersRestaurantKey();
 
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
         <span class="admin-chip">Usuarios e permissoes</span>
         <h2>Usuarios</h2>
-        <p>Acessos administrativos preparados para a futura plataforma INovas Food.</p>
+        <p>Gestao de acessos administrativos por restaurante.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>restaurant_key</span>
-        <strong>${escapeHtml(snapshot.restaurantKey || snapshot.futureRestaurantAssociation?.currentKey || "default")}</strong>
+        <strong>${escapeHtml(selectedRestaurantKey || snapshot.futureRestaurantAssociation?.currentKey || "default")}</strong>
       </div>
     </header>
 
@@ -9005,8 +9341,8 @@ const renderUsersModule = () => {
         <strong>${escapeHtml(String(blockedCount))}</strong>
       </article>
       <article class="admin-mini-stat is-gold">
-        <span>Preparacao futura</span>
-        <strong>${snapshot.futureRestaurantAssociation?.restaurantIdImplemented ? "restaurant_id" : "restaurant_key"}</strong>
+        <span>Pagina</span>
+        <strong>${escapeHtml(String(adminState.userPage))}</strong>
       </article>
     </section>
 
@@ -9023,39 +9359,32 @@ const renderUsersModule = () => {
             <span class="admin-chip">Lista</span>
             <h3>Usuarios administrativos</h3>
           </div>
-          <button class="admin-button admin-button-primary" type="button" data-user-new ${isBusy ? "disabled" : ""}>
-            Criar usuario
-          </button>
+          ${
+            canCreateAdminUsers()
+              ? `
+                <button class="admin-button admin-button-primary" type="button" data-user-new ${isBusy ? "disabled" : ""}>
+                  Criar usuario
+                </button>
+              `
+              : ""
+          }
         </header>
 
-        <div class="admin-users-table-head" aria-hidden="true">
-          <span>Nome</span>
-          <span>Login</span>
-          <span>Tipo</span>
-          <span>Status</span>
-          <span>Ultimo acesso</span>
-          <span>Acoes</span>
-        </div>
+        ${renderAdminUsersFilters()}
 
-        <div class="admin-users-list">
-          ${
-            adminState.isLoadingUsers
-              ? `
-                <div class="admin-empty-state admin-empty-state-loading">
-                  <strong>Carregando usuarios</strong>
-                  <span>Sincronizando acessos do gestor.</span>
-                </div>
-              `
-              : visibleUsers.length
-                ? visibleUsers.map(renderAdminUserRow).join("")
-                : `
-                  <div class="admin-empty-state admin-empty-state-soft">
-                    <strong>Nenhum usuario encontrado</strong>
-                    <span>Crie um usuario ou ajuste a busca atual.</span>
-                  </div>
-                `
-          }
-        </div>
+        ${
+          adminState.isLoadingUsers
+            ? `
+              <div class="admin-empty-state admin-empty-state-loading">
+                <strong>Carregando usuarios</strong>
+                <span>Sincronizando acessos do gestor.</span>
+              </div>
+            `
+            : `
+              ${renderAdminUsersTable()}
+              ${renderAdminUsersPagination()}
+            `
+        }
       </article>
 
       <form class="admin-users-form-card" data-user-form>
@@ -9072,7 +9401,7 @@ const renderUsersModule = () => {
                   type="button"
                   data-user-status-toggle="${escapeHtml(selectedUser.login)}"
                   data-user-next-status="${selectedUser.status === "BLOCKED" ? "ACTIVE" : "BLOCKED"}"
-                  ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}
+                  ${formDisabled ? "disabled" : ""}
                 >
                   ${selectedUser.status === "BLOCKED" ? "Desbloquear" : "Bloquear"}
                 </button>
@@ -9082,23 +9411,35 @@ const renderUsersModule = () => {
         </header>
 
         <input type="hidden" name="id" value="${escapeHtml(selectedUser.id || "")}" />
+        <input type="hidden" name="login" value="${escapeHtml(selectedUser.login || "")}" />
 
         <div class="admin-users-form-grid">
           <label class="admin-delivery-field">
             <span>Nome</span>
-            <input class="admin-input" name="name" value="${escapeHtml(selectedUser.name || selectedUser.nome || "")}" ${isBusy ? "disabled" : ""} required />
+            <input class="admin-input" name="name" value="${escapeHtml(selectedUser.name || selectedUser.nome || "")}" ${formDisabled ? "disabled" : ""} required />
           </label>
           <label class="admin-delivery-field">
-            <span>Login</span>
-            <input class="admin-input" name="login" value="${escapeHtml(selectedUser.login || "")}" ${isBusy || !isCreating ? "disabled" : ""} required />
+            <span>E-mail</span>
+            <input class="admin-input" name="email" type="email" value="${escapeHtml(selectedUser.email || "")}" ${formDisabled ? "disabled" : ""} required />
           </label>
           <label class="admin-delivery-field">
-            <span>Email</span>
-            <input class="admin-input" name="email" type="email" value="${escapeHtml(selectedUser.email || "")}" ${isBusy ? "disabled" : ""} />
+            <span>Telefone</span>
+            <input class="admin-input" name="phone" inputmode="tel" value="${escapeHtml(selectedUser.phone || selectedUser.telefone || "")}" ${formDisabled ? "disabled" : ""} required />
           </label>
           <label class="admin-delivery-field">
-            <span>Tipo</span>
-            <select class="admin-input" name="userType" ${isBusy ? "disabled" : ""}>
+            <span>Restaurante</span>
+            <input
+              class="admin-input"
+              name="restaurantKey"
+              value="${escapeHtml(selectedRestaurantKey)}"
+              ${formDisabled ? "disabled" : ""}
+              ${canManagePlatformUsers() ? "" : "readonly"}
+              required
+            />
+          </label>
+          <label class="admin-delivery-field">
+            <span>Perfil</span>
+            <select class="admin-input" name="userType" ${formDisabled ? "disabled" : ""} required>
               ${getAdminUserTypeOptions(selectedUserType).map((option) => `
                 <option value="${escapeHtml(option.key)}" ${option.key === selectedUserType ? "selected" : ""}>${escapeHtml(option.label)}</option>
               `).join("")}
@@ -9106,7 +9447,7 @@ const renderUsersModule = () => {
           </label>
           <label class="admin-delivery-field">
             <span>Status</span>
-            <select class="admin-input" name="status" ${isBusy ? "disabled" : ""}>
+            <select class="admin-input" name="status" ${formDisabled ? "disabled" : ""}>
               ${USER_STATUS_OPTIONS.map((option) => `
                 <option value="${escapeHtml(option.key)}" ${option.key === (selectedUser.status || "ACTIVE") ? "selected" : ""}>${escapeHtml(option.label)}</option>
               `).join("")}
@@ -9114,11 +9455,11 @@ const renderUsersModule = () => {
           </label>
           <label class="admin-delivery-field">
             <span>${isCreating ? "Senha inicial" : "Nova senha"}</span>
-            <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatoria" : "Preencha para redefinir"}" ${isBusy ? "disabled" : ""} ${isCreating ? "required" : ""} />
+            <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatoria" : "Preencha para redefinir"}" ${formDisabled ? "disabled" : ""} ${isCreating ? "required" : ""} />
           </label>
         </div>
 
-        <section class="admin-users-permissions">
+        <section class="admin-users-permissions" hidden aria-hidden="true">
           <header class="admin-users-card-head">
             <div>
               <span class="admin-chip">Permissoes</span>
@@ -9144,15 +9485,15 @@ const renderUsersModule = () => {
         <div class="admin-delivery-savebar">
           <div>
             <strong>${escapeHtml(selectedUserType)}</strong>
-            <span>${escapeHtml(isCreating ? "Novo usuario em restaurant_key default" : `Criado em ${selectedUser.createdAt ? formatDateTime(selectedUser.createdAt) : "data nao informada"}`)}</span>
+            <span>${escapeHtml(isCreating ? `Novo usuario em ${selectedRestaurantKey}` : `Criado em ${selectedUser.createdAt ? formatDateTime(selectedUser.createdAt) : "data nao informada"}`)}</span>
           </div>
           <div class="admin-delivery-savebar-actions">
             ${
               !isCreating
-                ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}>Redefinir senha</button>`
+                ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${formDisabled ? "disabled" : ""}>Redefinir senha</button>`
                 : ""
             }
-            <button class="admin-button admin-button-primary" type="submit" ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}>
+            <button class="admin-button admin-button-primary" type="submit" ${formDisabled ? "disabled" : ""}>
               ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
             </button>
           </div>
@@ -12000,7 +12341,8 @@ const saveRestaurantSettings = async () => {
 const readAdminUserFormPayload = (form) => {
   const formData = new FormData(form);
   const selectedUser = getSelectedAdminUser();
-  const userType = String(formData.get("userType") || selectedUser.userType || "CUSTOM").trim();
+  const email = String(formData.get("email") || "").trim();
+  const userType = String(formData.get("userType") || selectedUser.userType || "GERENTE").trim();
   const permissions = {};
 
   form.querySelectorAll("[data-user-permission]").forEach((input) => {
@@ -12014,8 +12356,10 @@ const readAdminUserFormPayload = (form) => {
   return {
     id: String(formData.get("id") || selectedUser.id || "").trim(),
     name: String(formData.get("name") || "").trim(),
-    login: String(formData.get("login") || selectedUser.login || "").trim(),
-    email: String(formData.get("email") || "").trim(),
+    login: String(formData.get("login") || selectedUser.login || email).trim(),
+    email,
+    phone: String(formData.get("phone") || "").trim(),
+    restaurantKey: String(formData.get("restaurantKey") || selectedUser.restaurantKey || getCurrentUsersRestaurantKey()).trim(),
     status: String(formData.get("status") || selectedUser.status || "ACTIVE").trim(),
     userType,
     password: String(formData.get("password") || ""),
@@ -12023,8 +12367,80 @@ const readAdminUserFormPayload = (form) => {
   };
 };
 
+const isValidAdminUserEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+
+const isValidAdminUserPhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
+};
+
+const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
+  const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
+  const userType = String(user.userType || "").trim().toUpperCase();
+  const currentId = String(user.id || "").trim();
+  const currentLogin = String(user.login || "").trim().toLowerCase();
+  const currentEmail = String(user.email || "").trim().toLowerCase();
+
+  if (!user.name) {
+    return "Informe o nome do usuario.";
+  }
+
+  if (!currentEmail || !isValidAdminUserEmail(currentEmail)) {
+    return "Informe um e-mail valido.";
+  }
+
+  if (!user.phone || !isValidAdminUserPhone(user.phone)) {
+    return "Informe um telefone valido com DDD.";
+  }
+
+  if (!user.restaurantKey) {
+    return "Informe o restaurante do usuario.";
+  }
+
+  if (!userType || !getAdminUserTypeOptions(userType).some((option) => option.key === userType)) {
+    return "Selecione um perfil valido.";
+  }
+
+  if (isCreating && !user.password) {
+    return "Informe a senha inicial do usuario.";
+  }
+
+  if (user.password && user.password.length < 6) {
+    return "A senha precisa ter pelo menos 6 caracteres.";
+  }
+
+  const duplicateUser = users.find((entry) => {
+    const sameRecord =
+      (currentId && String(entry.id || "") === currentId) ||
+      (currentLogin && String(entry.login || "").toLowerCase() === currentLogin);
+
+    if (sameRecord) {
+      return false;
+    }
+
+    return (
+      String(entry.login || "").toLowerCase() === currentEmail ||
+      String(entry.email || "").toLowerCase() === currentEmail
+    );
+  });
+
+  return duplicateUser ? "Ja existe um usuario com este e-mail." : "";
+};
+
 const saveAdminUserSettings = async (form) => {
   const user = readAdminUserFormPayload(form);
+  const validationMessage = validateAdminUserFormPayload(user, {
+    isCreating: adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN,
+  });
+
+  if (validationMessage) {
+    adminState.actionMessage = validationMessage;
+    adminState.actionTone = "error";
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+    return;
+  }
 
   adminState.userSaving = true;
   adminState.actionMessage = "";
@@ -12161,6 +12577,73 @@ const resetAdminUserPassword = async (form) => {
     }
 
     adminState.actionMessage = error.message || "Nao foi possivel redefinir a senha.";
+    adminState.actionTone = "error";
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+  }
+};
+
+const deleteAdminUserSettings = async ({ login }) => {
+  const normalizedLogin = String(login || "").trim();
+  const targetUser = (Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : []).find(
+    (user) => user.login === normalizedLogin
+  );
+
+  if (!normalizedLogin || !targetUser) {
+    adminState.actionMessage = "Usuario nao encontrado para exclusao.";
+    adminState.actionTone = "error";
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+    return;
+  }
+
+  const targetName = targetUser.name || targetUser.nome || targetUser.email || normalizedLogin;
+  const confirmed = window.confirm(`Excluir o usuario ${targetName}? Esta acao nao pode ser desfeita.`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  adminState.userBusyLogin = normalizedLogin;
+  adminState.actionMessage = "";
+  renderModuleContent();
+
+  try {
+    const response = await fetchJson("/api/admin/users/delete", {
+      method: "POST",
+      body: JSON.stringify({
+        id: targetUser.id,
+        login: normalizedLogin,
+      }),
+    });
+
+    syncAdminAccessFromPayload(response.admin);
+    adminState.usersSnapshot = response;
+    adminState.userBusyLogin = "";
+    adminState.selectedUserLogin =
+      response.users?.find((user) => user.login === adminState.selectedUserLogin)?.login ||
+      response.users?.[0]?.login ||
+      "";
+    adminState.userDraft = null;
+    adminState.actionMessage = response.message || "Usuario excluido com sucesso.";
+    adminState.actionTone = "success";
+    normalizeUsersPage();
+
+    renderSidebarNav();
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+  } catch (error) {
+    adminState.userBusyLogin = "";
+
+    if (error.status === 401) {
+      redirectToLogin();
+      return;
+    }
+
+    adminState.actionMessage = error.message || "Nao foi possivel excluir o usuario.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -12948,6 +13431,9 @@ const initDashboardPage = () => {
   if (searchInput) {
     searchInput.addEventListener("input", async (event) => {
       adminState.searchQuery = String(event.target.value || "").trim();
+      if (adminState.activeSection === "users") {
+        adminState.userPage = 1;
+      }
       adminState.selectedCustomerKey =
         adminState.activeSection === "customers"
           ? getSelectedCustomerCrmRecord()?.key || getVisibleCustomerCrmRecords()[0]?.key || ""
@@ -13097,6 +13583,30 @@ const initDashboardPage = () => {
   }
 
   if (moduleRoot) {
+    moduleRoot.addEventListener("input", (event) => {
+      const userInlineSearch = event.target.closest("[data-user-inline-search]");
+
+      if (userInlineSearch) {
+        const cursorPosition = userInlineSearch.selectionStart;
+        adminState.searchQuery = String(userInlineSearch.value || "").trim();
+        adminState.userPage = 1;
+        syncSelectionForActiveSection();
+        renderSectionChrome();
+        renderSidebarNav();
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
+        const nextSearch = document.querySelector("[data-user-inline-search]");
+
+        if (nextSearch) {
+          nextSearch.focus();
+          if (typeof cursorPosition === "number") {
+            nextSearch.setSelectionRange(cursorPosition, cursorPosition);
+          }
+        }
+      }
+    });
+
     moduleRoot.addEventListener("click", (event) => {
       const dashboardPeriodOptionButton = event.target.closest("[data-dashboard-period-option]");
 
@@ -13165,6 +13675,51 @@ const initDashboardPage = () => {
           void resetAdminUserPassword(userForm);
         }
 
+        return;
+      }
+
+      const userDeleteButton = event.target.closest("[data-user-delete]");
+
+      if (userDeleteButton) {
+        void deleteAdminUserSettings({
+          login: String(userDeleteButton.dataset.userDelete || "").trim(),
+        });
+        return;
+      }
+
+      const userSortButton = event.target.closest("[data-user-sort]");
+
+      if (userSortButton) {
+        const sortKey = String(userSortButton.dataset.userSort || "").trim();
+
+        if (!USER_TABLE_COLUMNS.some((column) => column.key === sortKey && column.sortable)) {
+          return;
+        }
+
+        adminState.userSort = {
+          key: sortKey,
+          direction:
+            adminState.userSort.key === sortKey && adminState.userSort.direction === "asc"
+              ? "desc"
+              : "asc",
+        };
+        adminState.userPage = 1;
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
+        return;
+      }
+
+      const userPageButton = event.target.closest("[data-user-page]");
+
+      if (userPageButton) {
+        const direction = String(userPageButton.dataset.userPage || "").trim();
+
+        adminState.userPage += direction === "next" ? 1 : -1;
+        normalizeUsersPage();
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
         return;
       }
 
@@ -13557,8 +14112,42 @@ const initDashboardPage = () => {
       }
 
       const scheduledFilterField = event.target.closest("[data-scheduled-filter]");
+      const userFilterField = event.target.closest("[data-user-filter]");
+      const userPageSizeField = event.target.closest("[data-user-page-size]");
 
       const userTypeField = event.target.closest('[data-user-form] select[name="userType"]');
+
+      if (userFilterField) {
+        const filterKey = String(userFilterField.dataset.userFilter || "").trim();
+
+        if (["profile", "status"].includes(filterKey)) {
+          adminState.userFilters = {
+            ...adminState.userFilters,
+            [filterKey]: String(userFilterField.value || "").trim(),
+          };
+          adminState.userPage = 1;
+          syncSelectionForActiveSection();
+          renderModuleContent();
+          renderOrderDetails();
+          updateSidebarMeta();
+        }
+
+        return;
+      }
+
+      if (userPageSizeField) {
+        const nextPageSize = Number(userPageSizeField.value || adminState.userPageSize || 10);
+
+        if (USER_PAGE_SIZE_OPTIONS.includes(nextPageSize)) {
+          adminState.userPageSize = nextPageSize;
+          adminState.userPage = 1;
+          renderModuleContent();
+          renderOrderDetails();
+          updateSidebarMeta();
+        }
+
+        return;
+      }
 
       if (userTypeField) {
         const userForm = userTypeField.closest("[data-user-form]");

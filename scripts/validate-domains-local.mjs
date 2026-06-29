@@ -336,6 +336,7 @@ const validateDomainApi = async (adminApi) => {
         name: "Owner Dominios Negado",
         login: "owner.dominios.negado",
         email: "owner.dominios.negado@teste.local",
+        phone: "5511999913131",
         password: "senha-owner",
         status: "ACTIVE",
         userType: "OWNER",

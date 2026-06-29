@@ -1,60 +1,65 @@
-# INovas Food V1.1 Users Report
+# INovas Food V1.1.0 - Gestao de Usuarios
 
 Versao: 1.1.0
 
-Status: Production Ready (controlled deploy pending).
+Status: apta nos testes locais. Deploy controlado pendente de execucao/confirmacao em producao.
 
-## Escopo entregue
+## Funcionalidades implementadas
 
-- Painel Master ganhou a tela principal `Usuarios` com busca por ID, nome, restaurante, e-mail, telefone e CNPJ/MEI.
-- A tabela do Painel Master segue a ordem: ID / Nome / Restaurante / Plano / Status / Acoes.
-- O MASTER pode visualizar, editar, bloquear/desbloquear usuarios e iniciar o cadastro de restaurante/OWNER.
-- Cadastro de restaurante agora exige CNPJ/MEI, proprietario, nome fantasia, cidade, CEP, numero, e-mail, telefone, plano e data de adesao.
-- OWNER segue limitado ao proprio restaurante e pode criar somente usuarios internos.
-- Perfis internos adicionados: Gerente, Subgerente, Caixa, Cozinha, Bar, Estoque, Financeiro, Entregador, Atendente e Personalizado.
-- Permissoes avancadas no painel operacional ficam recolhidas atras de `Personalizar permissoes`.
+- Tela `Usuarios` do Gestor com tabela responsiva na ordem obrigatoria: ID, Nome, Restaurante, Plano, Status e Acoes.
+- Busca por ID, nome, restaurante, e-mail, telefone e CNPJ/MEI.
+- Filtros por perfil e status.
+- Ordenacao por colunas e paginacao com tamanho configuravel.
+- Cadastro/edicao com Nome, E-mail, Telefone, Restaurante, Perfil e Senha inicial.
+- Validacao frontend para campos vazios, e-mail, telefone, senha minima e duplicidade de e-mail.
+- Validacao backend para e-mail, telefone, senha minima, duplicidade e escopo de restaurante.
+- Perfis visiveis na V1.1: MASTER, OWNER, GERENTE, CAIXA, COZINHA, ESTOQUE e ENTREGADOR.
+- OWNER limitado a usuarios do proprio restaurante.
+- Perfis diferentes de MASTER/OWNER bloqueados para escrita via API.
+- Exclusao de usuario com confirmacao, loading e mensagem de sucesso/erro.
+- Permissoes avancadas permanecem ocultas.
+- Painel Master ajustado para os perfis V1.1 e edicao com telefone.
 
-## Backend e seguranca
+## Seguranca
 
-- `ADMIN_USERS` continua suportado para MASTER de plataforma.
-- MASTER nao depende de restaurante especifico quando configurado com `platformScope`.
-- OWNER nao pode criar MASTER, OWNER ou usuario para outro restaurante.
-- Usuarios internos recebem permissoes padrao por perfil.
-- Perfil Personalizado preserva permissoes individuais.
-- APIs de usuarios continuam passando por TenantContext, sessao, plano/assinatura e permissao.
-- Senhas iniciais sao enviadas somente para API e persistidas pelo mecanismo de hash existente.
+- APIs de usuarios continuam protegidas por sessao, TenantContext, plano e permissoes existentes.
+- `/api/admin/users/delete` exige `users_delete`.
+- Escrita por GERENTE/CAIXA/COZINHA/ESTOQUE/ENTREGADOR e demais perfis nao administradores retorna 403.
+- OWNER nao cria MASTER/OWNER nem usuarios de outro restaurante.
+- Usuario logado nao pode bloquear ou excluir o proprio acesso.
+- Ao menos um MASTER ativo permanece obrigatorio.
 
-## Compatibilidade
+## Testes executados
 
-- Nenhum comportamento visual publico foi alterado.
-- Tokyo Sushi/default continua preservado em `INOVAS_TENANT_MODE=default_only`.
-- V1.0 nao foi redeployada nem republicada nesta etapa.
+- `npm.cmd run validate:v1-1-users-local` - OK.
+- `npm.cmd run validate:permissions-local` - OK.
+- `npm.cmd run validate:platform-integration-local` - OK.
+- `npm.cmd run validate:v1-final-local` - OK.
 
-## Validacao local
+Cobertura V1.1 validada:
 
-- Criado `npm run validate:v1-1-users-local`.
-- O validador cobre:
-  - MASTER de plataforma autenticando sem restaurante proprio;
-  - falha segura quando cadastro V1.1 esta incompleto;
-  - cadastro completo de restaurante e OWNER;
-  - diretorio Master com ID, plano, restaurante e CNPJ/MEI;
-  - login OWNER por tenant;
-  - criacao de usuario interno pelo OWNER;
-  - negativa para OWNER criar MASTER;
-  - negativa para OWNER criar usuario em outro restaurante;
-  - bloqueio/desbloqueio de usuario interno;
-  - preservacao de Tokyo/default em `default_only`;
-  - garantia de que `.data` real nao e alterada pelo teste.
+- criacao, edicao, exclusao e bloqueio/desbloqueio;
+- busca, filtros, ordenacao e paginacao;
+- OWNER isolado por restaurante;
+- MASTER funcionando;
+- validacoes frontend/backend;
+- permissao avancada oculta;
+- browser desktop/mobile da tela Usuarios;
+- preservacao do restaurante Tokyo/default em `default_only`;
+- garantia de que os testes nao alteram `.data` real.
 
-## Arquivos principais
+## Regressao V1.0
 
-- `admin/master.js`
-- `admin/admin.js`
-- `admin/admin.css`
-- `lib/admin-api.cjs`
-- `lib/master-platform-store.cjs`
-- `lib/user-permissions.cjs`
-- `scripts/validate-v1-1-users-local.mjs`
-- `scripts/v1-validation-suite.mjs`
-- `scripts/validate-v1-release-local.mjs`
-- `package.json`
+- Validacao final V1 local passou completa.
+- Menus, planos, contratos, tenant context, isolamento, persistencia, Security Guardian, permissoes, admin local, layouts publicos, mobile publico e horarios passaram.
+- Nao houve alteracao de layout nos modulos Gestor, Cardapio, Pedidos, Clientes, Financeiro ou Estoque fora do modulo Usuarios.
+
+## Pendencias
+
+- Executar commit e tag `v1.1.0`.
+- Realizar deploy controlado.
+- Executar smoke tests em producao, incluindo Tokyo Sushi no ambiente padrao.
+
+## Conclusao
+
+A V1.1.0 de Gestao de Usuarios esta apta para deploy controlado com base nos testes locais.

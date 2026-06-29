@@ -492,15 +492,10 @@
     { key: "MASTER", label: "MASTER" },
     { key: "OWNER", label: "OWNER" },
     { key: "GERENTE", label: "Gerente" },
-    { key: "SUBGERENTE", label: "Subgerente" },
     { key: "CAIXA", label: "Caixa" },
     { key: "COZINHA", label: "Cozinha" },
-    { key: "BAR", label: "Bar" },
     { key: "ESTOQUE", label: "Estoque" },
-    { key: "FINANCEIRO", label: "Financeiro" },
     { key: "ENTREGADOR", label: "Entregador" },
-    { key: "ATENDENTE", label: "Atendente" },
-    { key: "CUSTOM", label: "Personalizado" },
   ];
 
   const getFilteredMasterUsers = () => {
@@ -664,6 +659,10 @@
           <label>
             <span>E-mail</span>
             <input class="admin-input" name="email" type="email" value="${escapeHtml(user.email || "")}" />
+          </label>
+          <label>
+            <span>Telefone</span>
+            <input class="admin-input" name="phone" inputmode="tel" value="${escapeHtml(user.phone || user.telefone || "")}" />
           </label>
           <label>
             <span>Perfil</span>
@@ -1336,6 +1335,7 @@
       login: getFormValue(form, "login") || selectedUser.login,
       name: getFormValue(form, "name"),
       email: getFormValue(form, "email"),
+      phone: getFormValue(form, "phone") || selectedUser.phone || selectedUser.telefone || "",
       status: getFormValue(form, "status") || selectedUser.status || "ACTIVE",
       userType: getFormValue(form, "userType") || selectedUser.userType || selectedUser.tipo_usuario || "CUSTOM",
       restaurantKey: getFormValue(form, "restaurantKey") || selectedUser.restaurantKey || "",

@@ -387,6 +387,7 @@ const validateApiAccess = async (adminApi, tempRoot) => {
     name: "Owner Planos",
     login: "owner.planos",
     email: "owner.planos@teste.local",
+    phone: "5511999912121",
     password: "senha-owner",
     status: "ACTIVE",
     userType: "OWNER",
