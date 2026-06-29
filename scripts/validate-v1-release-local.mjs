@@ -198,8 +198,17 @@ const runValidation = async () => {
       cookie: masterCookie,
       body: {
         restaurantName: "Pizzaria V1 Piloto",
+        tradeName: "Pizzaria V1 Piloto",
         slug: "pizzaria-v1",
         domain: "pizzaria-v1.localhost",
+        document: "12345678000190",
+        ownerFullName: "Owner Pizzaria V1",
+        city: "Sao Paulo",
+        postalCode: "01000000",
+        establishmentNumber: "100",
+        email: "owner@pizzaria-v1.local",
+        phone: "5511999911111",
+        adhesionDate: "2026-06-28",
         whatsapp: "5511999911111",
         address: {
           street: "Rua V1",
@@ -207,7 +216,7 @@ const runValidation = async () => {
           neighborhood: "Centro",
           city: "Sao Paulo",
           state: "SP",
-          postalCode: "01000-000",
+          postalCode: "01000000",
         },
         businessSchedule: {
           acceptOrdersOutsideHours: true,
@@ -223,6 +232,7 @@ const runValidation = async () => {
         subscriptionStatus: "TRIAL",
         adminUser: {
           login: "owner@pizzaria-v1.local",
+          email: "owner@pizzaria-v1.local",
           name: "Owner Pizzaria V1",
           password: "SenhaOwnerV1",
         },

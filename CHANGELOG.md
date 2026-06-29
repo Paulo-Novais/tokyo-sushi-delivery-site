@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0] - 2026-06-29
+
+Status: Production Ready (Controlled Deploy)
+
+### Added
+
+- Gestao V1.1 de usuarios no Painel Master com busca por ID, nome, restaurante, e-mail, telefone e CNPJ/MEI.
+- Cadastro completo de restaurante/OWNER com campos legais e comerciais obrigatorios.
+- Perfis internos padrao para usuarios de restaurante: Gerente, Subgerente, Caixa, Cozinha, Bar, Estoque, Financeiro, Entregador, Atendente e Personalizado.
+- Validador `validate:v1-1-users-local`.
+
+### Changed
+
+- Regras de MASTER de plataforma e OWNER de restaurante ficaram separadas no backend.
+- Permissoes avancadas do painel operacional ficam recolhidas atras de personalizacao.
+- Payloads locais de validacao V1 passam a atender o contrato cadastral V1.1.
+
 ## [1.0.0] - 2026-06-28
 
 Status: Production Ready (Pilot)

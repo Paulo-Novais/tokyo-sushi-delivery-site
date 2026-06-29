@@ -87,6 +87,12 @@
     snapshot: null,
     isLoading: true,
     error: "",
+    userSearch: "",
+    selectedUserId: "",
+    userMode: "list",
+    userFeedback: "",
+    userFeedbackType: "info",
+    isUserSubmitting: false,
   };
 
   const numberFormatter = new Intl.NumberFormat("pt-BR");
@@ -107,6 +113,13 @@
       .replace(/'/g, "&#039;");
 
   const asArray = (value) => (Array.isArray(value) ? value : []);
+
+  const normalizeSearch = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
 
   const formatNumber = (value) => numberFormatter.format(Number(value || 0));
   const formatCurrency = (value) => currencyFormatter.format(Number(value || 0));
@@ -176,6 +189,20 @@
         .replace(/^-+|-+$/g, "") || "prepared";
 
     return `<span class="master-status master-status-${escapeHtml(statusKey)}">${escapeHtml(label)}</span>`;
+  };
+
+  const renderFeedback = () => {
+    if (!state.userFeedback) {
+      return "";
+    }
+
+    return `
+      <div class="admin-feedback ${
+        state.userFeedbackType === "success" ? "is-success" : state.userFeedbackType === "error" ? "is-error" : ""
+      }" data-master-user-feedback>
+        ${escapeHtml(state.userFeedback)}
+      </div>
+    `;
   };
 
   const renderTable = (headers, rows, emptyLabel) => `
@@ -425,24 +452,401 @@
     `;
   };
 
-  const renderUsers = () => {
-    const rows = asArray(state.snapshot?.users).map(
-      (user) => `
-        <tr>
-          <td>${escapeHtml(user.name || user.nome)}</td>
-          <td>${escapeHtml(user.login)}</td>
-          <td>${escapeHtml(user.userType || user.tipo_usuario)}</td>
-          <td>${renderStatus(user.statusLabel || user.status)}</td>
-          <td>${escapeHtml(formatDateTime(user.lastAccessAt || user.ultimo_acesso))}</td>
-        </tr>
-      `
+  const getMasterUsers = () => asArray(state.snapshot?.users);
+
+  const getMasterUserById = (id) => {
+    const targetId = String(id || "").trim();
+
+    if (!targetId) {
+      return null;
+    }
+
+    return (
+      getMasterUsers().find(
+        (user) =>
+          String(user.id || "") === targetId ||
+          String(user.directoryId || "") === targetId ||
+          String(user.login || "") === targetId
+      ) || null
     );
+  };
+
+  const getPlanOptions = () => {
+    const plans = asArray(state.snapshot?.plans)
+      .map((plan) => ({
+        key: String(plan.key || plan.plan || plan.name || "").trim(),
+        label: String(plan.name || plan.key || plan.plan || "").trim(),
+      }))
+      .filter((plan) => plan.key);
+
+    return plans.length
+      ? plans
+      : [
+          { key: "START", label: "START" },
+          { key: "PRO", label: "PRO" },
+          { key: "PREMIUM", label: "PREMIUM" },
+        ];
+  };
+
+  const getMasterUserTypeOptions = () => [
+    { key: "MASTER", label: "MASTER" },
+    { key: "OWNER", label: "OWNER" },
+    { key: "GERENTE", label: "Gerente" },
+    { key: "SUBGERENTE", label: "Subgerente" },
+    { key: "CAIXA", label: "Caixa" },
+    { key: "COZINHA", label: "Cozinha" },
+    { key: "BAR", label: "Bar" },
+    { key: "ESTOQUE", label: "Estoque" },
+    { key: "FINANCEIRO", label: "Financeiro" },
+    { key: "ENTREGADOR", label: "Entregador" },
+    { key: "ATENDENTE", label: "Atendente" },
+    { key: "CUSTOM", label: "Personalizado" },
+  ];
+
+  const getFilteredMasterUsers = () => {
+    const search = normalizeSearch(state.userSearch);
+
+    if (!search) {
+      return getMasterUsers();
+    }
+
+    return getMasterUsers().filter((user) =>
+      normalizeSearch(
+        [
+          user.searchIndex,
+          user.id,
+          user.directoryId,
+          user.name,
+          user.nome,
+          user.login,
+          user.email,
+          user.phone,
+          user.telefone,
+          user.restaurantName,
+          user.restaurant,
+          user.restaurantKey,
+          user.taxId,
+          user.cnpjMei,
+          user.ownerFullName,
+          user.tradeName,
+        ].join(" ")
+      ).includes(search)
+    );
+  };
+
+  const renderMasterUserActionButtons = (user) => {
+    const id = user.id || user.directoryId || user.login;
+    const isBlocked = user.status === "BLOCKED";
+
+    return `
+      <div class="master-row-actions">
+        <button class="admin-action-button is-compact" type="button" data-master-user-action="view" data-master-user-id="${escapeHtml(id)}">
+          Visualizar
+        </button>
+        <button class="admin-action-button is-compact" type="button" data-master-user-action="edit" data-master-user-id="${escapeHtml(id)}">
+          Editar
+        </button>
+        <button class="admin-action-button is-compact ${isBlocked ? "" : "is-danger"}" type="button" data-master-user-action="toggle" data-master-user-id="${escapeHtml(id)}" data-master-next-status="${isBlocked ? "ACTIVE" : "BLOCKED"}">
+          ${isBlocked ? "Desbloquear" : "Bloquear"}
+        </button>
+      </div>
+    `;
+  };
+
+  const renderMasterUsersTable = () => {
+    const currentSearch = normalizeSearch(state.userSearch);
+    const rows = getMasterUsers().map((user) => {
+      const id = user.id || user.directoryId || user.login;
+      const searchIndex = normalizeSearch(
+        [
+          user.searchIndex,
+          id,
+          user.name,
+          user.login,
+          user.email,
+          user.phone,
+          user.restaurantName,
+          user.taxId,
+          user.cnpjMei,
+        ].join(" ")
+      );
+      const hidden = currentSearch && !searchIndex.includes(currentSearch);
+
+      return `
+        <tr data-master-user-row data-master-user-row-search="${escapeHtml(searchIndex)}" ${hidden ? "hidden" : ""}>
+          <td>
+            <strong>${escapeHtml(id)}</strong>
+            <small>${escapeHtml(user.login || user.email || "--")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(user.name || user.nome || user.login || "--")}</strong>
+            <small>${escapeHtml(user.email || "Sem e-mail")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(user.restaurantName || user.restaurant || "--")}</strong>
+            <small>${escapeHtml(user.cnpjMei || user.taxId || user.restaurantKey || "--")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(user.planName || user.plan || "--")}</strong>
+            <small>${escapeHtml(user.userTypeLabel || user.userType || user.tipo_usuario || "--")}</small>
+          </td>
+          <td>${renderStatus(user.statusLabel || user.status)}</td>
+          <td>${renderMasterUserActionButtons(user)}</td>
+        </tr>
+      `;
+    });
+
+    return renderTable(
+      ["ID", "Nome", "Restaurante", "Plano", "Status", "Acoes"],
+      rows,
+      "Nenhum usuario encontrado."
+    );
+  };
+
+  const renderMasterUserDetails = (user) => {
+    if (!user) {
+      return "";
+    }
+
+    return `
+      <article class="master-panel master-user-drawer" data-master-user-drawer>
+        <header class="master-panel-head">
+          <div>
+            <span class="admin-chip">Visualizacao</span>
+            <h2>${escapeHtml(user.name || user.nome || user.login)}</h2>
+          </div>
+          <button class="admin-action-button is-compact" type="button" data-master-user-action="close">
+            Fechar
+          </button>
+        </header>
+        ${renderFieldGrid([
+          { label: "ID", value: user.id || user.directoryId || user.login },
+          { label: "Login", value: user.login },
+          { label: "E-mail", value: user.email },
+          { label: "Restaurante", value: user.restaurantName || user.restaurant },
+          { label: "Plano", value: user.planName || user.plan },
+          { label: "Perfil", value: user.userTypeLabel || user.userType || user.tipo_usuario },
+          { label: "CNPJ/MEI", value: user.cnpjMei || user.taxId },
+          { label: "Telefone", value: user.phone || user.telefone },
+          { label: "Cidade", value: user.city },
+          { label: "Data de adesao", value: user.adhesionDate ? formatDateTime(user.adhesionDate) : "" },
+        ])}
+      </article>
+    `;
+  };
+
+  const renderMasterUserEditForm = (user) => {
+    if (!user) {
+      return "";
+    }
+
+    const selectedType = String(user.userType || user.tipo_usuario || "CUSTOM").toUpperCase();
+
+    return `
+      <form class="master-panel master-user-drawer" data-master-user-edit-form>
+        <header class="master-panel-head">
+          <div>
+            <span class="admin-chip">Editar usuario</span>
+            <h2>${escapeHtml(user.name || user.login)}</h2>
+          </div>
+          <button class="admin-action-button is-compact" type="button" data-master-user-action="close">
+            Fechar
+          </button>
+        </header>
+        <input type="hidden" name="id" value="${escapeHtml(user.id || "")}" />
+        <input type="hidden" name="login" value="${escapeHtml(user.login || "")}" />
+        <input type="hidden" name="restaurantKey" value="${escapeHtml(user.restaurantKey || "")}" />
+        <div class="master-registration-form">
+          <label>
+            <span>Nome</span>
+            <input class="admin-input" name="name" value="${escapeHtml(user.name || user.nome || "")}" required />
+          </label>
+          <label>
+            <span>E-mail</span>
+            <input class="admin-input" name="email" type="email" value="${escapeHtml(user.email || "")}" />
+          </label>
+          <label>
+            <span>Perfil</span>
+            <select class="admin-input" name="userType">
+              ${getMasterUserTypeOptions()
+                .map(
+                  (option) => `
+                    <option value="${escapeHtml(option.key)}" ${option.key === selectedType ? "selected" : ""}>
+                      ${escapeHtml(option.label)}
+                    </option>
+                  `
+                )
+                .join("")}
+            </select>
+          </label>
+          <label>
+            <span>Status</span>
+            <select class="admin-input" name="status">
+              <option value="ACTIVE" ${user.status === "ACTIVE" ? "selected" : ""}>Ativo</option>
+              <option value="BLOCKED" ${user.status === "BLOCKED" ? "selected" : ""}>Bloqueado</option>
+            </select>
+          </label>
+          <label class="master-registration-form-wide">
+            <span>Nova senha</span>
+            <input class="admin-input" name="password" type="password" autocomplete="new-password" placeholder="Preencha apenas para redefinir" />
+          </label>
+        </div>
+        <div class="master-form-actions">
+          <button class="admin-button admin-button-secondary" type="button" data-master-user-action="close">
+            Cancelar
+          </button>
+          <button class="admin-button admin-button-primary" type="submit" ${state.isUserSubmitting ? "disabled" : ""}>
+            ${state.isUserSubmitting ? "Salvando..." : "Salvar usuario"}
+          </button>
+        </div>
+      </form>
+    `;
+  };
+
+  const renderRestaurantRegistrationForm = () => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    return `
+      <form class="master-panel master-user-drawer" data-master-restaurant-form>
+        <header class="master-panel-head">
+          <div>
+            <span class="admin-chip">Novo cadastro</span>
+            <h2>Cadastrar restaurante</h2>
+          </div>
+          <button class="admin-action-button is-compact" type="button" data-master-user-action="close">
+            Fechar
+          </button>
+        </header>
+        <div class="master-registration-form">
+          <label>
+            <span>CNPJ ou MEI</span>
+            <input class="admin-input" name="document" inputmode="numeric" required />
+          </label>
+          <label>
+            <span>Nome completo do proprietario</span>
+            <input class="admin-input" name="ownerFullName" required />
+          </label>
+          <label>
+            <span>Nome fantasia</span>
+            <input class="admin-input" name="tradeName" required />
+          </label>
+          <label>
+            <span>Slug</span>
+            <input class="admin-input" name="slug" placeholder="restaurante-piloto" required />
+          </label>
+          <label>
+            <span>Cidade</span>
+            <input class="admin-input" name="city" required />
+          </label>
+          <label>
+            <span>CEP</span>
+            <input class="admin-input" name="postalCode" inputmode="numeric" required />
+          </label>
+          <label>
+            <span>Numero do estabelecimento</span>
+            <input class="admin-input" name="establishmentNumber" required />
+          </label>
+          <label>
+            <span>E-mail</span>
+            <input class="admin-input" name="email" type="email" required />
+          </label>
+          <label>
+            <span>Telefone</span>
+            <input class="admin-input" name="phone" inputmode="tel" required />
+          </label>
+          <label>
+            <span>Tipo de plano</span>
+            <select class="admin-input" name="plan" required>
+              ${getPlanOptions()
+                .map((plan) => `<option value="${escapeHtml(plan.key)}">${escapeHtml(plan.label)}</option>`)
+                .join("")}
+            </select>
+          </label>
+          <label>
+            <span>Data de adesao</span>
+            <input class="admin-input" name="adhesionDate" type="date" value="${escapeHtml(today)}" required />
+          </label>
+          <label>
+            <span>Dominio/subdominio</span>
+            <input class="admin-input" name="domain" placeholder="restaurante.localhost" />
+          </label>
+          <label class="master-registration-form-wide">
+            <span>Senha inicial do OWNER</span>
+            <input class="admin-input" name="ownerPassword" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+        </div>
+        <div class="master-form-note">
+          O MASTER cria o restaurante e o OWNER inicial. A senha e enviada somente para a API e armazenada com hash.
+        </div>
+        <div class="master-form-actions">
+          <button class="admin-button admin-button-secondary" type="button" data-master-user-action="close">
+            Cancelar
+          </button>
+          <button class="admin-button admin-button-primary" type="submit" ${state.isUserSubmitting ? "disabled" : ""}>
+            ${state.isUserSubmitting ? "Cadastrando..." : "Cadastrar restaurante"}
+          </button>
+        </div>
+      </form>
+    `;
+  };
+
+  const renderMasterUsersSidePanel = () => {
+    const selectedUser = getMasterUserById(state.selectedUserId);
+
+    if (state.userMode === "new-restaurant") {
+      return renderRestaurantRegistrationForm();
+    }
+
+    if (state.userMode === "edit-user") {
+      return renderMasterUserEditForm(selectedUser);
+    }
+
+    if (state.userMode === "view-user") {
+      return renderMasterUserDetails(selectedUser);
+    }
+
+    return "";
+  };
+
+  const renderUsers = () => {
+    const totalUsers = getMasterUsers().length;
+    const visibleUsers = getFilteredMasterUsers().length;
 
     return `
       <article class="master-panel">
-        <h2>Usuarios da Plataforma</h2>
-        ${renderTable(["Nome", "Login", "Tipo", "Status", "Ultimo acesso"], rows, "Nenhum usuario cadastrado.")}
+        <header class="master-panel-head">
+          <div>
+            <h2>Usuarios</h2>
+            <p>Busca por ID, proprietario, restaurante, e-mail, telefone ou CNPJ/MEI.</p>
+          </div>
+          <button class="admin-button admin-button-primary" type="button" data-master-user-action="new-restaurant">
+            Cadastrar Restaurante
+          </button>
+        </header>
+        ${renderFeedback()}
+        <div class="master-users-toolbar">
+          <label class="master-users-search">
+            <span>ID como referencia principal</span>
+            <input
+              class="admin-input"
+              type="search"
+              value="${escapeHtml(state.userSearch)}"
+              placeholder="Buscar por ID, nome, restaurante, e-mail, telefone ou CNPJ/MEI"
+              data-master-user-search
+            />
+          </label>
+          <div class="master-users-counter">
+            <strong data-master-users-visible>${escapeHtml(String(visibleUsers))}</strong>
+            <span>de ${escapeHtml(String(totalUsers))} usuarios</span>
+          </div>
+        </div>
+        ${renderMasterUsersTable()}
+        <div class="admin-empty-state admin-empty-state-soft master-user-filter-empty" data-master-user-empty-filter ${visibleUsers > 0 || !state.userSearch ? "hidden" : ""}>
+          <strong>Nenhum usuario encontrado</strong>
+          <span>Revise o ID, nome, restaurante, e-mail, telefone ou CNPJ/MEI pesquisado.</span>
+        </div>
       </article>
+      ${renderMasterUsersSidePanel()}
     `;
   };
 
@@ -809,8 +1213,203 @@
     }
   };
 
+  const getFormValue = (form, name) =>
+    String(new FormData(form).get(name) || "").trim();
+
+  const toSlug = (value) =>
+    normalizeSearch(value)
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  const applyMasterUserSearchFilter = () => {
+    const rows = queryAll("[data-master-user-row]");
+    const queryValue = normalizeSearch(state.userSearch);
+    let visibleCount = 0;
+
+    rows.forEach((row) => {
+      const matches = !queryValue || String(row.dataset.masterUserRowSearch || "").includes(queryValue);
+      row.hidden = !matches;
+
+      if (matches) {
+        visibleCount += 1;
+      }
+    });
+
+    const counter = query("[data-master-users-visible]");
+    const emptyState = query("[data-master-user-empty-filter]");
+
+    if (counter) {
+      counter.textContent = String(visibleCount);
+    }
+
+    if (emptyState) {
+      emptyState.hidden = visibleCount > 0 || !queryValue;
+    }
+  };
+
+  const submitRestaurantRegistration = async (form) => {
+    const documentValue = getFormValue(form, "document");
+    const ownerFullName = getFormValue(form, "ownerFullName");
+    const tradeName = getFormValue(form, "tradeName");
+    const slug = toSlug(getFormValue(form, "slug") || tradeName);
+    const city = getFormValue(form, "city");
+    const postalCode = getFormValue(form, "postalCode");
+    const establishmentNumber = getFormValue(form, "establishmentNumber");
+    const email = getFormValue(form, "email").toLowerCase();
+    const phone = getFormValue(form, "phone");
+    const plan = getFormValue(form, "plan");
+    const adhesionDate = getFormValue(form, "adhesionDate");
+    const domain = getFormValue(form, "domain") || `${slug}.localhost`;
+    const ownerPassword = getFormValue(form, "ownerPassword");
+
+    state.isUserSubmitting = true;
+    state.userFeedback = "";
+    renderContent();
+
+    try {
+      const response = await fetchJson("/api/admin/master/onboard-restaurant", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantName: tradeName,
+          tradeName,
+          name: tradeName,
+          slug,
+          restaurantKey: slug,
+          domain,
+          document: documentValue,
+          ownerFullName,
+          city,
+          postalCode,
+          establishmentNumber,
+          email,
+          phone,
+          whatsapp: phone,
+          plan,
+          adhesionDate,
+          subscriptionStatus: "TRIAL",
+          address: {
+            city,
+            postalCode,
+            number: establishmentNumber,
+          },
+          delivery: {
+            radiusKm: 5,
+            fee: 0,
+            minimumOrder: 0,
+            deliveriesEnabled: true,
+          },
+          paymentMethods: ["pix", "card", "cash"],
+          adminUser: {
+            login: email,
+            email,
+            name: ownerFullName,
+            password: ownerPassword,
+          },
+        }),
+      });
+
+      state.userFeedback = response.message || "Restaurante cadastrado com sucesso.";
+      state.userFeedbackType = "success";
+      state.userMode = "view-user";
+      state.selectedUserId =
+        response.restaurantAdmin?.id || response.restaurantAdmin?.login || response.adminUser?.login || "";
+      state.isUserSubmitting = false;
+      await loadMasterPanel();
+    } catch (error) {
+      state.isUserSubmitting = false;
+      state.userFeedback = error.message || "Nao foi possivel cadastrar o restaurante.";
+      state.userFeedbackType = "error";
+      renderContent();
+    }
+  };
+
+  const submitMasterUserEdit = async (form) => {
+    const selectedUser = getMasterUserById(state.selectedUserId);
+
+    if (!selectedUser) {
+      return;
+    }
+
+    const password = getFormValue(form, "password");
+    const user = {
+      id: getFormValue(form, "id") || selectedUser.id,
+      login: getFormValue(form, "login") || selectedUser.login,
+      name: getFormValue(form, "name"),
+      email: getFormValue(form, "email"),
+      status: getFormValue(form, "status") || selectedUser.status || "ACTIVE",
+      userType: getFormValue(form, "userType") || selectedUser.userType || selectedUser.tipo_usuario || "CUSTOM",
+      restaurantKey: getFormValue(form, "restaurantKey") || selectedUser.restaurantKey || "",
+      permissions: selectedUser.permissions || {},
+    };
+
+    if (password) {
+      user.password = password;
+    }
+
+    state.isUserSubmitting = true;
+    state.userFeedback = "";
+    renderContent();
+
+    try {
+      const response = await fetchJson("/api/admin/users/save", {
+        method: "POST",
+        body: JSON.stringify({ user }),
+      });
+
+      state.userFeedback = response.message || "Usuario salvo com sucesso.";
+      state.userFeedbackType = "success";
+      state.userMode = "view-user";
+      state.selectedUserId = response.user?.id || response.user?.login || selectedUser.id || selectedUser.login || "";
+      state.isUserSubmitting = false;
+      await loadMasterPanel();
+    } catch (error) {
+      state.isUserSubmitting = false;
+      state.userFeedback = error.message || "Nao foi possivel salvar o usuario.";
+      state.userFeedbackType = "error";
+      renderContent();
+    }
+  };
+
+  const toggleMasterUserStatus = async (button) => {
+    const userId = String(button?.dataset.masterUserId || "").trim();
+    const nextStatus = String(button?.dataset.masterNextStatus || "").trim();
+    const user = getMasterUserById(userId);
+
+    if (!user || !nextStatus) {
+      return;
+    }
+
+    state.isUserSubmitting = true;
+    state.userFeedback = "";
+    renderContent();
+
+    try {
+      const response = await fetchJson("/api/admin/users/status", {
+        method: "POST",
+        body: JSON.stringify({
+          id: user.id,
+          login: user.login,
+          status: nextStatus,
+        }),
+      });
+
+      state.userFeedback = response.message || "Status do usuario atualizado.";
+      state.userFeedbackType = "success";
+      state.selectedUserId = response.user?.id || response.user?.login || user.id || user.login || "";
+      state.userMode = "view-user";
+      state.isUserSubmitting = false;
+      await loadMasterPanel();
+    } catch (error) {
+      state.isUserSubmitting = false;
+      state.userFeedback = error.message || "Nao foi possivel alterar o status do usuario.";
+      state.userFeedbackType = "error";
+      renderContent();
+    }
+  };
+
   const initMasterPanel = () => {
     const navRoot = query("[data-master-nav]");
+    const contentRoot = query("[data-master-content]");
     const refreshButtons = queryAll("[data-master-refresh]");
     const logoutButton = query("[data-master-logout]");
 
@@ -829,7 +1428,77 @@
         }
 
         state.activeSection = nextSection;
+        state.userFeedback = "";
         render();
+      });
+    }
+
+    if (contentRoot) {
+      contentRoot.addEventListener("input", (event) => {
+        const searchInput = event.target.closest("[data-master-user-search]");
+
+        if (!searchInput) {
+          return;
+        }
+
+        state.userSearch = String(searchInput.value || "");
+        applyMasterUserSearchFilter();
+      });
+
+      contentRoot.addEventListener("click", (event) => {
+        const actionButton = event.target.closest("[data-master-user-action]");
+
+        if (!actionButton) {
+          return;
+        }
+
+        const action = String(actionButton.dataset.masterUserAction || "").trim();
+        const userId = String(actionButton.dataset.masterUserId || "").trim();
+
+        if (action === "new-restaurant") {
+          state.userMode = "new-restaurant";
+          state.selectedUserId = "";
+          state.userFeedback = "";
+          renderContent();
+          return;
+        }
+
+        if (action === "close") {
+          state.userMode = "list";
+          state.selectedUserId = "";
+          renderContent();
+          return;
+        }
+
+        if (action === "view" || action === "edit") {
+          state.userMode = action === "view" ? "view-user" : "edit-user";
+          state.selectedUserId = userId;
+          state.userFeedback = "";
+          renderContent();
+          return;
+        }
+
+        if (action === "toggle") {
+          void toggleMasterUserStatus(actionButton);
+        }
+      });
+
+      contentRoot.addEventListener("submit", (event) => {
+        const restaurantForm = event.target.closest("[data-master-restaurant-form]");
+        const editForm = event.target.closest("[data-master-user-edit-form]");
+
+        if (!restaurantForm && !editForm) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (restaurantForm) {
+          void submitRestaurantRegistration(restaurantForm);
+          return;
+        }
+
+        void submitMasterUserEdit(editForm);
       });
     }
 

@@ -228,9 +228,18 @@ const restaurantPayload = ({
   ownerPassword = "SenhaOwnerV1",
 } = {}) => ({
   restaurantName: name || `Restaurante ${key}`,
+  tradeName: name || `Restaurante ${key}`,
   slug: key,
   restaurantKey: key,
   domain: `${key}.localhost`,
+  document: "12345678000190",
+  ownerFullName: `Owner ${name || key}`,
+  city: "Sao Paulo",
+  postalCode: "01000000",
+  establishmentNumber: "100",
+  email: ownerLogin || `owner@${key}.local`,
+  phone: whatsapp,
+  adhesionDate: "2026-06-28",
   whatsapp,
   address: {
     street: "Rua V1",
@@ -238,7 +247,7 @@ const restaurantPayload = ({
     neighborhood: "Centro",
     city: "Sao Paulo",
     state: "SP",
-    postalCode: "01000-000",
+    postalCode: "01000000",
   },
   businessSchedule: {
     acceptOrdersOutsideHours: true,

@@ -2428,6 +2428,29 @@ a.admin-action-button {
   gap: 14px;
 }
 
+.admin-users-permission-details {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-users-permission-details summary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0 14px;
+  color: #ffd0c2;
+  background: rgba(235, 81, 54, 0.1);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-users-permission-details[open] summary {
+  margin-bottom: 12px;
+}
+
 .admin-permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -12216,6 +12239,24 @@ body.master-body {
   overflow: hidden;
 }
 
+.master-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.master-panel-head h2,
+.master-panel-head p {
+  margin: 0;
+}
+
+.master-panel-head p {
+  margin-top: 6px;
+  color: var(--admin-text-muted);
+}
+
 .master-panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -12378,6 +12419,88 @@ body.master-body {
   font-size: 0.78rem;
 }
 
+.master-users-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  margin: 16px 0;
+}
+
+.master-users-search {
+  display: grid;
+  gap: 8px;
+}
+
+.master-users-search span,
+.master-registration-form label span {
+  color: var(--admin-text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.master-users-counter {
+  min-width: 138px;
+  min-height: 50px;
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 3px;
+  color: var(--admin-text-muted);
+}
+
+.master-users-counter strong {
+  color: var(--admin-text);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.master-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.master-user-drawer {
+  display: grid;
+  gap: 16px;
+}
+
+.master-registration-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.master-registration-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.master-registration-form-wide {
+  grid-column: 1 / -1;
+}
+
+.master-form-note {
+  border: 1px solid rgba(242, 182, 73, 0.18);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(242, 182, 73, 0.08);
+  color: var(--admin-text-soft);
+}
+
+.master-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.master-user-filter-empty {
+  margin-top: 14px;
+}
+
 @media (max-width: 1180px) {
   .master-shell {
     grid-template-columns: 1fr;
@@ -12415,7 +12538,17 @@ body.master-body {
   .master-nav,
   .master-kpi-grid,
   .master-card-grid,
-  .master-field-grid {
+  .master-field-grid,
+  .master-users-toolbar,
+  .master-registration-form {
     grid-template-columns: 1fr;
+  }
+
+  .master-users-counter {
+    justify-items: start;
+  }
+
+  .master-panel-head {
+    display: grid;
   }
 }

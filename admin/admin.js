@@ -119,10 +119,16 @@ const SECTION_FEATURE_MAP = Object.freeze({
   reviews: "reviews",
 });
 const USER_TYPE_OPTIONS = Object.freeze([
-  { key: "MASTER", label: "MASTER" },
-  { key: "DESENVOLVEDOR", label: "DESENVOLVEDOR" },
-  { key: "OWNER", label: "OWNER" },
-  { key: "CUSTOM", label: "CUSTOM" },
+  { key: "GERENTE", label: "Gerente" },
+  { key: "SUBGERENTE", label: "Subgerente" },
+  { key: "CAIXA", label: "Caixa" },
+  { key: "COZINHA", label: "Cozinha" },
+  { key: "BAR", label: "Bar" },
+  { key: "ESTOQUE", label: "Estoque" },
+  { key: "FINANCEIRO", label: "Financeiro" },
+  { key: "ENTREGADOR", label: "Entregador" },
+  { key: "ATENDENTE", label: "Atendente" },
+  { key: "CUSTOM", label: "Personalizado" },
 ]);
 const USER_STATUS_OPTIONS = Object.freeze([
   { key: "ACTIVE", label: "Ativo" },
@@ -8785,6 +8791,25 @@ const getUserProfilePermissions = (userType) => {
   return profile?.permissions && typeof profile.permissions === "object" ? profile.permissions : {};
 };
 
+const getAdminUserTypeOptions = (selectedType = "CUSTOM") => {
+  const normalizedSelectedType = String(selectedType || "CUSTOM").trim().toUpperCase();
+  const options = [...USER_TYPE_OPTIONS];
+
+  if (normalizedSelectedType && !options.some((option) => option.key === normalizedSelectedType)) {
+    options.unshift({
+      key: normalizedSelectedType,
+      label: normalizedSelectedType,
+    });
+  }
+
+  return options;
+};
+
+const canSubmitSelectedAdminUser = (user) => {
+  const userType = String(user?.userType || user?.tipo_usuario || "CUSTOM").trim().toUpperCase();
+  return USER_TYPE_OPTIONS.some((option) => option.key === userType);
+};
+
 const getVisibleAdminUsers = () => {
   const query = normalizeInventorySearchValue(adminState.searchQuery);
   const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
@@ -8951,6 +8976,7 @@ const renderUsersModule = () => {
   const activeCount = users.filter((user) => user.status !== "BLOCKED").length;
   const blockedCount = users.filter((user) => user.status === "BLOCKED").length;
   const selectedUserType = selectedUser.userType || selectedUser.tipo_usuario || "CUSTOM";
+  const selectedUserCanSubmit = canSubmitSelectedAdminUser(selectedUser);
 
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
@@ -9046,7 +9072,7 @@ const renderUsersModule = () => {
                   type="button"
                   data-user-status-toggle="${escapeHtml(selectedUser.login)}"
                   data-user-next-status="${selectedUser.status === "BLOCKED" ? "ACTIVE" : "BLOCKED"}"
-                  ${isBusy ? "disabled" : ""}
+                  ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}
                 >
                   ${selectedUser.status === "BLOCKED" ? "Desbloquear" : "Bloquear"}
                 </button>
@@ -9073,7 +9099,7 @@ const renderUsersModule = () => {
           <label class="admin-delivery-field">
             <span>Tipo</span>
             <select class="admin-input" name="userType" ${isBusy ? "disabled" : ""}>
-              ${USER_TYPE_OPTIONS.map((option) => `
+              ${getAdminUserTypeOptions(selectedUserType).map((option) => `
                 <option value="${escapeHtml(option.key)}" ${option.key === selectedUserType ? "selected" : ""}>${escapeHtml(option.label)}</option>
               `).join("")}
             </select>
@@ -9100,7 +9126,19 @@ const renderUsersModule = () => {
             </div>
             <small>${selectedUserType === "CUSTOM" ? "Permissoes individuais" : "Perfil padrao aplicado automaticamente"}</small>
           </header>
-          ${renderAdminUserPermissions(selectedUser, isBusy)}
+          ${
+            selectedUserCanSubmit
+              ? ""
+              : `
+                <div class="admin-feedback is-error">
+                  Este perfil e protegido. OWNER administra o restaurante e nao deve ser alterado pela tela operacional.
+                </div>
+              `
+          }
+          <details class="admin-users-permission-details">
+            <summary>Personalizar permissoes</summary>
+            ${renderAdminUserPermissions(selectedUser, isBusy)}
+          </details>
         </section>
 
         <div class="admin-delivery-savebar">
@@ -9111,10 +9149,10 @@ const renderUsersModule = () => {
           <div class="admin-delivery-savebar-actions">
             ${
               !isCreating
-                ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${isBusy ? "disabled" : ""}>Redefinir senha</button>`
+                ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}>Redefinir senha</button>`
                 : ""
             }
-            <button class="admin-button admin-button-primary" type="submit" ${isBusy ? "disabled" : ""}>
+            <button class="admin-button admin-button-primary" type="submit" ${isBusy || !selectedUserCanSubmit ? "disabled" : ""}>
               ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
             </button>
           </div>
