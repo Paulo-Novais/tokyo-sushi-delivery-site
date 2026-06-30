@@ -38,7 +38,8 @@
     "validate:v1-export-local": "node scripts/validate-v1-export-local.mjs",
     "validate:v1-pilot-journey-local": "node scripts/validate-v1-pilot-journey-local.mjs",
     "validate:v1-final-local": "node scripts/validate-v1-final-local.mjs",
-    "validate:v1-1-users-local": "node scripts/validate-v1-1-users-local.mjs"
+    "validate:v1-1-users-local": "node scripts/validate-v1-1-users-local.mjs",
+    "validate:v1-2-saas-local": "node scripts/validate-v1-2-saas-local.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

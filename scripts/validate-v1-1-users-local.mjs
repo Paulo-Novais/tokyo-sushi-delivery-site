@@ -355,13 +355,13 @@ const validateUsersBrowser = async (adminApi) => {
     });
     desktopPage.on("pageerror", (error) => pageErrors.push(`desktop:${String(error?.message || error)}`));
 
-    await loginBrowser(desktopPage, baseURL, "owner@usuarios-a.local", "SenhaOwnerV11");
+    await loginBrowser(desktopPage, baseURL, "master@v1-1.local", "SenhaMasterV11");
     await openUsersModule(desktopPage);
 
     const headers = await desktopPage.locator(".admin-users-table thead th").allTextContents();
     assert.deepEqual(
       headers.map((header) => header.replace(/\s+/g, " ").trim().replace(/[\\^v]+$/g, "").trim()),
-      ["ID", "Nome", "Restaurante", "Plano", "Status", "Acoes"],
+      ["ID", "Nome", "Restaurante", "Plano", "Perfil", "Status", "Acoes"],
       "Tabela Usuarios deve seguir a ordem obrigatoria"
     );
     await desktopPage.locator("[data-user-inline-search]").fill("Owner");
@@ -370,15 +370,58 @@ const validateUsersBrowser = async (adminApi) => {
       "Busca por nome deveria manter resultado visivel."
     );
     await desktopPage.locator('[data-user-sort="name"]').click();
+    await desktopPage.locator('[data-user-filter="restaurant"]').selectOption("usuarios-a");
+    await desktopPage.locator('[data-user-filter="profile"]').selectOption("OWNER");
     await desktopPage.locator('[data-user-filter="status"]').selectOption("ACTIVE");
+    await desktopPage.locator("[data-user-clear-filters]").click();
     await desktopPage.locator("[data-user-page-size]").selectOption("10");
     assert.equal(await desktopPage.locator("[data-user-page]").count(), 2, "Paginacao deve expor anterior/proxima.");
+    await desktopPage.locator("[data-user-new]").click();
+    await waitForCondition(
+      async () => (await desktopPage.locator(".admin-users-dialog").count()) === 1,
+      "Botao Novo usuario deve abrir modal/drawer."
+    );
     assert.equal(
       await desktopPage.locator(".admin-users-permissions").isHidden(),
       true,
       "Permissoes avancadas devem permanecer ocultas."
     );
+    await desktopPage.locator("[data-user-dialog-close]").first().click();
     await desktopContext.close();
+
+    const masterContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
+    const masterPage = await masterContext.newPage();
+    masterPage.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(`master:${message.text()}`);
+      }
+    });
+    masterPage.on("pageerror", (error) => pageErrors.push(`master:${String(error?.message || error)}`));
+
+    await loginBrowser(masterPage, baseURL, "master@v1-1.local", "SenhaMasterV11");
+    await openUsersModule(masterPage);
+    assert.equal(
+      await masterPage.locator("[data-admin-main-title]").textContent(),
+      "INovas Food",
+      "Header MASTER deve exibir INovas Food em vez de restaurante."
+    );
+    assert.equal(
+      await masterPage.locator("[data-admin-welcome]").textContent(),
+      "Administrador do Sistema",
+      "Header MASTER deve identificar administracao do sistema."
+    );
+    await masterPage.locator("[data-user-new]").click();
+    await masterPage.locator('input[name="userScope"][value="SYSTEM"]').check();
+    await waitForCondition(
+      async () => (await masterPage.locator('.admin-users-dialog input[name="restaurantKey"]').inputValue().catch(() => "__missing__")) === "",
+      "Usuario do Sistema nao deve exibir restaurante no formulario."
+    );
+    assert.equal(
+      await masterPage.locator('.admin-users-dialog select[name="userType"] option').first().textContent(),
+      "SOCIO",
+      "Usuario do Sistema deve iniciar com o primeiro perfil abaixo de MASTER."
+    );
+    await masterContext.close();
 
     const mobileContext = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
     const mobilePage = await mobileContext.newPage();
@@ -389,22 +432,21 @@ const validateUsersBrowser = async (adminApi) => {
     });
     mobilePage.on("pageerror", (error) => pageErrors.push(`mobile:${String(error?.message || error)}`));
 
-    await loginBrowser(mobilePage, baseURL, "owner@usuarios-a.local", "SenhaOwnerV11");
+    await loginBrowser(mobilePage, baseURL, "master@v1-1.local", "SenhaMasterV11");
     await openUsersModule(mobilePage);
     const mobileLayout = await mobilePage.evaluate(() => {
       const tableWrap = document.querySelector(".admin-users-table-wrap");
-      const form = document.querySelector(".admin-users-form-card");
+      const firstCell = document.querySelector(".admin-users-table tbody td");
       const bodyOverflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
 
       return {
         hasTableScroll: tableWrap ? tableWrap.scrollWidth >= tableWrap.clientWidth : false,
-        formWidth: form ? form.getBoundingClientRect().width : 0,
+        tableCellDisplay: firstCell ? getComputedStyle(firstCell).display : "",
         viewportWidth: window.innerWidth,
         bodyOverflow,
       };
     });
-    assert.equal(mobileLayout.hasTableScroll, true, "Tabela mobile deve ficar dentro de wrapper rolavel.");
-    assert.ok(mobileLayout.formWidth <= mobileLayout.viewportWidth, "Formulario mobile nao deve exceder viewport.");
+    assert.equal(mobileLayout.tableCellDisplay, "flex", "Tabela mobile deve virar cards responsivos.");
     assert.ok(mobileLayout.bodyOverflow <= 4, "Pagina mobile nao deve gerar overflow horizontal relevante.");
     await mobileContext.close();
 
@@ -524,19 +566,43 @@ const run = async () => {
       "busca deve cobrir ID e CNPJ/MEI"
     );
 
+    const createSupport = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
+      cookie: master.cookie,
+      ip: "127.0.2.4",
+      body: {
+        user: {
+          name: "Suporte INovas",
+          login: "suporte@v1-1.local",
+          email: "suporte@v1-1.local",
+          password: "SenhaSuporteV11",
+          status: "ACTIVE",
+          userScope: "SYSTEM",
+          userType: "SUPORTE",
+        },
+      },
+    });
+    assert.equal(createSupport.statusCode, 200, "MASTER deve criar usuario do sistema sem restaurante");
+    assert.equal(createSupport.payload?.user?.restaurantKey, "", "Usuario do sistema nao deve ter restaurantKey");
+    assert.equal(createSupport.payload?.user?.platformScope, true, "Usuario do sistema deve ter platformScope");
+
     const adminUiSource = await readWorkspaceFile("admin/admin.js");
     assert.ok(
       adminUiSource.includes('{ key: "id", label: "ID"') &&
         adminUiSource.includes('{ key: "name", label: "Nome"') &&
         adminUiSource.includes('{ key: "restaurant", label: "Restaurante"') &&
         adminUiSource.includes('{ key: "plan", label: "Plano"') &&
+        adminUiSource.includes('{ key: "profile", label: "Perfil"') &&
         adminUiSource.includes('{ key: "status", label: "Status"') &&
         adminUiSource.includes('{ key: "actions", label: "Acoes"'),
-      "UI deve declarar tabela na ordem ID/Nome/Restaurante/Plano/Status/Acoes"
+      "UI deve declarar tabela na ordem ID/Nome/Restaurante/Plano/Perfil/Status/Acoes"
     );
     assert.ok(adminUiSource.includes("data-user-sort"), "UI deve expor ordenacao por colunas");
     assert.ok(adminUiSource.includes("data-user-page"), "UI deve expor paginacao");
     assert.ok(adminUiSource.includes("data-user-inline-search"), "UI deve expor busca da tela Usuarios");
+    assert.ok(adminUiSource.includes("data-user-scope"), "UI deve expor Tipo de usuario no cadastro");
 
     const owner = await loginAdmin(adminApi, {
       host: "usuarios-a.localhost",
@@ -729,7 +795,12 @@ const run = async () => {
       },
     });
     assert.equal(createMasterDenied.statusCode, 403, "OWNER nao deve criar MASTER");
-    assert.equal(createMasterDenied.payload?.errorCode, "owner_cannot_manage_platform_user");
+    assert.ok(
+      ["owner_cannot_manage_platform_user", "system_user_hierarchy_denied"].includes(
+        createMasterDenied.payload?.errorCode
+      ),
+      "OWNER deve continuar bloqueado ao tentar criar usuario de plataforma"
+    );
 
     const createOtherTenantDenied = await runAdminApi(adminApi, {
       method: "POST",

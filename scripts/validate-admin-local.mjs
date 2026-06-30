@@ -759,6 +759,18 @@ const buildFinancePayload = (orders) => {
   };
 };
 
+const mockRestaurantAdmin = {
+  login: "gestor.local",
+  displayName: "Gestor Local",
+  name: "Gestor Local",
+  userType: "OWNER",
+  tipo_usuario: "OWNER",
+  userScope: "RESTAURANT",
+  platformScope: false,
+  restaurantKey: "default",
+  restaurantName: "Tokyo Sushi Delivery",
+};
+
 const createRouteState = () => {
   const orders = buildOrders();
 
@@ -801,7 +813,7 @@ const handleAdminApiRoute = async (route, routeState) => {
     await fulfillJson(route, {
       ok: true,
       authenticated: routeState.authenticated,
-      admin: routeState.authenticated ? { login: "gestor.local", displayName: "Gestor Local" } : null,
+      admin: routeState.authenticated ? mockRestaurantAdmin : null,
     });
     return;
   }
@@ -817,7 +829,7 @@ const handleAdminApiRoute = async (route, routeState) => {
       ok: true,
       authenticated: true,
       redirectTo: "/admin/index.html",
-      admin: { login: "gestor.local", displayName: "Gestor Local" },
+      admin: mockRestaurantAdmin,
     });
     return;
   }
@@ -841,7 +853,7 @@ const handleAdminApiRoute = async (route, routeState) => {
       stats: routeState.stats,
       orders: routeState.orders,
       recentOrders: routeState.orders,
-      admin: { displayName: "Gestor Local" },
+      admin: mockRestaurantAdmin,
     });
     return;
   }

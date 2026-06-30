@@ -353,7 +353,8 @@ const createManagedUser = async (adminApi, masterCookie, user) => {
   });
 
   assert.equal(response.statusCode, 200, `Usuario ${user.login} deveria ser criado.`);
-  assert.equal(response.payload?.user?.restaurantKey, "default");
+  const systemUserTypes = new Set(["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]);
+  assert.equal(response.payload?.user?.restaurantKey, systemUserTypes.has(user.userType) ? "" : "default");
   assert.equal(response.payload?.user?.tipo_usuario, user.userType);
 
   return response.payload.user;
@@ -386,7 +387,8 @@ const validateApiMatrix = async (adminApi) => {
   const masterCookie = masterLogin.cookie;
 
   assert.equal(masterLogin.response.payload?.admin?.tipo_usuario, "MASTER");
-  assert.equal(masterLogin.response.payload?.admin?.restaurantKey, "default");
+  assert.equal(masterLogin.response.payload?.admin?.restaurantKey, "");
+  assert.equal(masterLogin.response.payload?.admin?.platformScope, true);
 
   const oldMasterLogin = await runAdminApi(adminApi, {
     method: "POST",
@@ -535,7 +537,10 @@ const validateApiMatrix = async (adminApi) => {
     403,
     "CUSTOM nao deve acessar API Master."
   );
-  assert.equal(customMaster.payload?.errorCode, "master_access_required");
+  assert.ok(
+    ["master_access_required", "platform_panel_access_required"].includes(customMaster.payload?.errorCode),
+    "CUSTOM deve continuar bloqueado no painel/API da plataforma."
+  );
 
   await expectApiStatus(
     adminApi,
@@ -661,6 +666,42 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
     );
     await masterContext.close();
 
+    const systemContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
+    const systemPage = await systemContext.newPage();
+    systemPage.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(`system:${message.text()}`);
+      }
+    });
+    systemPage.on("pageerror", (error) => pageErrors.push(`system:${String(error?.message || error)}`));
+
+    await loginBrowser(systemPage, baseURL, PROFILE_FIXTURES.master, "/admin/");
+    await waitForCondition(
+      async () => (await systemPage.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "dashboard",
+      "MASTER deveria abrir Gestor administrativo."
+    );
+    await validateRestaurantMenu(systemPage, {
+      minItems: 10,
+      includes: [
+        "Usuarios",
+        "Pedidos",
+        "Agendados",
+        "Cardapio",
+        "Entregas",
+        "Clientes",
+        "Promocoes",
+        "Metricas",
+        "Relatorios",
+        "Financeiro",
+        "Avaliacoes",
+        "Configuracoes",
+      ],
+      excludes: ["Dashboard", "Estoque", "Tokyo Sushi Delivery"],
+    });
+    assert.equal(await getText(systemPage, "[data-admin-main-title]"), "INovas Food");
+    assert.equal(await getText(systemPage, "[data-admin-welcome]"), "Administrador do Sistema");
+    await systemContext.close();
+
     const ownerContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const ownerPage = await ownerContext.newPage();
     ownerPage.on("console", (message) => {
@@ -676,10 +717,25 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
       "OWNER deveria abrir Gestor."
     );
     await validateRestaurantMenu(ownerPage, {
-      minItems: 8,
-      includes: ["Pedidos", "Financeiro", "Usuarios"],
+      minItems: 12,
+      includes: [
+        "Dashboard",
+        "Pedidos",
+        "Agendamentos",
+        "Cardapio",
+        "Entregas",
+        "Clientes",
+        "Promocoes",
+        "Metricas",
+        "Relatorios",
+        "Estoque",
+        "Financeiro",
+        "Avaliacoes",
+        "Configuracoes",
+      ],
       excludes: ["Painel Master", "Restaurantes", "Planos", "Recursos", "Dominios", "Assinaturas", "Relatorios Gerais", "Desenvolvedor"],
     });
+    assert.equal((await getText(ownerPage, "[data-admin-nav]")).includes("Usuarios"), false, "Menu de restaurante nao deve conter Usuarios.");
     await ownerContext.close();
 
     const customContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });

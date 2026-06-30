@@ -80,18 +80,18 @@
     "socialImage": "/site-images/combinado-imperial.png",
     "supportAvatar": "./site-images/support-avatar-duo.webp",
     "loginCover": "./site-images/login-cover-floating.png",
-    "adminSidebarLogo": "../assets/tokyo-logo-sidebar.png"
+    "adminSidebarLogo": "../assets/inovas-food-logo-oficial.png"
   },
   "adminBranding": {
-    "indexTitle": "Gestor de Pedidos | Tokyo Sushi Delivery",
-    "loginTitle": "Login do Gestor | Tokyo Sushi Delivery",
+    "indexTitle": "Gestor | INovas Food",
+    "loginTitle": "Login | INovas Food",
     "privateAreaLabel": "Area privada",
-    "loginHeadline": "Gestor web administrativo do Tokyo Sushi Delivery",
-    "loginPlaceholder": "admin@tokyosushidelivery.com.br",
-    "sidebarEyebrow": "Gestor privado",
-    "sidebarTitle": "Tokyo Sushi Delivery",
+    "loginHeadline": "Gestor web administrativo INovas Food",
+    "loginPlaceholder": "seuemail@exemplo.com",
+    "sidebarEyebrow": "INovas Food",
+    "sidebarTitle": "Painel Operacional",
     "sidebarSubtitle": "Gestor de pedidos",
-    "displayNameFallback": "Gestor Tokyo"
+    "displayNameFallback": "Gestor INovas"
   },
   "whatsappTemplates": {
     "orderSupport": "Ola, quero fazer um pedido no {restaurantName}.",

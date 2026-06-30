@@ -498,10 +498,10 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     );
     const startNavText = await getNavText(startPage);
 
-    ["Pedidos", "Cardapio", "Usuarios"].forEach((label) => {
+    ["Pedidos", "Cardapio"].forEach((label) => {
       assert.ok(startNavText.includes(label), `Menu START deveria conter ${label}.`);
     });
-    ["Financeiro", "Estoque", "Clientes", "Promocoes", "Relatorios", "Avaliacoes"].forEach((label) => {
+    ["Usuarios", "Financeiro", "Estoque", "Clientes", "Promocoes", "Relatorios", "Avaliacoes"].forEach((label) => {
       assert.equal(startNavText.includes(label), false, `Menu START nao deveria conter ${label}.`);
     });
     await startContext.close();
@@ -527,7 +527,35 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     ["Financeiro", "Estoque", "Clientes", "Promocoes"].forEach((label) => {
       assert.ok(premiumNavText.includes(label), `Menu PREMIUM deveria conter ${label}.`);
     });
+    assert.equal(
+      premiumNavText.includes("Usuarios"),
+      false,
+      "Menu PREMIUM de usuario de restaurante nao deveria conter Usuarios."
+    );
     await premiumContext.close();
+
+    const systemContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
+    const systemPage = await systemContext.newPage();
+    systemPage.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(`system:${message.text()}`);
+      }
+    });
+    systemPage.on("pageerror", (error) => pageErrors.push(`system:${String(error?.message || error)}`));
+
+    await loginBrowser(systemPage, baseURL, "usermaster@inovas.com", "novais753951");
+    await waitForCondition(
+      async () => (await systemPage.locator("[data-admin-nav] [data-admin-section]").count()) >= 10,
+      "Menu MASTER deveria renderizar navegacao do sistema."
+    );
+    const systemNavText = await getNavText(systemPage);
+    assert.ok(systemNavText.includes("Usuarios"), "Menu MASTER deveria conter Usuarios.");
+    assert.equal(
+      await systemPage.locator('[data-admin-section="users"]').count(),
+      1,
+      "Menu MASTER deveria expor a secao Usuarios por seletor estavel."
+    );
+    await systemContext.close();
 
     const customContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const customPage = await customContext.newPage();

@@ -614,7 +614,8 @@ export const runOnboarding = async () =>
       ip: "127.0.8.4",
     });
     assertStatus(defaultSession, 200, "Tokyo/default deve seguir intacto");
-    assert.equal(defaultSession.payload?.admin?.restaurantKey, "default");
+    assert.equal(defaultSession.payload?.admin?.restaurantKey, "");
+    assert.equal(defaultSession.payload?.admin?.platformScope, true);
   });
 
 export const runSubscription = async () =>

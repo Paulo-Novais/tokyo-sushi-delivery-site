@@ -1,193 +1,193 @@
 /* Restored from current production visual for Orders only. */
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-brand-copy strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar .admin-button,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar-card strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-main-intro h1,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-head h2,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-module-head h2,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-module-head h3,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-head h2,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-hero-main h3,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-card-head h3,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-stat-card strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-ribbon-card strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-id strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-customer strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-meta-line strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-summary-grid strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-fields strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-head h2,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-summary strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-row-top strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-row-meta strong {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-brand-copy strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar .admin-button,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-main-intro h1,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-module-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-module-head h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-hero-main h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-card-head h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-stat-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-ribbon-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-id strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-customer strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-meta-line strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-summary-grid strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-fields strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-summary strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-row-top strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-row-meta strong {
   color: #f5f7fb;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-main-intro p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-search-card small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-ribbon-card p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-empty-state span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-column-head p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-module-head p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-head p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-item small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-status-event p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-status-event-title strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-brand-copy small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar-card p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar-card small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-badge,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-search-label,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-customer p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-meta-line small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-footer small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-card-head span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-section h4,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-empty-inline,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-overflow-count,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-head p,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-row-top small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-row-meta small {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-main-intro p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-search-card small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-ribbon-card p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-empty-state span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-column-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-module-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-item small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-status-event p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-status-event-title strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-brand-copy small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar-card p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar-card small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-badge,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-search-label,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-customer p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-meta-line small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-footer small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-card-head span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-section h4,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-empty-inline,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-overflow-count,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-row-top small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-row-meta small {
   color: #9aa8bc;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-chip,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-eyebrow {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-chip,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-eyebrow {
   color: #f2f5fa;
   background: rgba(255, 255, 255, 0.06);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-main-intro,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-search-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-stat-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-ribbon-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-panel,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-panel,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-closed-panel,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-hero,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-spotlight-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-module-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-dispatch-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-lane-panel,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-lane-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-customer-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-mini-stat,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-payment-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-report-bar-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-metrics-trend-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-metrics-stage-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-metrics-breakdown-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-metrics-highlight-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-metrics-admin-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-audit-event,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-closed-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-transaction-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-history-order {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-main-intro,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-search-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-stat-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-ribbon-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-closed-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-hero,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-spotlight-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-module-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-dispatch-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-lane-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-lane-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-customer-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-mini-stat,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-payment-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-report-bar-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-metrics-trend-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-metrics-stage-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-metrics-breakdown-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-metrics-highlight-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-metrics-admin-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-audit-event,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-closed-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-transaction-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-history-order {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(13, 18, 27, 0.92);
   box-shadow: var(--admin-shadow-md);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-main-intro {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-main-intro {
   background:
     linear-gradient(135deg, rgba(235, 81, 54, 0.14), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 100%),
     rgba(17, 24, 35, 0.92);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-input {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-input {
   color: #f5f7fb;
   background: rgba(8, 12, 18, 0.92);
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-input::placeholder,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-textarea::placeholder {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-input::placeholder,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-textarea::placeholder {
   color: #7c8aa0;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-input:focus {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-input:focus {
   border-color: rgba(255, 123, 82, 0.64);
   box-shadow: 0 0 0 4px rgba(235, 81, 54, 0.16);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-button-primary,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-action-button.is-primary {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-button-primary,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-action-button.is-primary {
   color: #fff7ef;
   background: linear-gradient(135deg, #eb5136 0%, #ff7b52 100%);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-action-button.is-success {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-action-button.is-success {
   color: #eafff3;
   background: #12955d;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-action-button.is-info {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-action-button.is-info {
   color: #eef5ff;
   background: #2154d8;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-action-button.is-danger,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-overflow-button,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-close {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-action-button.is-danger,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-overflow-button,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-close {
   color: #f1f5f9;
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar .admin-button-secondary {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar .admin-button-secondary {
   color: #f8fafc;
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar .admin-button-ghost {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar .admin-button-ghost {
   color: #e5edf7;
   background: transparent;
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active small,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-badge,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-icon {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active small,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-badge,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-icon {
   color: #f8fafc;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-icon {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-icon {
   background: rgba(255, 255, 255, 0.08);
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-sidebar-card,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-head-meta,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-module-head-meta,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-head-meta-item,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-order-card-meta-line span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-summary-grid span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-fields span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-item,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-status-event,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-empty-state,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-empty-inline,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-mini-stat,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-inline-note,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-summary span,
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-board-modal-row-meta span {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-sidebar-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-head-meta,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-module-head-meta,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-head-meta-item,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-order-card-meta-line span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-summary-grid span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-fields span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-item,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-status-event,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-empty-state,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-empty-inline,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-mini-stat,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-inline-note,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-summary span,
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-board-modal-row-meta span {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
   color: #d3dae4;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-detail-panel {
+body.admin-body[data-admin-page="dashboard"][data-admin-theme="legacy-dark-disabled"][data-admin-section="orders"] .admin-detail-panel {
   background: rgba(11, 17, 26, 0.94);
 }
 

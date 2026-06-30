@@ -12,8 +12,8 @@ const ADMIN_BRANDING = Object.freeze(ADMIN_RUNTIME_CONFIG.adminBranding || {});
 const ADMIN_DEFAULT_ADDRESS = Object.freeze(ADMIN_APP_BRANDING.defaultAddress || {});
 const ADMIN_STORAGE_KEYS = Object.freeze(ADMIN_IDENTIFIERS.storageKeys || {});
 const ADMIN_THEME_STORAGE_KEY = ADMIN_STORAGE_KEYS.adminTheme || "tokyo_admin_theme";
-const ADMIN_THEME_DEFAULT = "dark";
-const ADMIN_THEME_OPTIONS = new Set(["light", "dark"]);
+const ADMIN_THEME_DEFAULT = "light";
+const ADMIN_THEME_OPTIONS = new Set(["light"]);
 const PUBLIC_SITE_LAYOUT_OPTIONS = Object.freeze([
   { key: "MODERN", label: "MODERN", helper: "Tokyo atual, banner grande, categorias horizontais e cards modernos." },
   { key: "CATALOGO", label: "CATALOGO", helper: "Menu lateral, produtos em lista e navegacao rapida." },
@@ -56,10 +56,10 @@ const CUSTOMER_CRM_SORT_OPTIONS = [
   { key: "orders-desc", label: "Mais pedidos" },
   { key: "lapsed-desc", label: "Mais tempo sem compra" },
 ];
-const NAV_SECTIONS = [
+const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "dashboard", label: "Dashboard", helper: "Resumo do turno" },
   { key: "orders", label: "Pedidos", helper: "Fila operacional" },
-  { key: "scheduled", label: "Agendados", helper: "Pedidos futuros" },
+  { key: "scheduled", label: "Agendamentos", helper: "Pedidos futuros" },
   { key: "menu", label: "Cardapio", helper: "Produtos e combos" },
   { key: "deliveries", label: "Entregas", helper: "Motoboys e rotas" },
   { key: "customers", label: "Clientes", helper: "Base recorrente" },
@@ -70,8 +70,27 @@ const NAV_SECTIONS = [
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
   { key: "reviews", label: "Avaliacoes", helper: "Feedback do cliente" },
   { key: "settings", label: "Configuracoes", helper: "Ajustes do sistema" },
-  { key: "users", label: "Usuarios", helper: "Acessos e permissoes" },
-];
+]);
+const SYSTEM_NAV_SECTIONS = Object.freeze([
+  { key: "users", label: "Usuarios", helper: "Acessos da plataforma" },
+  { key: "orders", label: "Pedidos", helper: "Pesquisa por restaurante" },
+  { key: "scheduled", label: "Agendados", helper: "Agenda por restaurante" },
+  { key: "menu", label: "Cardapio", helper: "Catalogos por restaurante" },
+  { key: "deliveries", label: "Entregas", helper: "Operacao por restaurante" },
+  { key: "customers", label: "Clientes", helper: "Base por restaurante" },
+  { key: "promotions", label: "Promocoes", helper: "Campanhas por restaurante" },
+  { key: "metrics", label: "Metricas", helper: "Consolidado ou restaurante" },
+  { key: "reports", label: "Relatorios", helper: "Consolidado ou restaurante" },
+  { key: "finance", label: "Financeiro", helper: "Consolidado ou restaurante" },
+  { key: "reviews", label: "Avaliacoes", helper: "Feedback por restaurante" },
+  { key: "settings", label: "Configuracoes", helper: "Ajustes da plataforma" },
+]);
+const NAV_SECTIONS = Object.freeze([
+  ...RESTAURANT_NAV_SECTIONS,
+  ...SYSTEM_NAV_SECTIONS.filter(
+    (systemSection) => !RESTAURANT_NAV_SECTIONS.some((section) => section.key === systemSection.key)
+  ),
+]);
 const IMPLEMENTED_SECTIONS = new Set([
   "dashboard",
   "orders",
@@ -118,8 +137,50 @@ const SECTION_FEATURE_MAP = Object.freeze({
   finance: "finance",
   reviews: "reviews",
 });
+const SYSTEM_GLOBAL_FILTERS = Object.freeze({
+  orders: Object.freeze([
+    { key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" },
+    { key: "order", label: "Pedido", placeholder: "ID ou codigo" },
+    { key: "customer", label: "Cliente", placeholder: "Nome ou telefone" },
+    { key: "status", label: "Status", placeholder: "Todos" },
+    { key: "date", label: "Data", type: "date", placeholder: "" },
+  ]),
+  scheduled: Object.freeze([
+    { key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" },
+    { key: "order", label: "Pedido", placeholder: "ID ou codigo" },
+    { key: "customer", label: "Cliente", placeholder: "Nome ou telefone" },
+    { key: "date", label: "Data", type: "date", placeholder: "" },
+  ]),
+  customers: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" }]),
+  menu: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" }]),
+  deliveries: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" }]),
+  promotions: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" }]),
+  reviews: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" }]),
+  finance: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Consolidado da plataforma" }]),
+  reports: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Consolidado da plataforma" }]),
+  metrics: Object.freeze([{ key: "restaurant", label: "Restaurante", placeholder: "Consolidado da plataforma" }]),
+});
 const USER_TYPE_OPTIONS = Object.freeze([
   { key: "MASTER", label: "MASTER" },
+  { key: "SOCIO", label: "SOCIO" },
+  { key: "DESENVOLVEDOR", label: "Desenvolvedor" },
+  { key: "SUPORTE", label: "Suporte" },
+  { key: "VENDEDOR", label: "Vendedor" },
+  { key: "OWNER", label: "OWNER" },
+  { key: "GERENTE", label: "Gerente" },
+  { key: "CAIXA", label: "Caixa" },
+  { key: "COZINHA", label: "Cozinha" },
+  { key: "ESTOQUE", label: "Estoque" },
+  { key: "ENTREGADOR", label: "Entregador" },
+]);
+const SYSTEM_USER_TYPE_OPTIONS = Object.freeze([
+  { key: "MASTER", label: "MASTER" },
+  { key: "SOCIO", label: "SOCIO" },
+  { key: "DESENVOLVEDOR", label: "Desenvolvedor" },
+  { key: "SUPORTE", label: "Suporte" },
+  { key: "VENDEDOR", label: "Vendedor" },
+]);
+const RESTAURANT_USER_TYPE_OPTIONS = Object.freeze([
   { key: "OWNER", label: "OWNER" },
   { key: "GERENTE", label: "Gerente" },
   { key: "CAIXA", label: "Caixa" },
@@ -128,7 +189,29 @@ const USER_TYPE_OPTIONS = Object.freeze([
   { key: "ENTREGADOR", label: "Entregador" },
 ]);
 const OWNER_USER_TYPE_OPTIONS = Object.freeze(
-  USER_TYPE_OPTIONS.filter((option) => !["MASTER", "OWNER"].includes(option.key))
+  RESTAURANT_USER_TYPE_OPTIONS.filter((option) => option.key !== "OWNER")
+);
+const USER_SCOPE_OPTIONS = Object.freeze([
+  { key: "SYSTEM", label: "Usuario do Sistema" },
+  { key: "RESTAURANT", label: "Usuario de Restaurante" },
+]);
+const SYSTEM_USER_TYPES = Object.freeze(SYSTEM_USER_TYPE_OPTIONS.map((option) => option.key));
+const RESTAURANT_USER_TYPES = Object.freeze(RESTAURANT_USER_TYPE_OPTIONS.map((option) => option.key));
+const SYSTEM_USER_TYPE_SET = new Set(SYSTEM_USER_TYPES);
+const RESTAURANT_USER_TYPE_SET = new Set(RESTAURANT_USER_TYPES);
+const SYSTEM_USER_HIERARCHY = Object.freeze(["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]);
+const SYSTEM_USER_MANAGEABLE_TYPES = Object.freeze({
+  MASTER: Object.freeze(["SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]),
+  SOCIO: Object.freeze(["DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]),
+  DESENVOLVEDOR: Object.freeze(["SUPORTE", "VENDEDOR"]),
+  SUPORTE: Object.freeze(["VENDEDOR"]),
+  VENDEDOR: Object.freeze([]),
+});
+const USER_TYPE_LABELS = Object.freeze(
+  USER_TYPE_OPTIONS.reduce((labels, option) => {
+    labels[option.key] = option.label;
+    return labels;
+  }, {})
 );
 const USER_STATUS_OPTIONS = Object.freeze([
   { key: "ACTIVE", label: "Ativo" },
@@ -141,6 +224,7 @@ const USER_TABLE_COLUMNS = Object.freeze([
   { key: "name", label: "Nome", sortable: true },
   { key: "restaurant", label: "Restaurante", sortable: true },
   { key: "plan", label: "Plano", sortable: true },
+  { key: "profile", label: "Perfil", sortable: true },
   { key: "status", label: "Status", sortable: true },
   { key: "actions", label: "Acoes", sortable: false },
 ]);
@@ -650,6 +734,7 @@ const adminState = {
   adminDisplayName: "",
   adminUserType: "MASTER",
   adminRestaurantKey: "default",
+  adminPlatformScope: false,
   adminPermissions: null,
   adminPermissionModules: USER_PERMISSION_MODULES_FALLBACK,
   commercialAccess: null,
@@ -724,10 +809,19 @@ const adminState = {
   userBusyLogin: "",
   selectedUserLogin: "",
   userDraft: null,
+  userDialogMode: "",
   userFilters: {
+    restaurant: "",
     profile: "",
     status: "",
   },
+  systemFilters: Object.keys(SYSTEM_GLOBAL_FILTERS).reduce((filters, sectionKey) => {
+    filters[sectionKey] = SYSTEM_GLOBAL_FILTERS[sectionKey].reduce((sectionFilters, filter) => {
+      sectionFilters[filter.key] = "";
+      return sectionFilters;
+    }, {});
+    return filters;
+  }, {}),
   userSort: {
     key: "id",
     direction: "asc",
@@ -809,12 +903,7 @@ const resolveCanonicalOrderStatus = (status, fulfillmentMode = "") => {
 };
 
 const getStoredAdminTheme = () => {
-  try {
-    const storedTheme = String(window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY) || "").trim();
-    return ADMIN_THEME_OPTIONS.has(storedTheme) ? storedTheme : ADMIN_THEME_DEFAULT;
-  } catch (error) {
-    return ADMIN_THEME_DEFAULT;
-  }
+  return ADMIN_THEME_DEFAULT;
 };
 
 const syncThemeToggle = () => {
@@ -824,12 +913,9 @@ const syncThemeToggle = () => {
     return;
   }
 
-  const isDarkTheme = adminState.theme === "dark";
-  const nextThemeLabel = isDarkTheme ? "claro" : "escuro";
-
-  themeToggleButton.setAttribute("aria-pressed", isDarkTheme ? "true" : "false");
-  themeToggleButton.setAttribute("aria-label", `Ativar tema ${nextThemeLabel}`);
-  themeToggleButton.setAttribute("title", `Ativar tema ${nextThemeLabel}`);
+  themeToggleButton.setAttribute("aria-pressed", "false");
+  themeToggleButton.setAttribute("aria-label", "Tema claro oficial INovas Food");
+  themeToggleButton.setAttribute("title", "Tema claro oficial INovas Food");
 };
 
 const applyAdminTheme = (theme, { persist = true } = {}) => {
@@ -846,7 +932,7 @@ const applyAdminTheme = (theme, { persist = true } = {}) => {
 
   if (persist) {
     try {
-      window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, resolvedTheme);
+      window.localStorage.removeItem(ADMIN_THEME_STORAGE_KEY);
     } catch (error) {
       // Ignoramos falhas de persistencia local para nao bloquear a interface.
     }
@@ -893,8 +979,14 @@ const syncAdminAccessFromPayload = (admin = {}) => {
     adminState.adminUserType = admin.userType || admin.tipo_usuario;
   }
 
+  if (Object.prototype.hasOwnProperty.call(admin, "platformScope")) {
+    adminState.adminPlatformScope = admin.platformScope === true;
+  } else if (admin.userScope) {
+    adminState.adminPlatformScope = String(admin.userScope || "").toUpperCase() === "SYSTEM";
+  }
+
   if (Object.prototype.hasOwnProperty.call(admin, "restaurantKey")) {
-    adminState.adminRestaurantKey = admin.restaurantKey || "default";
+    adminState.adminRestaurantKey = adminState.adminPlatformScope ? "" : admin.restaurantKey || "default";
   }
 
   const permissions = normalizeAdminPermissionsPayload(admin.permissions);
@@ -960,17 +1052,28 @@ const hasPlanFeatureForSection = (sectionKey) => {
 const canAccessAdminSection = (sectionKey) =>
   hasAdminPermission(SECTION_PERMISSION_MAP[sectionKey] || "") && hasPlanFeatureForSection(sectionKey);
 
+const getNavigationSectionsForActor = () =>
+  isSystemAdminActor() ? SYSTEM_NAV_SECTIONS : RESTAURANT_NAV_SECTIONS;
+
+const getNavigationSectionByKey = (sectionKey) =>
+  getNavigationSectionsForActor().find((section) => section.key === sectionKey) ||
+  NAV_SECTIONS.find((section) => section.key === sectionKey) ||
+  null;
+
 const getVisibleNavSections = () =>
-  NAV_SECTIONS.filter((section) => canAccessAdminSection(section.key));
+  getNavigationSectionsForActor().filter((section) => canAccessAdminSection(section.key));
 
 const ensureActiveSectionAllowed = () => {
-  if (canAccessAdminSection(adminState.activeSection)) {
+  if (
+    getVisibleNavSections().some((section) => section.key === adminState.activeSection) &&
+    canAccessAdminSection(adminState.activeSection)
+  ) {
     return;
   }
 
   adminState.activeSection =
     getVisibleNavSections().find((section) => IMPLEMENTED_SECTIONS.has(section.key))?.key ||
-    "orders";
+    (isSystemAdminActor() ? "users" : "orders");
 };
 
 const escapeHtml = (value) =>
@@ -2986,9 +3089,12 @@ const renderSectionChrome = () => {
   const isInventorySection = adminState.activeSection === "inventory";
   const isCustomersSection = adminState.activeSection === "customers";
   const isUsersSection = adminState.activeSection === "users";
+  const isMasterPlatformHeader = getAdminUserActorType() === "MASTER" && isSystemAdminActor();
 
   if (chipNode) {
-    chipNode.textContent = isDashboardSection
+    chipNode.textContent = isMasterPlatformHeader
+      ? "Painel Administrativo"
+      : isDashboardSection
       ? "Dashboard gerencial"
       : isOrdersSection
         ? "Operacao em tempo real"
@@ -2996,7 +3102,9 @@ const renderSectionChrome = () => {
   }
 
   if (titleNode) {
-    titleNode.textContent = isDashboardSection
+    titleNode.textContent = isMasterPlatformHeader
+      ? "INovas Food"
+      : isDashboardSection
       ? "Resumo do turno e indicadores"
       : isOrdersSection
         ? "Pedidos"
@@ -3004,7 +3112,9 @@ const renderSectionChrome = () => {
   }
 
   if (welcomeNode) {
-    welcomeNode.textContent = isDashboardSection
+    welcomeNode.textContent = isMasterPlatformHeader
+      ? "Administrador do Sistema"
+      : isDashboardSection
       ? "Acompanhe em tempo real o desempenho do turno, pedidos e entregas. Dados atualizados automaticamente."
       : isOrdersSection
         ? "Acompanhe e gerencie todos os pedidos em tempo real, com a proxima acao sempre visivel para a operacao."
@@ -8844,9 +8954,43 @@ const getUserProfilePermissions = (userType) => {
 
 const getAdminUserActorType = () => String(adminState.adminUserType || "").trim().toUpperCase();
 
-const canManageAdminUsers = () => ["MASTER", "OWNER"].includes(getAdminUserActorType());
+const isSystemUserType = (userType) => SYSTEM_USER_TYPE_SET.has(String(userType || "").trim().toUpperCase());
 
-const canManagePlatformUsers = () => getAdminUserActorType() === "MASTER";
+const normalizeAdminUserScope = (value, userType = "") => {
+  const normalizedValue = String(value || "").trim().toUpperCase();
+
+  if (["SYSTEM", "SISTEMA", "PLATFORM", "PLATAFORMA"].includes(normalizedValue)) {
+    return "SYSTEM";
+  }
+
+  if (["RESTAURANT", "RESTAURANTE", "OPERACIONAL"].includes(normalizedValue)) {
+    return "RESTAURANT";
+  }
+
+  return isSystemUserType(userType) ? "SYSTEM" : "RESTAURANT";
+};
+
+const getAdminUserScope = (user = {}) =>
+  normalizeAdminUserScope(
+    user.userScope || user.user_scope || (user.platformScope === true ? "SYSTEM" : ""),
+    user.userType || user.tipo_usuario
+  );
+
+const isSystemAdminActor = () =>
+  adminState.adminPlatformScope === true || isSystemUserType(getAdminUserActorType());
+
+const getManageableSystemUserTypesForActor = () =>
+  SYSTEM_USER_MANAGEABLE_TYPES[getAdminUserActorType()] || [];
+
+const canManageSystemUsers = () => getManageableSystemUserTypesForActor().length > 0;
+
+const canManageRestaurantUsers = () => ["MASTER", "SOCIO", "SUPORTE", "OWNER"].includes(getAdminUserActorType());
+
+const canManageAdminUsers = () => canManageSystemUsers() || canManageRestaurantUsers();
+
+const canManagePlatformUsers = () => canManageSystemUsers();
+
+const canManageUserScopes = () => isSystemAdminActor() && (canManageSystemUsers() || canManageRestaurantUsers());
 
 const canCreateAdminUsers = () => canManageAdminUsers() && hasAdminPermission("users_create");
 
@@ -8854,9 +8998,20 @@ const canEditAdminUsers = () => canManageAdminUsers() && hasAdminPermission("use
 
 const canDeleteAdminUsers = () => canManageAdminUsers() && hasAdminPermission("users_delete");
 
-const getAdminUserTypeOptions = (selectedType = "GERENTE") => {
+const getAdminUserTypeOptions = (selectedType = "GERENTE", userScope = "") => {
   const normalizedSelectedType = String(selectedType || "GERENTE").trim().toUpperCase();
-  const baseOptions = canManagePlatformUsers() ? USER_TYPE_OPTIONS : OWNER_USER_TYPE_OPTIONS;
+  const normalizedScope = normalizeAdminUserScope(userScope, normalizedSelectedType);
+  const actorType = getAdminUserActorType();
+  const baseOptions =
+    normalizedScope === "SYSTEM"
+      ? SYSTEM_USER_TYPE_OPTIONS.filter((option) =>
+          getManageableSystemUserTypesForActor().includes(option.key)
+        )
+      : actorType === "OWNER"
+        ? OWNER_USER_TYPE_OPTIONS
+        : canManageRestaurantUsers()
+          ? RESTAURANT_USER_TYPE_OPTIONS
+          : [];
   const options = [...baseOptions];
 
   if (normalizedSelectedType && !options.some((option) => option.key === normalizedSelectedType)) {
@@ -8871,19 +9026,34 @@ const getAdminUserTypeOptions = (selectedType = "GERENTE") => {
 
 const canSubmitSelectedAdminUser = (user) => {
   const userType = String(user?.userType || user?.tipo_usuario || "GERENTE").trim().toUpperCase();
+  const userScope = getAdminUserScope(user);
+  const actorType = getAdminUserActorType();
 
-  if (!getAdminUserTypeOptions(userType).some((option) => option.key === userType)) {
+  if (!getAdminUserTypeOptions(userType, userScope).some((option) => option.key === userType)) {
     return false;
   }
 
-  if (!canManagePlatformUsers() && ["MASTER", "OWNER"].includes(userType)) {
-    return false;
+  if (userScope === "SYSTEM") {
+    return getManageableSystemUserTypesForActor().includes(userType);
   }
 
-  return true;
+  if (actorType === "OWNER") {
+    const targetRestaurant = String(user?.restaurantKey || getCurrentUsersRestaurantKey()).trim();
+    return (
+      RESTAURANT_USER_TYPE_SET.has(userType) &&
+      userType !== "OWNER" &&
+      targetRestaurant === getCurrentUsersRestaurantKey()
+    );
+  }
+
+  return canManageRestaurantUsers() && RESTAURANT_USER_TYPE_SET.has(userType);
 };
 
 const getCurrentUsersRestaurantKey = () => {
+  if (isSystemAdminActor()) {
+    return "";
+  }
+
   const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
   const firstRestaurantKey = users.find((user) => user.restaurantKey)?.restaurantKey || "";
 
@@ -8901,8 +9071,9 @@ const getAdminUserId = (user = {}) => user.id || user.directoryId || user.login 
 
 const getAdminUserRestaurantName = (user = {}) => {
   const type = String(user.userType || user.tipo_usuario || "").toUpperCase();
+  const scope = getAdminUserScope(user);
 
-  if (type === "MASTER" && user.platformScope === true) {
+  if (scope === "SYSTEM" || (type === "MASTER" && user.platformScope === true)) {
     return "Plataforma INovas Food";
   }
 
@@ -8911,8 +9082,9 @@ const getAdminUserRestaurantName = (user = {}) => {
 
 const getAdminUserPlan = (user = {}) => {
   const type = String(user.userType || user.tipo_usuario || "").toUpperCase();
+  const scope = getAdminUserScope(user);
 
-  if (type === "MASTER" && user.platformScope === true) {
+  if (scope === "SYSTEM" || (type === "MASTER" && user.platformScope === true)) {
     return "PLATAFORMA";
   }
 
@@ -8927,6 +9099,18 @@ const getAdminUserPlan = (user = {}) => {
 };
 
 const getAdminUserCnpj = (user = {}) => user.cnpjMei || user.taxId || user.document || "";
+
+const getAdminUserProfileLabel = (user = {}) => {
+  const userType = String(user.userType || user.tipo_usuario || "").trim().toUpperCase();
+  return user.userTypeLabel || USER_TYPE_LABELS[userType] || userType || "--";
+};
+
+const getAdminUserInitials = (user = {}) => {
+  const name = String(user.name || user.nome || user.email || user.login || "").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const initials = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : name.slice(0, 2);
+  return initials.toUpperCase() || "US";
+};
 
 const getAdminUserSearchText = (user = {}) =>
   normalizeInventorySearchValue(
@@ -8952,6 +9136,7 @@ const getAdminUserSearchText = (user = {}) =>
 
 const getFilteredAdminUsers = () => {
   const query = normalizeInventorySearchValue(adminState.searchQuery);
+  const restaurantFilter = String(adminState.userFilters.restaurant || "").trim();
   const profileFilter = String(adminState.userFilters.profile || "").trim().toUpperCase();
   const statusFilter = String(adminState.userFilters.status || "").trim().toUpperCase();
   const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
@@ -8959,11 +9144,13 @@ const getFilteredAdminUsers = () => {
   return users.filter((user) => {
     const userType = String(user.userType || user.tipo_usuario || "").trim().toUpperCase();
     const userStatus = String(user.status || "").trim().toUpperCase();
+    const userRestaurant = String(user.restaurantKey || "").trim();
     const matchesSearch = !query || getAdminUserSearchText(user).includes(query);
+    const matchesRestaurant = !restaurantFilter || userRestaurant === restaurantFilter;
     const matchesProfile = !profileFilter || userType === profileFilter;
     const matchesStatus = !statusFilter || userStatus === statusFilter;
 
-    return matchesSearch && matchesProfile && matchesStatus;
+    return matchesSearch && matchesRestaurant && matchesProfile && matchesStatus;
   });
 };
 
@@ -8978,6 +9165,10 @@ const getAdminUserSortValue = (user = {}, key = "id") => {
 
   if (key === "plan") {
     return getAdminUserPlan(user);
+  }
+
+  if (key === "profile") {
+    return getAdminUserProfileLabel(user);
   }
 
   if (key === "status") {
@@ -9026,10 +9217,15 @@ const getBlankAdminUser = () => ({
   email: "",
   phone: "",
   telefone: "",
-  restaurantKey: getCurrentUsersRestaurantKey(),
+  restaurantKey: isSystemAdminActor() && canManageSystemUsers() ? "" : getCurrentUsersRestaurantKey(),
   status: "ACTIVE",
-  userType: "GERENTE",
-  tipo_usuario: "GERENTE",
+  userScope: isSystemAdminActor() && canManageSystemUsers() ? "SYSTEM" : "RESTAURANT",
+  userType: isSystemAdminActor() && canManageSystemUsers()
+    ? getManageableSystemUserTypesForActor()[0] || "VENDEDOR"
+    : "GERENTE",
+  tipo_usuario: isSystemAdminActor() && canManageSystemUsers()
+    ? getManageableSystemUserTypesForActor()[0] || "VENDEDOR"
+    : "GERENTE",
   permissions: {},
   effectivePermissions: {},
   createdAt: "",
@@ -9062,10 +9258,13 @@ const getSelectedAdminUser = () => {
 
 const renderAdminUserStatus = (user) => {
   const isBlocked = user.status === "BLOCKED";
+  const isActive = user.status === "ACTIVE";
+  const statusClass = isBlocked ? "is-blocked" : isActive ? "is-active" : "is-inactive";
 
   return `
-    <span class="admin-user-status${isBlocked ? " is-blocked" : " is-active"}">
-      ${escapeHtml(user.statusLabel || (isBlocked ? "Bloqueado" : "Ativo"))}
+    <span class="admin-user-status ${statusClass}">
+      <span class="admin-user-status-dot" aria-hidden="true"></span>
+      ${escapeHtml(user.statusLabel || (isBlocked ? "Bloqueado" : isActive ? "Ativo" : "Inativo"))}
     </span>
   `;
 };
@@ -9087,25 +9286,39 @@ const renderAdminUserSortButton = (column) => {
   `;
 };
 
+const renderAdminUserIcon = (icon) => {
+  const icons = {
+    view: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.8 12s3.3-6 9.2-6 9.2 6 9.2 6-3.3 6-9.2 6-9.2-6-9.2-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.8"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 4.7-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm11.2-13.2 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    delete: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+
+  return icons[icon] || "";
+};
+
 const renderAdminUserActions = (user) => {
   const login = user.login || "";
-  const isSelected = adminState.selectedUserLogin === login;
   const canEditUser = canEditAdminUsers() && canSubmitSelectedAdminUser(user);
   const canDeleteUser = canDeleteAdminUsers() && canSubmitSelectedAdminUser(user);
   const isBusy = adminState.userBusyLogin === login || adminState.userSaving;
 
   return `
     <div class="admin-user-row-actions">
-      <button class="admin-action-button is-compact" type="button" data-user-select="${escapeHtml(login)}">
-        ${escapeHtml(canEditUser ? (isSelected ? "Editando" : "Editar") : "Visualizar")}
+      <button class="admin-user-icon-button" type="button" data-user-view="${escapeHtml(login)}" aria-label="Visualizar usuario" title="Visualizar usuario">
+        ${renderAdminUserIcon("view")}
+      </button>
+      <button class="admin-user-icon-button" type="button" data-user-select="${escapeHtml(login)}" aria-label="Editar usuario" title="Editar usuario" ${!canEditUser ? "disabled" : ""}>
+        ${renderAdminUserIcon("edit")}
       </button>
       <button
-        class="admin-action-button is-compact is-danger"
+        class="admin-user-icon-button is-danger"
         type="button"
         data-user-delete="${escapeHtml(login)}"
+        aria-label="Excluir usuario"
+        title="Excluir usuario"
         ${isBusy || !canDeleteUser ? "disabled" : ""}
       >
-        ${adminState.userBusyLogin === login ? "Excluindo..." : "Excluir"}
+        ${renderAdminUserIcon("delete")}
       </button>
     </div>
   `;
@@ -9113,24 +9326,32 @@ const renderAdminUserActions = (user) => {
 
 const renderAdminUserRow = (user) => {
   const isSelected = adminState.selectedUserLogin === user.login;
+  const profileKey = String(user.userType || user.tipo_usuario || "").trim().toLowerCase();
+  const plan = getAdminUserPlan(user) || "--";
 
   return `
     <tr class="${isSelected ? "is-selected" : ""}" data-user-row="${escapeHtml(user.login || "")}">
       <td>
         <strong>${escapeHtml(getAdminUserId(user) || "--")}</strong>
-        <small>${escapeHtml(user.login || "--")}</small>
       </td>
       <td>
-        <strong>${escapeHtml(user.name || user.nome || user.email || "--")}</strong>
-        <small>${escapeHtml(user.email || "Sem e-mail")}</small>
+        <div class="admin-user-identity">
+          <span class="admin-user-avatar" aria-hidden="true">${escapeHtml(getAdminUserInitials(user))}</span>
+          <span>
+            <strong>${escapeHtml(user.name || user.nome || user.email || "--")}</strong>
+            <small>${escapeHtml(user.email || "Sem e-mail")}</small>
+          </span>
+        </div>
       </td>
       <td>
         <strong>${escapeHtml(getAdminUserRestaurantName(user) || "--")}</strong>
         <small>${escapeHtml(user.phone || user.telefone || getAdminUserCnpj(user) || "--")}</small>
       </td>
       <td>
-        <strong>${escapeHtml(getAdminUserPlan(user) || "--")}</strong>
-        <small>${escapeHtml(user.userTypeLabel || user.userType || user.tipo_usuario || "--")}</small>
+        <span class="admin-user-badge is-plan">${escapeHtml(plan)}</span>
+      </td>
+      <td>
+        <span class="admin-user-badge is-profile is-${escapeHtml(profileKey)}">${escapeHtml(getAdminUserProfileLabel(user))}</span>
       </td>
       <td>${renderAdminUserStatus(user)}</td>
       <td>${renderAdminUserActions(user)}</td>
@@ -9256,8 +9477,25 @@ const renderAdminUsersPagination = () => {
   `;
 };
 
+const getAdminUsersRestaurantFilterOptions = () => {
+  const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
+  const options = new Map();
+
+  users.forEach((user) => {
+    const restaurantKey = String(user.restaurantKey || "").trim();
+
+    if (restaurantKey) {
+      options.set(restaurantKey, getAdminUserRestaurantName(user));
+    }
+  });
+
+  return [...options.entries()]
+    .map(([key, label]) => ({ key, label }))
+    .sort((left, right) => left.label.localeCompare(right.label, "pt-BR", { sensitivity: "base" }));
+};
+
 const renderAdminUsersFilters = () => `
-  <div class="admin-users-toolbar">
+  <div class="admin-users-toolbar" aria-label="Filtros de usuarios">
     <label class="admin-delivery-field">
       <span>Busca</span>
       <input
@@ -9267,6 +9505,17 @@ const renderAdminUsersFilters = () => `
         placeholder="ID, nome, restaurante, e-mail, telefone ou CNPJ"
         data-user-inline-search
       />
+    </label>
+    <label class="admin-delivery-field">
+      <span>Restaurante</span>
+      <select class="admin-input" data-user-filter="restaurant">
+        <option value="">Todos</option>
+        ${getAdminUsersRestaurantFilterOptions().map((option) => `
+          <option value="${escapeHtml(option.key)}" ${adminState.userFilters.restaurant === option.key ? "selected" : ""}>
+            ${escapeHtml(option.label)}
+          </option>
+        `).join("")}
+      </select>
     </label>
     <label class="admin-delivery-field">
       <span>Perfil</span>
@@ -9290,8 +9539,195 @@ const renderAdminUsersFilters = () => `
         `).join("")}
       </select>
     </label>
+    <button class="admin-button admin-button-secondary admin-users-clear-filters" type="button" data-user-clear-filters>
+      Limpar filtros
+    </button>
   </div>
 `;
+
+const renderAdminUserScopeField = ({ userScope, disabled }) => {
+  if (!canManagePlatformUsers()) {
+    return `
+      <input type="hidden" name="userScope" value="RESTAURANT" />
+      <div class="admin-user-scope-readonly">
+        <span>Tipo de usuario</span>
+        <strong>Usuario de Restaurante</strong>
+      </div>
+    `;
+  }
+
+  return `
+    <fieldset class="admin-user-scope-group">
+      <legend>Tipo de usuario</legend>
+      ${USER_SCOPE_OPTIONS.map((option) => `
+        <label class="admin-user-scope-option">
+          <input
+            type="radio"
+            name="userScope"
+            value="${escapeHtml(option.key)}"
+            data-user-scope
+            ${option.key === userScope ? "checked" : ""}
+            ${disabled ? "disabled" : ""}
+          />
+          <span>${escapeHtml(option.label)}</span>
+        </label>
+      `).join("")}
+    </fieldset>
+  `;
+};
+
+const renderAdminUserDialog = () => {
+  if (!adminState.userDialogMode) {
+    return "";
+  }
+
+  const selectedUser = getSelectedAdminUser();
+  const isCreating = adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN || !selectedUser.login;
+  const isViewing = adminState.userDialogMode === "view";
+  const isBusy = adminState.isLoadingUsers || adminState.userSaving;
+  const userScope = getAdminUserScope(selectedUser);
+  const selectedUserType = selectedUser.userType || selectedUser.tipo_usuario || (userScope === "SYSTEM" ? "MASTER" : "GERENTE");
+  const selectedUserCanSubmit =
+    (isCreating ? canCreateAdminUsers() : canEditAdminUsers()) && canSubmitSelectedAdminUser(selectedUser);
+  const formDisabled = isViewing || isBusy || !selectedUserCanSubmit;
+  const selectedRestaurantKey = userScope === "SYSTEM" ? "" : selectedUser.restaurantKey || getCurrentUsersRestaurantKey();
+  const dialogTitle = isViewing
+    ? selectedUser.name || selectedUser.login || "Visualizar usuario"
+    : isCreating
+      ? "Novo usuario"
+      : selectedUser.name || selectedUser.login || "Editar usuario";
+
+  return `
+    <div class="admin-users-modal" role="presentation">
+      <button class="admin-users-modal-backdrop" type="button" data-user-dialog-close aria-label="Fechar formulario"></button>
+      <aside class="admin-users-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-user-dialog-title">
+        <header class="admin-users-dialog-head">
+          <div>
+            <span class="admin-chip">${escapeHtml(isViewing ? "Visualizacao" : isCreating ? "Cadastro" : "Edicao")}</span>
+            <h3 id="admin-user-dialog-title">${escapeHtml(dialogTitle)}</h3>
+            <p>${escapeHtml(userScope === "SYSTEM" ? "Usuario da plataforma INovas Food." : "Usuario vinculado a um restaurante.")}</p>
+          </div>
+          <button class="admin-user-icon-button" type="button" data-user-dialog-close aria-label="Fechar" title="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+        </header>
+
+        <form class="admin-users-form-card" data-user-form>
+          <input type="hidden" name="id" value="${escapeHtml(selectedUser.id || "")}" />
+          <input type="hidden" name="login" value="${escapeHtml(selectedUser.login || "")}" />
+
+          ${renderAdminUserScopeField({ userScope, disabled: isViewing || isBusy || !canManageUserScopes() })}
+
+          <div class="admin-users-form-grid">
+            <label class="admin-delivery-field">
+              <span>Nome</span>
+              <input class="admin-input" name="name" value="${escapeHtml(selectedUser.name || selectedUser.nome || "")}" ${formDisabled ? "disabled" : ""} required />
+            </label>
+            <label class="admin-delivery-field">
+              <span>E-mail</span>
+              <input class="admin-input" name="email" type="email" value="${escapeHtml(selectedUser.email || "")}" ${formDisabled ? "disabled" : ""} required />
+            </label>
+            <label class="admin-delivery-field">
+              <span>Telefone</span>
+              <input class="admin-input" name="phone" inputmode="tel" value="${escapeHtml(selectedUser.phone || selectedUser.telefone || "")}" ${formDisabled ? "disabled" : ""} required />
+            </label>
+            ${
+              userScope === "RESTAURANT"
+                ? `
+                  <label class="admin-delivery-field">
+                    <span>Restaurante</span>
+                    <input
+                      class="admin-input"
+                      name="restaurantKey"
+                      value="${escapeHtml(selectedRestaurantKey)}"
+                      ${formDisabled ? "disabled" : ""}
+                      ${isSystemAdminActor() && canManageRestaurantUsers() ? "" : "readonly"}
+                      required
+                    />
+                  </label>
+                `
+                : `<input type="hidden" name="restaurantKey" value="" />`
+            }
+            <label class="admin-delivery-field">
+              <span>Perfil</span>
+              <select class="admin-input" name="userType" ${formDisabled ? "disabled" : ""} required>
+                ${getAdminUserTypeOptions(selectedUserType, userScope).map((option) => `
+                  <option value="${escapeHtml(option.key)}" ${option.key === selectedUserType ? "selected" : ""}>${escapeHtml(option.label)}</option>
+                `).join("")}
+              </select>
+            </label>
+            <label class="admin-delivery-field">
+              <span>Status</span>
+              <select class="admin-input" name="status" ${formDisabled ? "disabled" : ""}>
+                ${USER_STATUS_OPTIONS.map((option) => `
+                  <option value="${escapeHtml(option.key)}" ${option.key === (selectedUser.status || "ACTIVE") ? "selected" : ""}>${escapeHtml(option.label)}</option>
+                `).join("")}
+              </select>
+            </label>
+            <label class="admin-delivery-field">
+              <span>${isCreating ? "Senha inicial" : "Nova senha"}</span>
+              <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatoria" : "Preencha para redefinir"}" ${formDisabled ? "disabled" : ""} ${isCreating ? "required" : ""} />
+            </label>
+          </div>
+
+          <section class="admin-users-permissions" hidden aria-hidden="true">
+            <header class="admin-users-card-head">
+              <div>
+                <span class="admin-chip">Permissoes</span>
+                <h3>Modulos e acoes</h3>
+              </div>
+              <small>${selectedUserType === "CUSTOM" ? "Permissoes individuais" : "Perfil padrao aplicado automaticamente"}</small>
+            </header>
+            ${
+              selectedUserCanSubmit
+                ? ""
+                : `
+                  <div class="admin-feedback is-error">
+                    Este perfil e protegido ou esta fora do seu escopo de administracao.
+                  </div>
+                `
+            }
+            <details class="admin-users-permission-details">
+              <summary>Personalizar permissoes</summary>
+              ${renderAdminUserPermissions(selectedUser, isBusy)}
+            </details>
+          </section>
+
+          <div class="admin-delivery-savebar">
+            <div>
+              <strong>${escapeHtml(getAdminUserProfileLabel({ ...selectedUser, userType: selectedUserType }))}</strong>
+              <span>${escapeHtml(userScope === "SYSTEM" ? "Administracao da plataforma" : `Restaurante ${selectedRestaurantKey || "nao informado"}`)}</span>
+            </div>
+            <div class="admin-delivery-savebar-actions">
+              <button class="admin-button admin-button-secondary" type="button" data-user-dialog-close>
+                ${isViewing ? "Fechar" : "Cancelar"}
+              </button>
+              ${
+                isViewing && canEditAdminUsers() && canSubmitSelectedAdminUser(selectedUser)
+                  ? `<button class="admin-button admin-button-primary" type="button" data-user-select="${escapeHtml(selectedUser.login || "")}">Editar</button>`
+                  : ""
+              }
+              ${
+                !isViewing && !isCreating
+                  ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${formDisabled ? "disabled" : ""}>Redefinir senha</button>`
+                  : ""
+              }
+              ${
+                !isViewing
+                  ? `<button class="admin-button admin-button-primary" type="submit" ${formDisabled ? "disabled" : ""}>
+                      ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
+                    </button>`
+                  : ""
+              }
+            </div>
+          </div>
+        </form>
+      </aside>
+    </div>
+  `;
+};
 
 const renderUsersModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
@@ -9302,47 +9738,61 @@ const renderUsersModule = () => {
 
   const snapshot = getUsersSnapshot();
   const users = Array.isArray(snapshot.users) ? snapshot.users : [];
-  const visibleUsers = getFilteredAdminUsers();
-  const selectedUser = getSelectedAdminUser();
-  const isCreating = adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN || !selectedUser.login;
   const isBusy = adminState.isLoadingUsers || adminState.userSaving;
-  const activeCount = users.filter((user) => user.status !== "BLOCKED").length;
+  const activeCount = users.filter((user) => user.status === "ACTIVE").length;
+  const inactiveCount = users.filter((user) => user.status !== "ACTIVE" && user.status !== "BLOCKED").length;
   const blockedCount = users.filter((user) => user.status === "BLOCKED").length;
-  const selectedUserType = selectedUser.userType || selectedUser.tipo_usuario || "GERENTE";
-  const selectedUserCanSubmit =
-    (isCreating ? canCreateAdminUsers() : canEditAdminUsers()) && canSubmitSelectedAdminUser(selectedUser);
-  const formDisabled = isBusy || !selectedUserCanSubmit;
-  const selectedRestaurantKey = selectedUser.restaurantKey || getCurrentUsersRestaurantKey();
 
   moduleRoot.innerHTML = `
-    <header class="admin-module-head">
+    <header class="admin-users-page-head">
       <div>
-        <span class="admin-chip">Usuarios e permissoes</span>
         <h2>Usuarios</h2>
-        <p>Gestao de acessos administrativos por restaurante.</p>
+        <p>Gerencie os usuarios e permissoes do sistema por escopo.</p>
       </div>
-      <div class="admin-module-head-meta">
-        <span>restaurant_key</span>
-        <strong>${escapeHtml(selectedRestaurantKey || snapshot.futureRestaurantAssociation?.currentKey || "default")}</strong>
-      </div>
+      ${
+        canCreateAdminUsers()
+          ? `
+            <button class="admin-button admin-button-primary admin-users-new-button" type="button" data-user-new ${isBusy ? "disabled" : ""}>
+              <span aria-hidden="true">+</span>
+              Novo usuario
+            </button>
+          `
+          : ""
+      }
     </header>
 
-    <section class="admin-module-kpis">
-      <article class="admin-mini-stat is-blue">
-        <span>Total</span>
-        <strong>${escapeHtml(String(users.length))}</strong>
+    <section class="admin-users-summary-grid" aria-label="Resumo de usuarios">
+      <article class="admin-users-summary-card is-total">
+        <span class="admin-users-summary-icon" aria-hidden="true">${renderAdminUserIcon("view")}</span>
+        <div>
+          <span>Total de usuarios</span>
+          <strong>${escapeHtml(String(users.length))}</strong>
+          <small>Todos os usuarios</small>
+        </div>
       </article>
-      <article class="admin-mini-stat is-cyan">
-        <span>Ativos</span>
-        <strong>${escapeHtml(String(activeCount))}</strong>
+      <article class="admin-users-summary-card is-active">
+        <span class="admin-users-summary-icon" aria-hidden="true">${renderAdminUserIcon("view")}</span>
+        <div>
+          <span>Ativos</span>
+          <strong>${escapeHtml(String(activeCount))}</strong>
+          <small>Usuarios ativos</small>
+        </div>
       </article>
-      <article class="admin-mini-stat is-danger">
-        <span>Bloqueados</span>
-        <strong>${escapeHtml(String(blockedCount))}</strong>
+      <article class="admin-users-summary-card is-inactive">
+        <span class="admin-users-summary-icon" aria-hidden="true">${renderAdminUserIcon("view")}</span>
+        <div>
+          <span>Inativos</span>
+          <strong>${escapeHtml(String(inactiveCount))}</strong>
+          <small>Usuarios inativos</small>
+        </div>
       </article>
-      <article class="admin-mini-stat is-gold">
-        <span>Pagina</span>
-        <strong>${escapeHtml(String(adminState.userPage))}</strong>
+      <article class="admin-users-summary-card is-blocked">
+        <span class="admin-users-summary-icon" aria-hidden="true">${renderAdminUserIcon("delete")}</span>
+        <div>
+          <span>Bloqueados</span>
+          <strong>${escapeHtml(String(blockedCount))}</strong>
+          <small>Usuarios bloqueados</small>
+        </div>
       </article>
     </section>
 
@@ -9354,22 +9804,6 @@ const renderUsersModule = () => {
       }
 
       <article class="admin-users-list-card">
-        <header class="admin-users-card-head">
-          <div>
-            <span class="admin-chip">Lista</span>
-            <h3>Usuarios administrativos</h3>
-          </div>
-          ${
-            canCreateAdminUsers()
-              ? `
-                <button class="admin-button admin-button-primary" type="button" data-user-new ${isBusy ? "disabled" : ""}>
-                  Criar usuario
-                </button>
-              `
-              : ""
-          }
-        </header>
-
         ${renderAdminUsersFilters()}
 
         ${
@@ -9386,126 +9820,15 @@ const renderUsersModule = () => {
             `
         }
       </article>
-
-      <form class="admin-users-form-card" data-user-form>
-        <header class="admin-users-card-head">
-          <div>
-            <span class="admin-chip">${isCreating ? "Novo acesso" : "Editar acesso"}</span>
-            <h3>${escapeHtml(isCreating ? "Criar usuario" : selectedUser.name || selectedUser.login)}</h3>
-          </div>
-          ${
-            !isCreating
-              ? `
-                <button
-                  class="admin-button admin-button-secondary"
-                  type="button"
-                  data-user-status-toggle="${escapeHtml(selectedUser.login)}"
-                  data-user-next-status="${selectedUser.status === "BLOCKED" ? "ACTIVE" : "BLOCKED"}"
-                  ${formDisabled ? "disabled" : ""}
-                >
-                  ${selectedUser.status === "BLOCKED" ? "Desbloquear" : "Bloquear"}
-                </button>
-              `
-              : ""
-          }
-        </header>
-
-        <input type="hidden" name="id" value="${escapeHtml(selectedUser.id || "")}" />
-        <input type="hidden" name="login" value="${escapeHtml(selectedUser.login || "")}" />
-
-        <div class="admin-users-form-grid">
-          <label class="admin-delivery-field">
-            <span>Nome</span>
-            <input class="admin-input" name="name" value="${escapeHtml(selectedUser.name || selectedUser.nome || "")}" ${formDisabled ? "disabled" : ""} required />
-          </label>
-          <label class="admin-delivery-field">
-            <span>E-mail</span>
-            <input class="admin-input" name="email" type="email" value="${escapeHtml(selectedUser.email || "")}" ${formDisabled ? "disabled" : ""} required />
-          </label>
-          <label class="admin-delivery-field">
-            <span>Telefone</span>
-            <input class="admin-input" name="phone" inputmode="tel" value="${escapeHtml(selectedUser.phone || selectedUser.telefone || "")}" ${formDisabled ? "disabled" : ""} required />
-          </label>
-          <label class="admin-delivery-field">
-            <span>Restaurante</span>
-            <input
-              class="admin-input"
-              name="restaurantKey"
-              value="${escapeHtml(selectedRestaurantKey)}"
-              ${formDisabled ? "disabled" : ""}
-              ${canManagePlatformUsers() ? "" : "readonly"}
-              required
-            />
-          </label>
-          <label class="admin-delivery-field">
-            <span>Perfil</span>
-            <select class="admin-input" name="userType" ${formDisabled ? "disabled" : ""} required>
-              ${getAdminUserTypeOptions(selectedUserType).map((option) => `
-                <option value="${escapeHtml(option.key)}" ${option.key === selectedUserType ? "selected" : ""}>${escapeHtml(option.label)}</option>
-              `).join("")}
-            </select>
-          </label>
-          <label class="admin-delivery-field">
-            <span>Status</span>
-            <select class="admin-input" name="status" ${formDisabled ? "disabled" : ""}>
-              ${USER_STATUS_OPTIONS.map((option) => `
-                <option value="${escapeHtml(option.key)}" ${option.key === (selectedUser.status || "ACTIVE") ? "selected" : ""}>${escapeHtml(option.label)}</option>
-              `).join("")}
-            </select>
-          </label>
-          <label class="admin-delivery-field">
-            <span>${isCreating ? "Senha inicial" : "Nova senha"}</span>
-            <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatoria" : "Preencha para redefinir"}" ${formDisabled ? "disabled" : ""} ${isCreating ? "required" : ""} />
-          </label>
-        </div>
-
-        <section class="admin-users-permissions" hidden aria-hidden="true">
-          <header class="admin-users-card-head">
-            <div>
-              <span class="admin-chip">Permissoes</span>
-              <h3>Modulos e acoes</h3>
-            </div>
-            <small>${selectedUserType === "CUSTOM" ? "Permissoes individuais" : "Perfil padrao aplicado automaticamente"}</small>
-          </header>
-          ${
-            selectedUserCanSubmit
-              ? ""
-              : `
-                <div class="admin-feedback is-error">
-                  Este perfil e protegido. OWNER administra o restaurante e nao deve ser alterado pela tela operacional.
-                </div>
-              `
-          }
-          <details class="admin-users-permission-details">
-            <summary>Personalizar permissoes</summary>
-            ${renderAdminUserPermissions(selectedUser, isBusy)}
-          </details>
-        </section>
-
-        <div class="admin-delivery-savebar">
-          <div>
-            <strong>${escapeHtml(selectedUserType)}</strong>
-            <span>${escapeHtml(isCreating ? `Novo usuario em ${selectedRestaurantKey}` : `Criado em ${selectedUser.createdAt ? formatDateTime(selectedUser.createdAt) : "data nao informada"}`)}</span>
-          </div>
-          <div class="admin-delivery-savebar-actions">
-            ${
-              !isCreating
-                ? `<button class="admin-button admin-button-secondary" type="button" data-user-reset-password ${formDisabled ? "disabled" : ""}>Redefinir senha</button>`
-                : ""
-            }
-            <button class="admin-button admin-button-primary" type="submit" ${formDisabled ? "disabled" : ""}>
-              ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
-            </button>
-          </div>
-        </div>
-      </form>
     </section>
+
+    ${renderAdminUserDialog()}
   `;
 };
 
 const renderPlaceholderModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
-  const section = NAV_SECTIONS.find((entry) => entry.key === adminState.activeSection);
+  const section = getNavigationSectionByKey(adminState.activeSection);
   const roadmapLabel = ["scheduled", "menu", "promotions", "reviews", "settings"].includes(
     adminState.activeSection
   )
@@ -9528,7 +9851,7 @@ const renderPlaceholderModule = () => {
 
 const renderPlanBlockedModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
-  const section = NAV_SECTIONS.find((entry) => entry.key === adminState.activeSection);
+  const section = getNavigationSectionByKey(adminState.activeSection);
   const featureKey = SECTION_FEATURE_MAP[adminState.activeSection] || "";
 
   if (!moduleRoot) {
@@ -9547,7 +9870,7 @@ const renderPlanBlockedModule = () => {
   `;
 };
 
-const renderModuleContent = () => {
+const renderModuleContentBody = () => {
   if (!hasPlanFeatureForSection(adminState.activeSection)) {
     renderPlanBlockedModule();
     adminState.expandedBoardColumnKey = "";
@@ -9639,6 +9962,51 @@ const renderModuleContent = () => {
   }
 
   renderPlaceholderModule();
+};
+
+const getSystemFilterValuesForSection = (sectionKey = adminState.activeSection) =>
+  adminState.systemFilters?.[sectionKey] || {};
+
+const renderSystemGlobalFilters = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  const filters = SYSTEM_GLOBAL_FILTERS[adminState.activeSection];
+
+  if (!moduleRoot || !isSystemAdminActor() || !filters) {
+    return;
+  }
+
+  const values = getSystemFilterValuesForSection();
+  const sectionLabel = getNavigationSectionByKey(adminState.activeSection)?.label || "Modulo";
+  const isConsolidatedSection = ["finance", "reports", "metrics"].includes(adminState.activeSection);
+
+  moduleRoot.querySelector("[data-system-global-filters]")?.remove();
+  moduleRoot.insertAdjacentHTML("afterbegin", `
+    <section class="admin-system-filter-bar" data-system-global-filters data-system-section="${escapeHtml(adminState.activeSection)}">
+      <div class="admin-system-filter-title">
+        <span>${escapeHtml(sectionLabel)}</span>
+        <strong>${escapeHtml(isConsolidatedSection && !values.restaurant ? "Consolidado da plataforma" : "Filtros da plataforma")}</strong>
+      </div>
+      <div class="admin-system-filter-grid">
+        ${filters.map((filter) => `
+          <label class="admin-system-filter-field">
+            <span>${escapeHtml(filter.label)}</span>
+            <input
+              class="admin-input"
+              type="${escapeHtml(filter.type || "search")}"
+              data-system-filter="${escapeHtml(filter.key)}"
+              value="${escapeHtml(values[filter.key] || "")}"
+              placeholder="${escapeHtml(filter.placeholder || "")}"
+            />
+          </label>
+        `).join("")}
+      </div>
+    </section>
+  `);
+};
+
+const renderModuleContent = () => {
+  renderModuleContentBody();
+  renderSystemGlobalFilters();
 };
 
 const renderBoard = () => {
@@ -12343,6 +12711,7 @@ const readAdminUserFormPayload = (form) => {
   const selectedUser = getSelectedAdminUser();
   const email = String(formData.get("email") || "").trim();
   const userType = String(formData.get("userType") || selectedUser.userType || "GERENTE").trim();
+  const userScope = normalizeAdminUserScope(formData.get("userScope") || selectedUser.userScope, userType);
   const permissions = {};
 
   form.querySelectorAll("[data-user-permission]").forEach((input) => {
@@ -12359,8 +12728,12 @@ const readAdminUserFormPayload = (form) => {
     login: String(formData.get("login") || selectedUser.login || email).trim(),
     email,
     phone: String(formData.get("phone") || "").trim(),
-    restaurantKey: String(formData.get("restaurantKey") || selectedUser.restaurantKey || getCurrentUsersRestaurantKey()).trim(),
+    restaurantKey: userScope === "SYSTEM"
+      ? ""
+      : String(formData.get("restaurantKey") || selectedUser.restaurantKey || getCurrentUsersRestaurantKey()).trim(),
     status: String(formData.get("status") || selectedUser.status || "ACTIVE").trim(),
+    userScope,
+    platformScope: userScope === "SYSTEM",
     userType,
     password: String(formData.get("password") || ""),
     permissions: userType === "CUSTOM" ? permissions : {},
@@ -12377,6 +12750,7 @@ const isValidAdminUserPhone = (value) => {
 const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
   const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
   const userType = String(user.userType || "").trim().toUpperCase();
+  const userScope = normalizeAdminUserScope(user.userScope, userType);
   const currentId = String(user.id || "").trim();
   const currentLogin = String(user.login || "").trim().toLowerCase();
   const currentEmail = String(user.email || "").trim().toLowerCase();
@@ -12393,11 +12767,19 @@ const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
     return "Informe um telefone valido com DDD.";
   }
 
-  if (!user.restaurantKey) {
+  if (userScope === "SYSTEM" && !SYSTEM_USER_TYPE_SET.has(userType)) {
+    return "Usuario do sistema deve usar um perfil da plataforma INovas.";
+  }
+
+  if (userScope === "RESTAURANT" && !RESTAURANT_USER_TYPE_SET.has(userType)) {
+    return "Usuario de restaurante deve usar um perfil operacional valido.";
+  }
+
+  if (userScope === "RESTAURANT" && !user.restaurantKey) {
     return "Informe o restaurante do usuario.";
   }
 
-  if (!userType || !getAdminUserTypeOptions(userType).some((option) => option.key === userType)) {
+  if (!userType || !getAdminUserTypeOptions(userType, userScope).some((option) => option.key === userType)) {
     return "Selecione um perfil valido.";
   }
 
@@ -12458,6 +12840,7 @@ const saveAdminUserSettings = async (form) => {
     adminState.userSaving = false;
     adminState.selectedUserLogin = response.user?.login || user.login || "";
     adminState.userDraft = null;
+    adminState.userDialogMode = "";
     adminState.actionMessage = response.message || "Usuario salvo com sucesso.";
     adminState.actionTone = "success";
 
@@ -12627,6 +13010,7 @@ const deleteAdminUserSettings = async ({ login }) => {
       response.users?.[0]?.login ||
       "";
     adminState.userDraft = null;
+    adminState.userDialogMode = "";
     adminState.actionMessage = response.message || "Usuario excluido com sucesso.";
     adminState.actionTone = "success";
     normalizeUsersPage();
@@ -12771,7 +13155,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
       payload.admin?.displayName ||
       adminState.adminDisplayName ||
       ADMIN_BRANDING.displayNameFallback ||
-      "Gestor Tokyo";
+      "Gestor INovas";
     adminState.isLoadingOrders = false;
 
     void ensurePublicCatalogItems();
@@ -13424,7 +13808,7 @@ const initDashboardPage = () => {
 
   if (themeToggleButton) {
     themeToggleButton.addEventListener("click", () => {
-      applyAdminTheme(adminState.theme === "dark" ? "light" : "dark");
+      applyAdminTheme(ADMIN_THEME_DEFAULT);
     });
   }
 
@@ -13585,6 +13969,7 @@ const initDashboardPage = () => {
   if (moduleRoot) {
     moduleRoot.addEventListener("input", (event) => {
       const userInlineSearch = event.target.closest("[data-user-inline-search]");
+      const systemFilterField = event.target.closest("[data-system-filter]");
 
       if (userInlineSearch) {
         const cursorPosition = userInlineSearch.selectionStart;
@@ -13602,6 +13987,34 @@ const initDashboardPage = () => {
           nextSearch.focus();
           if (typeof cursorPosition === "number") {
             nextSearch.setSelectionRange(cursorPosition, cursorPosition);
+          }
+        }
+      }
+
+      if (systemFilterField) {
+        const sectionKey = adminState.activeSection;
+        const filterKey = String(systemFilterField.dataset.systemFilter || "").trim();
+        const cursorPosition = systemFilterField.selectionStart;
+
+        if (SYSTEM_GLOBAL_FILTERS[sectionKey]?.some((filter) => filter.key === filterKey)) {
+          adminState.systemFilters = {
+            ...adminState.systemFilters,
+            [sectionKey]: {
+              ...(adminState.systemFilters?.[sectionKey] || {}),
+              [filterKey]: String(systemFilterField.value || "").trim(),
+            },
+          };
+          renderModuleContent();
+
+          const nextField = document.querySelector(
+            `[data-system-global-filters] [data-system-filter="${CSS.escape(filterKey)}"]`
+          );
+
+          if (nextField) {
+            nextField.focus();
+            if (typeof cursorPosition === "number" && nextField.type !== "date") {
+              nextField.setSelectionRange(cursorPosition, cursorPosition);
+            }
           }
         }
       }
@@ -13637,6 +14050,32 @@ const initDashboardPage = () => {
       if (userNewButton) {
         adminState.selectedUserLogin = NEW_ADMIN_USER_LOGIN;
         adminState.userDraft = getBlankAdminUser();
+        adminState.userDialogMode = "create";
+        adminState.actionMessage = "";
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
+        return;
+      }
+
+      const userDialogCloseButton = event.target.closest("[data-user-dialog-close]");
+
+      if (userDialogCloseButton) {
+        adminState.userDialogMode = "";
+        adminState.userDraft = null;
+        adminState.actionMessage = "";
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
+        return;
+      }
+
+      const userViewButton = event.target.closest("[data-user-view]");
+
+      if (userViewButton) {
+        adminState.selectedUserLogin = String(userViewButton.dataset.userView || "").trim();
+        adminState.userDraft = null;
+        adminState.userDialogMode = "view";
         adminState.actionMessage = "";
         renderModuleContent();
         renderOrderDetails();
@@ -13649,7 +14088,24 @@ const initDashboardPage = () => {
       if (userSelectButton) {
         adminState.selectedUserLogin = String(userSelectButton.dataset.userSelect || "").trim();
         adminState.userDraft = null;
+        adminState.userDialogMode = "edit";
         adminState.actionMessage = "";
+        renderModuleContent();
+        renderOrderDetails();
+        updateSidebarMeta();
+        return;
+      }
+
+      const userClearFiltersButton = event.target.closest("[data-user-clear-filters]");
+
+      if (userClearFiltersButton) {
+        adminState.searchQuery = "";
+        adminState.userFilters = {
+          restaurant: "",
+          profile: "",
+          status: "",
+        };
+        adminState.userPage = 1;
         renderModuleContent();
         renderOrderDetails();
         updateSidebarMeta();
@@ -14116,11 +14572,12 @@ const initDashboardPage = () => {
       const userPageSizeField = event.target.closest("[data-user-page-size]");
 
       const userTypeField = event.target.closest('[data-user-form] select[name="userType"]');
+      const userScopeField = event.target.closest('[data-user-form] input[name="userScope"]');
 
       if (userFilterField) {
         const filterKey = String(userFilterField.dataset.userFilter || "").trim();
 
-        if (["profile", "status"].includes(filterKey)) {
+        if (["restaurant", "profile", "status"].includes(filterKey)) {
           adminState.userFilters = {
             ...adminState.userFilters,
             [filterKey]: String(userFilterField.value || "").trim(),
@@ -14149,15 +14606,28 @@ const initDashboardPage = () => {
         return;
       }
 
-      if (userTypeField) {
-        const userForm = userTypeField.closest("[data-user-form]");
+      if (userTypeField || userScopeField) {
+        const userForm = (userTypeField || userScopeField).closest("[data-user-form]");
         const currentPayload = readAdminUserFormPayload(userForm);
         const users = Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : [];
         const existingIndex = users.findIndex((user) => user.login === currentPayload.login);
+        const normalizedScope = normalizeAdminUserScope(currentPayload.userScope, currentPayload.userType);
+        const normalizedType =
+          normalizedScope === "SYSTEM" && !SYSTEM_USER_TYPE_SET.has(currentPayload.userType)
+            ? getManageableSystemUserTypesForActor()[0] || "VENDEDOR"
+            : normalizedScope === "RESTAURANT" && !RESTAURANT_USER_TYPE_SET.has(currentPayload.userType)
+              ? isSystemAdminActor() && canManageRestaurantUsers()
+                ? "OWNER"
+                : "GERENTE"
+              : currentPayload.userType;
         const nextUser = {
           ...(existingIndex === -1 ? getBlankAdminUser() : users[existingIndex]),
           ...currentPayload,
-          tipo_usuario: currentPayload.userType,
+          userScope: normalizedScope,
+          platformScope: normalizedScope === "SYSTEM",
+          userType: normalizedType,
+          tipo_usuario: normalizedType,
+          restaurantKey: normalizedScope === "SYSTEM" ? "" : currentPayload.restaurantKey,
         };
 
         if (adminState.selectedUserLogin === NEW_ADMIN_USER_LOGIN || existingIndex === -1) {
@@ -14806,7 +15276,7 @@ const syncAdminStaticBranding = () => {
   const page = document.body.dataset.adminPage;
 
   if (page === "login") {
-    document.title = ADMIN_BRANDING.loginTitle || "Login do Gestor | Tokyo Sushi Delivery";
+    document.title = ADMIN_BRANDING.loginTitle || "Login | INovas Food";
     const eyebrow = document.querySelector(".admin-login-hero .admin-eyebrow");
     const headline = document.querySelector(".admin-login-hero h1");
     const loginInput = document.querySelector('[data-admin-login-form] input[name="identifier"]');
@@ -14817,35 +15287,35 @@ const syncAdminStaticBranding = () => {
 
     if (headline) {
       headline.textContent =
-        ADMIN_BRANDING.loginHeadline || "Gestor web administrativo do Tokyo Sushi Delivery";
+        ADMIN_BRANDING.loginHeadline || "Gestor web administrativo INovas Food";
     }
 
     if (loginInput) {
       loginInput.placeholder =
-        ADMIN_BRANDING.loginPlaceholder || "admin@tokyosushidelivery.com.br";
+        ADMIN_BRANDING.loginPlaceholder || "seuemail@exemplo.com";
     }
 
     return;
   }
 
   if (page === "dashboard") {
-    document.title = ADMIN_BRANDING.indexTitle || "Gestor de Pedidos | Tokyo Sushi Delivery";
+    document.title = ADMIN_BRANDING.indexTitle || "Gestor | INovas Food";
     const logo = document.querySelector(".admin-brand-logo");
     const eyebrow = document.querySelector(".admin-brand-copy .admin-eyebrow");
     const title = document.querySelector(".admin-brand-copy strong");
     const subtitle = document.querySelector(".admin-brand-copy small");
 
     if (logo) {
-      logo.src = ADMIN_ASSETS.adminSidebarLogo || "../assets/tokyo-logo-sidebar.png";
-      logo.alt = ADMIN_BRANDING.sidebarTitle || "Tokyo Sushi Delivery";
+      logo.src = ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-oficial.png";
+      logo.alt = ADMIN_BRANDING.sidebarTitle || "INovas Food";
     }
 
     if (eyebrow) {
-      eyebrow.textContent = ADMIN_BRANDING.sidebarEyebrow || "Gestor privado";
+      eyebrow.textContent = ADMIN_BRANDING.sidebarEyebrow || "INovas Food";
     }
 
     if (title) {
-      title.textContent = ADMIN_BRANDING.sidebarTitle || "Tokyo Sushi Delivery";
+      title.textContent = ADMIN_BRANDING.sidebarTitle || "Painel Operacional";
     }
 
     if (subtitle) {
