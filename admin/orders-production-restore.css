@@ -2829,3 +2829,249 @@ body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin
   line-height: 1.06;
   opacity: 0.74;
 }
+
+/* Official INOVAS light reference override for Orders */
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] {
+  color-scheme: light;
+  --inovas-orange: #ff5a00;
+  --inovas-orange-hover: #e94f00;
+  --inovas-orange-soft: #fff1e8;
+  --inovas-black: #111827;
+  --inovas-text: #111827;
+  --inovas-muted: #667085;
+  --inovas-bg: #f8fafc;
+  --inovas-surface: #ffffff;
+  --inovas-border: #e5e7eb;
+  --inovas-success: #16a34a;
+  --inovas-danger: #ef4444;
+  --inovas-warning: #f59e0b;
+  --orders-bg: var(--inovas-bg);
+  --orders-sidebar: var(--inovas-surface);
+  --orders-card: var(--inovas-surface);
+  --orders-card-soft: #fbfdff;
+  --orders-border: var(--inovas-border);
+  --orders-text: var(--inovas-text);
+  --orders-muted: var(--inovas-muted);
+  --orders-received: var(--inovas-warning);
+  --orders-preparing: var(--inovas-orange);
+  --orders-ready: var(--inovas-success);
+  --orders-delivery: #2563eb;
+  background: var(--inovas-bg) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-shell,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-main-shell,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-workspace,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-shell {
+  background: var(--inovas-bg) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-main-topbar {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-main-intro,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-search-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-stat-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-ribbon-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-closed-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-hero,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-spotlight-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-dispatch-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-lane-panel,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-lane-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-customer-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-mini-stat,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-payment-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-report-bar-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-metrics-trend-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-metrics-stage-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-metrics-breakdown-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-metrics-highlight-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-metrics-admin-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-audit-event,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-closed-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-transaction-row,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-history-order {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column {
+  border-color: var(--inovas-border) !important;
+  background: #fbfdff !important;
+  color: var(--inovas-text) !important;
+  box-shadow: none !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack {
+  background: #fbfdff !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-items,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-state,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-inline,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-state-inline,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-inline-note,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar-card,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-head-meta,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-head-meta,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head-meta-item,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-meta-line span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-summary-grid span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-fields span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-item,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-status-event,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-summary span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-row-meta span {
+  border-color: var(--inovas-border) !important;
+  background: #f9fafb !important;
+  color: var(--inovas-muted) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-brand-copy strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar .admin-button,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-main-intro h1,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-head h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-hero-main h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-card-head h3,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-stat-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-ribbon-card strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-id strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-customer strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-meta-line strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-summary-grid strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-fields strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-head h2,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-summary strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-row-top strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-row-meta strong {
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-main-intro p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-search-card small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-ribbon-card p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-state span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-meta small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-item small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-status-event p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-brand-copy small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar-card p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar-card small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-search-label,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-customer p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-meta-line small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-footer small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-card-head span,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-section h4,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-overflow-count,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-head p,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-row-top small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-row-meta small {
+  color: var(--inovas-muted) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-input,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-textarea,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] select.admin-input {
+  border-color: #d0d5dd !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: none !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-input:focus,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-textarea:focus,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] select.admin-input:focus {
+  border-color: var(--inovas-orange) !important;
+  box-shadow: 0 0 0 4px rgba(255, 90, 0, 0.12) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-chip,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-eyebrow,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-status,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-state-chip {
+  border-color: rgba(255, 90, 0, 0.18) !important;
+  background: var(--inovas-orange-soft) !important;
+  color: var(--inovas-orange-hover) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item.is-active {
+  border-color: rgba(255, 90, 0, 0.16) !important;
+  background: var(--inovas-orange-soft) !important;
+  color: var(--inovas-orange-hover) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item.is-active strong,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item.is-active small,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-badge,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-nav-item.is-active .admin-nav-icon {
+  color: var(--inovas-orange-hover) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-button-primary,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-action-button.is-primary,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-primary-action,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-action-button.is-primary {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, var(--inovas-orange), var(--inovas-orange-hover)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(255, 90, 0, 0.18) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-action-button,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-action-button.is-danger,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-overflow-button,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-modal-close,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar .admin-button-secondary,
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-sidebar .admin-button-ghost {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: none !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-action-button.is-danger {
+  color: var(--inovas-danger) !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-action-button.is-success {
+  background: var(--inovas-success) !important;
+  border-color: var(--inovas-success) !important;
+  color: #ffffff !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-action-button.is-warning {
+  background: var(--inovas-warning) !important;
+  border-color: var(--inovas-warning) !important;
+  color: #111827 !important;
+}
+
+body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-action-button.is-info {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}

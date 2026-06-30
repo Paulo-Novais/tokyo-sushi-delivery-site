@@ -1,6 +1,18 @@
 @charset "UTF-8";
 
 :root {
+  --inovas-orange: #ff5a00;
+  --inovas-orange-hover: #e94f00;
+  --inovas-orange-soft: #fff1e8;
+  --inovas-black: #111827;
+  --inovas-text: #111827;
+  --inovas-muted: #667085;
+  --inovas-bg: #f8fafc;
+  --inovas-surface: #ffffff;
+  --inovas-border: #e5e7eb;
+  --inovas-success: #16a34a;
+  --inovas-danger: #ef4444;
+  --inovas-warning: #f59e0b;
   --bg: #080505;
   --bg-soft: #14090d;
   --surface: rgba(21, 11, 14, 0.84);
@@ -5366,7 +5378,7 @@ select.auth-input option:focus {
 }
 
 .inovas-platform-footer a {
-  color: var(--gold);
+  color: var(--inovas-orange);
   font-weight: 800;
   white-space: nowrap;
 }

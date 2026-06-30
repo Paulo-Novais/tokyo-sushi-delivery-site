@@ -1,14 +1,26 @@
 @charset "UTF-8";
 
 :root {
-  --if-orange: #ff6a00;
-  --if-orange-dark: #ef4a11;
-  --if-black: #111827;
-  --if-gray: #6b7280;
-  --if-gray-light: #f3f4f6;
-  --if-border: #e5e7eb;
-  --if-white: #ffffff;
-  --if-success: #22c55e;
+  --inovas-orange: #ff5a00;
+  --inovas-orange-hover: #e94f00;
+  --inovas-orange-soft: #fff1e8;
+  --inovas-black: #111827;
+  --inovas-text: #111827;
+  --inovas-muted: #667085;
+  --inovas-bg: #f8fafc;
+  --inovas-surface: #ffffff;
+  --inovas-border: #e5e7eb;
+  --inovas-success: #16a34a;
+  --inovas-danger: #ef4444;
+  --inovas-warning: #f59e0b;
+  --if-orange: var(--inovas-orange);
+  --if-orange-dark: var(--inovas-orange-hover);
+  --if-black: var(--inovas-black);
+  --if-gray: var(--inovas-muted);
+  --if-gray-light: var(--inovas-bg);
+  --if-border: var(--inovas-border);
+  --if-white: var(--inovas-surface);
+  --if-success: var(--inovas-success);
   --if-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --if-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
   --if-shadow-lg: 0 20px 48px rgba(17, 24, 39, 0.1);
@@ -132,7 +144,7 @@ input {
 .if-button-primary {
   color: var(--if-white);
   background: linear-gradient(135deg, var(--if-orange), var(--if-orange-dark));
-  box-shadow: 0 10px 24px rgba(255, 106, 0, 0.24);
+  box-shadow: 0 10px 24px rgba(255, 90, 0, 0.24);
 }
 
 .if-button-secondary,
@@ -166,7 +178,7 @@ input {
   min-height: 1.8rem;
   padding: 0 0.75rem;
   border-radius: 999px;
-  background: rgba(255, 106, 0, 0.1);
+  background: rgba(255, 90, 0, 0.1);
   color: var(--if-orange-dark);
   font-size: 0.76rem;
   font-weight: 900;
@@ -217,7 +229,7 @@ input {
   display: inline-flex;
   align-items: center;
   padding: 0 0.85rem;
-  border: 1px solid rgba(255, 106, 0, 0.16);
+  border: 1px solid rgba(255, 90, 0, 0.16);
   border-radius: var(--if-radius);
   background: #fff7f2;
   color: var(--if-orange-dark);
@@ -450,8 +462,8 @@ input {
 }
 
 .if-plan.is-featured {
-  border-color: rgba(255, 106, 0, 0.28);
-  box-shadow: 0 18px 40px rgba(255, 106, 0, 0.14);
+  border-color: rgba(255, 90, 0, 0.28);
+  box-shadow: 0 18px 40px rgba(255, 90, 0, 0.14);
 }
 
 .if-checks p {
