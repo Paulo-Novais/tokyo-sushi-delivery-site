@@ -734,6 +734,7 @@ const adminState = {
   adminDisplayName: "",
   adminUserType: "MASTER",
   adminRestaurantKey: "default",
+  adminRestaurantName: "",
   adminPlatformScope: false,
   adminPermissions: null,
   adminPermissionModules: USER_PERMISSION_MODULES_FALLBACK,
@@ -987,6 +988,12 @@ const syncAdminAccessFromPayload = (admin = {}) => {
 
   if (Object.prototype.hasOwnProperty.call(admin, "restaurantKey")) {
     adminState.adminRestaurantKey = adminState.adminPlatformScope ? "" : admin.restaurantKey || "default";
+  }
+
+  if (adminState.adminPlatformScope) {
+    adminState.adminRestaurantName = "";
+  } else if (admin.restaurantName || admin.restaurant) {
+    adminState.adminRestaurantName = admin.restaurantName || admin.restaurant;
   }
 
   const permissions = normalizeAdminPermissionsPayload(admin.permissions);
@@ -3090,10 +3097,15 @@ const renderSectionChrome = () => {
   const isCustomersSection = adminState.activeSection === "customers";
   const isUsersSection = adminState.activeSection === "users";
   const isMasterPlatformHeader = getAdminUserActorType() === "MASTER" && isSystemAdminActor();
+  const restaurantHeaderName = !isSystemAdminActor()
+    ? String(adminState.adminRestaurantName || "").trim()
+    : "";
 
   if (chipNode) {
     chipNode.textContent = isMasterPlatformHeader
       ? "Painel Administrativo"
+      : restaurantHeaderName
+      ? restaurantHeaderName
       : isDashboardSection
       ? "Dashboard gerencial"
       : isOrdersSection

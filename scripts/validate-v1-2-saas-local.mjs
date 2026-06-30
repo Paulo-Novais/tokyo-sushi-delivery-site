@@ -268,6 +268,7 @@ const validateApiArchitecture = async (adminApi) => {
   });
   assert.equal(master.response.payload?.admin?.userType, "MASTER");
   assert.equal(master.response.payload?.admin?.restaurantKey, "", "MASTER nao deve receber restaurantKey.");
+  assert.equal(master.response.payload?.admin?.restaurantName || "", "", "MASTER nao deve receber restaurantName.");
   assert.equal(master.response.payload?.admin?.platformScope, true, "MASTER deve ser usuario de sistema.");
 
   const usersPayload = await expectStatus(
@@ -493,6 +494,7 @@ const validateApiArchitecture = async (adminApi) => {
   });
   assert.equal(owner.response.payload?.admin?.userType, "OWNER");
   assert.equal(owner.response.payload?.admin?.restaurantKey, "seller-v12");
+  assert.equal(owner.response.payload?.admin?.restaurantName, "Restaurante seller-v12");
 
   await saveUser(
     adminApi,

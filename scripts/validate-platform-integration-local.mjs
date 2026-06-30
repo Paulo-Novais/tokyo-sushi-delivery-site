@@ -388,6 +388,7 @@ const validateApiMatrix = async (adminApi) => {
 
   assert.equal(masterLogin.response.payload?.admin?.tipo_usuario, "MASTER");
   assert.equal(masterLogin.response.payload?.admin?.restaurantKey, "");
+  assert.equal(masterLogin.response.payload?.admin?.restaurantName || "", "");
   assert.equal(masterLogin.response.payload?.admin?.platformScope, true);
 
   const oldMasterLogin = await runAdminApi(adminApi, {
@@ -437,6 +438,8 @@ const validateApiMatrix = async (adminApi) => {
   const customLogin = await login(adminApi, PROFILE_FIXTURES.custom);
 
   assert.equal(ownerLogin.response.payload?.admin?.tipo_usuario, "OWNER");
+  assert.equal(ownerLogin.response.payload?.admin?.restaurantKey, "default");
+  assert.equal(ownerLogin.response.payload?.admin?.restaurantName, "Tokyo Sushi Delivery");
   assert.equal(developerLogin.response.payload?.admin?.tipo_usuario, "DESENVOLVEDOR");
   assert.equal(customLogin.response.payload?.admin?.tipo_usuario, "CUSTOM");
 
@@ -700,6 +703,7 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
     });
     assert.equal(await getText(systemPage, "[data-admin-main-title]"), "INovas Food");
     assert.equal(await getText(systemPage, "[data-admin-welcome]"), "Administrador do Sistema");
+    assert.equal((await getText(systemPage, "[data-admin-main-topbar]")).includes("Tokyo Sushi Delivery"), false, "Header MASTER nao deve depender de restaurante.");
     await systemContext.close();
 
     const ownerContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
@@ -735,6 +739,7 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
       ],
       excludes: ["Painel Master", "Restaurantes", "Planos", "Recursos", "Dominios", "Assinaturas", "Relatorios Gerais", "Desenvolvedor"],
     });
+    assert.equal(await getText(ownerPage, "[data-admin-main-chip]"), "Tokyo Sushi Delivery");
     assert.equal((await getText(ownerPage, "[data-admin-nav]")).includes("Usuarios"), false, "Menu de restaurante nao deve conter Usuarios.");
     await ownerContext.close();
 

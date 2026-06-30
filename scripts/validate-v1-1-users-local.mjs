@@ -337,7 +337,37 @@ const openUsersModule = async (page) => {
   );
 };
 
+const captureBrowserDiagnostics = (page, label, consoleErrors, pageErrors) => {
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(`${label}:${message.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => pageErrors.push(`${label}:${String(error?.message || error)}`));
+  page.on("response", async (response) => {
+    const status = response.status();
+
+    if (status >= 400) {
+      const request = response.request();
+      let body = "";
+
+      try {
+        body = (await response.text()).replace(/\s+/g, " ").trim().slice(0, 300);
+      } catch (error) {
+        body = "";
+      }
+
+      consoleErrors.push(
+        `${label}:HTTP ${status} ${request.method()} ${response.url()}${body ? ` ${body}` : ""}`
+      );
+    }
+  });
+};
+
 const validateUsersBrowser = async (adminApi) => {
+  const { resetSecurityGuardianForTests } = require(path.join(workspaceRoot, "lib/security-guardian.cjs"));
+  resetSecurityGuardianForTests();
+
   const server = createStaticServer(workspaceRoot, adminApi);
   const { port } = await listen(server);
   const baseURL = `http://usuarios-a.localhost:${port}`;
@@ -348,12 +378,7 @@ const validateUsersBrowser = async (adminApi) => {
   try {
     const desktopContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const desktopPage = await desktopContext.newPage();
-    desktopPage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`desktop:${message.text()}`);
-      }
-    });
-    desktopPage.on("pageerror", (error) => pageErrors.push(`desktop:${String(error?.message || error)}`));
+    captureBrowserDiagnostics(desktopPage, "desktop", consoleErrors, pageErrors);
 
     await loginBrowser(desktopPage, baseURL, "master@v1-1.local", "SenhaMasterV11");
     await openUsersModule(desktopPage);
@@ -391,12 +416,7 @@ const validateUsersBrowser = async (adminApi) => {
 
     const masterContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const masterPage = await masterContext.newPage();
-    masterPage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`master:${message.text()}`);
-      }
-    });
-    masterPage.on("pageerror", (error) => pageErrors.push(`master:${String(error?.message || error)}`));
+    captureBrowserDiagnostics(masterPage, "master", consoleErrors, pageErrors);
 
     await loginBrowser(masterPage, baseURL, "master@v1-1.local", "SenhaMasterV11");
     await openUsersModule(masterPage);
@@ -425,12 +445,7 @@ const validateUsersBrowser = async (adminApi) => {
 
     const mobileContext = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 } });
     const mobilePage = await mobileContext.newPage();
-    mobilePage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`mobile:${message.text()}`);
-      }
-    });
-    mobilePage.on("pageerror", (error) => pageErrors.push(`mobile:${String(error?.message || error)}`));
+    captureBrowserDiagnostics(mobilePage, "mobile", consoleErrors, pageErrors);
 
     await loginBrowser(mobilePage, baseURL, "master@v1-1.local", "SenhaMasterV11");
     await openUsersModule(mobilePage);
