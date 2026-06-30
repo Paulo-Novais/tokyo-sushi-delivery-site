@@ -1,24 +1,33 @@
 (() => {
+  // ---------------------------------------------------------------------------
+  // Initial state and section metadata
+  // ---------------------------------------------------------------------------
+
   const MASTER_DEFAULT_MENU = [
     { key: "dashboard", label: "Dashboard Geral", status: "ready" },
-    { key: "restaurants", label: "Restaurantes", status: "foundation" },
+    { key: "restaurants", label: "Restaurantes", status: "ready" },
     { key: "users", label: "Usuarios", status: "ready" },
-    { key: "plans", label: "Planos", status: "foundation" },
+    { key: "plans", label: "Planos", status: "ready" },
+    { key: "subscriptions", label: "Assinaturas", status: "ready" },
+    { key: "sellers", label: "Vendedores", status: "ready" },
+    { key: "commissions", label: "Comissao", status: "prepared" },
+    { key: "contracts", label: "Contratos", status: "prepared" },
+    { key: "finance", label: "Receita SaaS", status: "ready" },
+    { key: "commercial", label: "Comercial", status: "ready" },
     { key: "resources", label: "Recursos", status: "foundation" },
     { key: "domains", label: "Dominios", status: "foundation" },
-    { key: "subscriptions", label: "Assinaturas", status: "prepared" },
     { key: "reports", label: "Relatorios Gerais", status: "prepared" },
-    { key: "logs", label: "Logs", status: "foundation" },
-    { key: "audit", label: "Auditoria", status: "foundation" },
+    { key: "logs", label: "Logs", status: "ready" },
+    { key: "audit", label: "Auditoria", status: "ready" },
     { key: "developer", label: "Desenvolvedor", status: "foundation" },
-    { key: "settings", label: "Configuracoes da Plataforma", status: "foundation" },
+    { key: "settings", label: "Configuracoes da Plataforma", status: "ready" },
   ];
 
   const SECTION_META = {
     dashboard: {
-      chip: "Dashboard Geral",
-      title: "Dashboard Geral",
-      subtitle: "Leitura consolidada da plataforma.",
+      chip: "Dashboard Plataforma",
+      title: "Dashboard Plataforma",
+      subtitle: "Leitura global da INovas Food, sem dependencia de restaurante unico.",
     },
     restaurants: {
       chip: "Restaurantes",
@@ -34,6 +43,36 @@
       chip: "Planos",
       title: "Planos",
       subtitle: "Estrutura comercial sem cobranca ativa.",
+    },
+    subscriptions: {
+      chip: "Assinaturas",
+      title: "Assinaturas",
+      subtitle: "Situacao contratual dos restaurantes, sem gateway de pagamento.",
+    },
+    sellers: {
+      chip: "Vendedores",
+      title: "Vendedores",
+      subtitle: "Carteira comercial e vinculos preparados por vendedor.",
+    },
+    commissions: {
+      chip: "Comissao",
+      title: "Comissao",
+      subtitle: "Base preparada para calculo futuro de comissoes.",
+    },
+    contracts: {
+      chip: "Contratos",
+      title: "Contratos",
+      subtitle: "Contratos e assinaturas preparados para integracao futura.",
+    },
+    finance: {
+      chip: "Financeiro Plataforma",
+      title: "Financeiro Plataforma",
+      subtitle: "Indicadores financeiros consolidados da plataforma.",
+    },
+    commercial: {
+      chip: "Comercial",
+      title: "Dashboard Comercial",
+      subtitle: "Acompanhamento comercial de leads, clientes e vendedores.",
     },
     resources: {
       chip: "Recursos",
@@ -93,6 +132,17 @@
     userFeedback: "",
     userFeedbackType: "info",
     isUserSubmitting: false,
+    restaurantFilters: {
+      name: "",
+      city: "",
+      state: "",
+      plan: "",
+      status: "",
+      responsible: "",
+      domain: "",
+    },
+    selectedRestaurantKey: "",
+    selectedRestaurantTab: "info",
   };
 
   const numberFormatter = new Intl.NumberFormat("pt-BR");
@@ -100,6 +150,10 @@
     style: "currency",
     currency: "BRL",
   });
+
+  // ---------------------------------------------------------------------------
+  // DOM and formatting helpers
+  // ---------------------------------------------------------------------------
 
   const query = (selector) => document.querySelector(selector);
   const queryAll = (selector) => Array.from(document.querySelectorAll(selector));
@@ -123,6 +177,7 @@
 
   const formatNumber = (value) => numberFormatter.format(Number(value || 0));
   const formatCurrency = (value) => currencyFormatter.format(Number(value || 0));
+  const formatPercent = (value) => `${formatNumber(value)}%`;
 
   const formatDateTime = (value) => {
     if (!value) {
@@ -205,6 +260,10 @@
     `;
   };
 
+  // ---------------------------------------------------------------------------
+  // Shared render helpers
+  // ---------------------------------------------------------------------------
+
   const renderTable = (headers, rows, emptyLabel) => `
     <div class="master-table-wrap">
       <table class="master-table">
@@ -237,7 +296,31 @@
     </div>
   `;
 
+  const renderActionButton = (label, action, id = "") => `
+    <button class="admin-action-button is-compact" type="button" data-master-prepared-action="${escapeHtml(action)}" data-master-action-id="${escapeHtml(id)}">
+      ${escapeHtml(label)}
+    </button>
+  `;
+
+  const renderDangerActionButton = (label, action, id = "") => `
+    <button class="admin-action-button is-compact is-danger" type="button" data-master-prepared-action="${escapeHtml(action)}" data-master-action-id="${escapeHtml(id)}">
+      ${escapeHtml(label)}
+    </button>
+  `;
+
+  const getRestaurantByKey = (restaurantKey) =>
+    asArray(state.snapshot?.restaurants).find(
+      (restaurant) => String(restaurant.restaurantKey || restaurant.key || "") === String(restaurantKey || "")
+    ) || null;
+
+  const getRestaurantUsers = (restaurantKey) =>
+    asArray(state.snapshot?.users).filter((user) => user.restaurantKey === restaurantKey);
+
   const getMenu = () => asArray(state.snapshot?.menu).length ? state.snapshot.menu : MASTER_DEFAULT_MENU;
+
+  // ---------------------------------------------------------------------------
+  // Shell, menu and platform KPIs
+  // ---------------------------------------------------------------------------
 
   const renderNav = () => {
     const navRoot = query("[data-master-nav]");
@@ -323,15 +406,25 @@
       return;
     }
 
-    const dashboard = state.snapshot?.dashboard || {};
+    const dashboard = state.snapshot?.platformDashboard || state.snapshot?.dashboard || {};
     const kpis = [
-      ["Restaurantes", formatNumber(dashboard.totalRestaurants)],
-      ["Usuarios", formatNumber(dashboard.totalUsers)],
-      ["Pedidos", formatNumber(dashboard.totalOrders)],
-      ["Clientes", formatNumber(dashboard.totalCustomers)],
-      ["Avaliacoes", formatNumber(dashboard.totalReviews)],
-      ["Faturamento", formatCurrency(dashboard.totalRevenue)],
-      ["Acessos", formatNumber(dashboard.totalAccesses)],
+      ["Total Restaurantes", formatNumber(dashboard.totalRestaurants)],
+      ["Ativos", formatNumber(dashboard.activeRestaurants)],
+      ["Bloqueados", formatNumber(dashboard.blockedRestaurants)],
+      ["Usuarios Sistema", formatNumber(dashboard.systemUsers)],
+      ["Usuarios Restaurantes", formatNumber(dashboard.restaurantUsers)],
+      ["Pedidos Hoje", formatNumber(dashboard.ordersToday)],
+      ["Pedidos Mes", formatNumber(dashboard.ordersMonth)],
+      ["Clientes Totais", formatNumber(dashboard.totalCustomers)],
+      ["Faturamento Total", formatCurrency(dashboard.totalRevenue)],
+      ["Faturamento Mensal", formatCurrency(dashboard.monthlyRevenue)],
+      ["Novos Restaurantes", formatNumber(dashboard.newRestaurants)],
+      ["Assinaturas Ativas", formatNumber(dashboard.activeSubscriptions)],
+      ["Assinaturas Vencendo", formatNumber(dashboard.expiringSubscriptions)],
+      ["Uso Medio Plataforma", formatPercent(dashboard.averagePlatformUsage)],
+      ["Chamados", formatNumber(dashboard.supportTickets)],
+      ["Erros", formatNumber(dashboard.errors)],
+      ["Performance", `${formatNumber(dashboard.performanceScore)}%`],
     ];
 
     kpiRoot.innerHTML = kpis
@@ -348,9 +441,11 @@
 
   const renderDashboard = () => {
     const restaurants = asArray(state.snapshot?.restaurants);
-    const plans = asArray(state.snapshot?.plans);
+    const plans = asArray(state.snapshot?.platformPlans || state.snapshot?.plans);
     const modules = getMenu();
-    const flags = state.snapshot?.restaurantFeatureFlags?.default || {};
+    const dashboard = state.snapshot?.platformDashboard || state.snapshot?.dashboard || {};
+    const finance = state.snapshot?.financeDashboard || {};
+    const commercial = state.snapshot?.commercialDashboard || {};
 
     return `
       <div class="master-panel-grid">
@@ -363,20 +458,26 @@
               label: "Modo manutencao",
               value: state.snapshot?.platform?.maintenanceMode ? "Ativo" : "Inativo",
             },
+            { label: "Performance", value: dashboard.performanceStatus || "Estavel" },
+            { label: "Uso medio", value: formatPercent(dashboard.averagePlatformUsage) },
+            { label: "Chamados", value: formatNumber(dashboard.supportTickets) },
           ])}
         </article>
         <article class="master-panel">
-          <h2>Cliente Modelo</h2>
+          <h2>Consolidado SaaS</h2>
           ${renderFieldGrid([
-            { label: "Restaurante", value: restaurants[0]?.name || "Tokyo Sushi Delivery" },
-            { label: "Plano", value: restaurants[0]?.plan || "PREMIUM" },
-            { label: "Status", value: restaurants[0]?.statusLabel || restaurants[0]?.status || "Cliente Modelo" },
+            { label: "Restaurantes", value: formatNumber(dashboard.totalRestaurants) },
+            { label: "Assinaturas ativas", value: formatNumber(dashboard.activeSubscriptions) },
+            { label: "MRR", value: formatCurrency(finance.mrr) },
+            { label: "Receita anual", value: formatCurrency(finance.annualRevenue) },
+            { label: "Vendedores", value: formatNumber(commercial.sellers) },
+            { label: "Clientes pagantes", value: formatNumber(finance.payingCustomers) },
           ])}
         </article>
       </div>
       <div class="master-panel-grid">
         <article class="master-panel">
-          <h2>Modulos Master</h2>
+          <h2>Modulos da Plataforma</h2>
           <div class="master-list">
             ${modules
               .map(
@@ -391,14 +492,15 @@
           </div>
         </article>
         <article class="master-panel">
-          <h2>Feature Flags</h2>
+          <h2>Restaurantes Recentes</h2>
           <div class="master-list">
-            ${Object.entries(flags)
+            ${restaurants
+              .slice(0, 6)
               .map(
-                ([key, enabled]) => `
+                (restaurant) => `
                   <div class="master-list-row">
-                    <strong>${escapeHtml(key)}</strong>
-                    ${renderStatus(enabled ? "ON" : "OFF")}
+                    <strong>${escapeHtml(restaurant.name || restaurant.restaurantKey)}</strong>
+                    ${renderStatus(restaurant.statusLabel || restaurant.status)}
                   </div>
                 `
               )
@@ -407,15 +509,19 @@
         </article>
       </div>
       <div class="master-panel">
-        <h2>Planos Preparados</h2>
+        <h2>Planos Oficiais</h2>
         <div class="master-card-grid">
           ${plans
             .map(
               (plan) => `
                 <article class="master-card">
                   <span>${escapeHtml(plan.status)}</span>
-                  <strong>${escapeHtml(plan.name)}</strong>
+                  <strong>${escapeHtml(plan.displayName || plan.name)}</strong>
                   <small>${escapeHtml(plan.description)}</small>
+                  <div class="master-list-row">
+                    <strong>Valor</strong>
+                    <span>${escapeHtml(formatCurrency(plan.monthlyValue || plan.valor_mensal))}</span>
+                  </div>
                 </article>
               `
             )
@@ -425,34 +531,231 @@
     `;
   };
 
+  // ---------------------------------------------------------------------------
+  // Restaurants
+  // ---------------------------------------------------------------------------
+
   const renderRestaurants = () => {
-    const rows = asArray(state.snapshot?.restaurants).map(
+    const filters = state.restaurantFilters || {};
+    const filterValue = (key) => normalizeSearch(filters[key]);
+    const restaurants = asArray(state.snapshot?.restaurants);
+    const filteredRestaurants = restaurants.filter((restaurant) => {
+      const registration = restaurant.registration || {};
+      const owner = restaurant.owner || {};
+      const city = registration.city || restaurant.address?.city || restaurant.onboarding?.address?.city || "";
+      const stateValue = registration.state || restaurant.address?.state || restaurant.onboarding?.address?.state || "";
+      const responsible = registration.ownerFullName || owner.fullName || owner.name || "";
+      const haystacks = {
+        name: `${restaurant.name || ""} ${restaurant.restaurantKey || ""}`,
+        city,
+        state: stateValue,
+        plan: restaurant.plan,
+        status: `${restaurant.status || ""} ${restaurant.statusLabel || ""}`,
+        responsible,
+        domain: restaurant.domain,
+      };
+
+      return Object.keys(filters).every((key) => {
+        const value = filterValue(key);
+        return !value || normalizeSearch(haystacks[key]).includes(value);
+      });
+    });
+    const rows = filteredRestaurants.map(
       (restaurant) => `
         <tr>
-          <td>${escapeHtml(restaurant.name)}</td>
-          <td>${escapeHtml(restaurant.slug)}</td>
+          <td>${escapeHtml(restaurant.restaurantId || restaurant.restaurantKey || restaurant.key)}</td>
+          <td>
+            <img class="master-brand-logo" src="${escapeHtml(restaurant.logo || "../assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(restaurant.name || "Restaurante")}" />
+          </td>
+          <td>
+            <strong>${escapeHtml(restaurant.name)}</strong>
+            <small>${escapeHtml(restaurant.slug || restaurant.restaurantKey)}</small>
+          </td>
+          <td>${escapeHtml(restaurant.domain || "--")}</td>
+          <td>${escapeHtml(restaurant.plan || "--")}</td>
           <td>${renderStatus(restaurant.statusLabel || restaurant.status)}</td>
-          <td>${escapeHtml(restaurant.plan)}</td>
-          <td>${escapeHtml(restaurant.domain)}</td>
+          <td>${escapeHtml(restaurant.registration?.city || restaurant.address?.city || restaurant.onboarding?.address?.city || "--")}</td>
+          <td>${escapeHtml(restaurant.registration?.state || restaurant.address?.state || restaurant.onboarding?.address?.state || "--")}</td>
+          <td>${escapeHtml(restaurant.registration?.ownerFullName || restaurant.owner?.fullName || "--")}</td>
+          <td>${escapeHtml(restaurant.registration?.phone || restaurant.owner?.phone || restaurant.whatsapp || "--")}</td>
           <td>${escapeHtml(formatDateTime(restaurant.createdAt))}</td>
-          <td>${escapeHtml(restaurant.notes)}</td>
+          <td>${escapeHtml(formatDateTime(getRestaurantUsers(restaurant.restaurantKey).map((user) => user.lastAccessAt || user.ultimo_acesso).filter(Boolean).sort().pop()))}</td>
+          <td>
+            <div class="master-row-actions">
+              <button class="admin-action-button is-compact" type="button" data-master-restaurant-action="view" data-master-restaurant-key="${escapeHtml(restaurant.restaurantKey)}">Visualizar</button>
+              ${renderActionButton("Editar", "restaurant-edit", restaurant.restaurantKey)}
+              ${renderActionButton("Bloquear", "restaurant-block", restaurant.restaurantKey)}
+              ${renderActionButton("Suspender", "restaurant-suspend", restaurant.restaurantKey)}
+              ${renderActionButton("Reativar", "restaurant-reactivate", restaurant.restaurantKey)}
+              ${renderDangerActionButton("Excluir", "restaurant-soft-delete", restaurant.restaurantKey)}
+            </div>
+          </td>
         </tr>
       `
     );
 
     return `
       <article class="master-panel">
-        <h2>Cadastro de Restaurantes</h2>
+        <header class="master-panel-head">
+          <div>
+            <h2>Gestao de Restaurantes</h2>
+            <p>${escapeHtml(String(filteredRestaurants.length))} de ${escapeHtml(String(restaurants.length))} restaurantes exibidos. Consultas globais preparadas para paginacao.</p>
+          </div>
+          ${renderActionButton("Novo restaurante", "restaurant-create")}
+        </header>
+        <div class="master-registration-form">
+          ${["name", "city", "state", "plan", "status", "responsible", "domain"]
+            .map(
+              (key) => `
+                <label>
+                  <span>${escapeHtml({
+                    name: "Nome",
+                    city: "Cidade",
+                    state: "Estado",
+                    plan: "Plano",
+                    status: "Status",
+                    responsible: "Responsavel",
+                    domain: "Dominio",
+                  }[key])}</span>
+                  <input class="admin-input" value="${escapeHtml(filters[key] || "")}" data-master-restaurant-filter="${escapeHtml(key)}" />
+                </label>
+              `
+            )
+            .join("")}
+        </div>
         ${renderTable(
-          ["Nome", "Slug", "Status", "Plano", "Dominio", "Data de criacao", "Observacoes"],
+          [
+            "ID",
+            "Logo",
+            "Nome",
+            "Dominio",
+            "Plano",
+            "Status",
+            "Cidade",
+            "Estado",
+            "Responsavel",
+            "Telefone",
+            "Data Cadastro",
+            "Ultimo Login",
+            "Acoes",
+          ],
           rows,
           "Nenhum restaurante cadastrado."
         )}
+      </article>
+      ${renderRestaurantPage()}
+    `;
+  };
+
+  const renderRestaurantPage = () => {
+    const restaurant = getRestaurantByKey(state.selectedRestaurantKey);
+
+    if (!restaurant) {
+      return "";
+    }
+
+    const users = getRestaurantUsers(restaurant.restaurantKey);
+    const subscription = asArray(state.snapshot?.subscriptions).find(
+      (entry) => entry.restaurantKey === restaurant.restaurantKey
+    ) || {};
+    const tabs = [
+      ["info", "Informacoes"],
+      ["media", "Logo/Banner"],
+      ["plan", "Plano"],
+      ["users", "Usuarios"],
+      ["finance", "Financeiro"],
+      ["orders", "Pedidos"],
+      ["customers", "Clientes"],
+      ["catalog", "Cardapio"],
+      ["inventory", "Estoque"],
+      ["metrics", "Metricas"],
+      ["reviews", "Avaliacoes"],
+      ["settings", "Configuracoes"],
+    ];
+    const activeTab = state.selectedRestaurantTab || "info";
+    const tabContent = {
+      info: renderFieldGrid([
+        { label: "ID", value: restaurant.restaurantId || restaurant.restaurantKey },
+        { label: "Nome", value: restaurant.name },
+        { label: "Dominio", value: restaurant.domain },
+        { label: "Cidade", value: restaurant.registration?.city || restaurant.address?.city },
+        { label: "Estado", value: restaurant.registration?.state || restaurant.address?.state },
+        { label: "Responsavel", value: restaurant.registration?.ownerFullName || restaurant.owner?.fullName },
+      ]),
+      media: renderFieldGrid([
+        { label: "Logo", value: restaurant.logo || "Logo do restaurante preparada" },
+        { label: "Banner", value: restaurant.banner || "Banner do restaurante preparado" },
+        { label: "Branding", value: "Separado da marca INOVAS Food" },
+      ]),
+      plan: renderFieldGrid([
+        { label: "Plano", value: subscription.plan || restaurant.plan },
+        { label: "Status", value: subscription.contractStatus || subscription.status },
+        { label: "Mensalidade", value: formatCurrency(subscription.monthlyValue || subscription.valor_mensal) },
+      ]),
+      users: renderTable(
+        ["Nome", "Perfil", "Status"],
+        users.map(
+          (user) => `
+            <tr>
+              <td>${escapeHtml(user.name || user.login)}</td>
+              <td>${escapeHtml(user.userType || user.tipo_usuario)}</td>
+              <td>${renderStatus(user.statusLabel || user.status)}</td>
+            </tr>
+          `
+        ),
+        "Nenhum usuario vinculado."
+      ),
+      finance: renderFieldGrid([
+        { label: "Mensalidade", value: formatCurrency(subscription.monthlyValue || subscription.valor_mensal) },
+        { label: "Forma pagamento", value: "Nao integrado" },
+        { label: "Historico", value: "Preparado para integracao futura" },
+      ]),
+      orders: renderFieldGrid([
+        { label: "Pedidos", value: formatNumber(state.snapshot?.dashboard?.totalOrders) },
+        { label: "Escopo", value: restaurant.restaurantKey },
+      ]),
+      customers: renderFieldGrid([
+        { label: "Clientes", value: formatNumber(state.snapshot?.dashboard?.totalCustomers) },
+        { label: "Escopo", value: restaurant.restaurantKey },
+      ]),
+      catalog: renderFieldGrid([{ label: "Cardapio", value: "Preparado para consulta por restaurante" }]),
+      inventory: renderFieldGrid([{ label: "Estoque", value: "Preparado para consulta por restaurante" }]),
+      metrics: renderFieldGrid([{ label: "Metricas", value: "Preparado para consolidado por restaurante" }]),
+      reviews: renderFieldGrid([{ label: "Avaliacoes", value: formatNumber(state.snapshot?.dashboard?.totalReviews) }]),
+      settings: renderFieldGrid([{ label: "Configuracoes", value: "Preparadas por tenant/restaurante" }]),
+    }[activeTab] || "";
+
+    return `
+      <article class="master-panel" data-master-restaurant-page>
+        <header class="master-panel-head">
+          <div>
+            <span class="admin-chip">Pagina Restaurante</span>
+            <h2>${escapeHtml(restaurant.name)}</h2>
+            <p>Todas as abas usam dados escopados por restaurante e preservam a marca INOVAS separada.</p>
+          </div>
+          <button class="admin-action-button is-compact" type="button" data-master-restaurant-action="close">Fechar</button>
+        </header>
+        <div class="master-token-list">
+          ${tabs
+            .map(
+              ([key, label]) => `
+                <button class="admin-action-button is-compact ${activeTab === key ? "is-primary" : ""}" type="button" data-master-restaurant-tab="${escapeHtml(key)}">
+                  ${escapeHtml(label)}
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+        ${tabContent}
       </article>
     `;
   };
 
   const getMasterUsers = () => asArray(state.snapshot?.users);
+
+  // ---------------------------------------------------------------------------
+  // Users and restaurant onboarding
+  // ---------------------------------------------------------------------------
 
   const getMasterUserById = (id) => {
     const targetId = String(id || "").trim();
@@ -849,45 +1152,60 @@
     `;
   };
 
-  const renderPlans = () => `
-    <div class="master-card-grid">
-      ${asArray(state.snapshot?.plans)
-        .map(
-          (plan) => `
-            <article class="master-card">
-              <span>${escapeHtml(plan.status)}</span>
-              <strong>${escapeHtml(plan.name)}</strong>
-              <small>${escapeHtml(plan.description)}</small>
-              <div class="master-list">
-                <div class="master-list-row">
-                  <strong>Valor mensal</strong>
-                  <span>${escapeHtml(formatCurrency(plan.monthlyValue || plan.valor_mensal))}</span>
-                </div>
-                <div class="master-list-row">
-                  <strong>Limite de usuarios</strong>
-                  <span>${escapeHtml(
-                    Number(plan.userLimit || plan.limite_usuarios || 0)
-                      ? `${plan.userLimit || plan.limite_usuarios} usuarios`
-                      : "Usuarios extras preparados"
-                  )}</span>
-                </div>
-                <div class="master-list-row">
-                  <strong>Edicao</strong>
-                  <span>Valor, descricao e status preparados</span>
-                </div>
-              </div>
-              <div class="master-token-list">
-                ${asArray(plan.recursos_inclusos || plan.includedFeatures || plan.features)
-                  .map((feature) => `<em>${escapeHtml(feature)}</em>`)
-                  .join("")}
-              </div>
-              <small>${escapeHtml(plan.notes || plan.observations || "Sem observacoes.")}</small>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
+  const renderPlans = () => {
+    const plans = asArray(state.snapshot?.platformPlans || state.snapshot?.plans);
+    const rows = plans.map(
+      (plan) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(plan.displayName || plan.name)}</strong>
+            <small>${escapeHtml(plan.key)}</small>
+          </td>
+          <td>${escapeHtml(formatCurrency(plan.monthlyValue || plan.valor_mensal))}</td>
+          <td>${escapeHtml(plan.description)}</td>
+          <td>
+            <div class="master-token-list">
+              ${asArray(plan.recursos_inclusos || plan.includedFeatures || plan.features)
+                .slice(0, 8)
+                .map((feature) => `<em>${escapeHtml(feature)}</em>`)
+                .join("")}
+            </div>
+          </td>
+          <td>${renderStatus(plan.status)}</td>
+          <td><span class="master-status">${escapeHtml(plan.color || "#FF6A00")}</span></td>
+          <td>${escapeHtml(String(plan.order || "--"))}</td>
+          <td>${escapeHtml(plan.featured ? "Sim" : "Nao")}</td>
+          <td>
+            <div class="master-row-actions">
+              ${renderActionButton("Editar", "plan-edit", plan.key)}
+              ${renderActionButton("Duplicar", "plan-duplicate", plan.key)}
+            </div>
+          </td>
+        </tr>
+      `
+    );
+
+    return `
+      <article class="master-panel">
+        <header class="master-panel-head">
+          <div>
+            <h2>Gestao dos Planos</h2>
+            <p>Planos oficiais V1.3: Essencial, Profissional e Enterprise. Pagamento real nao integrado.</p>
+          </div>
+          ${renderActionButton("Novo plano", "plan-create")}
+        </header>
+        ${renderTable(
+          ["Nome", "Valor", "Descricao", "Funcionalidades", "Status", "Cor", "Ordem", "Destaque", "Acoes"],
+          rows,
+          "Nenhum plano cadastrado."
+        )}
+      </article>
+    `;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Platform commercial modules
+  // ---------------------------------------------------------------------------
 
   const renderResources = () => {
     const rows = asArray(state.snapshot?.resources || state.snapshot?.commercialFeatures).map(
@@ -965,9 +1283,11 @@
         <tr>
           <td>${escapeHtml(subscription.restaurantName)}</td>
           <td>${escapeHtml(subscription.plan)}</td>
-          <td>${escapeHtml(formatCurrency(subscription.monthlyValue || subscription.valor_mensal))}</td>
+          <td>${renderStatus(subscription.contractStatus || subscription.status)}</td>
+          <td>${escapeHtml(subscription.nextBillingAt || subscription.dueDate || subscription.data_vencimento || `Dia ${subscription.dueDay || subscription.dia_vencimento || "--"}`)}</td>
+          <td>${escapeHtml(subscription.paymentMethod || "Nao integrado")}</td>
+          <td>${escapeHtml(subscription.history || "Preparado para integracao futura")}</td>
           <td>${renderStatus(subscription.status)}</td>
-          <td>${escapeHtml(subscription.dueDate || subscription.data_vencimento || `Dia ${subscription.dueDay || subscription.dia_vencimento || "--"}`)}</td>
           <td>
             <div class="master-token-list">
               ${asArray(subscription.releasedFeatures || subscription.recursos_liberados)
@@ -985,11 +1305,196 @@
       <article class="master-panel">
         <h2>Assinaturas / Contratos</h2>
         ${renderTable(
-          ["Restaurante", "Plano", "Valor", "Status", "Vencimento", "Recursos liberados", "Observacoes"],
+          [
+            "Restaurante",
+            "Plano",
+            "Situacao",
+            "Proximo Vencimento",
+            "Forma Pagamento",
+            "Historico",
+            "Status",
+            "Recursos liberados",
+            "Observacoes",
+          ],
           rows,
           "Nenhum contrato cadastrado."
         )}
       </article>
+    `;
+  };
+
+  const renderSellers = () => {
+    const rows = asArray(state.snapshot?.sellers).map(
+      (seller) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(seller.name)}</strong>
+            <small>${escapeHtml(seller.id)}</small>
+          </td>
+          <td>${escapeHtml(seller.phone || "--")}</td>
+          <td>${escapeHtml(seller.email || "--")}</td>
+          <td>${escapeHtml(formatNumber(seller.clients))}</td>
+          <td>${escapeHtml(formatNumber(seller.restaurants))}</td>
+          <td>${escapeHtml(String(seller.commissionRate || "Preparado"))}</td>
+          <td>${renderStatus(seller.status)}</td>
+          <td>
+            <div class="master-row-actions">
+              ${renderActionButton("Cadastrar", "seller-create", seller.id)}
+              ${renderActionButton("Editar", "seller-edit", seller.id)}
+              ${renderActionButton("Bloquear", "seller-block", seller.id)}
+              ${renderDangerActionButton("Excluir", "seller-delete", seller.id)}
+              ${renderActionButton("Ver Clientes", "seller-customers", seller.id)}
+              ${renderActionButton("Ver Restaurantes", "seller-restaurants", seller.id)}
+            </div>
+          </td>
+        </tr>
+      `
+    );
+
+    return `
+      <article class="master-panel">
+        <header class="master-panel-head">
+          <div>
+            <h2>Vendedores</h2>
+            <p>Carteira comercial vinculada por seller_id, sem calculo automatico de comissao nesta versao.</p>
+          </div>
+          ${renderActionButton("Cadastrar vendedor", "seller-create")}
+        </header>
+        ${renderTable(
+          ["Nome", "Telefone", "Email", "Clientes", "Restaurantes", "Comissao", "Status", "Acoes"],
+          rows,
+          "Nenhum vendedor cadastrado."
+        )}
+      </article>
+    `;
+  };
+
+  const renderCommissions = () => {
+    const rows = asArray(state.snapshot?.commissions).map(
+      (commission) => `
+        <tr>
+          <td>${escapeHtml(commission.restaurantName || "--")}</td>
+          <td>${escapeHtml(commission.plan || "--")}</td>
+          <td>${escapeHtml(formatCurrency(commission.monthlyValue))}</td>
+          <td>${escapeHtml(commission.sellerName || "--")}</td>
+          <td>${escapeHtml(commission.percentage || "A definir")}</td>
+          <td>${escapeHtml(String(commission.value || "A calcular"))}</td>
+          <td>${renderStatus(commission.status)}</td>
+        </tr>
+      `
+    );
+
+    return `
+      <article class="master-panel">
+        <h2>Comissao</h2>
+        <p>Estrutura preparada para comissao futura. Nenhum valor e calculado automaticamente nesta versao.</p>
+        ${renderTable(
+          ["Restaurante", "Plano", "Mensalidade", "Vendedor", "Percentual", "Valor", "Status"],
+          rows,
+          "Nenhuma comissao preparada."
+        )}
+      </article>
+    `;
+  };
+
+  const renderContracts = () => {
+    const rows = asArray(state.snapshot?.platformContracts).map(
+      (contract) => `
+        <tr>
+          <td>${escapeHtml(contract.contract)}</td>
+          <td>${escapeHtml(contract.plan)}</td>
+          <td>${escapeHtml(contract.restaurantName)}</td>
+          <td>${renderStatus(contract.status)}</td>
+          <td>${escapeHtml(contract.signedLabel || (contract.signed ? "Sim" : "Nao"))}</td>
+          <td>${escapeHtml(formatDateTime(contract.date))}</td>
+          <td>${escapeHtml(contract.download || "Preparado")}</td>
+        </tr>
+      `
+    );
+
+    return `
+      <article class="master-panel">
+        <h2>Contratos</h2>
+        <p>Modulo preparado para assinatura e download futuro. Sem integracao externa nesta etapa.</p>
+        ${renderTable(["Contrato", "Plano", "Restaurante", "Status", "Assinado", "Data", "Download"], rows, "Nenhum contrato preparado.")}
+      </article>
+    `;
+  };
+
+  const renderFinance = () => {
+    const finance = state.snapshot?.financeDashboard || {};
+    const renderBreakdown = (title, values = {}) => `
+      <article class="master-panel">
+        <h2>${escapeHtml(title)}</h2>
+        <div class="master-list">
+          ${Object.entries(values)
+            .map(
+              ([key, value]) => `
+                <div class="master-list-row">
+                  <strong>${escapeHtml(key)}</strong>
+                  <span>${escapeHtml(formatCurrency(value))}</span>
+                </div>
+              `
+            )
+            .join("") || "<div class=\"master-list-row\"><strong>Sem dados</strong><span>R$ 0,00</span></div>"}
+        </div>
+      </article>
+    `;
+
+    return `
+      <div class="master-panel-grid">
+        <article class="master-panel">
+          <h2>Dashboard Financeiro</h2>
+          ${renderFieldGrid([
+            { label: "MRR", value: formatCurrency(finance.mrr) },
+            { label: "Receita Mensal", value: formatCurrency(finance.monthlyRevenue) },
+            { label: "Receita Anual", value: formatCurrency(finance.annualRevenue) },
+            { label: "Clientes Pagantes", value: formatNumber(finance.payingCustomers) },
+            { label: "Inadimplentes", value: formatNumber(finance.overdueCustomers) },
+            { label: "Ticket Medio", value: formatCurrency(finance.averageTicket) },
+          ])}
+        </article>
+        ${renderBreakdown("Receita por Plano", finance.revenueByPlan)}
+      </div>
+      <div class="master-panel-grid">
+        ${renderBreakdown("Receita por Cidade", finance.revenueByCity)}
+        ${renderBreakdown("Receita por Estado", finance.revenueByState)}
+      </div>
+    `;
+  };
+
+  const renderCommercial = () => {
+    const commercial = state.snapshot?.commercialDashboard || {};
+
+    return `
+      <div class="master-panel-grid">
+        <article class="master-panel">
+          <h2>Dashboard Comercial</h2>
+          ${renderFieldGrid([
+            { label: "Leads", value: formatNumber(commercial.leads) },
+            { label: "Novos Clientes", value: formatNumber(commercial.newCustomers) },
+            { label: "Conversao", value: formatPercent(commercial.conversionRate) },
+            { label: "Restaurantes", value: formatNumber(commercial.restaurants) },
+            { label: "Vendedores", value: formatNumber(commercial.sellers) },
+            { label: "Vendedores Ativos", value: formatNumber(commercial.activeSellers) },
+          ])}
+        </article>
+        <article class="master-panel">
+          <h2>Melhores vendedores</h2>
+          <div class="master-list">
+            ${asArray(commercial.topSellers)
+              .map(
+                (seller) => `
+                  <div class="master-list-row">
+                    <strong>${escapeHtml(seller.name)}</strong>
+                    <span>${escapeHtml(formatNumber(seller.restaurants))} restaurantes</span>
+                  </div>
+                `
+              )
+              .join("") || "<div class=\"master-list-row\"><strong>Sem vendedores</strong><span>0 restaurantes</span></div>"}
+          </div>
+        </article>
+      </div>
     `;
   };
 
@@ -998,7 +1503,7 @@
       <h2>Relatorios Gerais</h2>
       ${renderFieldGrid([
         { label: "Preparado", value: state.snapshot?.reports?.prepared ? "Sim" : "Nao" },
-        { label: "Escopo atual", value: "Tokyo Sushi / default" },
+        { label: "Escopo atual", value: "Global Plataforma" },
         { label: "Consolidacao", value: "Futura carteira INovas Food" },
       ])}
     </article>
@@ -1009,10 +1514,13 @@
       (event) => `
         <tr>
           <td>${escapeHtml(event.actorName || event.actorLogin || "--")}</td>
-          <td>${escapeHtml(event.target || "--")}</td>
           <td>${escapeHtml(formatDateTime(event.changedAt))}</td>
-          <td>${escapeHtml(event.origin || "--")}</td>
           <td>${escapeHtml(event.actionType || "--")}</td>
+          <td>${escapeHtml(event.metadata?.ip || "--")}</td>
+          <td>${escapeHtml(event.metadata?.restaurantKey || event.target || "--")}</td>
+          <td>${escapeHtml(event.origin || "platform")}</td>
+          <td>${escapeHtml(key === "audit" ? JSON.stringify(event.metadata?.before || {}) : "--")}</td>
+          <td>${escapeHtml(key === "audit" ? JSON.stringify(event.metadata?.after || event.metadata || {}) : "--")}</td>
         </tr>
       `
     );
@@ -1020,10 +1528,28 @@
     return `
       <article class="master-panel">
         <h2>${key === "logs" ? "Logs" : "Auditoria"}</h2>
-        ${renderTable(["Quem alterou", "O que alterou", "Quando", "Origem", "Tipo de acao"], rows, "Sem registros novos.")}
+        <div class="master-registration-form">
+          <label>
+            <span>Usuario</span>
+            <input class="admin-input" placeholder="Filtro preparado" disabled />
+          </label>
+          <label>
+            <span>Restaurante/Sistema</span>
+            <input class="admin-input" placeholder="Filtro preparado" disabled />
+          </label>
+        </div>
+        ${renderTable(
+          ["Usuario", "Data", "Acao", "IP", "Restaurante", "Sistema", "Antes", "Depois"],
+          rows,
+          "Sem registros novos."
+        )}
       </article>
     `;
   };
+
+  // ---------------------------------------------------------------------------
+  // Logs, audit, developer diagnostics and settings
+  // ---------------------------------------------------------------------------
 
   const renderDeveloper = () => {
     const developer = state.snapshot?.developer || {};
@@ -1117,13 +1643,32 @@
         ${renderFieldGrid([
           { label: "Nome da plataforma", value: settings.platformName },
           { label: "Logo", value: settings.logo || "--" },
+          { label: "Dominio", value: settings.domain || "--" },
           { label: "Site", value: settings.site || "--" },
           { label: "Email", value: settings.email || "--" },
+          { label: "Email suporte", value: settings.emails?.support || "--" },
+          { label: "Email financeiro", value: settings.emails?.financial || "--" },
+          { label: "Email comercial", value: settings.emails?.commercial || "--" },
           { label: "WhatsApp", value: settings.whatsapp || "--" },
+          { label: "Instagram", value: settings.social?.instagram || "--" },
+          { label: "Facebook", value: settings.social?.facebook || "--" },
+          { label: "LinkedIn", value: settings.social?.linkedin || "--" },
+          { label: "SMTP", value: settings.smtp?.status || "PREPARED" },
+          { label: "Integracoes", value: Object.values(settings.integrations || {}).join(" / ") || "PREPARED" },
+          { label: "API", value: settings.api?.status || "PREPARED" },
+          { label: "Tokens", value: settings.tokens?.status || "PREPARED" },
           { label: "Rodape padrao", value: settings.defaultFooter },
           { label: "Marca exibida nos clientes", value: settings.customerBrandName },
           { label: "Modo manutencao", value: settings.maintenanceMode ? "Ativo" : "Inativo" },
           { label: "Versao", value: settings.version },
+        ])}
+      </article>
+      <article class="master-panel">
+        <h2>Branding</h2>
+        ${renderFieldGrid([
+          { label: "Marca plataforma", value: "INOVAS Food" },
+          { label: "Marca restaurante", value: "Configurada por restaurante" },
+          { label: "Regra", value: "Nunca misturar marca INOVAS com marca do restaurante" },
         ])}
       </article>
     `;
@@ -1164,6 +1709,11 @@
       resources: renderResources,
       domains: renderDomains,
       subscriptions: renderSubscriptions,
+      sellers: renderSellers,
+      commissions: renderCommissions,
+      contracts: renderContracts,
+      finance: renderFinance,
+      commercial: renderCommercial,
       reports: renderReports,
       logs: () => renderEvents("logs"),
       audit: () => renderEvents("audit"),
@@ -1171,8 +1721,13 @@
       settings: renderSettings,
     };
 
-    contentRoot.innerHTML = (renderers[state.activeSection] || renderDashboard)();
+    const sectionBody = (renderers[state.activeSection] || renderDashboard)();
+    contentRoot.innerHTML = `${state.activeSection === "users" ? "" : renderFeedback()}${sectionBody}`;
   };
+
+  // ---------------------------------------------------------------------------
+  // Data loading and form submissions
+  // ---------------------------------------------------------------------------
 
   const render = () => {
     renderChrome();
@@ -1408,6 +1963,8 @@
   };
 
   const initMasterPanel = () => {
+    // Platform RC keeps all writes behind the existing backend; prepared actions
+    // only inform the operator that the module contract exists.
     const navRoot = query("[data-master-nav]");
     const contentRoot = query("[data-master-content]");
     const refreshButtons = queryAll("[data-master-refresh]");
@@ -1436,6 +1993,20 @@
     if (contentRoot) {
       contentRoot.addEventListener("input", (event) => {
         const searchInput = event.target.closest("[data-master-user-search]");
+        const restaurantFilter = event.target.closest("[data-master-restaurant-filter]");
+
+        if (restaurantFilter) {
+          const filterKey = String(restaurantFilter.dataset.masterRestaurantFilter || "").trim();
+
+          if (filterKey) {
+            state.restaurantFilters = {
+              ...state.restaurantFilters,
+              [filterKey]: String(restaurantFilter.value || ""),
+            };
+            renderContent();
+          }
+          return;
+        }
 
         if (!searchInput) {
           return;
@@ -1447,6 +2018,41 @@
 
       contentRoot.addEventListener("click", (event) => {
         const actionButton = event.target.closest("[data-master-user-action]");
+        const restaurantActionButton = event.target.closest("[data-master-restaurant-action]");
+        const restaurantTabButton = event.target.closest("[data-master-restaurant-tab]");
+        const preparedActionButton = event.target.closest("[data-master-prepared-action]");
+
+        if (restaurantTabButton) {
+          state.selectedRestaurantTab = String(restaurantTabButton.dataset.masterRestaurantTab || "info").trim() || "info";
+          renderContent();
+          return;
+        }
+
+        if (restaurantActionButton) {
+          const action = String(restaurantActionButton.dataset.masterRestaurantAction || "").trim();
+
+          if (action === "view") {
+            state.selectedRestaurantKey = String(restaurantActionButton.dataset.masterRestaurantKey || "").trim();
+            state.selectedRestaurantTab = "info";
+            renderContent();
+            return;
+          }
+
+          if (action === "close") {
+            state.selectedRestaurantKey = "";
+            state.selectedRestaurantTab = "info";
+            renderContent();
+            return;
+          }
+        }
+
+        if (preparedActionButton) {
+          const action = String(preparedActionButton.dataset.masterPreparedAction || "").trim();
+          state.userFeedback = `Acao ${action} preparada para a Plataforma V1.3. Escrita real ainda nao foi executada.`;
+          state.userFeedbackType = "info";
+          renderContent();
+          return;
+        }
 
         if (!actionButton) {
           return;

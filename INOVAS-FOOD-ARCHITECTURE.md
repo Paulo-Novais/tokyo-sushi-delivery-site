@@ -128,12 +128,14 @@ Responsabilidades atuais:
 
 - Mostrar visao da plataforma.
 - Representar restaurantes, planos, recursos, dominios, contratos, assinaturas, relatorios, logs e auditoria.
+- Em V1.3, atuar como painel administrativo SaaS da INOVAS Food, com dashboard global, gestao de restaurantes, pagina do restaurante em abas, planos, assinaturas, vendedores, comissao, contratos, financeiro plataforma, comercial, configuracoes, logs e auditoria.
 - Manter feature flags comerciais.
 - Simular preparo para `restaurant_key`.
 
 Ponto importante:
 
-- O painel master e uma boa fundacao conceitual, mas ainda nao e multi-restaurante real. `resolveRestaurantByHost` sempre retorna a operacao default. O proprio snapshot declara `multiRestaurantActive: false`.
+- O painel master e uma boa fundacao conceitual, mas ainda nao e multi-restaurante real. `resolveRestaurantByHost` preserva a operacao default quando `INOVAS_TENANT_MODE=default_only`. O proprio snapshot declara se `multiRestaurantActive` esta ativo.
+- A V1.3 nao integra pagamento real, assinatura digital, SMTP, API tokens ou calculo automatico de comissao; esses contratos ficam preparados no snapshot da Plataforma.
 
 ### APIs
 

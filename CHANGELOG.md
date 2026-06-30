@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.3.0] - Em desenvolvimento
+
+Status: Local Validation
+
+### Added
+
+- Dashboard exclusivo da Plataforma com cards globais de restaurantes, usuarios, pedidos, clientes, faturamento, assinaturas, uso, chamados, erros e performance.
+- Modulo Restaurantes no Painel Master com filtros, tabela completa, acoes preparadas e pagina do restaurante em abas.
+- Gestao visual de Planos oficiais V1.3: Essencial, Profissional e Enterprise, preservando chaves tecnicas legadas.
+- Telas de Assinaturas, Vendedores, Comissao, Contratos, Financeiro Plataforma e Dashboard Comercial.
+- Configuracoes da Plataforma com campos preparados para dominio, emails, WhatsApp, redes, SMTP, integracoes, API e tokens.
+- Logs e Auditoria no contexto da Plataforma.
+- Validador `validate:v1-3-platform-local`.
+
+### Changed
+
+- Painel Master passa a operar como base administrativa SaaS da INOVAS Food.
+- Dashboard da plataforma deixa de destacar apenas Tokyo/default e usa agregados globais do snapshot master.
+- Usuarios de sistema sao contados separadamente de usuarios de restaurante no snapshot da Plataforma.
+- RC organiza documentacao V2 em `docs/`, adiciona marcadores de secao no codigo da plataforma e reforca a validacao da logo oficial INOVAS Food no login e no Painel Master.
+
+### Not Included
+
+- Deploy, tag e commit.
+- Integracao real de pagamento, contrato externo, SMTP, API tokens ou calculo automatico de comissao.
+- Alteracoes no Gestor do Restaurante, APIs publicas, autenticacao ou banco de producao.
+
 ## [1.1.0] - 2026-06-29
 
 Status: Production Ready (Controlled Deploy)

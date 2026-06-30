@@ -29,6 +29,31 @@ Critérios de saida:
 - Chave Google Maps revisada com restricao de referrer/API.
 - Variaveis reais revisadas sem exposicao.
 
+## V1.3 - Gestao da Plataforma
+
+Objetivo: transformar o Painel Master em painel administrativo SaaS da INOVAS Food, sem criar novas funcionalidades para restaurantes.
+
+- Dashboard Plataforma com dados globais.
+- Gestao de restaurantes.
+- Pagina de restaurante em abas.
+- Gestao visual de planos Essencial, Profissional e Enterprise.
+- Assinaturas preparadas para integracao futura.
+- Vendedores e carteira comercial.
+- Estrutura de comissao por vendedor.
+- Contratos preparados.
+- Dashboard financeiro da plataforma.
+- Dashboard comercial.
+- Configuracoes da plataforma.
+- Logs e auditoria.
+- Validador `validate:v1-3-platform-local`.
+
+Fora de escopo:
+
+- Gateway de pagamento.
+- Calculo automatico de comissao.
+- Alteracao no gestor de restaurante.
+- Alteracao de autenticacao, APIs publicas ou banco de producao.
+
 ## V1.5 - Operacao presencial e fidelizacao
 
 Objetivo: ampliar a operacao do restaurante para salao, caixa e relacionamento.
