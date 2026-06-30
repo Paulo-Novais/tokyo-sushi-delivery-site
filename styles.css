@@ -5347,6 +5347,19 @@ select.auth-input option:focus {
   gap: 0.16rem;
 }
 
+.inovas-platform-footer .inovas-platform-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inovas-platform-footer .inovas-platform-brand img {
+  width: 7.8rem;
+  height: auto;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
 .inovas-platform-footer strong {
   color: var(--text);
   font-size: 0.95rem;

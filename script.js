@@ -363,6 +363,7 @@ const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
   platformFooter: {
     showPlatformBranding: TOKYO_SITE_APPEARANCE.platformFooter?.showPlatformBranding !== false,
     brandName: TOKYO_SITE_APPEARANCE.platformFooter?.brandName || "INovas Food",
+    logo: TOKYO_SITE_APPEARANCE.platformFooter?.logo || "./assets/inovas-food-logo-oficial.png",
     headline: TOKYO_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INovas Food",
     description:
       TOKYO_SITE_APPEARANCE.platformFooter?.description ||
@@ -6233,6 +6234,10 @@ const normalizePublicPlatformFooter = (source = {}, defaults = RESTAURANT_SETTIN
       fallback.showPlatformBranding !== false
     ),
     brandName: normalizePublicSettingsText(footer.brandName, fallback.brandName || "INovas Food", 80),
+    logo: normalizePublicAssetUrl(
+      footer.logo,
+      fallback.logo || "./assets/inovas-food-logo-oficial.png"
+    ),
     headline: normalizePublicSettingsText(
       footer.headline,
       fallback.headline || "Desenvolvido por INovas Food",
@@ -7682,11 +7687,17 @@ const syncPlatformFooter = (settings) => {
   document.querySelectorAll("[data-platform-branding]").forEach((node) => {
     node.hidden = false;
     const headline = node.querySelector("[data-platform-branding-headline]");
+    const logo = node.querySelector("[data-platform-branding-logo]");
     const description = node.querySelector("[data-platform-branding-description]");
     const link = node.querySelector("[data-platform-branding-link]");
 
     if (headline) {
       headline.textContent = footer.headline || "Desenvolvido por INovas Food";
+    }
+
+    if (logo) {
+      logo.src = footer.logo || "./assets/inovas-food-logo-oficial.png";
+      logo.alt = footer.brandName || "INovas Food";
     }
 
     if (description) {
@@ -9992,9 +10003,12 @@ const createSiteFooter = () => {
             <span>${escapeHtml(footerBottomAddress || "Rua General Osório, 2165 - Franca - SP.")}</span>
           </div>
           <div class="inovas-platform-footer" data-platform-branding>
-            <div>
-              <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INovas Food")}</strong>
-              <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
+            <div class="inovas-platform-brand">
+              <img src="${escapeHtml(platformFooter.logo || "./assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(platformFooter.brandName || "INovas Food")}" data-platform-branding-logo />
+              <div>
+                <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INovas Food")}</strong>
+                <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
+              </div>
             </div>
             <a href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://www.inovasfood.com.br"))}" target="_blank" rel="noreferrer" data-platform-branding-link>
               ${escapeHtml(platformFooter.displayUrl || "www.inovasfood.com.br")}

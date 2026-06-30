@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/inovas",
+      "destination": "/inovas.html"
+    },
+    {
       "source": "/api/admin/login",
       "destination": "/api/admin/[...action]?action=auth/login"
     },
