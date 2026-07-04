@@ -456,7 +456,7 @@ const validateDesktopLayout = async (page) => {
     "A ultima coluna do kanban nao deveria ficar cortada na direita."
   );
   assert.ok(
-    metrics.logoCurrentSrc.includes("/assets/tokyo-logo-sidebar.png"),
+    metrics.logoCurrentSrc.includes("/assets/inovas-food-logo-oficial.png"),
     "A sidebar deveria usar a nova logo dedicada."
   );
   assert.ok(metrics.logoWidth > 0, "A logo da sidebar deveria estar renderizada.");

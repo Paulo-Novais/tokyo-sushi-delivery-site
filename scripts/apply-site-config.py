@@ -130,7 +130,7 @@ def build_runtime_config(site_config: dict) -> dict:
             "socialImage": social_image_path,
             "supportAvatar": "./site-images/support-avatar-duo.webp",
             "loginCover": "./site-images/login-cover-floating.png",
-            "adminSidebarLogo": "../assets/tokyo-logo-sidebar.png",
+            "adminSidebarLogo": "../assets/inovas-food-logo-oficial.png",
         },
         site_config.get("assets"),
     )
