@@ -84,11 +84,6 @@ body.admin-body::after,
   display: none;
 }
 
-.admin-theme-toggle,
-[data-admin-theme-toggle] {
-  display: none !important;
-}
-
 /* Shell Layout */
 .admin-shell,
 .master-shell {
@@ -481,7 +476,7 @@ select.admin-input:focus,
 
 /* Official INOVAS light reference lock */
 :root,
-body.admin-body,
+body.admin-body[data-admin-theme='light'],
 body.master-body {
   color-scheme: light;
   --inovas-orange: #ff5a00;
@@ -526,23 +521,23 @@ body.master-body {
 
 html,
 body,
-body.admin-body,
-body.admin-body[data-admin-page],
-body.admin-body[data-admin-theme],
-body.admin-body[data-admin-section],
-body.admin-body.admin-login-page,
+body.admin-body[data-admin-theme='light'],
+body.admin-body[data-admin-theme='light'][data-admin-page],
+body.admin-body[data-admin-theme='light'],
+body.admin-body[data-admin-theme='light'][data-admin-section],
+body.admin-body[data-admin-theme='light'].admin-login-page,
 body.master-body {
   background: var(--inovas-bg) !important;
   color: var(--inovas-text) !important;
 }
 
-body.admin-body::before,
-body.admin-body::after {
+body.admin-body[data-admin-theme='light']::before,
+body.admin-body[data-admin-theme='light']::after {
   background: transparent !important;
   box-shadow: none !important;
 }
 
-body.admin-body .admin-shell,
+body.admin-body[data-admin-theme='light'] .admin-shell,
 body.master-body .master-shell {
   width: 100% !important;
   max-width: none !important;
@@ -552,18 +547,18 @@ body.master-body .master-shell {
   gap: 0 !important;
 }
 
-body.admin-body .admin-shell {
+body.admin-body[data-admin-theme='light'] .admin-shell {
   grid-template-columns: 238px minmax(0, 1fr) !important;
 }
 
-body.admin-body .admin-main-shell,
+body.admin-body[data-admin-theme='light'] .admin-main-shell,
 body.master-body .master-main {
   min-width: 0;
   padding: 0 !important;
   background: var(--inovas-bg) !important;
 }
 
-body.admin-body .admin-sidebar,
+body.admin-body[data-admin-theme='light'] .admin-sidebar,
 body.master-body .master-sidebar {
   position: sticky !important;
   top: 0 !important;
@@ -577,32 +572,32 @@ body.master-body .master-sidebar {
   color: var(--inovas-text) !important;
 }
 
-body.admin-body .admin-sidebar::before,
-body.admin-body .admin-sidebar::after,
+body.admin-body[data-admin-theme='light'] .admin-sidebar::before,
+body.admin-body[data-admin-theme='light'] .admin-sidebar::after,
 body.master-body .master-sidebar::before,
 body.master-body .master-sidebar::after,
-body.admin-body .admin-login-hero::before,
-body.admin-body .admin-login-hero::after,
-body.admin-body .admin-panel-card::after,
-body.admin-body .admin-board-panel::after,
-body.admin-body .admin-detail-panel::after {
+body.admin-body[data-admin-theme='light'] .admin-login-hero::before,
+body.admin-body[data-admin-theme='light'] .admin-login-hero::after,
+body.admin-body[data-admin-theme='light'] .admin-panel-card::after,
+body.admin-body[data-admin-theme='light'] .admin-board-panel::after,
+body.admin-body[data-admin-theme='light'] .admin-detail-panel::after {
   display: none !important;
 }
 
-body.admin-body .admin-sidebar-brand,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-brand,
 body.master-body .master-brand {
   gap: 12px !important;
   padding: 0 0 14px !important;
 }
 
-body.admin-body .admin-sidebar-brand-top,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-brand-top,
 body.master-body .master-brand {
   display: flex !important;
   justify-content: flex-start !important;
 }
 
-body.admin-body .admin-brand-logo,
-body.admin-body .admin-login-brand-logo,
+body.admin-body[data-admin-theme='light'] .admin-brand-logo,
+body.admin-body[data-admin-theme='light'] .admin-login-brand-logo,
 body.master-body .master-brand-logo {
   width: 192px !important;
   max-width: 100% !important;
@@ -610,12 +605,12 @@ body.master-body .master-brand-logo {
   filter: none !important;
 }
 
-body.admin-body .admin-brand-copy strong,
-body.admin-body .admin-brand-copy small {
+body.admin-body[data-admin-theme='light'] .admin-brand-copy strong,
+body.admin-body[data-admin-theme='light'] .admin-brand-copy small {
   color: var(--inovas-text) !important;
 }
 
-body.admin-body .admin-brand-copy .admin-eyebrow,
+body.admin-body[data-admin-theme='light'] .admin-brand-copy .admin-eyebrow,
 body.master-body .admin-eyebrow {
   color: var(--inovas-muted) !important;
   background: transparent !important;
@@ -623,7 +618,7 @@ body.master-body .admin-eyebrow {
   padding: 0 !important;
 }
 
-body.admin-body .admin-main-topbar,
+body.admin-body[data-admin-theme='light'] .admin-main-topbar,
 body.master-body .master-topbar {
   min-height: 66px !important;
   display: flex !important;
@@ -637,14 +632,14 @@ body.master-body .master-topbar {
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04) !important;
 }
 
-body.admin-body .admin-main-topbar .admin-main-intro {
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-main-intro {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
-body.admin-body .admin-main-topbar .admin-main-intro h1 {
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-main-intro h1 {
   margin: 0 !important;
   color: var(--inovas-orange) !important;
   font-size: 0.92rem !important;
@@ -652,16 +647,16 @@ body.admin-body .admin-main-topbar .admin-main-intro h1 {
   letter-spacing: 0 !important;
 }
 
-body.admin-body .admin-main-topbar .admin-main-intro p,
-body.admin-body .admin-main-topbar .admin-main-intro .admin-eyebrow {
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-main-intro p,
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-main-intro .admin-eyebrow {
   display: none !important;
 }
 
-body.admin-body .admin-main-topbar .admin-search-card,
-body.admin-body .admin-turn-panel-card,
-body.admin-body .admin-top-restaurant-select,
-body.admin-body .admin-top-icon-button,
-body.admin-body .admin-user-menu-button,
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-search-card,
+body.admin-body[data-admin-theme='light'] .admin-turn-panel-card,
+body.admin-body[data-admin-theme='light'] .admin-top-restaurant-select,
+body.admin-body[data-admin-theme='light'] .admin-top-icon-button,
+body.admin-body[data-admin-theme='light'] .admin-user-menu-button,
 body.master-body .master-topbar-actions > * {
   border: 1px solid var(--inovas-border) !important;
   border-radius: 8px !important;
@@ -670,15 +665,15 @@ body.master-body .master-topbar-actions > * {
   box-shadow: none !important;
 }
 
-body.admin-body .admin-main-topbar .admin-search-card {
+body.admin-body[data-admin-theme='light'] .admin-main-topbar .admin-search-card {
   display: none !important;
 }
 
-body.admin-body .admin-nav {
+body.admin-body[data-admin-theme='light'] .admin-nav {
   gap: 4px !important;
 }
 
-body.admin-body .admin-nav-item,
+body.admin-body[data-admin-theme='light'] .admin-nav-item,
 body.master-body .master-nav-item {
   min-height: 46px !important;
   padding: 9px 10px !important;
@@ -690,13 +685,13 @@ body.master-body .master-nav-item {
   box-shadow: none !important;
 }
 
-body.admin-body .admin-nav-item:hover,
+body.admin-body[data-admin-theme='light'] .admin-nav-item:hover,
 body.master-body .master-nav-item:hover {
   border-color: var(--inovas-border) !important;
   background: #f9fafb !important;
 }
 
-body.admin-body .admin-nav-item.is-active,
+body.admin-body[data-admin-theme='light'] .admin-nav-item.is-active,
 body.master-body .master-nav-item.is-active {
   border-color: rgba(255, 90, 0, 0.18) !important;
   border-left-color: var(--inovas-orange) !important;
@@ -704,77 +699,77 @@ body.master-body .master-nav-item.is-active {
   color: var(--inovas-orange-hover) !important;
 }
 
-body.admin-body .admin-nav-item strong,
+body.admin-body[data-admin-theme='light'] .admin-nav-item strong,
 body.master-body .master-nav-item strong {
   color: var(--inovas-text) !important;
   font-size: 0.86rem !important;
   font-weight: 800 !important;
 }
 
-body.admin-body .admin-nav-item small,
-body.admin-body .admin-brand-copy small,
-body.admin-body .admin-sidebar-card small,
-body.admin-body .admin-sidebar-card p,
+body.admin-body[data-admin-theme='light'] .admin-nav-item small,
+body.admin-body[data-admin-theme='light'] .admin-brand-copy small,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-card small,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-card p,
 body.master-body .master-nav-item small {
   color: var(--inovas-muted) !important;
 }
 
-body.admin-body .admin-nav-item.is-active strong,
-body.admin-body .admin-nav-item.is-active small,
-body.admin-body .admin-nav-item.is-active .admin-nav-icon,
+body.admin-body[data-admin-theme='light'] .admin-nav-item.is-active strong,
+body.admin-body[data-admin-theme='light'] .admin-nav-item.is-active small,
+body.admin-body[data-admin-theme='light'] .admin-nav-item.is-active .admin-nav-icon,
 body.master-body .master-nav-item.is-active strong,
 body.master-body .master-nav-item.is-active small {
   color: var(--inovas-orange-hover) !important;
 }
 
-body.admin-body .admin-nav-icon,
-body.admin-body .admin-search-shortcut,
-body.admin-body .admin-top-icon-button {
+body.admin-body[data-admin-theme='light'] .admin-nav-icon,
+body.admin-body[data-admin-theme='light'] .admin-search-shortcut,
+body.admin-body[data-admin-theme='light'] .admin-top-icon-button {
   border-color: transparent !important;
   background: transparent !important;
   color: #475467 !important;
 }
 
-body.admin-body .admin-nav-badge,
-body.admin-body .admin-top-alert-badge {
+body.admin-body[data-admin-theme='light'] .admin-nav-badge,
+body.admin-body[data-admin-theme='light'] .admin-top-alert-badge {
   border: 0 !important;
   background: var(--inovas-danger) !important;
   color: #ffffff !important;
   box-shadow: none !important;
 }
 
-body.admin-body .admin-sidebar-card,
-body.admin-body .admin-sidebar-operator,
-body.admin-body .admin-main-intro,
-body.admin-body .admin-search-card,
-body.admin-body .admin-stat-card,
-body.admin-body .admin-ribbon-card,
-body.admin-body .admin-board-panel,
-body.admin-body .admin-detail-panel,
-body.admin-body .admin-closed-panel,
-body.admin-body .admin-module-card,
-body.admin-body .admin-dispatch-card,
-body.admin-body .admin-lane-panel,
-body.admin-body .admin-lane-card,
-body.admin-body .admin-customer-card,
-body.admin-body .admin-mini-stat,
-body.admin-body .admin-payment-row,
-body.admin-body .admin-report-bar-row,
-body.admin-body .admin-metrics-trend-card,
-body.admin-body .admin-metrics-stage-row,
-body.admin-body .admin-metrics-breakdown-row,
-body.admin-body .admin-metrics-highlight-card,
-body.admin-body .admin-metrics-admin-row,
-body.admin-body .admin-audit-event,
-body.admin-body .admin-closed-card,
-body.admin-body .admin-transaction-row,
-body.admin-body .admin-history-order,
-body.admin-body .admin-users-list-card,
-body.admin-body .admin-users-form-card,
-body.admin-body .admin-users-summary-card,
-body.admin-body .admin-system-filter-bar,
-body.admin-body .admin-login-hero,
-body.admin-body .admin-panel-card,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-card,
+body.admin-body[data-admin-theme='light'] .admin-sidebar-operator,
+body.admin-body[data-admin-theme='light'] .admin-main-intro,
+body.admin-body[data-admin-theme='light'] .admin-search-card,
+body.admin-body[data-admin-theme='light'] .admin-stat-card,
+body.admin-body[data-admin-theme='light'] .admin-ribbon-card,
+body.admin-body[data-admin-theme='light'] .admin-board-panel,
+body.admin-body[data-admin-theme='light'] .admin-detail-panel,
+body.admin-body[data-admin-theme='light'] .admin-closed-panel,
+body.admin-body[data-admin-theme='light'] .admin-module-card,
+body.admin-body[data-admin-theme='light'] .admin-dispatch-card,
+body.admin-body[data-admin-theme='light'] .admin-lane-panel,
+body.admin-body[data-admin-theme='light'] .admin-lane-card,
+body.admin-body[data-admin-theme='light'] .admin-customer-card,
+body.admin-body[data-admin-theme='light'] .admin-mini-stat,
+body.admin-body[data-admin-theme='light'] .admin-payment-row,
+body.admin-body[data-admin-theme='light'] .admin-report-bar-row,
+body.admin-body[data-admin-theme='light'] .admin-metrics-trend-card,
+body.admin-body[data-admin-theme='light'] .admin-metrics-stage-row,
+body.admin-body[data-admin-theme='light'] .admin-metrics-breakdown-row,
+body.admin-body[data-admin-theme='light'] .admin-metrics-highlight-card,
+body.admin-body[data-admin-theme='light'] .admin-metrics-admin-row,
+body.admin-body[data-admin-theme='light'] .admin-audit-event,
+body.admin-body[data-admin-theme='light'] .admin-closed-card,
+body.admin-body[data-admin-theme='light'] .admin-transaction-row,
+body.admin-body[data-admin-theme='light'] .admin-history-order,
+body.admin-body[data-admin-theme='light'] .admin-users-list-card,
+body.admin-body[data-admin-theme='light'] .admin-users-form-card,
+body.admin-body[data-admin-theme='light'] .admin-users-summary-card,
+body.admin-body[data-admin-theme='light'] .admin-system-filter-bar,
+body.admin-body[data-admin-theme='light'] .admin-login-hero,
+body.admin-body[data-admin-theme='light'] .admin-panel-card,
 body.master-body .master-panel,
 body.master-body .master-kpi-card,
 body.master-body .master-card,
@@ -788,30 +783,30 @@ body.master-body .master-list-row {
   box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05) !important;
 }
 
-body.admin-body .admin-main-shell > :not(.admin-main-topbar),
-body.admin-body .admin-module-shell,
-body.admin-body .admin-users-page,
-body.admin-body .admin-workspace {
+body.admin-body[data-admin-theme='light'] .admin-main-shell > :not(.admin-main-topbar),
+body.admin-body[data-admin-theme='light'] .admin-module-shell,
+body.admin-body[data-admin-theme='light'] .admin-users-page,
+body.admin-body[data-admin-theme='light'] .admin-workspace {
   padding: 24px 30px !important;
   background: var(--inovas-bg) !important;
 }
 
-body.admin-body .admin-main-intro:not(.admin-main-topbar .admin-main-intro) {
+body.admin-body[data-admin-theme='light'] .admin-main-intro:not(.admin-main-topbar .admin-main-intro) {
   padding: 24px !important;
 }
 
-body.admin-body .admin-main-intro h1,
-body.admin-body .admin-panel-head h2,
-body.admin-body .admin-login-hero h1,
-body.admin-body .admin-board-head h2,
-body.admin-body .admin-module-head h2,
-body.admin-body .admin-module-head h3,
-body.admin-body .admin-detail-head h2,
-body.admin-body .admin-stat-card strong,
-body.admin-body .admin-ribbon-card strong,
-body.admin-body .admin-order-card-id strong,
-body.admin-body .admin-order-card-customer strong,
-body.admin-body .admin-users-page-head h2,
+body.admin-body[data-admin-theme='light'] .admin-main-intro h1,
+body.admin-body[data-admin-theme='light'] .admin-panel-head h2,
+body.admin-body[data-admin-theme='light'] .admin-login-hero h1,
+body.admin-body[data-admin-theme='light'] .admin-board-head h2,
+body.admin-body[data-admin-theme='light'] .admin-module-head h2,
+body.admin-body[data-admin-theme='light'] .admin-module-head h3,
+body.admin-body[data-admin-theme='light'] .admin-detail-head h2,
+body.admin-body[data-admin-theme='light'] .admin-stat-card strong,
+body.admin-body[data-admin-theme='light'] .admin-ribbon-card strong,
+body.admin-body[data-admin-theme='light'] .admin-order-card-id strong,
+body.admin-body[data-admin-theme='light'] .admin-order-card-customer strong,
+body.admin-body[data-admin-theme='light'] .admin-users-page-head h2,
 body.master-body h1,
 body.master-body h2,
 body.master-body strong {
@@ -819,68 +814,68 @@ body.master-body strong {
   letter-spacing: 0 !important;
 }
 
-body.admin-body .admin-main-intro p,
-body.admin-body .admin-panel-head p,
-body.admin-body .admin-login-hero p,
-body.admin-body .admin-board-head p,
-body.admin-body .admin-module-head p,
-body.admin-body .admin-detail-head p,
-body.admin-body .admin-search-card small,
-body.admin-body .admin-ribbon-card p,
-body.admin-body .admin-empty-state span,
-body.admin-body .admin-order-card-line,
-body.admin-body .admin-order-card-line.is-soft,
-body.admin-body .admin-order-card-meta,
-body.admin-body .admin-order-card-footer small,
-body.admin-body .admin-board-column-head p,
-body.admin-body .admin-board-column-meta small,
-body.admin-body .admin-detail-item small {
+body.admin-body[data-admin-theme='light'] .admin-main-intro p,
+body.admin-body[data-admin-theme='light'] .admin-panel-head p,
+body.admin-body[data-admin-theme='light'] .admin-login-hero p,
+body.admin-body[data-admin-theme='light'] .admin-board-head p,
+body.admin-body[data-admin-theme='light'] .admin-module-head p,
+body.admin-body[data-admin-theme='light'] .admin-detail-head p,
+body.admin-body[data-admin-theme='light'] .admin-search-card small,
+body.admin-body[data-admin-theme='light'] .admin-ribbon-card p,
+body.admin-body[data-admin-theme='light'] .admin-empty-state span,
+body.admin-body[data-admin-theme='light'] .admin-order-card-line,
+body.admin-body[data-admin-theme='light'] .admin-order-card-line.is-soft,
+body.admin-body[data-admin-theme='light'] .admin-order-card-meta,
+body.admin-body[data-admin-theme='light'] .admin-order-card-footer small,
+body.admin-body[data-admin-theme='light'] .admin-board-column-head p,
+body.admin-body[data-admin-theme='light'] .admin-board-column-meta small,
+body.admin-body[data-admin-theme='light'] .admin-detail-item small {
   color: var(--inovas-muted) !important;
 }
 
-body.admin-body .admin-eyebrow,
-body.admin-body .admin-chip,
-body.admin-body .admin-inline-chip,
-body.admin-body .admin-order-status,
-body.admin-body .admin-order-card-state-chip {
+body.admin-body[data-admin-theme='light'] .admin-eyebrow,
+body.admin-body[data-admin-theme='light'] .admin-chip,
+body.admin-body[data-admin-theme='light'] .admin-inline-chip,
+body.admin-body[data-admin-theme='light'] .admin-order-status,
+body.admin-body[data-admin-theme='light'] .admin-order-card-state-chip {
   border: 1px solid rgba(255, 90, 0, 0.18) !important;
   background: var(--inovas-orange-soft) !important;
   color: var(--inovas-orange-hover) !important;
 }
 
-body.admin-body .admin-button-primary,
-body.admin-body .admin-action-button.is-primary,
-body.admin-body .admin-order-card-primary-action.is-primary,
-body.admin-body .admin-users-primary-action,
-body.admin-body .admin-users-pagination button.is-active,
-body.admin-body .admin-users-add-button,
-body.admin-body .admin-login-submit {
+body.admin-body[data-admin-theme='light'] .admin-button-primary,
+body.admin-body[data-admin-theme='light'] .admin-action-button.is-primary,
+body.admin-body[data-admin-theme='light'] .admin-order-card-primary-action.is-primary,
+body.admin-body[data-admin-theme='light'] .admin-users-primary-action,
+body.admin-body[data-admin-theme='light'] .admin-users-pagination button.is-active,
+body.admin-body[data-admin-theme='light'] .admin-users-add-button,
+body.admin-body[data-admin-theme='light'] .admin-login-submit {
   border-color: transparent !important;
   background: linear-gradient(135deg, var(--inovas-orange), var(--inovas-orange-hover)) !important;
   color: #ffffff !important;
   box-shadow: 0 10px 22px rgba(255, 90, 0, 0.18) !important;
 }
 
-body.admin-body .admin-button-secondary,
-body.admin-body .admin-button-ghost,
-body.admin-body .admin-action-button,
-body.admin-body .admin-user-icon-button,
-body.admin-body .admin-board-overflow-button,
-body.admin-body .admin-board-modal-close {
+body.admin-body[data-admin-theme='light'] .admin-button-secondary,
+body.admin-body[data-admin-theme='light'] .admin-button-ghost,
+body.admin-body[data-admin-theme='light'] .admin-action-button,
+body.admin-body[data-admin-theme='light'] .admin-user-icon-button,
+body.admin-body[data-admin-theme='light'] .admin-board-overflow-button,
+body.admin-body[data-admin-theme='light'] .admin-board-modal-close {
   border: 1px solid var(--inovas-border) !important;
   background: var(--inovas-surface) !important;
   color: var(--inovas-text) !important;
   box-shadow: none !important;
 }
 
-body.admin-body .admin-action-button.is-danger,
-body.admin-body .admin-user-icon-button.is-danger {
+body.admin-body[data-admin-theme='light'] .admin-action-button.is-danger,
+body.admin-body[data-admin-theme='light'] .admin-user-icon-button.is-danger {
   color: var(--inovas-danger) !important;
 }
 
-body.admin-body .admin-input,
-body.admin-body .admin-textarea,
-body.admin-body select.admin-input,
+body.admin-body[data-admin-theme='light'] .admin-input,
+body.admin-body[data-admin-theme='light'] .admin-textarea,
+body.admin-body[data-admin-theme='light'] select.admin-input,
 body.master-body input,
 body.master-body select,
 body.master-body textarea {
@@ -891,14 +886,14 @@ body.master-body textarea {
   box-shadow: none !important;
 }
 
-body.admin-body .admin-input::placeholder,
-body.admin-body .admin-textarea::placeholder {
+body.admin-body[data-admin-theme='light'] .admin-input::placeholder,
+body.admin-body[data-admin-theme='light'] .admin-textarea::placeholder {
   color: #98a2b3 !important;
 }
 
-body.admin-body .admin-input:focus,
-body.admin-body .admin-textarea:focus,
-body.admin-body select.admin-input:focus,
+body.admin-body[data-admin-theme='light'] .admin-input:focus,
+body.admin-body[data-admin-theme='light'] .admin-textarea:focus,
+body.admin-body[data-admin-theme='light'] select.admin-input:focus,
 body.master-body input:focus,
 body.master-body select:focus,
 body.master-body textarea:focus {
@@ -907,7 +902,7 @@ body.master-body textarea:focus {
   outline: none !important;
 }
 
-body.admin-body .admin-users-table,
+body.admin-body[data-admin-theme='light'] .admin-users-table,
 body.master-body .master-table {
   border-collapse: separate !important;
   border-spacing: 0 !important;
@@ -915,8 +910,8 @@ body.master-body .master-table {
   background: var(--inovas-surface) !important;
 }
 
-body.admin-body .admin-users-table th,
-body.admin-body .admin-users-table td,
+body.admin-body[data-admin-theme='light'] .admin-users-table th,
+body.admin-body[data-admin-theme='light'] .admin-users-table td,
 body.master-body .master-table th,
 body.master-body .master-table td {
   border-color: var(--inovas-border) !important;
@@ -924,13 +919,13 @@ body.master-body .master-table td {
   color: var(--inovas-text) !important;
 }
 
-body.admin-body .admin-users-table th,
+body.admin-body[data-admin-theme='light'] .admin-users-table th,
 body.master-body .master-table th {
   color: var(--inovas-muted) !important;
   font-weight: 800 !important;
 }
 
-body.admin-body[data-admin-section="orders"] {
+body.admin-body[data-admin-theme='light'][data-admin-section="orders"] {
   --orders-bg: var(--inovas-bg);
   --orders-sidebar: var(--inovas-surface);
   --orders-card: var(--inovas-surface);
@@ -945,8 +940,8 @@ body.admin-body[data-admin-section="orders"] {
   background: var(--inovas-bg) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-panel,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-panel,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
   padding: 18px !important;
   border: 1px solid var(--inovas-border) !important;
   border-radius: 8px !important;
@@ -954,13 +949,13 @@ body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin
   box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board {
   gap: 12px !important;
   overflow-x: auto !important;
   scrollbar-color: rgba(102, 112, 133, 0.28) transparent !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column {
   min-width: 210px !important;
   border: 1px solid var(--inovas-border) !important;
   border-radius: 8px !important;
@@ -969,28 +964,28 @@ body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin
   box-shadow: none !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head {
   padding: 14px !important;
   border-bottom: 1px solid var(--inovas-border) !important;
   background: #fbfdff !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head strong,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-meta span {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-head strong,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-meta span {
   color: var(--inovas-text) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-meta span {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column-meta span {
   border: 1px solid var(--inovas-border) !important;
   background: var(--inovas-surface) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack {
   padding: 12px !important;
   gap: 12px !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card {
   border: 1px solid var(--inovas-border) !important;
   border-radius: 8px !important;
   background: var(--inovas-surface) !important;
@@ -998,70 +993,70 @@ body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.is-selected {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.is-selected {
   border-color: rgba(255, 90, 0, 0.42) !important;
   box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.1) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card::before {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card::before {
   height: 3px !important;
   background: var(--inovas-orange) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-select {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-select {
   color: var(--inovas-text) !important;
   background: transparent !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-items,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-state-inline,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-action-hint,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-overflow-button {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-items,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-empty-state-inline,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-action-hint,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-overflow-button {
   border: 1px solid var(--inovas-border) !important;
   background: #f9fafb !important;
   color: var(--inovas-muted) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-item-row,
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-meta {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-item-row,
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-meta {
   color: var(--inovas-muted) !important;
 }
 
-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-primary-action {
+body.admin-body[data-admin-theme='light'][data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card-primary-action {
   border-radius: 8px !important;
   background: linear-gradient(135deg, var(--inovas-orange), var(--inovas-orange-hover)) !important;
   color: #ffffff !important;
   box-shadow: 0 10px 22px rgba(255, 90, 0, 0.16) !important;
 }
 
-body.admin-body .admin-sidebar-operator-avatar,
-body.admin-body .admin-user-avatar,
-body.admin-body .admin-users-avatar,
-body.admin-body .admin-order-avatar {
+body.admin-body[data-admin-theme='light'] .admin-sidebar-operator-avatar,
+body.admin-body[data-admin-theme='light'] .admin-user-avatar,
+body.admin-body[data-admin-theme='light'] .admin-users-avatar,
+body.admin-body[data-admin-theme='light'] .admin-order-avatar {
   background: linear-gradient(135deg, var(--inovas-orange), var(--inovas-orange-hover)) !important;
   color: #ffffff !important;
 }
 
-body.admin-body.admin-login-page .admin-login-layout {
+body.admin-body[data-admin-theme='light'].admin-login-page .admin-login-layout {
   background: var(--inovas-bg) !important;
 }
 
-body.admin-body.admin-login-page .admin-login-hero,
-body.admin-body.admin-login-page .admin-panel-card {
+body.admin-body[data-admin-theme='light'].admin-login-page .admin-login-hero,
+body.admin-body[data-admin-theme='light'].admin-login-page .admin-panel-card {
   background: var(--inovas-surface) !important;
 }
 
-body.admin-body.admin-login-page .admin-button-primary {
+body.admin-body[data-admin-theme='light'].admin-login-page .admin-button-primary {
   background: linear-gradient(135deg, var(--inovas-orange), var(--inovas-orange-hover)) !important;
   color: #ffffff !important;
 }
 
 @media (max-width: 900px) {
-  body.admin-body .admin-shell {
+  body.admin-body[data-admin-theme='light'] .admin-shell {
     grid-template-columns: 1fr !important;
   }
 
-  body.admin-body .admin-sidebar,
+  body.admin-body[data-admin-theme='light'] .admin-sidebar,
   body.master-body .master-sidebar {
     position: static !important;
     min-height: auto !important;
@@ -1069,15 +1064,357 @@ body.admin-body.admin-login-page .admin-button-primary {
     border-bottom: 1px solid var(--inovas-border) !important;
   }
 
-  body.admin-body .admin-main-topbar,
+  body.admin-body[data-admin-theme='light'] .admin-main-topbar,
   body.master-body .master-topbar {
     padding: 12px 16px !important;
   }
 
-  body.admin-body .admin-main-shell > :not(.admin-main-topbar),
-  body.admin-body .admin-module-shell,
-  body.admin-body .admin-users-page,
-  body.admin-body .admin-workspace {
+  body.admin-body[data-admin-theme='light'] .admin-main-shell > :not(.admin-main-topbar),
+  body.admin-body[data-admin-theme='light'] .admin-module-shell,
+  body.admin-body[data-admin-theme='light'] .admin-users-page,
+  body.admin-body[data-admin-theme='light'] .admin-workspace {
     padding: 16px !important;
   }
+}
+
+/* Theme palette containment: overrides legacy color-only rules without changing layout. */
+body.admin-body[data-admin-theme='light'] .admin-stat-card span,
+body.admin-body[data-admin-theme='light'] .admin-stat-card small,
+body.admin-body[data-admin-theme='light'] .admin-stat-card-summary,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-block-head span,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-summary-card span,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-summary-card small,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-status-row span,
+body.admin-body[data-admin-theme='light'] .admin-turn-panel-copy small,
+body.admin-body[data-admin-theme='light'] .admin-detail-card-head span,
+body.admin-body[data-admin-theme='light'] .admin-detail-section h4,
+body.admin-body[data-admin-theme='light'] .admin-detail-note-block p,
+body.admin-body[data-admin-theme='light'] .admin-status-event p,
+body.admin-body[data-admin-theme='light'] .admin-status-event small {
+  color: var(--inovas-muted) !important;
+}
+
+body.admin-body[data-admin-theme='light'] .admin-dashboard-block,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-summary-card,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-revenue-card,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-status-row,
+body.admin-body[data-admin-theme='light'] .admin-detail-hero,
+body.admin-body[data-admin-theme='light'] .admin-detail-card,
+body.admin-body[data-admin-theme='light'] .admin-detail-card-spotlight,
+body.admin-body[data-admin-theme='light'] .admin-detail-action-spotlight,
+body.admin-body[data-admin-theme='light'] .admin-detail-note-block,
+body.admin-body[data-admin-theme='light'] .admin-detail-card-top-summary,
+body.admin-body[data-admin-theme='light'] .admin-detail-order-item,
+body.admin-body[data-admin-theme='light'] .admin-detail-summary-grid span,
+body.admin-body[data-admin-theme='light'] .admin-detail-fields span,
+body.admin-body[data-admin-theme='light'] .admin-status-event,
+body.admin-body[data-admin-theme='light'] .admin-empty-state,
+body.admin-body[data-admin-theme='light'] .admin-empty-inline {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05) !important;
+}
+
+body.admin-body[data-admin-theme='light'] .admin-dashboard-summary-card-icon,
+body.admin-body[data-admin-theme='light'] .admin-detail-avatar,
+body.admin-body[data-admin-theme='light'] .admin-detail-order-item-avatar {
+  background: var(--inovas-orange-soft) !important;
+  color: var(--inovas-orange-hover) !important;
+}
+
+body.admin-body[data-admin-theme='light'] .admin-dashboard-block h3,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-summary-card strong,
+body.admin-body[data-admin-theme='light'] .admin-detail-hero-main h3,
+body.admin-body[data-admin-theme='light'] .admin-detail-card-head h3,
+body.admin-body[data-admin-theme='light'] .admin-detail-summary-grid strong,
+body.admin-body[data-admin-theme='light'] .admin-detail-fields strong,
+body.admin-body[data-admin-theme='light'] .admin-status-event-title strong,
+body.admin-body[data-admin-theme='light'] .admin-detail-order-item strong {
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='light'] .admin-report-bar,
+body.admin-body[data-admin-theme='light'] .admin-metrics-distribution-bar,
+body.admin-body[data-admin-theme='light'] .admin-dashboard-status-bar {
+  background: #eef2f7 !important;
+}
+
+body.admin-body[data-admin-theme='dark'] {
+  color-scheme: dark;
+  --inovas-orange: #ff7a1a;
+  --inovas-orange-hover: #ff8a3d;
+  --inovas-orange-soft: rgba(255, 122, 26, 0.16);
+  --inovas-bg: #0b1220;
+  --inovas-surface: #111827;
+  --inovas-surface-soft: #172033;
+  --inovas-border: rgba(255, 255, 255, 0.1);
+  --inovas-text: #f8fafc;
+  --inovas-muted: #a7b3c5;
+  --admin-bg: var(--inovas-bg);
+  --admin-surface: var(--inovas-surface);
+  --admin-surface-soft: var(--inovas-surface-soft);
+  --admin-border: var(--inovas-border);
+  --admin-text: var(--inovas-text);
+  --admin-text-muted: var(--inovas-muted);
+  --admin-text-soft: #d8dee9;
+  --admin-accent: var(--inovas-orange);
+  --admin-accent-strong: var(--inovas-orange-hover);
+  background: var(--inovas-bg) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-shell,
+body.admin-body[data-admin-theme='dark'] .admin-main-shell,
+body.admin-body[data-admin-theme='dark'] .admin-main-shell > :not(.admin-main-topbar),
+body.admin-body[data-admin-theme='dark'] .admin-module-shell,
+body.admin-body[data-admin-theme='dark'] .admin-users-page,
+body.admin-body[data-admin-theme='dark'] .admin-workspace {
+  background: var(--inovas-bg) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-sidebar,
+body.admin-body[data-admin-theme='dark'] .admin-main-topbar,
+body.admin-body[data-admin-theme='dark'] .admin-turn-panel-card,
+body.admin-body[data-admin-theme='dark'] .admin-search-card,
+body.admin-body[data-admin-theme='dark'] .admin-stat-card,
+body.admin-body[data-admin-theme='dark'] .admin-ribbon-card,
+body.admin-body[data-admin-theme='dark'] .admin-board-panel,
+body.admin-body[data-admin-theme='dark'] .admin-detail-panel,
+body.admin-body[data-admin-theme='dark'] .admin-closed-panel,
+body.admin-body[data-admin-theme='dark'] .admin-module-card,
+body.admin-body[data-admin-theme='dark'] .admin-order-card,
+body.admin-body[data-admin-theme='dark'] .admin-detail-hero,
+body.admin-body[data-admin-theme='dark'] .admin-detail-card,
+body.admin-body[data-admin-theme='dark'] .admin-detail-card-spotlight,
+body.admin-body[data-admin-theme='dark'] .admin-detail-action-spotlight,
+body.admin-body[data-admin-theme='dark'] .admin-detail-note-block,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-block,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-summary-card,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-revenue-card,
+body.admin-body[data-admin-theme='dark'] .admin-users-list-card,
+body.admin-body[data-admin-theme='dark'] .admin-users-form-card,
+body.admin-body[data-admin-theme='dark'] .admin-users-summary-card,
+body.admin-body[data-admin-theme='dark'] .admin-system-filter-bar,
+body.admin-body[data-admin-theme='dark'] .admin-sidebar-card,
+body.admin-body[data-admin-theme='dark'] .admin-sidebar-operator {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-board-column,
+body.admin-body[data-admin-theme='dark'] .admin-board-column-head,
+body.admin-body[data-admin-theme='dark'] .admin-order-card-items,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-status-row,
+body.admin-body[data-admin-theme='dark'] .admin-detail-card-top-summary,
+body.admin-body[data-admin-theme='dark'] .admin-detail-order-item,
+body.admin-body[data-admin-theme='dark'] .admin-detail-summary-grid span,
+body.admin-body[data-admin-theme='dark'] .admin-detail-fields span,
+body.admin-body[data-admin-theme='dark'] .admin-status-event,
+body.admin-body[data-admin-theme='dark'] .admin-empty-state,
+body.admin-body[data-admin-theme='dark'] .admin-empty-inline,
+body.admin-body[data-admin-theme='dark'] .admin-user-scope-option,
+body.admin-body[data-admin-theme='dark'] .admin-user-scope-readonly {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface-soft) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-brand-copy strong,
+body.admin-body[data-admin-theme='dark'] .admin-main-intro h1,
+body.admin-body[data-admin-theme='dark'] .admin-panel-head h2,
+body.admin-body[data-admin-theme='dark'] .admin-board-head h2,
+body.admin-body[data-admin-theme='dark'] .admin-module-head h2,
+body.admin-body[data-admin-theme='dark'] .admin-module-head h3,
+body.admin-body[data-admin-theme='dark'] .admin-detail-head h2,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-block h3,
+body.admin-body[data-admin-theme='dark'] .admin-stat-card strong,
+body.admin-body[data-admin-theme='dark'] .admin-ribbon-card strong,
+body.admin-body[data-admin-theme='dark'] .admin-order-card-id strong,
+body.admin-body[data-admin-theme='dark'] .admin-order-card-customer strong,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-summary-card strong,
+body.admin-body[data-admin-theme='dark'] .admin-detail-hero-main h3,
+body.admin-body[data-admin-theme='dark'] .admin-detail-card-head h3,
+body.admin-body[data-admin-theme='dark'] .admin-detail-summary-grid strong,
+body.admin-body[data-admin-theme='dark'] .admin-detail-fields strong,
+body.admin-body[data-admin-theme='dark'] .admin-users-page-head h2,
+body.admin-body[data-admin-theme='dark'] .admin-users-summary-card strong,
+body.admin-body[data-admin-theme='dark'] .admin-users-table strong {
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-brand-copy small,
+body.admin-body[data-admin-theme='dark'] .admin-main-intro p,
+body.admin-body[data-admin-theme='dark'] .admin-panel-head p,
+body.admin-body[data-admin-theme='dark'] .admin-board-head p,
+body.admin-body[data-admin-theme='dark'] .admin-module-head p,
+body.admin-body[data-admin-theme='dark'] .admin-detail-head p,
+body.admin-body[data-admin-theme='dark'] .admin-stat-card span,
+body.admin-body[data-admin-theme='dark'] .admin-stat-card small,
+body.admin-body[data-admin-theme='dark'] .admin-stat-card-summary,
+body.admin-body[data-admin-theme='dark'] .admin-order-card-line,
+body.admin-body[data-admin-theme='dark'] .admin-order-card-meta,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-block-head span,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-summary-card span,
+body.admin-body[data-admin-theme='dark'] .admin-dashboard-summary-card small,
+body.admin-body[data-admin-theme='dark'] .admin-detail-card-head span,
+body.admin-body[data-admin-theme='dark'] .admin-detail-section h4,
+body.admin-body[data-admin-theme='dark'] .admin-detail-note-block p,
+body.admin-body[data-admin-theme='dark'] .admin-status-event p,
+body.admin-body[data-admin-theme='dark'] .admin-status-event small,
+body.admin-body[data-admin-theme='dark'] .admin-users-page-head p,
+body.admin-body[data-admin-theme='dark'] .admin-users-summary-card span,
+body.admin-body[data-admin-theme='dark'] .admin-users-summary-card small,
+body.admin-body[data-admin-theme='dark'] .admin-users-table small,
+body.admin-body[data-admin-theme='dark'] .admin-field span {
+  color: var(--inovas-muted) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-input,
+body.admin-body[data-admin-theme='dark'] .admin-textarea,
+body.admin-body[data-admin-theme='dark'] select.admin-input,
+body.admin-body[data-admin-theme='dark'] .admin-search-input-shell,
+body.admin-body[data-admin-theme='dark'] .admin-users-table,
+body.admin-body[data-admin-theme='dark'] .admin-users-table th,
+body.admin-body[data-admin-theme='dark'] .admin-users-table td {
+  border-color: var(--inovas-border) !important;
+  background: #0d1626 !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-users-table tbody tr:hover td,
+body.admin-body[data-admin-theme='dark'] .admin-users-table tbody tr.is-selected td {
+  background: #172033 !important;
+}
+
+body.admin-body[data-admin-theme='dark'] .admin-button-secondary,
+body.admin-body[data-admin-theme='dark'] .admin-button-ghost,
+body.admin-body[data-admin-theme='dark'] .admin-action-button,
+body.admin-body[data-admin-theme='dark'] .admin-user-icon-button,
+body.admin-body[data-admin-theme='dark'] .admin-board-overflow-button,
+body.admin-body[data-admin-theme='dark'] .admin-board-modal-close {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface-soft) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='light'] .admin-sidebar-operator {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='light'] .admin-sidebar-operator-copy strong {
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='light'] .admin-sidebar-operator-copy small {
+  color: var(--inovas-muted) !important;
+  opacity: 1 !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-sidebar {
+  border-color: var(--inovas-border) !important;
+  background: rgba(11, 18, 32, 0.96) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-sidebar-operator-copy strong {
+  color: #e5e7eb !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item small,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-sidebar-operator-copy small,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-brand-copy small {
+  color: var(--inovas-muted) !important;
+  opacity: 1 !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-icon {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #d8dee9 !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item.is-active {
+  border-color: rgba(255, 122, 26, 0.28) !important;
+  background: rgba(255, 122, 26, 0.16) !important;
+  box-shadow: inset 3px 0 0 var(--inovas-orange) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item.is-active strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item.is-active small,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item.is-active .admin-nav-icon,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'] .admin-nav-item.is-active .admin-nav-badge {
+  color: #fff7ed !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] {
+  --orders-bg: var(--inovas-bg);
+  --orders-sidebar: var(--inovas-surface);
+  --orders-card: var(--inovas-surface);
+  --orders-card-soft: var(--inovas-surface-soft);
+  --orders-border: var(--inovas-border);
+  --orders-text: var(--inovas-text);
+  --orders-muted: var(--inovas-muted);
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stat-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stats-grid.is-orders-layout .admin-stat-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-main-intro,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-search-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-board-panel,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-panel,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-closed-panel {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-board-column,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-board-column-head,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-board-stack,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card-items,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-summary-grid span,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-fields span,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-status-event {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface-soft) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stat-card strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stats-grid.is-orders-layout .admin-stat-card strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card-customer strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card-id strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-summary-grid strong,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-fields strong {
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stat-card span,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stat-card small,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-stat-card-summary,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card-line,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-order-card-meta,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-detail-section h4,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-status-event p,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='orders'] .admin-status-event small {
+  color: var(--inovas-muted) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='users'] .admin-sidebar-card,
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='users'] .admin-sidebar-operator {
+  border-color: var(--inovas-border) !important;
+  background: var(--inovas-surface) !important;
+  color: var(--inovas-text) !important;
+}
+
+body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin-section='users'] .admin-user-status {
+  color: var(--inovas-muted) !important;
 }

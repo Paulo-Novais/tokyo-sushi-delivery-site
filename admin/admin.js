@@ -13,7 +13,7 @@ const ADMIN_DEFAULT_ADDRESS = Object.freeze(ADMIN_APP_BRANDING.defaultAddress ||
 const ADMIN_STORAGE_KEYS = Object.freeze(ADMIN_IDENTIFIERS.storageKeys || {});
 const ADMIN_THEME_STORAGE_KEY = ADMIN_STORAGE_KEYS.adminTheme || "tokyo_admin_theme";
 const ADMIN_THEME_DEFAULT = "light";
-const ADMIN_THEME_OPTIONS = new Set(["light"]);
+const ADMIN_THEME_OPTIONS = new Set(["light", "dark"]);
 const PUBLIC_SITE_LAYOUT_OPTIONS = Object.freeze([
   { key: "MODERN", label: "MODERN", helper: "Tokyo atual, banner grande, categorias horizontais e cards modernos." },
   { key: "CATALOGO", label: "CATALOGO", helper: "Menu lateral, produtos em lista e navegacao rapida." },
@@ -904,6 +904,17 @@ const resolveCanonicalOrderStatus = (status, fulfillmentMode = "") => {
 };
 
 const getStoredAdminTheme = () => {
+  if (typeof window === "undefined") {
+    return ADMIN_THEME_DEFAULT;
+  }
+
+  try {
+    const storedTheme = window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY);
+    return ADMIN_THEME_OPTIONS.has(storedTheme) ? storedTheme : ADMIN_THEME_DEFAULT;
+  } catch (error) {
+    // Ignoramos falhas de leitura local para manter o gestor acessivel.
+  }
+
   return ADMIN_THEME_DEFAULT;
 };
 
@@ -914,9 +925,12 @@ const syncThemeToggle = () => {
     return;
   }
 
-  themeToggleButton.setAttribute("aria-pressed", "false");
-  themeToggleButton.setAttribute("aria-label", "Tema claro oficial INovas Food");
-  themeToggleButton.setAttribute("title", "Tema claro oficial INovas Food");
+  const isDarkTheme = adminState.theme === "dark";
+  const nextThemeLabel = isDarkTheme ? "tema claro" : "tema escuro";
+
+  themeToggleButton.setAttribute("aria-pressed", String(isDarkTheme));
+  themeToggleButton.setAttribute("aria-label", `Alternar para ${nextThemeLabel}`);
+  themeToggleButton.setAttribute("title", `Alternar para ${nextThemeLabel}`);
 };
 
 const applyAdminTheme = (theme, { persist = true } = {}) => {
@@ -933,7 +947,7 @@ const applyAdminTheme = (theme, { persist = true } = {}) => {
 
   if (persist) {
     try {
-      window.localStorage.removeItem(ADMIN_THEME_STORAGE_KEY);
+      window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, resolvedTheme);
     } catch (error) {
       // Ignoramos falhas de persistencia local para nao bloquear a interface.
     }
@@ -13820,7 +13834,7 @@ const initDashboardPage = () => {
 
   if (themeToggleButton) {
     themeToggleButton.addEventListener("click", () => {
-      applyAdminTheme(ADMIN_THEME_DEFAULT);
+      applyAdminTheme(adminState.theme === "dark" ? "light" : "dark");
     });
   }
 
