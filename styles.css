@@ -5352,21 +5352,24 @@ select.auth-input option:focus {
   border-top: 1px solid rgba(245, 195, 211, 0.1);
   color: var(--muted);
   font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .inovas-platform-footer div {
   display: grid;
   gap: 0.16rem;
+  min-width: 0;
 }
 
 .inovas-platform-footer .inovas-platform-brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: min(100%, 22rem);
 }
 
 .inovas-platform-footer .inovas-platform-brand img {
-  width: 7.8rem;
+  width: min(7.8rem, 34vw);
   height: auto;
   flex: 0 0 auto;
   object-fit: contain;
@@ -5375,12 +5378,21 @@ select.auth-input option:focus {
 .inovas-platform-footer strong {
   color: var(--text);
   font-size: 0.95rem;
+  line-height: 1.25;
 }
 
 .inovas-platform-footer a {
   color: var(--inovas-orange);
   font-weight: 800;
   white-space: nowrap;
+  transition: color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.inovas-platform-footer a:hover,
+.inovas-platform-footer a:focus-visible {
+  color: var(--accent);
+  transform: translateX(2px);
+  outline: none;
 }
 
 .whatsapp-widget {
@@ -7545,6 +7557,7 @@ select.auth-input option:focus {
 
   .inovas-platform-footer {
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .inovas-platform-footer a {
@@ -7625,6 +7638,7 @@ select.auth-input option:focus {
 
   .inovas-platform-footer {
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .inovas-platform-footer a {

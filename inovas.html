@@ -3,272 +3,508 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>INOVAS Food | Sistema para gestao de restaurantes</title>
+    <title>INOVAS Food | Sistema completo para gestao de restaurantes</title>
     <meta
       name="description"
-      content="INOVAS Food e o sistema completo para gestao de restaurantes, com pedidos, cardapio, financeiro, estoque, relatorios, clientes e entregas."
+      content="INOVAS Food e a plataforma para restaurantes venderem e gerirem pedidos, cardapio, entregas, clientes, estoque, financeiro e relatorios em um unico gestor."
+    />
+    <meta
+      name="keywords"
+      content="INOVAS Food, sistema para restaurante, cardapio digital, pedidos online, delivery, gestor de restaurante"
     />
     <meta name="robots" content="index,follow" />
-    <meta name="theme-color" content="#ff5a00" />
-    <link rel="canonical" href="https://www.inovasfood.com.br/" />
+    <meta name="theme-color" content="#ff6a00" />
+    <meta property="og:title" content="INOVAS Food | Sistema completo para gestao de restaurantes" />
+    <meta
+      property="og:description"
+      content="Pedidos, cardapio, entregas, clientes, estoque, financeiro e relatorios em uma plataforma simples, moderna e feita para restaurantes."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.inovasfood.com.br/inovas" />
+    <meta property="og:image" content="https://www.inovasfood.com.br/assets/inovas-food-logo-oficial.png" />
+    <meta property="og:image:alt" content="Logotipo oficial INOVAS Food" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="INOVAS Food | Sistema completo para gestao de restaurantes" />
+    <meta
+      name="twitter:description"
+      content="Uma plataforma SaaS para restaurantes venderem mais com gestao clara, identidade propria e tecnologia INOVAS Food."
+    />
+    <meta name="twitter:image" content="https://www.inovasfood.com.br/assets/inovas-food-logo-oficial.png" />
+    <link rel="canonical" href="https://www.inovasfood.com.br/inovas" />
     <link rel="icon" type="image/png" href="./assets/inovas-food-logo-oficial.png" />
+    <link rel="manifest" href="./site.webmanifest" />
     <link rel="stylesheet" href="./inovas.css" />
   </head>
   <body>
+    <a class="if-skip-link" href="#conteudo">Pular para o conteudo</a>
+
     <header class="if-header">
       <div class="if-container if-nav">
-        <a class="if-brand" href="./inovas.html" aria-label="INOVAS Food">
-          <img src="./assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
+        <a class="if-brand" href="./inovas.html" aria-label="Pagina inicial da INOVAS Food">
+          <img
+            src="./assets/inovas-food-logo-oficial.png"
+            alt="Logotipo oficial INOVAS Food"
+            width="360"
+            height="120"
+            fetchpriority="high"
+          />
         </a>
 
-        <nav class="if-menu" aria-label="Navegacao institucional">
+        <nav class="if-menu" aria-label="Navegacao principal">
           <a href="#recursos">Recursos</a>
-          <a href="#restaurantes">Restaurantes</a>
           <a href="#planos">Planos</a>
           <a href="#demonstracao">Demonstracao</a>
+          <a href="#restaurantes">Restaurantes</a>
           <a href="#contato">Contato</a>
         </nav>
 
         <div class="if-nav-actions">
-          <a class="if-button if-button-ghost" href="./admin/login.html">Entrar</a>
+          <a class="if-button if-button-ghost" href="./admin/login.html">Entrar no gestor</a>
           <a class="if-button if-button-primary" href="#contato">Solicitar demo</a>
         </div>
       </div>
     </header>
 
-    <main>
-      <section class="if-hero" id="demonstracao">
+    <main id="conteudo">
+      <section class="if-hero" aria-labelledby="if-hero-title">
         <div class="if-container if-hero-grid">
           <div class="if-hero-copy">
-            <span class="if-eyebrow">Plataforma SaaS para food service</span>
-            <h1>O sistema completo para <span>gestao de restaurantes.</span></h1>
+            <span class="if-eyebrow">SaaS para food service</span>
+            <h1 id="if-hero-title">O sistema completo para gestao de restaurantes.</h1>
             <p>
-              Una pedidos, cardapio, financeiro, estoque, entregas, clientes e relatorios
-              em um gestor moderno, claro e pronto para operacoes que precisam crescer.
+              Pedidos, cardapio, entregas, clientes, estoque, financeiro e relatorios em uma
+              plataforma simples, moderna e feita para o seu restaurante vender mais.
             </p>
 
-            <div class="if-hero-actions">
+            <div class="if-hero-actions" aria-label="Acoes principais">
               <a class="if-button if-button-primary if-button-large" href="#contato">Solicitar demonstracao</a>
               <a class="if-button if-button-secondary if-button-large" href="./admin/login.html">Entrar no gestor</a>
             </div>
 
-            <div class="if-proof" aria-label="Destaques da plataforma">
-              <strong>Multi-restaurante</strong>
-              <strong>Pedidos em tempo real</strong>
-              <strong>Tema claro e dark</strong>
+            <div class="if-trust-row" aria-label="Sinais de confianca">
+              <strong>Projeto piloto: Tokyo Sushi</strong>
+              <strong>Operacao delivery real</strong>
+              <strong>Identidade por restaurante</strong>
             </div>
           </div>
 
-          <div class="if-hero-panel" aria-label="Previa visual do gestor INOVAS Food">
-            <div class="if-panel-top">
-              <span></span>
-              <small>INOVAS Food</small>
-            </div>
-
-            <div class="if-panel-summary">
-              <div>
-                <small>Pedidos hoje</small>
-                <strong>128</strong>
+          <div class="if-product-preview" aria-label="Previa visual da plataforma INOVAS Food">
+            <div class="if-preview-window">
+              <div class="if-preview-bar">
+                <span></span>
+                <span></span>
+                <span></span>
+                <small>Gestor INOVAS Food</small>
               </div>
-              <span>+18%</span>
-            </div>
 
-            <div class="if-panel-grid">
-              <article>
-                <small>Faturamento</small>
-                <strong>R$ 12.840</strong>
-              </article>
-              <article>
-                <small>Ticket medio</small>
-                <strong>R$ 58,90</strong>
-              </article>
-              <article>
-                <small>Tempo medio</small>
-                <strong>24 min</strong>
-              </article>
-              <article>
-                <small>Avaliacoes</small>
-                <strong>4,8</strong>
-              </article>
-            </div>
+              <div class="if-preview-body">
+                <aside class="if-preview-sidebar" aria-hidden="true">
+                  <img src="./assets/inovas-food-logo-oficial.png" alt="" />
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </aside>
 
-            <div class="if-kanban-preview" aria-label="Previa do fluxo de pedidos">
-              <article>
-                <span>Recebido</span>
-                <strong>#1284</strong>
-                <small>Tokyo Sushi Delivery</small>
-              </article>
-              <article>
-                <span>Em preparo</span>
-                <strong>#1285</strong>
-                <small>Pizzaria Modelo</small>
-              </article>
-              <article>
-                <span>Em rota</span>
-                <strong>#1286</strong>
-                <small>Hamburgueria Prime</small>
-              </article>
+                <div class="if-preview-content">
+                  <div class="if-preview-kpis">
+                    <article>
+                      <small>Pedidos hoje</small>
+                      <strong>128</strong>
+                      <span>+18%</span>
+                    </article>
+                    <article>
+                      <small>Ticket medio</small>
+                      <strong>R$ 58,90</strong>
+                      <span>4,8 avaliacao</span>
+                    </article>
+                  </div>
+
+                  <div class="if-preview-flow">
+                    <article>
+                      <span>Recebido</span>
+                      <strong>#1284</strong>
+                      <small>Combo familia</small>
+                    </article>
+                    <article>
+                      <span>Em preparo</span>
+                      <strong>#1285</strong>
+                      <small>Pedido balcao</small>
+                    </article>
+                    <article>
+                      <span>Em rota</span>
+                      <strong>#1286</strong>
+                      <small>Entrega 24 min</small>
+                    </article>
+                  </div>
+
+                  <div class="if-preview-chart" aria-hidden="true">
+                    <span style="height: 44%"></span>
+                    <span style="height: 68%"></span>
+                    <span style="height: 52%"></span>
+                    <span style="height: 82%"></span>
+                    <span style="height: 74%"></span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="if-section" id="recursos">
+      <section class="if-section" id="recursos" aria-labelledby="if-recursos-title">
         <div class="if-container">
           <div class="if-section-head">
             <span class="if-eyebrow">Recursos</span>
-            <h2>Tudo que a operacao precisa em um unico gestor.</h2>
-          </div>
-
-          <div class="if-feature-grid">
-            <article class="if-feature-card" data-icon="PD">
-              <strong>Pedidos</strong>
-              <p>Fila operacional com status, acao principal e leitura rapida do turno.</p>
-            </article>
-            <article class="if-feature-card" data-icon="CA">
-              <strong>Cardapio</strong>
-              <p>Produtos, combos, adicionais e disponibilidade sem atrito para a equipe.</p>
-            </article>
-            <article class="if-feature-card" data-icon="FI">
-              <strong>Financeiro</strong>
-              <p>Receitas, ticket medio, cancelamentos e visao consolidada do dia.</p>
-            </article>
-            <article class="if-feature-card" data-icon="ES">
-              <strong>Estoque</strong>
-              <p>Insumos, alertas e controle para reduzir perdas na cozinha.</p>
-            </article>
-            <article class="if-feature-card" data-icon="EN">
-              <strong>Entregas</strong>
-              <p>Rota, motoboy, tempo estimado e acompanhamento ate a conclusao.</p>
-            </article>
-            <article class="if-feature-card" data-icon="CL">
-              <strong>Clientes</strong>
-              <p>Historico, recorrencia e base pronta para relacionamento comercial.</p>
-            </article>
-            <article class="if-feature-card" data-icon="RE">
-              <strong>Relatorios</strong>
-              <p>Indicadores claros para decidir com menos planilha e mais contexto.</p>
-            </article>
-            <article class="if-feature-card" data-icon="AV">
-              <strong>Avaliacoes</strong>
-              <p>Feedbacks organizados para evoluir atendimento, produto e entrega.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="if-section if-band" id="restaurantes">
-        <div class="if-container if-split">
-          <div>
-            <span class="if-eyebrow">Tipos de restaurante</span>
-            <h2>Uma base preparada para diferentes operacoes.</h2>
+            <h2 id="if-recursos-title">Tudo que a operacao precisa em um unico gestor.</h2>
             <p>
-              A INOVAS Food atende restaurantes com fluxo real de pedidos, equipe em movimento
-              e necessidade de enxergar a operacao sem complicar a rotina.
+              Modulos claros para vender, acompanhar pedidos e enxergar a saude do restaurante
+              sem espalhar a gestao em planilhas e conversas soltas.
             </p>
           </div>
 
-          <div class="if-restaurant-grid" aria-label="Tipos de restaurante atendidos">
-            <article>
-              <span>Sushi</span>
-              <strong>Combos, adicionais e alto volume.</strong>
+          <div class="if-feature-grid">
+            <article class="if-feature-card" data-icon="01">
+              <h3>Pedidos online</h3>
+              <p>Fila de pedidos com status, prioridade, preparo e historico operacional.</p>
             </article>
-            <article>
-              <span>Pizzaria</span>
-              <strong>Sabores, entrega e acompanhamento de forno.</strong>
+            <article class="if-feature-card" data-icon="02">
+              <h3>Cardapio digital</h3>
+              <p>Produtos, adicionais, disponibilidade e identidade visual do restaurante.</p>
             </article>
-            <article>
-              <span>Hamburgueria</span>
-              <strong>Pedidos rapidos, upsell e controle de preparo.</strong>
+            <article class="if-feature-card" data-icon="03">
+              <h3>Gestao de entregas</h3>
+              <p>Controle de rota, entregador, previsao e acompanhamento do pedido.</p>
             </article>
-            <article>
-              <span>Marmitaria</span>
-              <strong>Rotina recorrente, horarios e producao enxuta.</strong>
+            <article class="if-feature-card" data-icon="04">
+              <h3>Clientes</h3>
+              <p>Base organizada para recorrencia, atendimento e relacionamento comercial.</p>
             </article>
-            <article>
-              <span>Restaurante geral</span>
-              <strong>Atendimento amplo, indicadores e gestao diaria.</strong>
+            <article class="if-feature-card" data-icon="05">
+              <h3>Estoque</h3>
+              <p>Insumos, alertas e visao de perdas para operar com mais controle.</p>
+            </article>
+            <article class="if-feature-card" data-icon="06">
+              <h3>Financeiro</h3>
+              <p>Receitas, ticket medio, formas de pagamento e leitura do caixa.</p>
+            </article>
+            <article class="if-feature-card" data-icon="07">
+              <h3>Relatorios</h3>
+              <p>Indicadores de venda, operacao e desempenho para decisoes melhores.</p>
+            </article>
+            <article class="if-feature-card" data-icon="08">
+              <h3>Avaliacoes</h3>
+              <p>Feedbacks centralizados para melhorar atendimento, produto e entrega.</p>
+            </article>
+            <article class="if-feature-card" data-icon="09">
+              <h3>Multi-restaurante</h3>
+              <p>Estrutura preparada para unidades, marcas e operacoes em crescimento.</p>
+            </article>
+            <article class="if-feature-card" data-icon="10">
+              <h3>Painel Master</h3>
+              <p>Visao administrativa da plataforma para governanca e evolucao SaaS.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <section class="if-section" id="planos">
+      <section class="if-section if-band" id="restaurantes" aria-labelledby="if-restaurantes-title">
+        <div class="if-container if-split">
+          <div class="if-split-copy">
+            <span class="if-eyebrow">Para quem e</span>
+            <h2 id="if-restaurantes-title">A plataforma se adapta ao seu tipo de operacao.</h2>
+            <p>
+              A INOVAS Food foi pensada para restaurantes com atendimento real, equipe em movimento
+              e necessidade de vender sem perder controle.
+            </p>
+          </div>
+
+          <div class="if-restaurant-grid" aria-label="Tipos de restaurantes atendidos">
+            <article>
+              <span>Sushi</span>
+              <strong>Combos, adicionais, alto volume e entregas com status claro.</strong>
+            </article>
+            <article>
+              <span>Pizzaria</span>
+              <strong>Sabores, tamanhos, preparo, entrega e recorrencia de clientes.</strong>
+            </article>
+            <article>
+              <span>Hamburgueria</span>
+              <strong>Pedidos rapidos, upsell, adicionais e controle de producao.</strong>
+            </article>
+            <article>
+              <span>Marmitaria</span>
+              <strong>Rotina recorrente, horarios, producao enxuta e previsibilidade.</strong>
+            </article>
+            <article>
+              <span>Restaurante</span>
+              <strong>Cardapio completo, relatorios e gestao diaria em uma tela.</strong>
+            </article>
+            <article>
+              <span>Delivery</span>
+              <strong>Operacao focada em pedidos, rota, tempo e experiencia do cliente.</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="if-section" id="demonstracao" aria-labelledby="if-demo-title">
+        <div class="if-container">
+          <div class="if-section-head">
+            <span class="if-eyebrow">Demonstracao</span>
+            <h2 id="if-demo-title">Do cardapio ao resultado, o fluxo fica visivel.</h2>
+            <p>
+              Uma jornada simples para o cliente, clara para a cozinha e acompanhavel pelo gestor.
+            </p>
+          </div>
+
+          <div class="if-timeline" aria-label="Como a plataforma funciona">
+            <article>
+              <span>1</span>
+              <h3>Cliente acessa o cardapio</h3>
+              <p>O restaurante apresenta produtos, identidade e ofertas em uma experiencia propria.</p>
+            </article>
+            <article>
+              <span>2</span>
+              <h3>Faz o pedido</h3>
+              <p>O pedido nasce digital, organizado e pronto para entrar na rotina da loja.</p>
+            </article>
+            <article>
+              <span>3</span>
+              <h3>Restaurante gerencia</h3>
+              <p>A equipe acompanha status, preparo, cliente, pagamento e observacoes.</p>
+            </article>
+            <article>
+              <span>4</span>
+              <h3>Entrega acompanha status</h3>
+              <p>O fluxo de entrega fica claro, com previsao e comunicacao mais objetiva.</p>
+            </article>
+            <article>
+              <span>5</span>
+              <h3>Gestor acompanha resultados</h3>
+              <p>Relatorios ajudam a entender vendas, ticket, recorrencia e desempenho.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="if-section if-platform" aria-labelledby="if-platform-title">
+        <div class="if-container if-platform-grid">
+          <div class="if-platform-copy">
+            <span class="if-eyebrow">Plataforma</span>
+            <h2 id="if-platform-title">Seu restaurante com identidade propria e gestao centralizada.</h2>
+            <p>
+              Seu restaurante com identidade propria, gestao centralizada e tecnologia da INOVAS
+              Food nos bastidores.
+            </p>
+          </div>
+
+          <div class="if-platform-cards" aria-label="Camadas da plataforma">
+            <article>
+              <h3>Site do restaurante</h3>
+              <p>Uma experiencia publica com logo, cores, cardapio e jornada do cliente.</p>
+            </article>
+            <article>
+              <h3>Gestor do restaurante</h3>
+              <p>Painel para pedidos, catalogo, clientes, financeiro e operacao diaria.</p>
+            </article>
+            <article>
+              <h3>Painel Master INOVAS</h3>
+              <p>Governanca da plataforma, restaurantes, planos e administracao SaaS.</p>
+            </article>
+            <article>
+              <h3>Futuro app</h3>
+              <p>Base preparada para evoluir canais sem quebrar a operacao existente.</p>
+            </article>
+            <article>
+              <h3>Dominio proprio</h3>
+              <p>Cada restaurante pode fortalecer a propria marca com tecnologia nos bastidores.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="if-section" id="planos" aria-labelledby="if-planos-title">
         <div class="if-container">
           <div class="if-section-head">
             <span class="if-eyebrow">Planos</span>
-            <h2>Escolha o ritmo certo para crescer.</h2>
+            <h2 id="if-planos-title">Escolha o ritmo certo para comecar e evoluir.</h2>
+            <p>Sem precos definitivos nesta versao. O foco e alinhar recursos, maturidade e suporte.</p>
           </div>
 
           <div class="if-plan-grid">
             <article class="if-plan">
-              <span>Essencial</span>
+              <span class="if-plan-kicker">Essencial</span>
               <h3>Para comecar com controle.</h3>
               <div class="if-plan-price">
-                <strong>Sob consulta</strong>
-                <small>implantacao guiada</small>
+                <strong>A partir de</strong>
+                <small>consultar implantacao</small>
               </div>
-              <p>Pedidos, cardapio e configuracoes fundamentais.</p>
-              <a class="if-plan-link" href="#contato">Solicitar</a>
+              <ul>
+                <li>Cardapio digital</li>
+                <li>Pedidos</li>
+                <li>Entregas</li>
+                <li>Clientes</li>
+              </ul>
+              <a class="if-plan-link" href="#contato">Solicitar proposta</a>
             </article>
 
             <article class="if-plan is-featured">
-              <span>Profissional</span>
+              <span class="if-featured-badge">Mais indicado</span>
+              <span class="if-plan-kicker">Profissional</span>
               <h3>Para operar com visao completa.</h3>
               <div class="if-plan-price">
-                <strong>Recomendado</strong>
+                <strong>Consulte</strong>
                 <small>operacao completa</small>
               </div>
-              <p>Relatorios, clientes, financeiro, estoque e entregas.</p>
+              <ul>
+                <li>Tudo do Essencial</li>
+                <li>Estoque</li>
+                <li>Financeiro</li>
+                <li>Relatorios</li>
+                <li>Promocoes</li>
+              </ul>
               <a class="if-plan-link" href="#contato">Solicitar demonstracao</a>
             </article>
 
             <article class="if-plan">
-              <span>Enterprise</span>
-              <h3>Para redes e operacoes SaaS.</h3>
+              <span class="if-plan-kicker">Enterprise</span>
+              <h3>Para redes e operacoes avancadas.</h3>
               <div class="if-plan-price">
-                <strong>Personalizado</strong>
-                <small>escala e suporte</small>
+                <strong>Consulte</strong>
+                <small>escala e personalizacao</small>
               </div>
-              <p>Multi-restaurante, governanca, suporte e evolucao sob medida.</p>
+              <ul>
+                <li>Multiunidade</li>
+                <li>Recursos avancados</li>
+                <li>Suporte prioritario</li>
+                <li>Personalizacao</li>
+              </ul>
               <a class="if-plan-link" href="#contato">Falar com comercial</a>
             </article>
           </div>
         </div>
       </section>
 
-      <section class="if-section if-demo-section">
-        <div class="if-container if-demo-card">
-          <div>
-            <span class="if-eyebrow">Demonstracao</span>
-            <h2>Do painel Master ao gestor do restaurante, tudo com a mesma identidade.</h2>
-            <p>
-              Landing, login, Master e gestor compartilham o laranja oficial, superficies limpas,
-              foco visivel e componentes consistentes.
-            </p>
+      <section class="if-section if-band" aria-labelledby="if-prova-title">
+        <div class="if-container">
+          <div class="if-section-head">
+            <span class="if-eyebrow">Prova social</span>
+            <h2 id="if-prova-title">Construida a partir de operacao real.</h2>
           </div>
 
-          <div class="if-demo-stack" aria-label="Resumo visual da plataforma">
-            <span>Landing comercial</span>
-            <span>Login privado</span>
-            <span>Painel Master</span>
-            <span>Gestor restaurante</span>
+          <div class="if-proof-grid">
+            <article>
+              <strong>Projeto piloto: Tokyo Sushi</strong>
+              <p>Primeira operacao usada para validar jornada, gestor e necessidades reais.</p>
+            </article>
+            <article>
+              <strong>Plataforma em evolucao</strong>
+              <p>Produto em desenvolvimento continuo para restaurantes com foco em delivery.</p>
+            </article>
+            <article>
+              <strong>Foco em rotina de loja</strong>
+              <p>Decisoes visuais e operacionais pensadas para reduzir atrito no dia a dia.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      <section class="if-cta" id="contato">
-        <div class="if-container if-cta-card">
-          <div>
-            <span class="if-eyebrow">Proxima etapa</span>
-            <h2>Pronto para modernizar seu restaurante?</h2>
-            <p>Solicite uma demonstracao ou entre no gestor para acompanhar a operacao.</p>
+      <section class="if-section" aria-labelledby="if-faq-title">
+        <div class="if-container if-faq-layout">
+          <div class="if-faq-intro">
+            <span class="if-eyebrow">FAQ</span>
+            <h2 id="if-faq-title">Perguntas frequentes.</h2>
+            <p>Respostas diretas para entender se a INOVAS Food combina com sua operacao.</p>
           </div>
 
-          <div class="if-cta-actions">
-            <a class="if-button if-button-primary if-button-large" href="mailto:contato@inovasfood.com.br">Solicitar demonstracao</a>
-            <a class="if-button if-button-secondary if-button-large" href="./admin/login.html">Entrar no gestor</a>
+          <div class="if-faq-list">
+            <details>
+              <summary>A INOVAS Food serve para qualquer restaurante?</summary>
+              <p>Serve para diferentes operacoes de food service, especialmente delivery e restaurantes com cardapio digital.</p>
+            </details>
+            <details>
+              <summary>Preciso instalar aplicativo?</summary>
+              <p>Nao. A experiencia principal funciona pelo navegador, tanto para cliente quanto para gestor.</p>
+            </details>
+            <details>
+              <summary>Posso usar dominio proprio?</summary>
+              <p>Sim. A estrutura foi pensada para cada restaurante fortalecer a propria marca.</p>
+            </details>
+            <details>
+              <summary>O sistema funciona para delivery?</summary>
+              <p>Sim. Pedidos, acompanhamento, entregas e rotina operacional fazem parte do foco da plataforma.</p>
+            </details>
+            <details>
+              <summary>Tem painel administrativo?</summary>
+              <p>Sim. O gestor organiza pedidos, cardapio, clientes, estoque, financeiro e relatorios.</p>
+            </details>
+            <details>
+              <summary>Posso comecar com poucos recursos?</summary>
+              <p>Sim. O plano Essencial cobre a base para iniciar e evoluir conforme a operacao cresce.</p>
+            </details>
+            <details>
+              <summary>Posso ter minha logo e cores?</summary>
+              <p>Sim. A proposta e manter a identidade do restaurante com tecnologia INOVAS Food nos bastidores.</p>
+            </details>
+            <details>
+              <summary>Como solicito demonstracao?</summary>
+              <p>Use o contato da pagina para enviar seu interesse e alinhar a melhor configuracao.</p>
+            </details>
           </div>
+        </div>
+      </section>
+
+      <section class="if-contact" id="contato" aria-labelledby="if-contato-title">
+        <div class="if-container if-contact-grid">
+          <div class="if-contact-copy">
+            <span class="if-eyebrow">Contato</span>
+            <h2 id="if-contato-title">Vamos montar a demonstracao ideal para seu restaurante.</h2>
+            <p>
+              Conte como sua operacao funciona hoje. A INOVAS Food ajuda a organizar o caminho
+              entre cardapio, pedidos, entrega e gestao.
+            </p>
+
+            <div class="if-contact-methods" aria-label="Canais de contato">
+              <a href="mailto:contato@inovasfood.com.br?subject=Demonstracao%20INOVAS%20Food">
+                <span>E-mail</span>
+                contato@inovasfood.com.br
+              </a>
+              <a href="mailto:contato@inovasfood.com.br?subject=WhatsApp%20comercial%20INOVAS%20Food">
+                <span>WhatsApp</span>
+                Canal comercial configuravel
+              </a>
+              <a href="./admin/login.html">
+                <span>Acesso</span>
+                Entrar no gestor
+              </a>
+            </div>
+          </div>
+
+          <form
+            class="if-contact-form"
+            action="mailto:contato@inovasfood.com.br"
+            method="post"
+            enctype="text/plain"
+            aria-label="Formulario visual para solicitar demonstracao"
+          >
+            <label>
+              Nome
+              <input name="nome" type="text" autocomplete="name" placeholder="Seu nome" />
+            </label>
+            <label>
+              Restaurante
+              <input name="restaurante" type="text" autocomplete="organization" placeholder="Nome do restaurante" />
+            </label>
+            <label>
+              E-mail ou telefone
+              <input name="contato" type="text" autocomplete="email" placeholder="Como podemos falar com voce" />
+            </label>
+            <label>
+              Operacao
+              <textarea name="operacao" rows="4" placeholder="Conte se atende delivery, salao, retirada ou multiunidade"></textarea>
+            </label>
+            <button class="if-button if-button-primary if-button-large" type="submit">Solicitar demonstracao</button>
+          </form>
         </div>
       </section>
     </main>
@@ -276,23 +512,30 @@
     <footer class="if-footer">
       <div class="if-container if-footer-grid">
         <div class="if-footer-brand">
-          <img src="./assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
-          <p>Plataforma profissional para gestao de restaurantes.</p>
+          <img src="./assets/inovas-food-logo-oficial.png" alt="Logotipo oficial INOVAS Food" width="300" height="100" />
+          <p>INOVAS Food - tecnologia para restaurantes.</p>
         </div>
 
-        <nav aria-label="Links do rodape">
-          <strong>INOVAS Food</strong>
+        <nav aria-label="Links da landing">
+          <strong>Produto</strong>
           <a href="#recursos">Recursos</a>
+          <a href="#demonstracao">Demonstracao</a>
           <a href="#planos">Planos</a>
-          <a href="#contato">Contato</a>
+          <a href="#restaurantes">Restaurantes</a>
         </nav>
 
-        <nav aria-label="Acesso e suporte">
+        <nav aria-label="Contato e suporte">
           <strong>Atendimento</strong>
-          <a href="./admin/login.html">Login</a>
-          <a href="mailto:contato@inovasfood.com.br">Suporte</a>
           <a href="mailto:contato@inovasfood.com.br">contato@inovasfood.com.br</a>
+          <a href="mailto:contato@inovasfood.com.br?subject=Suporte%20INOVAS%20Food">Suporte</a>
+          <a href="./admin/login.html">Entrar no gestor</a>
         </nav>
+
+        <div class="if-footer-note">
+          <strong>INOVAS Food</strong>
+          <p>Gestao centralizada, identidade propria e evolucao continua para restaurantes.</p>
+          <small>(c) 2026 INOVAS Food. Todos os direitos reservados.</small>
+        </div>
       </div>
     </footer>
   </body>
