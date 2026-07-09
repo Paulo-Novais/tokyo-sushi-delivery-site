@@ -2,6 +2,36 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.inovasfood.com.br"
+        }
+      ],
+      "destination": "/inovas.html"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.inovasfood.com.br"
+        }
+      ],
+      "destination": "/inovas-robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.inovasfood.com.br"
+        }
+      ],
+      "destination": "/inovas-sitemap.xml"
+    },
+    {
       "source": "/inovas",
       "destination": "/inovas.html"
     },
@@ -141,6 +171,17 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "inovasfood.com.br"
+        }
+      ],
+      "destination": "https://www.inovasfood.com.br/:path*",
+      "permanent": true
+    },
     {
       "source": "/:path*",
       "has": [
