@@ -548,7 +548,7 @@ button {
 
 .if-kpis em,
 .if-phone em {
-  color: var(--if-green);
+  color: #08763a;
   font-size: 10px;
   font-style: normal;
   font-weight: 950;
@@ -694,7 +694,7 @@ button {
 }
 
 .if-orders-card em {
-  color: var(--if-green);
+  color: #08763a;
   font-style: normal;
   font-weight: 900;
 }
