@@ -40,7 +40,8 @@
     "validate:v1-final-local": "node scripts/validate-v1-final-local.mjs",
     "validate:v1-1-users-local": "node scripts/validate-v1-1-users-local.mjs",
     "validate:v1-2-saas-local": "node scripts/validate-v1-2-saas-local.mjs",
-    "validate:v1-3-platform-local": "node scripts/validate-v1-3-platform-local.mjs"
+    "validate:v1-3-platform-local": "node scripts/validate-v1-3-platform-local.mjs",
+    "validate:responsive-platform-local": "node scripts/validate-responsive-platform-local.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
