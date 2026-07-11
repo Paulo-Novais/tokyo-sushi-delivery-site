@@ -1813,7 +1813,7 @@ button {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .if-nav {
     min-height: auto;
     flex-wrap: wrap;
@@ -1824,7 +1824,6 @@ button {
     order: 3;
     width: 100%;
     justify-content: flex-start;
-    gap: 20px;
     overflow-x: auto;
     padding-bottom: 2px;
   }
@@ -1832,7 +1831,9 @@ button {
   .if-nav-actions {
     margin-left: auto;
   }
+}
 
+@media (max-width: 960px) {
   .if-hero {
     padding-top: 28px;
   }

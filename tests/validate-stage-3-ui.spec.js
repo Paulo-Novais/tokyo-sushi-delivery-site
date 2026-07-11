@@ -1,6 +1,8 @@
 const { test, expect, request } = require("@playwright/test");
 
-const baseURL = process.env.VALIDATION_BASE_URL || "http://localhost:3000";
+const baseURL = process.env.BASE_URL || process.env.VALIDATION_BASE_URL || "http://127.0.0.1:3000";
+const adminLogin = process.env.E2E_ADMIN_LOGIN;
+const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "").slice(-11);
 
@@ -27,7 +29,18 @@ const customer = {
   email: "cliente-ui@teste.com",
 };
 
-const buildOrderPayload = (nonce) => ({
+const findOrderableCatalogItem = (catalogPayload) => {
+  const sectionItems = (catalogPayload.sections || []).flatMap((section) =>
+    (section.items || []).map((item) => ({
+      ...item,
+      sectionId: item.sectionId || section.id || "",
+      sectionTitle: item.sectionTitle || section.title || "",
+    }))
+  );
+  return sectionItems.find((item) => item.id && item.name && item.isOrderable !== false) || null;
+};
+
+const buildOrderPayload = (nonce, catalogItem) => ({
   profile: {
     id: customer.id,
     name: customer.name,
@@ -46,24 +59,14 @@ const buildOrderPayload = (nonce) => ({
   },
   items: [
     {
-      id: `combo-ui-stage3-${nonce}`,
-      name: "Combinado UI Tracking",
-      category: "Combinados",
+      id: catalogItem.id,
+      name: catalogItem.name,
+      category: catalogItem.category || catalogItem.sectionTitle || "Cardapio",
       quantity: 1,
-      price: 84.9,
+      price: Number(catalogItem.price || catalogItem.regularPrice || 1),
     },
   ],
-  addons: [
-    {
-      id: "addon-ui-stage3",
-      name: "Molho especial",
-      quantity: 1,
-      chargedQuantity: 1,
-      freeUnits: 0,
-      unitPrice: 3.5,
-      totalPrice: 3.5,
-    },
-  ],
+  addons: [],
   deliveryQuote: {
     street: "Rua das Flores",
     houseNumber: "123",
@@ -92,6 +95,9 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
   const orderCreationClientToken = "ui-create-device-token";
   const trackingClientToken = "ui-track-device-token";
 
+  expect(adminLogin, "E2E_ADMIN_LOGIN precisa estar configurado.").toBeTruthy();
+  expect(adminPassword, "E2E_ADMIN_PASSWORD precisa estar configurado.").toBeTruthy();
+
   const publicApi = await request.newContext({
     baseURL,
     extraHTTPHeaders: {
@@ -100,13 +106,19 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
     },
   });
 
+  const catalogResponse = await publicApi.get("/api/catalog");
+  expect(catalogResponse.ok()).toBeTruthy();
+  const catalogPayload = await catalogResponse.json();
+  const catalogItem = findOrderableCatalogItem(catalogPayload);
+  expect(catalogItem, "O catalogo publico precisa expor ao menos um item compravel.").toBeTruthy();
+
   const createOrderResponse = await publicApi.post("/api/orders/create", {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "x-tokyo-customer-client-token": orderCreationClientToken,
       "x-tokyo-customer-key": customerKey,
     },
-    data: buildOrderPayload(nonce),
+    data: buildOrderPayload(nonce, catalogItem),
   });
   expect(createOrderResponse.ok()).toBeTruthy();
   const createdOrder = await createOrderResponse.json();
@@ -164,8 +176,8 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
 
   const adminLoginResponse = await adminApi.post("/api/admin/login", {
     data: {
-      identifier: "admin@tokyo.test",
-      password: "senha-segura",
+      identifier: adminLogin,
+      password: adminPassword,
       next: "/admin/",
     },
   });

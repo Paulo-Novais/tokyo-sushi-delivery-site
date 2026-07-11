@@ -1860,6 +1860,26 @@ body.admin-body[data-admin-page='dashboard'][data-admin-theme='dark'][data-admin
   color: #f8fafc !important;
 }
 
+@media (min-width: 1024px) and (max-width: 1599px) {
+  body.admin-body[data-admin-page='dashboard'][data-admin-section='orders'] .admin-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.admin-body[data-admin-page='dashboard'][data-admin-section='orders'] .admin-detail-panel {
+    position: static !important;
+    max-height: none !important;
+  }
+
+  body.admin-body[data-admin-page='dashboard'][data-admin-section='orders'] .admin-board {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    overflow-x: visible !important;
+  }
+
+  body.admin-body[data-admin-page='dashboard'][data-admin-section='orders'] .admin-board-column {
+    min-width: 0 !important;
+  }
+}
+
 @media (max-width: 1440px) {
   body.admin-body[data-admin-page='dashboard'][data-admin-theme='light'][data-admin-section='dashboard'] .admin-stats-grid {
     grid-column: 1 / 3 !important;

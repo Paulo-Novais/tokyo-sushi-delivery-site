@@ -1,8 +1,14 @@
 {
   "name": "tokyo-site",
-  "version": "1.1.0",
+  "version": "1.8.0",
   "private": true,
   "scripts": {
+    "start:test": "node scripts/local-validation-server.cjs",
+    "test": "npm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "validate:release": "node scripts/validate-release-local.mjs",
+    "validate:release:fast": "node scripts/validate-release-local.mjs --fast",
     "admin:hash": "node scripts/generate-admin-password-hash.mjs",
     "validate:stage-1-1": "node -e \"console.error('Comando bloqueado: validate:stage-1-1 apaga .data real. Use validate:stage-1-1:destructive apenas com backup.'); process.exit(1)\"",
     "validate:stage-1-1:destructive": "node scripts/validate-stage-1-1.mjs",

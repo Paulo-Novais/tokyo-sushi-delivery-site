@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.8.0] - 2026-07-11
+
+Status: Finalizacao controlada V1.8
+
+### Fixed
+
+- Corrigido contrato de erro do Painel Master para manter `master_access_required` em bloqueios de usuarios sem acesso de plataforma.
+- Ajustado Kanban administrativo para manter cinco colunas acessiveis no desktop validado sem corte lateral.
+- Removido fallback hardcoded de chave Google Maps em `maps-config.js`; a chave passa a depender de configuracao publica restrita por ambiente/host.
+
+### Security
+
+- Sanitizado `.env.example` para conter apenas placeholders, sem login, hash ou credencial operacional.
+- Adicionados headers globais de seguranca em `vercel.json`: CSP compativel, Permissions-Policy, X-Frame-Options, COOP e CORP, preservando HSTS, nosniff e Referrer-Policy.
+- CSP permanece compativel com inline JSON/scripts existentes; migracao para nonce/hash fica documentada como hardening posterior.
+
+### Changed
+
+- Alinhado versionamento local para `1.8.0` em pacote, lockfile, configuracao de plataforma e snapshot do Painel Master.
+
+### Known Limitations
+
+- Dominio `inovasfood.com.br` ainda depende de DNS/Vercel externos para certificacao publica.
+- Producao e Preview so podem receber GO apos novo deployment atrelado ao commit exato e smoke tests autenticados.
+- Nao houve alteracao destrutiva de banco.
+
 ## [1.3.0] - Em desenvolvimento
 
 Status: Local Validation
