@@ -35,7 +35,7 @@
     "companyWebsite": "https://tokyosushidelivery.com.br",
     "footerPoweredBy": "Tokyo Sushi Delivery Premium",
     "platformName": "Tokyo Sushi Delivery",
-    "platformVersion": "1.8.0",
+    "platformVersion": "1.9.0",
     "defaultWhatsapp": "5516990507398",
     "defaultAddress": {
       "full": "Rua General Osorio, 2165, Franca - SP, 14400-520, Brasil",

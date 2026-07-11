@@ -100,6 +100,9 @@ const loginAdmin = async (page, next = "/admin/") => {
   expect(adminLogin, "E2E_ADMIN_LOGIN precisa estar configurado.").toBeTruthy();
   expect(adminPassword, "E2E_ADMIN_PASSWORD precisa estar configurado.").toBeTruthy();
 
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `127.18.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}`,
+  });
   await page.goto(`/admin/login.html?next=${encodeURIComponent(next)}`, {
     waitUntil: "domcontentloaded",
   });

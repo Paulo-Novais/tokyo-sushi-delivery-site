@@ -9905,7 +9905,7 @@ const createSiteFooter = () => {
     .join("");
 
   const markup = `
-    <footer class="site-footer reveal" data-site-footer>
+    <footer class="site-footer" data-site-footer>
       <div class="container">
         <div class="site-footer-shell">
           <div class="site-footer-top">

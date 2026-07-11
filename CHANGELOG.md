@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.9.0] - 2026-07-11
+
+Status: Fechamento local V1.9
+
+### Added
+
+- Suite E2E V1.9 cobrindo autenticacao, headers de seguranca, RBAC, isolamento multi-tenant e responsividade do admin.
+- Helpers Playwright para onboarding real de restaurantes, login por tenant e criacao de pedidos publicos via HTTP.
+
+### Changed
+
+- Servidor local de validacao passa a operar em modo tenant piloto por padrao, preservando dados reais fora do workspace temporario.
+- Pipeline `test:e2e` passa a validar os specs V1.8 e V1.9 em conjunto.
+- Versionamento local alinhado para `1.9.0` em pacote, lockfile, configuracao e snapshot da plataforma.
+
+### Security
+
+- Smoke local verifica headers CSP, HSTS, nosniff, frame-deny, Permissions-Policy e `X-Robots-Tag` no admin.
+- RBAC E2E valida que OWNER nao acessa Painel Master e usuario sem permissao nao acessa catalogo/usuarios.
+
 ## [1.8.0] - 2026-07-11
 
 Status: Finalizacao controlada V1.8

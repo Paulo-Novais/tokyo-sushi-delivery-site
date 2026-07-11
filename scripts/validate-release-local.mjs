@@ -16,11 +16,16 @@ const criticalJsonFiles = [
 
 const syntaxFiles = [
   "maps-config.js",
+  "script.js",
   "site-config.js",
   "playwright.config.cjs",
   "scripts/local-validation-server.cjs",
   "tests/validate-stage-3-ui.spec.js",
+  "tests/e2e/helpers/v1.9-fixtures.cjs",
   "tests/e2e/v1.8-smoke.spec.js",
+  "tests/e2e/v1.9-auth-security.spec.js",
+  "tests/e2e/v1.9-rbac-tenant.spec.js",
+  "tests/e2e/v1.9-responsive.spec.js",
   "lib/admin-api.cjs",
   "lib/app-branding.cjs",
   "lib/master-platform-store.cjs",

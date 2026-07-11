@@ -20,7 +20,7 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD || crypto.randomBytes(24).t
 const sessionSecret = process.env.E2E_SESSION_SECRET || crypto.randomBytes(32).toString("base64url");
 
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
-process.env.INOVAS_TENANT_MODE = process.env.INOVAS_TENANT_MODE || "default_only";
+process.env.INOVAS_TENANT_MODE = process.env.INOVAS_TENANT_MODE || "pilot";
 process.env.ADMIN_LOGIN = adminLogin;
 process.env.ADMIN_PASSWORD = adminPassword;
 process.env.ADMIN_DISPLAY_NAME = process.env.E2E_ADMIN_DISPLAY_NAME || "Admin E2E";
@@ -193,6 +193,9 @@ const serveStatic = async (req, res, pathname) => {
   const body = await fs.promises.readFile(requestedPath);
 
   setSecurityHeaders(res);
+  if (staticPathname.startsWith("/admin/")) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
   res.writeHead(200, {
     "Cache-Control": staticPathname.startsWith("/admin/") ? "no-store, max-age=0" : "public, max-age=0, must-revalidate",
     "Content-Type": contentType,
