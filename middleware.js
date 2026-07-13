@@ -1,4 +1,4 @@
-import { next } from "@vercel/functions";
+import { next, rewrite } from "@vercel/functions";
 import adminAuth from "./lib/admin-auth.cjs";
 import appBranding from "./lib/app-branding.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
@@ -53,6 +53,7 @@ const PUBLIC_ALLOWED_HOSTS = new Set(
     .map(normalizePolicyHost)
     .filter(Boolean)
 );
+const RESTAURANT_PRIMARY_HOST = normalizePolicyHost(DOMAIN_CONFIG.primaryDomain);
 
 const isPublicAdminPath = (pathname) =>
   PUBLIC_ADMIN_PATHS.has(pathname) || PUBLIC_ADMIN_ASSET_PATTERN.test(pathname);
@@ -80,6 +81,17 @@ const getRequestPolicyHost = (request, requestUrl) =>
       requestUrl.host
   );
 
+const getRawRequestHost = (request, requestUrl) =>
+  String(
+    request.headers.get("x-forwarded-host") ||
+      request.headers.get("host") ||
+      requestUrl.host ||
+      ""
+  )
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
 const isAllowedPublicHost = (host) =>
   !host || isLocalHost(host) || isVercelPreviewHost(host) || PUBLIC_ALLOWED_HOSTS.has(host);
 
@@ -92,6 +104,41 @@ const buildUnknownHostResponse = () =>
       "X-Robots-Tag": "noindex, nofollow",
     },
   });
+
+const buildRewriteResponse = (requestUrl, destination) =>
+  rewrite(new URL(destination, requestUrl));
+
+const resolveRestaurantHostRewrite = (request, pathname, policyHost) => {
+  if (policyHost !== RESTAURANT_PRIMARY_HOST) {
+    return null;
+  }
+
+  if (getRawRequestHost(request, new URL(request.url)).replace(/^https?:\/\//, "").startsWith("www.")) {
+    return null;
+  }
+
+  if (pathname === "/robots.txt") {
+    return buildRewriteResponse(request.url, "/tokyo-robots.txt");
+  }
+
+  if (pathname === "/sitemap.xml") {
+    return buildRewriteResponse(request.url, "/tokyo-sitemap.xml");
+  }
+
+  if (pathname === "/" || pathname === "/index.html") {
+    return buildRewriteResponse(request.url, "/tokyo.html");
+  }
+
+  if (pathname === "/r/tokyo-sushi/" || pathname === "/r/tokyo-sushi/index.html") {
+    return buildRewriteResponse(request.url, "/tokyo.html");
+  }
+
+  if (pathname.startsWith("/r/tokyo-sushi/")) {
+    return buildRewriteResponse(request.url, `/${pathname.slice("/r/tokyo-sushi/".length)}`);
+  }
+
+  return null;
+};
 
 const buildGestorRedirectUrl = (requestUrl) => {
   const url = new URL(requestUrl);
@@ -151,6 +198,12 @@ export default async function middleware(request) {
 
   if (!isAllowedPublicHost(policyHost)) {
     return buildUnknownHostResponse();
+  }
+
+  const restaurantRewrite = resolveRestaurantHostRewrite(request, pathname, policyHost);
+
+  if (restaurantRewrite) {
+    return restaurantRewrite;
   }
 
   if (pathname === "/gestor" || pathname === "/gestor/" || pathname.startsWith("/gestor/")) {
