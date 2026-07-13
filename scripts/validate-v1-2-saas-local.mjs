@@ -312,7 +312,7 @@ const validateApiArchitecture = async (adminApi) => {
   );
 
   await saveUser(adminApi, master.cookie, {
-    name: "Socio INovas",
+    name: "Socio INOVAS",
     login: "socio@v1-2.local",
     email: "socio@v1-2.local",
     password: "SenhaSocioV12",
@@ -342,7 +342,7 @@ const validateApiArchitecture = async (adminApi) => {
     "SOCIO nao deve criar MASTER."
   );
   await saveUser(adminApi, socio.cookie, {
-    name: "Dev INovas",
+    name: "Dev INOVAS",
     login: "dev@v1-2.local",
     email: "dev@v1-2.local",
     password: "SenhaDevV12",
@@ -356,7 +356,7 @@ const validateApiArchitecture = async (adminApi) => {
   });
 
   await saveUser(adminApi, developer.cookie, {
-    name: "Suporte INovas",
+    name: "Suporte INOVAS",
     login: "suporte@v1-2.local",
     email: "suporte@v1-2.local",
     password: "SenhaSuporteV12",

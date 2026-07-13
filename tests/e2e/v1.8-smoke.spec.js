@@ -40,8 +40,8 @@ const collectPageSignals = (page) => {
   });
   page.on("response", (response) => {
     const status = response.status();
-    if (status >= 500) {
-      failedResponses.push(`${status} ${response.url()}`);
+    if (status >= 400) {
+      failedResponses.push(`${status} ${response.request().resourceType()} ${response.url()}`);
     }
   });
 
@@ -113,21 +113,23 @@ const loginAdmin = async (page, next = "/admin/") => {
 };
 
 test.describe("V1.8 public smoke", () => {
-  test("public home and INOVAS landing load without critical errors", async ({ page }) => {
+  test("INOVAS platform home and legacy landing load without critical errors", async ({ page }) => {
     for (const pathname of ["/", "/inovas"]) {
       const signals = collectPageSignals(page);
       const response = await page.goto(pathname, { waitUntil: "networkidle" });
       expect(response?.status(), `${pathname} deve responder 200.`).toBe(200);
       await expectNoHorizontalOverflow(page);
+      await expect(page).toHaveTitle(/INOVAS Food/i);
+      await expect(page).not.toHaveTitle(/Tokyo Sushi/i);
 
-      if (pathname === "/inovas") {
+      if (pathname === "/" || pathname === "/inovas") {
         await expectElementVisibleAndOpaque(page.locator(".if-footer"), "rodape INOVAS");
         await expectElementVisibleAndOpaque(page.locator(".if-newsletter"), "newsletter INOVAS");
         await expectElementVisibleAndOpaque(page.locator(".if-button").first(), "CTA INOVAS");
       } else {
         await expectElementVisibleAndOpaque(page.locator("[data-site-footer]"), "rodape publico");
         await expectElementVisibleAndOpaque(
-          page.getByRole("link", { name: /Agendar pedido|Pedir Agora|Ver Card[aá]pio/i }).first(),
+          page.getByRole("link", { name: /Agendar pedido|Pedir Agora|Ver Card[a\u00e1]pio/i }).first(),
           "CTA publico"
         );
       }
@@ -136,10 +138,24 @@ test.describe("V1.8 public smoke", () => {
     }
   });
 
+  test("Tokyo Sushi tenant route preserves restaurant storefront", async ({ page }) => {
+    const signals = collectPageSignals(page);
+    const response = await page.goto("/r/tokyo-sushi/", { waitUntil: "networkidle" });
+    expect(response?.status(), "rota tenant do Tokyo deve responder 200.").toBe(200);
+    await expectNoHorizontalOverflow(page);
+    await expect(page).toHaveTitle(/Tokyo Sushi/i);
+    await expectElementVisibleAndOpaque(page.locator("[data-site-footer]"), "rodape Tokyo tenant");
+    await expectElementVisibleAndOpaque(
+      page.getByRole("link", { name: /Agendar pedido|Pedir Agora|Ver Card[a\u00e1]pio/i }).first(),
+      "CTA Tokyo tenant"
+    );
+    expectNoCriticalSignals(signals);
+  });
+
   for (const [width, height] of PUBLIC_VIEWPORTS) {
     test(`public responsive viewport ${width}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      const response = await page.goto("/inovas", { waitUntil: "networkidle" });
+      const response = await page.goto("/", { waitUntil: "networkidle" });
       expect(response?.status()).toBe(200);
       await expectNoHorizontalOverflow(page);
       await expectElementVisibleAndOpaque(page.locator(".if-footer"), `rodape INOVAS ${width}`);
@@ -156,7 +172,7 @@ test.describe("V1.8 public smoke", () => {
     const page = await context.newPage();
 
     try {
-      await page.goto("/inovas", { waitUntil: "networkidle" });
+      await page.goto("/", { waitUntil: "networkidle" });
       await expectNoHorizontalOverflow(page);
       await expectElementVisibleAndOpaque(page.locator(".if-footer"), "rodape INOVAS com reduced motion");
     } finally {
@@ -180,6 +196,9 @@ test.describe("V1.8 admin protection and kanban smoke", () => {
     expect(missingApi.status()).toBe(404);
 
     await page.goto("/admin/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("[data-admin-login-form]")).toBeVisible();
+
+    await page.goto("/gestor", { waitUntil: "domcontentloaded" });
     await expect(page.locator("[data-admin-login-form]")).toBeVisible();
     await api.dispose();
   });

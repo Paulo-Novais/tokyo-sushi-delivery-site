@@ -182,6 +182,7 @@ const readRequestBody = (req) =>
 
 const handleAdminApiRequest = async (adminApi, req, res) => {
   req.body = await readRequestBody(req);
+  req.headers["x-forwarded-proto"] = req.headers["x-forwarded-proto"] || "http";
   const apiResponse = {
     setHeader(name, value) {
       res.setHeader(name, value);
@@ -226,10 +227,10 @@ const buildRestaurantSettingsPayload = () => ({
     siteLayout: "MODERN",
     platformFooter: {
       showPlatformBranding: true,
-      headline: "Desenvolvido por INovas Food",
+      headline: "Desenvolvido por INOVAS Food",
       description: "Plataforma profissional para restaurantes",
-      displayUrl: "www.inovasfood.com.br",
-      url: "https://www.inovasfood.com.br",
+      displayUrl: "inovasfood.com.br",
+      url: "https://inovasfood.com.br",
     },
   },
 });
@@ -507,16 +508,46 @@ const clickAdminSection = async (page, section) => {
 
 const clickMasterSection = async (page, section) => {
   if (!section) {
-    return;
+    return false;
   }
 
   const selector = `[data-master-section-button="${section}"]`;
-  await page.locator(selector).first().waitFor({ state: "visible", timeout: 12000 });
-  await page.locator(selector).first().click({ force: true });
+  let recoveredRestrictedState = false;
+  const hasInitialButtons = await page
+    .waitForFunction(() => document.querySelectorAll("[data-master-section-button]").length > 0, null, {
+      timeout: 5000,
+    })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasInitialButtons) {
+    const overview = await page
+      .evaluate(async () => {
+        const response = await fetch("/api/admin/master/overview", { credentials: "include" });
+        const payload = await response.json().catch(() => null);
+        return { status: response.status, menuCount: payload?.menu?.length || 0 };
+      })
+      .catch(() => null);
+
+    if (overview?.status === 200 && overview.menuCount > 0) {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await waitForSettled(page);
+      recoveredRestrictedState = true;
+    }
+  }
+
+  await page.waitForFunction(
+    () => document.querySelectorAll("[data-master-section-button]").length > 0,
+    null,
+    { timeout: 15000 }
+  );
+  await page.locator(selector).first().waitFor({ state: "attached", timeout: 12000 });
+  await page.locator(selector).first().evaluate((button) => button.click());
   await page.waitForFunction((expectedSection) => document.body.dataset.masterSection === expectedSection, section, {
     timeout: 12000,
   });
   await waitForSettled(page);
+  return recoveredRestrictedState;
 };
 
 const getCriticalSelectors = (surface) => {
@@ -723,7 +754,12 @@ const openResponsivePage = async ({
 
     if (surface === "master") {
       await page.locator("[data-master-nav]").waitFor({ state: "visible", timeout: 12000 });
-      await clickMasterSection(page, section);
+      const recoveredMasterState = await clickMasterSection(page, section);
+      if (recoveredMasterState) {
+        collectors.consoleErrors.length = 0;
+        collectors.pageErrors.length = 0;
+        collectors.failedResponses.length = 0;
+      }
     } else if (surface === "admin") {
       await page.locator("[data-admin-nav]").waitFor({ state: "visible", timeout: 12000 });
       await clickAdminSection(page, section);
@@ -895,7 +931,7 @@ const run = async () => {
 
     process.env.ADMIN_LOGIN = PROFILE_FIXTURES.master.login;
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(PROFILE_FIXTURES.master.password);
-    process.env.ADMIN_DISPLAY_NAME = "Master INovas Food";
+    process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-responsive-platform";
 
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));

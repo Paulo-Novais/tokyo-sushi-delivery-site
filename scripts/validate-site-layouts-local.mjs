@@ -184,7 +184,7 @@ const saveAppearance = async (store, patch) => {
     },
     {
       login: "usermaster@inovas.com",
-      displayName: "MASTER INovas Food",
+      displayName: "MASTER INOVAS Food",
     },
     defaultTenantOptions
   );
@@ -200,7 +200,7 @@ const validateStaticContracts = async () => {
   assert.equal(siteConfig.siteAppearance.layout, "MODERN");
   assert.equal(siteConfig.siteAppearance.platformFooter.showPlatformBranding, true);
   assert.ok(adminJs.includes("data-site-appearance-preview"), "Gestor deve possuir preview de aparencia.");
-  assert.ok(publicJs.includes("data-platform-branding"), "Site publico deve renderizar rodape INovas.");
+  assert.ok(publicJs.includes("data-platform-branding"), "Site publico deve renderizar rodape INOVAS.");
 };
 
 const validateStoreContracts = async (store) => {
@@ -221,7 +221,7 @@ const validateStoreContracts = async (store) => {
     gradientEnd: "#654321",
     useGradient: true,
     slogan: "Sabor modelo",
-    description: "Restaurante modelo da futura plataforma INovas Food.",
+    description: "Restaurante modelo da futura plataforma INOVAS Food.",
     instagram: "https://instagram.com/tokyo.layout",
     facebook: "https://facebook.com/tokyo.layout",
     tiktok: "https://tiktok.com/@tokyo.layout",
@@ -249,7 +249,7 @@ const validateStoreContracts = async (store) => {
   assert.equal(publicPayload.settings.siteLayout, "CATALOGO");
   assert.equal(publicPayload.settings.siteTheme, "DARK");
   assert.equal(publicPayload.settings.seoTitle, "Tokyo Layout Test");
-  assert.equal(publicPayload.settings.platformFooter.brandName, "INovas Food");
+  assert.equal(publicPayload.settings.platformFooter.brandName, "INOVAS Food");
 };
 
 const validateBrowserContracts = async ({ baseUrl, store }) => {
@@ -275,7 +275,7 @@ const validateBrowserContracts = async ({ baseUrl, store }) => {
     assert.ok(state.title.includes("Tokyo Layout Test"));
     assert.equal(state.description, "Descricao SEO da validacao de layouts.");
     assert.ok(state.keywords.includes("inovas"));
-    assert.ok(state.footer.includes("Desenvolvido por INovas Food"));
+    assert.ok(state.footer.includes("Desenvolvido por INOVAS Food"));
     assert.ok(state.navCount > 3, "Navegacao de categorias deve existir.");
 
     await saveAppearance(store, {

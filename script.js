@@ -362,9 +362,9 @@ const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
   },
   platformFooter: {
     showPlatformBranding: TOKYO_SITE_APPEARANCE.platformFooter?.showPlatformBranding !== false,
-    brandName: TOKYO_SITE_APPEARANCE.platformFooter?.brandName || "INovas Food",
+    brandName: TOKYO_SITE_APPEARANCE.platformFooter?.brandName || "INOVAS Food",
     logo: TOKYO_SITE_APPEARANCE.platformFooter?.logo || "./assets/inovas-food-logo-oficial.png",
-    headline: TOKYO_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INovas Food",
+    headline: TOKYO_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INOVAS Food",
     description:
       TOKYO_SITE_APPEARANCE.platformFooter?.description ||
       "Plataforma profissional para restaurantes",
@@ -6233,14 +6233,14 @@ const normalizePublicPlatformFooter = (source = {}, defaults = RESTAURANT_SETTIN
       footer.showPlatformBranding,
       fallback.showPlatformBranding !== false
     ),
-    brandName: normalizePublicSettingsText(footer.brandName, fallback.brandName || "INovas Food", 80),
+    brandName: normalizePublicSettingsText(footer.brandName, fallback.brandName || "INOVAS Food", 80),
     logo: normalizePublicAssetUrl(
       footer.logo,
       fallback.logo || "./assets/inovas-food-logo-oficial.png"
     ),
     headline: normalizePublicSettingsText(
       footer.headline,
-      fallback.headline || "Desenvolvido por INovas Food",
+      fallback.headline || "Desenvolvido por INOVAS Food",
       120
     ),
     description: normalizePublicSettingsText(
@@ -7692,12 +7692,12 @@ const syncPlatformFooter = (settings) => {
     const link = node.querySelector("[data-platform-branding-link]");
 
     if (headline) {
-      headline.textContent = footer.headline || "Desenvolvido por INovas Food";
+      headline.textContent = footer.headline || "Desenvolvido por INOVAS Food";
     }
 
     if (logo) {
       logo.src = footer.logo || "./assets/inovas-food-logo-oficial.png";
-      logo.alt = footer.brandName || "INovas Food";
+      logo.alt = footer.brandName || "INOVAS Food";
     }
 
     if (description) {
@@ -10004,9 +10004,9 @@ const createSiteFooter = () => {
           </div>
           <div class="inovas-platform-footer" data-platform-branding>
             <div class="inovas-platform-brand">
-              <img src="${escapeHtml(platformFooter.logo || "./assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(platformFooter.brandName || "INovas Food")}" data-platform-branding-logo />
+              <img src="${escapeHtml(platformFooter.logo || "./assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(platformFooter.brandName || "INOVAS Food")}" data-platform-branding-logo />
               <div>
-                <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INovas Food")}</strong>
+                <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INOVAS Food")}</strong>
                 <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
               </div>
             </div>

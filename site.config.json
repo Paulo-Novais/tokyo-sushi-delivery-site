@@ -83,15 +83,15 @@
     "adminSidebarLogo": "../assets/inovas-food-logo-oficial.png"
   },
   "adminBranding": {
-    "indexTitle": "Gestor | INovas Food",
-    "loginTitle": "Login | INovas Food",
+    "indexTitle": "Gestor | INOVAS Food",
+    "loginTitle": "Login | INOVAS Food",
     "privateAreaLabel": "Area privada",
-    "loginHeadline": "Gestor web administrativo INovas Food",
+    "loginHeadline": "Gestor web administrativo INOVAS Food",
     "loginPlaceholder": "seuemail@exemplo.com",
-    "sidebarEyebrow": "INovas Food",
+    "sidebarEyebrow": "INOVAS Food",
     "sidebarTitle": "Painel Operacional",
     "sidebarSubtitle": "Gestor de pedidos",
-    "displayNameFallback": "Gestor INovas"
+    "displayNameFallback": "Gestor INOVAS"
   },
   "whatsappTemplates": {
     "orderSupport": "Ola, quero fazer um pedido no {restaurantName}.",
@@ -229,12 +229,12 @@
     },
     "platformFooter": {
       "showPlatformBranding": true,
-      "brandName": "INovas Food",
+      "brandName": "INOVAS Food",
       "logo": "./assets/inovas-food-logo-oficial.png",
-      "headline": "Desenvolvido por INovas Food",
+      "headline": "Desenvolvido por INOVAS Food",
       "description": "Plataforma profissional para restaurantes",
-      "url": "https://www.inovasfood.com.br",
-      "displayUrl": "www.inovasfood.com.br"
+      "url": "https://inovasfood.com.br",
+      "displayUrl": "inovasfood.com.br"
     }
   },
   "features": {

@@ -609,7 +609,7 @@ const run = async () => {
 
     process.env.ADMIN_LOGIN = "usermaster@inovas.com";
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
-    process.env.ADMIN_DISPLAY_NAME = "Master INovas Food";
+    process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-planos-contratos";
 
     const masterStore = require(path.join(workspaceRoot, "lib/master-platform-store.cjs"));

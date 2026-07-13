@@ -2,34 +2,56 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.inovasfood.com.br"
-        }
-      ],
-      "destination": "/inovas.html"
-    },
-    {
       "source": "/robots.txt",
       "has": [
         {
           "type": "host",
-          "value": "www.inovasfood.com.br"
+          "value": "tokyosushidelivery.com.br"
         }
       ],
-      "destination": "/inovas-robots.txt"
+      "destination": "/tokyo-robots.txt"
     },
     {
       "source": "/sitemap.xml",
       "has": [
         {
           "type": "host",
-          "value": "www.inovasfood.com.br"
+          "value": "tokyosushidelivery.com.br"
         }
       ],
-      "destination": "/inovas-sitemap.xml"
+      "destination": "/tokyo-sitemap.xml"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "tokyosushidelivery.com.br"
+        }
+      ],
+      "destination": "/tokyo.html"
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "tokyosushidelivery.com.br"
+        }
+      ],
+      "destination": "/tokyo.html"
+    },
+    {
+      "source": "/r/tokyo-sushi/",
+      "destination": "/tokyo.html"
+    },
+    {
+      "source": "/r/tokyo-sushi/index.html",
+      "destination": "/tokyo.html"
+    },
+    {
+      "source": "/r/tokyo-sushi/:path*",
+      "destination": "/:path*"
     },
     {
       "source": "/inovas",
@@ -212,14 +234,29 @@
   ],
   "redirects": [
     {
+      "source": "/gestor",
+      "destination": "/admin/",
+      "permanent": false
+    },
+    {
+      "source": "/gestor/:path*",
+      "destination": "/admin/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/r/tokyo-sushi",
+      "destination": "/r/tokyo-sushi/",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
       "has": [
         {
           "type": "host",
-          "value": "inovasfood.com.br"
+          "value": "www.inovasfood.com.br"
         }
       ],
-      "destination": "https://www.inovasfood.com.br/:path*",
+      "destination": "https://inovasfood.com.br/:path*",
       "permanent": true
     },
     {

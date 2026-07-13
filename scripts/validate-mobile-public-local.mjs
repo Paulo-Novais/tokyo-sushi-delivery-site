@@ -11,7 +11,7 @@ const realDataDirectory = path.join(workspaceRoot, ".data");
 
 const MOBILE_WIDTHS = [320, 360, 375, 390, 414, 430, 768];
 const PUBLIC_PAGES = [
-  { label: "inicio", pathname: "/" },
+  { label: "inicio", pathname: "/r/tokyo-sushi/" },
   { label: "cardapio", pathname: "/cardapio.html" },
   { label: "entrega", pathname: "/entrega.html" },
   { label: "acompanhar", pathname: "/acompanhar.html" },
@@ -132,10 +132,10 @@ const buildRestaurantSettingsPayload = () => ({
     },
     platformFooter: {
       showPlatformBranding: true,
-      headline: "Desenvolvido por INovas Food",
+      headline: "Desenvolvido por INOVAS Food",
       description: "Plataforma profissional para restaurantes",
-      displayUrl: "www.inovasfood.com.br",
-      url: "https://www.inovasfood.com.br",
+      displayUrl: "inovasfood.com.br",
+      url: "https://inovasfood.com.br",
     },
     appearance: {
       layout: currentAppearance.layout,
@@ -158,10 +158,10 @@ const buildRestaurantSettingsPayload = () => ({
       },
       platformFooter: {
         showPlatformBranding: true,
-        headline: "Desenvolvido por INovas Food",
+        headline: "Desenvolvido por INOVAS Food",
         description: "Plataforma profissional para restaurantes",
-        displayUrl: "www.inovasfood.com.br",
-        url: "https://www.inovasfood.com.br",
+        displayUrl: "inovasfood.com.br",
+        url: "https://inovasfood.com.br",
       },
     },
   },
@@ -259,6 +259,12 @@ const createStaticServer = (rootDirectory) =>
 
       if (pathname === "/") {
         pathname = "/index.html";
+      }
+      if (pathname === "/r/tokyo-sushi/" || pathname === "/r/tokyo-sushi/index.html") {
+        pathname = "/tokyo.html";
+      }
+      if (pathname.startsWith("/r/tokyo-sushi/")) {
+        pathname = `/${pathname.slice("/r/tokyo-sushi/".length)}`;
       }
 
       const requestedPath = path.resolve(rootDirectory, `.${pathname}`);
@@ -480,7 +486,7 @@ const validateMetrics = ({ metrics, width, pageLabel, expectedLayout, expectedTh
   assertVisible(metrics.navLinks, `${pageLabel} navegacao`);
   assertVisible(metrics.cartButton, `${pageLabel} botao da sacola`);
   assertVisible(metrics.footer, `${pageLabel} rodape`);
-  assertVisible(metrics.platformFooter, `${pageLabel} rodape INovas`);
+  assertVisible(metrics.platformFooter, `${pageLabel} rodape INOVAS`);
 
   assert.ok(
     metrics.cartButton.width >= 40 && metrics.cartButton.height >= 40,

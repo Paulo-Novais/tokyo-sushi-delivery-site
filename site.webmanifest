@@ -1,15 +1,15 @@
 {
-  "name": "Tokyo Sushi Delivery",
-  "short_name": "Tokyo Sushi",
+  "name": "INOVAS Food",
+  "short_name": "INOVAS Food",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#080505",
-  "theme_color": "#080505",
-  "description": "Cardapio, entrega e pedidos do Tokyo Sushi Delivery.",
+  "background_color": "#f7faf8",
+  "theme_color": "#0f8f45",
+  "description": "Plataforma de gestao para restaurantes, delivery, pedidos, estoque e financeiro.",
   "icons": [
     {
-      "src": "/site-images/site-icon.png",
+      "src": "/assets/inovas-logo-header.png",
       "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"

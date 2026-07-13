@@ -27,12 +27,12 @@
     dashboard: {
       chip: "Dashboard Plataforma",
       title: "Dashboard Plataforma",
-      subtitle: "Leitura global da INovas Food, sem dependencia de restaurante unico.",
+      subtitle: "Leitura global da INOVAS Food, sem dependencia de restaurante unico.",
     },
     restaurants: {
       chip: "Restaurantes",
       title: "Restaurantes",
-      subtitle: "Cadastro superior preparado para a carteira INovas Food.",
+      subtitle: "Cadastro superior preparado para a carteira INOVAS Food.",
     },
     users: {
       chip: "Usuarios",
@@ -452,7 +452,7 @@
         <article class="master-panel">
           <h2>Plataforma</h2>
           ${renderFieldGrid([
-            { label: "Nome", value: state.snapshot?.platform?.platformName || "INovas Food" },
+            { label: "Nome", value: state.snapshot?.platform?.platformName || "INOVAS Food" },
             { label: "Versao", value: state.snapshot?.platform?.version || "--" },
             {
               label: "Modo manutencao",
@@ -1504,7 +1504,7 @@
       ${renderFieldGrid([
         { label: "Preparado", value: state.snapshot?.reports?.prepared ? "Sim" : "Nao" },
         { label: "Escopo atual", value: "Global Plataforma" },
-        { label: "Consolidacao", value: "Futura carteira INovas Food" },
+        { label: "Consolidacao", value: "Futura carteira INOVAS Food" },
       ])}
     </article>
   `;

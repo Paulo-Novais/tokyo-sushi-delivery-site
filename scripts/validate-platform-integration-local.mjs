@@ -701,7 +701,7 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
       ],
       excludes: ["Dashboard", "Estoque", "Tokyo Sushi Delivery"],
     });
-    assert.equal(await getText(systemPage, "[data-admin-main-title]"), "INovas Food");
+    assert.equal(await getText(systemPage, "[data-admin-main-title]"), "INOVAS Food");
     assert.equal(await getText(systemPage, "[data-admin-welcome]"), "Administrador do Sistema");
     assert.equal((await getText(systemPage, "[data-admin-main-topbar]")).includes("Tokyo Sushi Delivery"), false, "Header MASTER nao deve depender de restaurante.");
     await systemContext.close();
@@ -828,7 +828,7 @@ const run = async () => {
 
     process.env.ADMIN_LOGIN = PROFILE_FIXTURES.master.login;
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(PROFILE_FIXTURES.master.password);
-    process.env.ADMIN_DISPLAY_NAME = "Master INovas Food";
+    process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-platform-integration";
 
     await validateStaticContracts(adminAuth);

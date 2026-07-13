@@ -422,8 +422,8 @@ const validateUsersBrowser = async (adminApi) => {
     await openUsersModule(masterPage);
     assert.equal(
       await masterPage.locator("[data-admin-main-title]").textContent(),
-      "INovas Food",
-      "Header MASTER deve exibir INovas Food em vez de restaurante."
+      "INOVAS Food",
+      "Header MASTER deve exibir INOVAS Food em vez de restaurante."
     );
     assert.equal(
       await masterPage.locator("[data-admin-welcome]").textContent(),
@@ -589,7 +589,7 @@ const run = async () => {
       ip: "127.0.2.4",
       body: {
         user: {
-          name: "Suporte INovas",
+          name: "Suporte INOVAS",
           login: "suporte@v1-1.local",
           email: "suporte@v1-1.local",
           password: "SenhaSuporteV11",

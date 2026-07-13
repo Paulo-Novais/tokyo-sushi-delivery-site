@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tokyosushidelivery.com.br/sitemap.xml
+Sitemap: https://inovasfood.com.br/sitemap.xml

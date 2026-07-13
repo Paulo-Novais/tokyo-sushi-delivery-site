@@ -653,13 +653,13 @@ const RESTAURANT_SETTINGS_DEFAULT_DRAFT = Object.freeze({
   },
   platformFooter: {
     showPlatformBranding: ADMIN_SITE_APPEARANCE.platformFooter?.showPlatformBranding !== false,
-    brandName: ADMIN_SITE_APPEARANCE.platformFooter?.brandName || "INovas Food",
-    headline: ADMIN_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INovas Food",
+    brandName: ADMIN_SITE_APPEARANCE.platformFooter?.brandName || "INOVAS Food",
+    headline: ADMIN_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INOVAS Food",
     description:
       ADMIN_SITE_APPEARANCE.platformFooter?.description ||
       "Plataforma profissional para restaurantes",
-    url: ADMIN_SITE_APPEARANCE.platformFooter?.url || "https://www.inovasfood.com.br",
-    displayUrl: ADMIN_SITE_APPEARANCE.platformFooter?.displayUrl || "www.inovasfood.com.br",
+    url: ADMIN_SITE_APPEARANCE.platformFooter?.url || "https://inovasfood.com.br",
+    displayUrl: ADMIN_SITE_APPEARANCE.platformFooter?.displayUrl || "inovasfood.com.br",
   },
   whatsapp: ADMIN_APP_BRANDING.defaultWhatsapp || "5516990507398",
   address:
@@ -3129,7 +3129,7 @@ const renderSectionChrome = () => {
 
   if (titleNode) {
     titleNode.textContent = isMasterPlatformHeader
-      ? "INovas Food"
+      ? "INOVAS Food"
       : isDashboardSection
       ? "Resumo do turno e indicadores"
       : isOrdersSection
@@ -8564,7 +8564,7 @@ const refreshRestaurantSettingsAppearancePreview = () => {
   setText("[data-preview-name]", draft.restaurantName);
   setText("[data-preview-slogan]", draft.slogan);
   setText("[data-preview-description]", draft.description);
-  setText("[data-preview-footer-headline]", draft.footer.headline || "Desenvolvido por INovas Food");
+  setText("[data-preview-footer-headline]", draft.footer.headline || "Desenvolvido por INOVAS Food");
   setText(
     "[data-preview-footer-description]",
     draft.footer.description || "Plataforma profissional para restaurantes"
@@ -8604,7 +8604,7 @@ const renderRestaurantAppearancePreview = () => {
         </div>
       </div>
       <footer class="admin-site-preview-footer">
-        <strong data-preview-footer-headline>${escapeHtml(draft.footer.headline || "Desenvolvido por INovas Food")}</strong>
+        <strong data-preview-footer-headline>${escapeHtml(draft.footer.headline || "Desenvolvido por INOVAS Food")}</strong>
         <span data-preview-footer-description>${escapeHtml(draft.footer.description || "Plataforma profissional para restaurantes")}</span>
       </footer>
     </div>
@@ -8815,16 +8815,16 @@ const renderRestaurantSettingsModule = () => {
       <article class="admin-delivery-card is-wide">
         <header class="admin-delivery-card-head">
           <div>
-            <span class="admin-chip">Rodape INovas</span>
+            <span class="admin-chip">Rodape INOVAS</span>
             <h3>Marca institucional da plataforma</h3>
             <p>A marca permanece sempre visivel nesta etapa. A flag showPlatformBranding fica preparada para uso futuro.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Nome da plataforma", field: "platformFooter.brandName", value: draft.platformFooter?.brandName || "", placeholder: "INovas Food", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Chamada do rodape", field: "platformFooter.headline", value: draft.platformFooter?.headline || "", placeholder: "Desenvolvido por INovas Food", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "URL", field: "platformFooter.url", value: draft.platformFooter?.url || "", placeholder: "https://www.inovasfood.com.br", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "URL exibida", field: "platformFooter.displayUrl", value: draft.platformFooter?.displayUrl || "", placeholder: "www.inovasfood.com.br", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Nome da plataforma", field: "platformFooter.brandName", value: draft.platformFooter?.brandName || "", placeholder: "INOVAS Food", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Chamada do rodape", field: "platformFooter.headline", value: draft.platformFooter?.headline || "", placeholder: "Desenvolvido por INOVAS Food", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "URL", field: "platformFooter.url", value: draft.platformFooter?.url || "", placeholder: "https://inovasfood.com.br", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "URL exibida", field: "platformFooter.displayUrl", value: draft.platformFooter?.displayUrl || "", placeholder: "inovasfood.com.br", disabled: isBusy })}
           ${renderRestaurantSettingsTextarea({ label: "Descricao institucional", field: "platformFooter.description", value: draft.platformFooter?.description || "", placeholder: "Plataforma profissional para restaurantes", disabled: isBusy })}
         </div>
       </article>
@@ -9100,7 +9100,7 @@ const getAdminUserRestaurantName = (user = {}) => {
   const scope = getAdminUserScope(user);
 
   if (scope === "SYSTEM" || (type === "MASTER" && user.platformScope === true)) {
-    return "Plataforma INovas Food";
+    return "Plataforma INOVAS Food";
   }
 
   return user.restaurantName || user.restaurant || user.tradeName || user.restaurantKey || getCurrentUsersRestaurantKey();
@@ -9631,7 +9631,7 @@ const renderAdminUserDialog = () => {
           <div>
             <span class="admin-chip">${escapeHtml(isViewing ? "Visualizacao" : isCreating ? "Cadastro" : "Edicao")}</span>
             <h3 id="admin-user-dialog-title">${escapeHtml(dialogTitle)}</h3>
-            <p>${escapeHtml(userScope === "SYSTEM" ? "Usuario da plataforma INovas Food." : "Usuario vinculado a um restaurante.")}</p>
+            <p>${escapeHtml(userScope === "SYSTEM" ? "Usuario da plataforma INOVAS Food." : "Usuario vinculado a um restaurante.")}</p>
           </div>
           <button class="admin-user-icon-button" type="button" data-user-dialog-close aria-label="Fechar" title="Fechar">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -12794,7 +12794,7 @@ const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
   }
 
   if (userScope === "SYSTEM" && !SYSTEM_USER_TYPE_SET.has(userType)) {
-    return "Usuario do sistema deve usar um perfil da plataforma INovas.";
+    return "Usuario do sistema deve usar um perfil da plataforma INOVAS.";
   }
 
   if (userScope === "RESTAURANT" && !RESTAURANT_USER_TYPE_SET.has(userType)) {
@@ -13181,7 +13181,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
       payload.admin?.displayName ||
       adminState.adminDisplayName ||
       ADMIN_BRANDING.displayNameFallback ||
-      "Gestor INovas";
+      "Gestor INOVAS";
     adminState.isLoadingOrders = false;
 
     void ensurePublicCatalogItems();
@@ -15302,7 +15302,7 @@ const syncAdminStaticBranding = () => {
   const page = document.body.dataset.adminPage;
 
   if (page === "login") {
-    document.title = ADMIN_BRANDING.loginTitle || "Login | INovas Food";
+    document.title = ADMIN_BRANDING.loginTitle || "Login | INOVAS Food";
     const eyebrow = document.querySelector(".admin-login-hero .admin-eyebrow");
     const headline = document.querySelector(".admin-login-hero h1");
     const loginInput = document.querySelector('[data-admin-login-form] input[name="identifier"]');
@@ -15313,7 +15313,7 @@ const syncAdminStaticBranding = () => {
 
     if (headline) {
       headline.textContent =
-        ADMIN_BRANDING.loginHeadline || "Gestor web administrativo INovas Food";
+        ADMIN_BRANDING.loginHeadline || "Gestor web administrativo INOVAS Food";
     }
 
     if (loginInput) {
@@ -15325,7 +15325,7 @@ const syncAdminStaticBranding = () => {
   }
 
   if (page === "dashboard") {
-    document.title = ADMIN_BRANDING.indexTitle || "Gestor | INovas Food";
+    document.title = ADMIN_BRANDING.indexTitle || "Gestor | INOVAS Food";
     const logo = document.querySelector(".admin-brand-logo");
     const eyebrow = document.querySelector(".admin-brand-copy .admin-eyebrow");
     const title = document.querySelector(".admin-brand-copy strong");
@@ -15333,11 +15333,11 @@ const syncAdminStaticBranding = () => {
 
     if (logo) {
       logo.src = ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-oficial.png";
-      logo.alt = ADMIN_BRANDING.sidebarTitle || "INovas Food";
+      logo.alt = ADMIN_BRANDING.sidebarTitle || "INOVAS Food";
     }
 
     if (eyebrow) {
-      eyebrow.textContent = ADMIN_BRANDING.sidebarEyebrow || "INovas Food";
+      eyebrow.textContent = ADMIN_BRANDING.sidebarEyebrow || "INOVAS Food";
     }
 
     if (title) {

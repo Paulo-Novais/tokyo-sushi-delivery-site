@@ -266,11 +266,11 @@ def build_runtime_config(site_config: dict) -> dict:
         "platformFooter": merge_object(
             {
                 "showPlatformBranding": True,
-                "brandName": "INovas Food",
-                "headline": "Desenvolvido por INovas Food",
+                "brandName": "INOVAS Food",
+                "headline": "Desenvolvido por INOVAS Food",
                 "description": "Plataforma profissional para restaurantes",
-                "url": "https://www.inovasfood.com.br",
-                "displayUrl": "www.inovasfood.com.br",
+                "url": "https://inovasfood.com.br",
+                "displayUrl": "inovasfood.com.br",
             },
             normalize_object(site_appearance_source.get("platformFooter")),
         ),

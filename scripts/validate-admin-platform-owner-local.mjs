@@ -84,7 +84,7 @@ const run = async () => {
     process.env.ADMIN_USERS = JSON.stringify([
       {
         login: "usermaster@gmail.com",
-        displayName: "Master INovas Food",
+        displayName: "Master INOVAS Food",
         passwordHash: adminAuth.createPasswordHash("novais96"),
         userType: "MASTER",
         platformScope: true,

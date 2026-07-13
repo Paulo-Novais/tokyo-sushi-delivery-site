@@ -17,6 +17,15 @@ const isPublicAdminPath = (pathname) =>
 
 const isMasterAdminHtmlPath = (pathname) => MASTER_ADMIN_HTML_PATHS.has(pathname);
 
+const buildGestorRedirectUrl = (requestUrl) => {
+  const url = new URL(requestUrl);
+  const suffix = url.pathname.replace(/^\/gestor\/?/, "");
+  const targetPath = suffix ? `/admin/${suffix}` : "/admin/";
+  const target = new URL(targetPath, requestUrl);
+  target.search = url.search;
+  return target;
+};
+
 const buildUnauthorizedApiResponse = () =>
   new Response(
     JSON.stringify({
@@ -62,6 +71,11 @@ const resolveAdminSessionUserType = async (session) => {
 export default async function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
+
+  if (pathname === "/gestor" || pathname === "/gestor/" || pathname.startsWith("/gestor/")) {
+    return Response.redirect(buildGestorRedirectUrl(request.url), 307);
+  }
+
   const session = adminAuth.getAdminSessionFromCookieHeader(
     request.headers.get("cookie") || ""
   );
@@ -97,6 +111,6 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/gestor", "/gestor/:path*", "/admin", "/admin/:path*", "/api/admin/:path*"],
   runtime: "nodejs",
 };

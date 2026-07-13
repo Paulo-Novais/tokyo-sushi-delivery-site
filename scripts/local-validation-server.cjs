@@ -122,6 +122,12 @@ const sendText = (res, status, body) => {
   res.end(body);
 };
 
+const sendRedirect = (res, status, location) => {
+  setSecurityHeaders(res);
+  res.writeHead(status, { Location: location });
+  res.end();
+};
+
 const isPublicAdminAsset = (pathname) =>
   pathname === "/admin/login.html" ||
   pathname === "/admin/admin.css" ||
@@ -162,9 +168,27 @@ const protectAdminHtml = (req, res, pathname) => {
 const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
+  if (pathname === "/r/tokyo-sushi/" || pathname === "/r/tokyo-sushi/index.html") return "/tokyo.html";
+  if (pathname.startsWith("/r/tokyo-sushi/")) return `/${pathname.slice("/r/tokyo-sushi/".length)}`;
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
   if (pathname === "/admin/master") return "/admin/master.html";
   return pathname;
+};
+
+const resolveLocalRedirect = (pathname, search) => {
+  if (pathname === "/gestor" || pathname === "/gestor/") {
+    return `/admin/${search}`;
+  }
+
+  if (pathname.startsWith("/gestor/")) {
+    return `/admin/${pathname.slice("/gestor/".length)}${search}`;
+  }
+
+  if (pathname === "/r/tokyo-sushi") {
+    return `/r/tokyo-sushi/${search}`;
+  }
+
+  return null;
 };
 
 const serveStatic = async (req, res, pathname) => {
@@ -223,6 +247,12 @@ const server = http.createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url || "/", baseURL);
     const pathname = decodeURIComponent(requestUrl.pathname);
+    const redirectLocation = resolveLocalRedirect(pathname, requestUrl.search);
+
+    if (redirectLocation) {
+      sendRedirect(res, 302, redirectLocation);
+      return;
+    }
 
     if (pathname.startsWith("/api/")) {
       await handleApi(req, res, pathname);
