@@ -74,6 +74,14 @@
       "destination": "/api/admin/[...action]?action=auth/:action"
     },
     {
+      "source": "/api/admin/master/:action",
+      "destination": "/api/admin/[...action]?action=master/:action"
+    },
+    {
+      "source": "/api/admin/users/:action",
+      "destination": "/api/admin/[...action]?action=users/:action"
+    },
+    {
       "source": "/api/admin/orders/:action",
       "destination": "/api/admin/[...action]?action=orders/:action"
     },
