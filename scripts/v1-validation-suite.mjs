@@ -218,6 +218,14 @@ const loginMaster = (adminApi, ip = "127.0.1.1") =>
     ip,
   });
 
+const buildDocumentForRestaurantKey = (key = "default") => {
+  const hash = String(key || "default")
+    .split("")
+    .reduce((total, character) => (total * 31 + character.charCodeAt(0)) % 1000000000000, 0);
+
+  return `12${String(hash).padStart(12, "0")}`.slice(0, 14);
+};
+
 const restaurantPayload = ({
   key,
   name,
@@ -232,7 +240,7 @@ const restaurantPayload = ({
   slug: key,
   restaurantKey: key,
   domain: `${key}.localhost`,
-  document: "12345678000190",
+  document: buildDocumentForRestaurantKey(key),
   ownerFullName: `Owner ${name || key}`,
   city: "Sao Paulo",
   postalCode: "01000000",

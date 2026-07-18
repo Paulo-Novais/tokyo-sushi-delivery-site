@@ -386,8 +386,10 @@
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const error = new Error(payload.error || "Nao foi possivel concluir a operacao.");
+      const errorCode = payload.errorCode || payload.error || "";
+      const error = new Error(payload.message || payload.error || "Nao foi possivel concluir a operacao.");
       error.status = response.status;
+      error.code = errorCode;
       error.payload = payload;
       throw error;
     }
@@ -2962,6 +2964,34 @@
     }`;
   };
 
+  const RESTAURANT_ONBOARDING_SERVER_ERROR_FIELDS = Object.freeze({
+    restaurant_cnpj_already_exists: "document",
+    restaurant_email_already_exists: "email",
+    restaurant_slug_already_exists: "slug",
+    restaurant_domain_already_exists: "domain",
+  });
+
+  const applyRestaurantOnboardingServerError = (form, error) => {
+    const payload = error?.payload || {};
+    const errorCode = String(error?.code || payload.error || payload.errorCode || "").trim();
+    const message = payload.message || error?.message || "Não foi possível cadastrar o restaurante.";
+    const fieldName = RESTAURANT_ONBOARDING_SERVER_ERROR_FIELDS[errorCode];
+
+    if (fieldName) {
+      setOnboardingFieldValidation(form, fieldName, "invalid", message);
+      const field = form?.querySelector(`[name="${fieldName}"]`);
+      const accordion = field?.closest("details");
+
+      if (accordion) {
+        accordion.open = true;
+      }
+
+      field?.focus?.();
+    }
+
+    return message;
+  };
+
   const setOnboardingSubmitting = (form, isSubmitting) => {
     const submitButton = form?.querySelector('button[type="submit"]');
 
@@ -3532,7 +3562,7 @@
       await loadMasterPanel();
     } catch (error) {
       state.isUserSubmitting = false;
-      state.userFeedback = error.message || "Nao foi possivel cadastrar o restaurante.";
+      state.userFeedback = applyRestaurantOnboardingServerError(form, error);
       state.userFeedbackType = "error";
       setOnboardingSubmitting(form, false);
       showOnboardingFeedback(form, state.userFeedback, "error");

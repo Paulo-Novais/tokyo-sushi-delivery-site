@@ -38,6 +38,7 @@
     "validate:v1-release-local": "node scripts/validate-v1-release-local.mjs",
     "validate:v1-security-hardening-local": "node scripts/validate-v1-security-hardening-local.mjs",
     "validate:v1-onboarding-local": "node scripts/validate-v1-onboarding-local.mjs",
+    "validate:v1-10-onboarding-fixes-local": "node scripts/validate-v1-10-onboarding-fixes-local.mjs",
     "validate:v1-subscription-local": "node scripts/validate-v1-subscription-local.mjs",
     "validate:v1-rbac-local": "node scripts/validate-v1-rbac-local.mjs",
     "validate:v1-audit-local": "node scripts/validate-v1-audit-local.mjs",
