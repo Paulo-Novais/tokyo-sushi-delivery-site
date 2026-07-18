@@ -11,6 +11,14 @@ const uniqueKey = (prefix) => {
 
 const hostForKey = (restaurantKey) => `${restaurantKey}.localhost`;
 
+const buildDocumentForRestaurantKey = (key = "default") => {
+  const hash = String(key || "default")
+    .split("")
+    .reduce((total, character) => (total * 31 + character.charCodeAt(0)) % 1000000000000, 0);
+
+  return `12${String(hash).padStart(12, "0")}`.slice(0, 14);
+};
+
 const createApiContext = async ({ host, cookie, ip, origin } = {}) => {
   const extraHTTPHeaders = {
     "x-forwarded-for": ip || `127.19.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}`,
@@ -75,55 +83,59 @@ const buildRestaurantPayload = ({
   status = "ACTIVE",
   ownerLogin = `owner@${key}.local`,
   ownerPassword = "SenhaOwner19",
-} = {}) => ({
-  restaurantName: name,
-  tradeName: name,
-  name,
-  slug: key,
-  restaurantKey: key,
-  domain: `${key}.localhost`,
-  document: "12345678000190",
-  ownerFullName: `Owner ${name}`,
-  email: ownerLogin,
-  city: "Sao Paulo",
-  postalCode: "01000000",
-  establishmentNumber: "190",
-  registration: {
-    legalName: `${name} LTDA`,
-    document: "12.345.678/0001-90",
-    city: "Sao Paulo",
-    state: "SP",
-  },
-  phone: "5511999999999",
-  adhesionDate: "2026-07-11",
-  whatsapp: "5511999999999",
-  address: {
-    street: "Rua V19",
-    number: "190",
-    neighborhood: "Centro",
-    city: "Sao Paulo",
-    state: "SP",
-    postalCode: "01000000",
-  },
-  businessSchedule: {
-    acceptOrdersOutsideHours: true,
-  },
-  delivery: {
-    radiusKm: 8,
-    fee: 9,
-    minimumOrder: 35,
-    deliveriesEnabled: true,
-  },
-  paymentMethods: ["pix", "card", "cash"],
-  plan,
-  subscriptionStatus: status,
-  adminUser: {
-    login: ownerLogin,
+} = {}) => {
+  const document = buildDocumentForRestaurantKey(key);
+
+  return {
+    restaurantName: name,
+    tradeName: name,
+    name,
+    slug: key,
+    restaurantKey: key,
+    domain: `${key}.localhost`,
+    document,
+    ownerFullName: `Owner ${name}`,
     email: ownerLogin,
-    name: `Owner ${name}`,
-    password: ownerPassword,
-  },
-});
+    city: "Sao Paulo",
+    postalCode: "01000000",
+    establishmentNumber: "190",
+    registration: {
+      legalName: `${name} LTDA`,
+      document,
+      city: "Sao Paulo",
+      state: "SP",
+    },
+    phone: "5511999999999",
+    adhesionDate: "2026-07-11",
+    whatsapp: "5511999999999",
+    address: {
+      street: "Rua V19",
+      number: "190",
+      neighborhood: "Centro",
+      city: "Sao Paulo",
+      state: "SP",
+      postalCode: "01000000",
+    },
+    businessSchedule: {
+      acceptOrdersOutsideHours: true,
+    },
+    delivery: {
+      radiusKm: 8,
+      fee: 9,
+      minimumOrder: 35,
+      deliveriesEnabled: true,
+    },
+    paymentMethods: ["pix", "card", "cash"],
+    plan,
+    subscriptionStatus: status,
+    adminUser: {
+      login: ownerLogin,
+      email: ownerLogin,
+      name: `Owner ${name}`,
+      password: ownerPassword,
+    },
+  };
+};
 
 const onboardRestaurant = async (masterApi, options = {}) => {
   const key = options.key || uniqueKey("v19");
