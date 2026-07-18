@@ -145,9 +145,16 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
   });
 
   await page.locator("[data-auth-open]").first().click();
-  await page.locator('input[name="entry_name"]').fill(customer.name);
-  await page.locator('input[name="entry_phone"]').fill(customer.phone);
-  await page.locator("[data-auth-phone-form] .auth-submit").click();
+  const phoneForm = page.locator("[data-auth-phone-form]").filter({ has: page.locator('input[name="entry_phone"]') });
+  await expect(phoneForm).toBeVisible({ timeout: 15000 });
+  const nameInput = phoneForm.locator('input[name="entry_name"]');
+  const phoneInput = phoneForm.locator('input[name="entry_phone"]');
+  await nameInput.fill("");
+  await phoneInput.fill("");
+  await nameInput.fill(customer.name);
+  await phoneInput.fill(customer.phone);
+  await expect(phoneInput).toHaveValue(/\(11\) 96666-3311|11966663311|11 96666-3311/);
+  await phoneForm.locator(".auth-submit").click();
 
   const previewCodeNode = page.locator(".auth-code-preview strong");
   await expect(previewCodeNode).toBeVisible({ timeout: 15000 });
