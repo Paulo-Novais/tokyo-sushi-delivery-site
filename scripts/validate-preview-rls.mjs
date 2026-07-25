@@ -39,6 +39,7 @@ const withScope = (connectionString, scope) => {
   const parsed = new URL(connectionString);
   const options = [
     `-capp.audience=${scope.audience}`,
+    `-capp.login=${scope.login || "__none__"}`,
     `-capp.tenant_id=${scope.tenantId || "__none__"}`,
     `-capp.restaurant_id=${scope.restaurantId || "__none__"}`,
     `-capp.identity_id=${scope.identityId || "__test__"}`,
@@ -121,7 +122,7 @@ try {
   const tenantIdentityId = tenantIdentityResult.rows[0]?.identity_id || "";
   const tenantAdminUserResult = await ownerPool.query(
     `
-      SELECT id
+      SELECT id, login
       FROM admin_users
       WHERE tenant_id = $1
         AND restaurant_id = $2
@@ -131,6 +132,8 @@ try {
     [tenantA.tenant_id, tenantA.restaurant_id]
   );
   const tenantAdminUserId = tenantAdminUserResult.rows[0]?.id || "";
+  const tenantAdminUserLogin =
+    tenantAdminUserResult.rows[0]?.login || "";
   const systemIdentityResult = await ownerPool.query(`
     SELECT identity_id
     FROM system_principals
@@ -142,6 +145,7 @@ try {
     !tenantMembershipId ||
     !tenantIdentityId ||
     !tenantAdminUserId ||
+    !tenantAdminUserLogin ||
     !systemIdentityId
   ) {
     throw new Error("Identity scopes are unavailable for the RLS test.");
@@ -228,6 +232,30 @@ try {
     },
     "UPDATE identities SET updated_at = updated_at WHERE id = $1",
     [tenantIdentityId]
+  );
+  const authenticationOwnUser = await queryWithScope(
+    {
+      audience: "authentication",
+      login: tenantAdminUserLogin,
+      identityId: tenantIdentityId,
+    },
+    "SELECT count(*)::integer AS count FROM admin_users"
+  );
+  const authenticationOtherUser = await queryWithScope(
+    {
+      audience: "authentication",
+      login: `missing-${crypto.randomUUID()}@preview.invalid`,
+    },
+    "SELECT count(*)::integer AS count FROM admin_users"
+  );
+  const authenticationWrite = await queryWithScope(
+    {
+      audience: "authentication",
+      login: tenantAdminUserLogin,
+      identityId: tenantIdentityId,
+    },
+    "UPDATE admin_users SET updated_at = updated_at WHERE id = $1",
+    [tenantAdminUserId]
   );
   const supportViewUsers = await queryWithScope(
     {
@@ -363,6 +391,11 @@ try {
     tenantIdentityVisible: tenantIdentityVisible.rows[0].count === 1,
     tenantSystemIdentityHidden:
       tenantSystemIdentityHidden.rows[0].count === 0,
+    authenticationOwnUserVisible:
+      authenticationOwnUser.rows[0].count === 1,
+    authenticationOtherUsersDenied:
+      authenticationOtherUser.rows[0].count === 0,
+    authenticationWriteDenied: authenticationWrite.rowCount === 0,
     supportViewIdentityWriteDenied: supportViewIdentityWrite.rowCount === 0,
     supportViewUsersDenied: supportViewUsers.rows[0].count === 0,
     supportViewUserWriteDenied: supportViewUserWrite.rowCount === 0,
