@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acesso System | INOVAS Food</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="../assets/inovas-logo-header.png" />
+    <link rel="stylesheet" href="../admin/admin.css" />
+    <link rel="stylesheet" href="../admin/design-system.css" />
+    <script src="./login.js" defer></script>
+  </head>
+  <body class="admin-body admin-login-page" data-admin-theme="light">
+    <main class="admin-login-layout">
+      <section class="admin-login-hero">
+        <div class="admin-login-brand">
+          <img
+            class="admin-login-brand-logo"
+            src="../assets/inovas-food-logo-oficial.png"
+            alt="INOVAS Food"
+          />
+        </div>
+        <span class="admin-eyebrow">Plataforma INOVAS</span>
+        <h1>Acesso exclusivo do time System</h1>
+        <p>
+          Administração da plataforma, saúde dos serviços e suporte auditado,
+          sem acesso operacional direto aos restaurantes.
+        </p>
+
+        <div class="admin-hero-points">
+          <article>
+            <strong>Identidade separada</strong>
+            <span>A sessão System não carrega tenant ou restaurante.</span>
+          </article>
+          <article>
+            <strong>Privilégio mínimo</strong>
+            <span>Permissões exclusivas da plataforma, com trilha de auditoria.</span>
+          </article>
+          <article>
+            <strong>Suporte controlado</strong>
+            <span>Acesso temporário depende de escopo, motivo e modo explícitos.</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="admin-panel-card">
+        <div class="admin-panel-head">
+          <span class="admin-chip">System</span>
+          <h2>Entrar na plataforma</h2>
+          <p>Use uma conta interna autorizada da INOVAS Food.</p>
+        </div>
+
+        <form class="admin-form" data-system-login-form>
+          <label class="admin-field">
+            <span>E-mail corporativo</span>
+            <input
+              class="admin-input"
+              type="email"
+              name="identifier"
+              autocomplete="username"
+              placeholder="nome@inovas.com"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span>Senha</span>
+            <input
+              class="admin-input"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Sua senha"
+              required
+            />
+          </label>
+
+          <button
+            class="admin-button admin-button-primary"
+            type="submit"
+            data-system-login-submit
+          >
+            Entrar no System
+          </button>
+        </form>
+
+        <div
+          class="admin-feedback"
+          role="status"
+          aria-live="polite"
+          data-system-login-feedback
+          hidden
+        ></div>
+      </section>
+    </main>
+  </body>
+</html>
