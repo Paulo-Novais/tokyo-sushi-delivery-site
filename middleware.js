@@ -4,6 +4,7 @@ import appBranding from "./lib/app-branding.cjs";
 import masterPlatformStore from "./lib/master-platform-store.cjs";
 import restaurantPublicUrl from "./lib/restaurant-public-url.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
+import domainSessions from "./lib/domain-sessions.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -20,6 +21,23 @@ const USER_CREATION_HTML_PATHS = new Set([
   "/admin/usuarios/novo",
   "/admin/usuarios/novo.html",
 ]);
+const PUBLIC_SYSTEM_PATHS = new Set([
+  "/system/login.html",
+  "/api/auth/system/login",
+  "/api/auth/system/session",
+  "/api/auth/system/logout",
+  "/api/auth/restaurant/login",
+  "/api/auth/restaurant/session",
+  "/api/auth/restaurant/logout",
+]);
+const SYSTEM_ASSET_PATTERN =
+  /^\/system\/.+\.(css|js|map|png|jpg|jpeg|svg|webp|gif|ico)$/i;
+const SYSTEM_CONTROLLED_PATTERN = /^\/(?:system(?:\/|$)|api\/system(?:\/|$)|api\/support(?:\/|$))/;
+const TENANT_API_PATTERN = /^\/api\/tenant(?:\/|$)/;
+const {
+  SESSION_AUDIENCES,
+  getDomainSessionFromRequest,
+} = domainSessions;
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
 const SITE_APPEARANCE = appBranding.SITE_APPEARANCE || {};
 const {
@@ -101,6 +119,9 @@ const isAdminControlledPath = (pathname) =>
   pathname === "/gestor/" ||
   pathname.startsWith("/gestor/") ||
   pathname.startsWith("/api/admin/");
+
+const isSystemControlledPath = (pathname) =>
+  SYSTEM_CONTROLLED_PATTERN.test(pathname);
 
 const isLocalHost = (host) =>
   ["localhost", "127.0.0.1", "::1"].includes(host);
@@ -444,43 +465,82 @@ export default async function middleware(request) {
     return Response.redirect(buildGestorRedirectUrl(request.url), 307);
   }
 
+  const systemSession = getDomainSessionFromRequest(
+    request,
+    SESSION_AUDIENCES.SYSTEM
+  );
+  const restaurantSession = getDomainSessionFromRequest(
+    request,
+    SESSION_AUDIENCES.RESTAURANT
+  );
+  const supportSession = getDomainSessionFromRequest(
+    request,
+    SESSION_AUDIENCES.SUPPORT
+  );
+  const validSupportContext = Boolean(systemSession && supportSession);
+
+  if (PUBLIC_SYSTEM_PATHS.has(pathname) || SYSTEM_ASSET_PATTERN.test(pathname)) {
+    if (pathname === "/system/login.html" && systemSession) {
+      return Response.redirect(new URL("/system", request.url), 307);
+    }
+    return next();
+  }
+
+  if (isSystemControlledPath(pathname)) {
+    if (!systemSession) {
+      if (pathname.startsWith("/api/")) {
+        return buildUnauthorizedApiResponse();
+      }
+      const systemLogin = new URL("/system/login.html", request.url);
+      systemLogin.searchParams.set("next", `${pathname}${url.search}`);
+      return Response.redirect(systemLogin, 307);
+    }
+    return next();
+  }
+
+  if (TENANT_API_PATTERN.test(pathname)) {
+    return restaurantSession || validSupportContext
+      ? next()
+      : buildUnauthorizedApiResponse();
+  }
+
   if (!isAdminControlledPath(pathname)) {
     return next();
   }
 
-  const session = adminAuth.getAdminSessionFromCookieHeader(
-    request.headers.get("cookie") || ""
-  );
-
-  if (pathname === "/admin/login.html" && session) {
-    return Response.redirect(new URL("/admin/", request.url), 307);
+  if (pathname === "/admin/login.html") {
+    if (restaurantSession) {
+      return Response.redirect(new URL("/admin/", request.url), 307);
+    }
+    if (systemSession) {
+      return Response.redirect(new URL("/system", request.url), 307);
+    }
+    return next();
   }
 
   if (isPublicAdminPath(pathname)) {
     return next();
   }
 
+  if (isMasterAdminHtmlPath(pathname)) {
+    return Response.redirect(new URL("/system", request.url), 307);
+  }
+
+  if (pathname.startsWith("/api/admin/master")) {
+    return systemSession ? next() : buildUnauthorizedApiResponse();
+  }
+
   const loginUrl = new URL("/admin/login.html", request.url);
   loginUrl.searchParams.set("next", `${pathname}${url.search}`);
 
-  if (!session) {
+  if (!restaurantSession && !validSupportContext) {
     if (pathname.startsWith("/api/admin/")) {
       return buildUnauthorizedApiResponse();
     }
-
-    return Response.redirect(loginUrl, 307);
-  }
-
-  if (isMasterAdminHtmlPath(pathname)) {
-    const userType = await resolveAdminSessionUserType(session);
-
-    if (userType !== "MASTER") {
-      return buildForbiddenMasterResponse();
+    if (systemSession) {
+      return Response.redirect(new URL("/system", request.url), 307);
     }
-  }
-
-  if (USER_CREATION_HTML_PATHS.has(pathname) && !(await canAccessUserCreation(session))) {
-    return buildForbiddenUserCreationResponse();
+    return Response.redirect(loginUrl, 307);
   }
 
   return next();

@@ -50,6 +50,50 @@
       "destination": "/admin/usuarios/novo.html"
     },
     {
+      "source": "/admin/users",
+      "destination": "/admin/users/index.html"
+    },
+    {
+      "source": "/admin/users/new",
+      "destination": "/admin/users/new.html"
+    },
+    {
+      "source": "/admin/users/:id/edit",
+      "destination": "/admin/users/edit.html?id=:id"
+    },
+    {
+      "source": "/admin/users/edit",
+      "destination": "/admin/users/edit.html"
+    },
+    {
+      "source": "/system",
+      "destination": "/system/index.html"
+    },
+    {
+      "source": "/system/users",
+      "destination": "/system/users/index.html"
+    },
+    {
+      "source": "/system/users/new",
+      "destination": "/system/users/new.html"
+    },
+    {
+      "source": "/system/users/:id/edit",
+      "destination": "/system/users/edit.html?id=:id"
+    },
+    {
+      "source": "/system/users/edit",
+      "destination": "/system/users/edit.html"
+    },
+    {
+      "source": "/api/auth/system/:action",
+      "destination": "/api/auth/system/[...action]?action=:action"
+    },
+    {
+      "source": "/api/auth/restaurant/:action",
+      "destination": "/api/auth/restaurant/[...action]?action=:action"
+    },
+    {
       "source": "/api/admin/login",
       "destination": "/api/admin/[...action]?action=auth/login"
     },
@@ -174,6 +218,19 @@
         {
           "key": "Cross-Origin-Resource-Policy",
           "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/system/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
         }
       ]
     },
