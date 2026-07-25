@@ -24,16 +24,19 @@ const loginThroughUi = async (page) => {
   await page.locator('input[name="identifier"]').fill(adminLogin);
   await page.locator('input[name="password"]').fill(adminPassword);
   await page.locator("[data-admin-login-submit]").click();
-  await expect(page.locator(".admin-shell")).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(/\/system\/?$/);
+  await expect(page.locator(".users-shell")).toBeVisible({ timeout: 20_000 });
 };
 
-test.describe("V1.9 admin responsive shell", () => {
+test.describe("V1.9 System responsive shell", () => {
   for (const [width, height] of ADMIN_VIEWPORTS) {
-    test(`admin dashboard stays usable at ${width}px`, async ({ page }) => {
+    test(`System dashboard stays usable at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await loginThroughUi(page);
-      await expect(page.locator("[data-admin-nav]")).toBeVisible();
-      await expect(page.locator(".admin-board-column")).toHaveCount(5, { timeout: 20_000 });
+      await expect(
+        page.getByRole("heading", { name: "Visão geral da INOVAS" })
+      ).toBeVisible();
+      await expect(page.locator(".system-health-grid")).toBeVisible();
       await expectNoHorizontalOverflow(page);
     });
   }

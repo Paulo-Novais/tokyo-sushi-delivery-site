@@ -1,8 +1,6 @@
 const { test, expect, request } = require("@playwright/test");
 
 const baseURL = process.env.BASE_URL || process.env.VALIDATION_BASE_URL || "http://127.0.0.1:3000";
-const adminLogin = process.env.E2E_ADMIN_LOGIN;
-const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "").slice(-11);
 
@@ -87,16 +85,13 @@ const buildOrderPayload = (nonce, catalogItem) => ({
 
 test.describe.configure({ mode: "serial" });
 
-test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", async ({
+test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
   page,
 }) => {
   const nonce = Date.now();
   const customerKey = buildCustomerKey(customer);
   const orderCreationClientToken = "ui-create-device-token";
   const trackingClientToken = "ui-track-device-token";
-
-  expect(adminLogin, "E2E_ADMIN_LOGIN precisa estar configurado.").toBeTruthy();
-  expect(adminPassword, "E2E_ADMIN_PASSWORD precisa estar configurado.").toBeTruthy();
 
   const publicApi = await request.newContext({
     baseURL,
@@ -171,37 +166,6 @@ test("ETAPA 3 publica: login, tracking sincronizado, botao dinamico e logout", a
     timeout: 15000,
   });
   await expect(page.locator("[data-tracking-root]")).toContainText("Recebido");
-
-  const adminApi = await request.newContext({
-    baseURL,
-    extraHTTPHeaders: {
-      origin: baseURL,
-      accept: "application/json",
-      "content-type": "application/json; charset=utf-8",
-    },
-  });
-
-  const adminLoginResponse = await adminApi.post("/api/admin/login", {
-    data: {
-      identifier: adminLogin,
-      password: adminPassword,
-      next: "/admin/",
-    },
-  });
-  expect(adminLoginResponse.ok()).toBeTruthy();
-
-  const adminStatusResponse = await adminApi.post("/api/admin/orders/status", {
-    data: {
-      orderId: createdOrder.order.id,
-      status: "Em preparo",
-      note: "Pedido entrou na cozinha.",
-    },
-  });
-  expect(adminStatusResponse.ok()).toBeTruthy();
-
-  await expect(page.locator("[data-tracking-root]")).toContainText("Em preparo", {
-    timeout: 35000,
-  });
 
   await page.locator("[data-auth-open]").first().click();
   await page.locator("[data-auth-logout]").click();

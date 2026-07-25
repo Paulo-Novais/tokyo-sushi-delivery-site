@@ -38,6 +38,23 @@ process.env.ALLOWED_PUBLIC_ORIGINS =
   ].join(",");
 
 const adminApi = require(path.join(workspaceRoot, "api", "admin", "[...action].js"));
+const systemApi = require(path.join(workspaceRoot, "api", "system", "[...action].js"));
+const tenantApi = require(path.join(workspaceRoot, "api", "tenant", "[...action].js"));
+const supportApi = require(path.join(workspaceRoot, "api", "support", "[...action].js"));
+const systemAuthApi = require(path.join(
+  workspaceRoot,
+  "api",
+  "auth",
+  "system",
+  "[...action].js"
+));
+const restaurantAuthApi = require(path.join(
+  workspaceRoot,
+  "api",
+  "auth",
+  "restaurant",
+  "[...action].js"
+));
 const customerApi = require(path.join(workspaceRoot, "api", "customer", "[...action].js"));
 const catalogApi = require(path.join(workspaceRoot, "api", "catalog.js"));
 const deliverySettingsApi = require(path.join(workspaceRoot, "api", "delivery-settings.js"));
@@ -51,6 +68,10 @@ const {
 const {
   getAdminAccessContext,
 } = require(path.join(workspaceRoot, "lib", "user-permissions.cjs"));
+const {
+  requireRestaurantAccess,
+  requireSystemSession,
+} = require(path.join(workspaceRoot, "lib", "domain-access.cjs"));
 const {
   resolveRestaurantBySlug,
 } = require(path.join(workspaceRoot, "lib", "master-platform-store.cjs"));
@@ -124,6 +145,9 @@ const createApiResponse = (res) => ({
 
 const runApi = async (handler, req, res) => {
   req.body = await readRequestBody(req);
+  req.query = Object.fromEntries(
+    new URL(req.url || "/", baseURL).searchParams.entries()
+  );
   req.headers["x-forwarded-proto"] = req.headers["x-forwarded-proto"] || "http";
   setSecurityHeaders(res);
   await handler(req, createApiResponse(res));
@@ -167,9 +191,14 @@ const protectAdminHtml = async (req, res, pathname) => {
     return true;
   }
 
-  const session = getAdminSessionFromRequest(req);
-
-  if (!session) {
+  let session;
+  try {
+    session = await requireRestaurantAccess(req);
+  } catch (error) {
+    if (error?.errorCode === "system_session_not_tenant_session") {
+      sendRedirect(res, 302, "/system");
+      return false;
+    }
     const next = encodeURIComponent(pathname);
     setSecurityHeaders(res);
     res.writeHead(302, {
@@ -180,29 +209,50 @@ const protectAdminHtml = async (req, res, pathname) => {
     return false;
   }
 
-  if ((pathname === "/admin/master.html" || pathname === "/admin/master") && session.userType !== "MASTER") {
-    sendText(res, 403, "Acesso negado ao Painel Master.");
+  if (pathname === "/admin/master.html" || pathname === "/admin/master") {
+    sendRedirect(res, 302, "/system");
     return false;
   }
 
-  if (pathname === "/admin/usuarios/novo.html") {
-    try {
-      await getAdminAccessContext(session, ["users_create"], getConfiguredAdminUsers());
-    } catch (error) {
-      sendText(res, 403, "Acesso negado para criacao de usuarios.");
-      return false;
-    }
-  }
-
   return true;
+};
+
+const protectSystemHtml = async (req, res, pathname) => {
+  if (!pathname.startsWith("/system")) {
+    return true;
+  }
+  if (
+    pathname === "/system/login.html" ||
+    pathname.endsWith(".css") ||
+    pathname.endsWith(".js")
+  ) {
+    return true;
+  }
+  try {
+    await requireSystemSession(req);
+    return true;
+  } catch {
+    const next = encodeURIComponent(pathname);
+    sendRedirect(res, 302, `/system/login.html?next=${next}`);
+    return false;
+  }
 };
 
 const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
-  if (pathname === "/admin/master") return "/admin/master.html";
+  if (pathname === "/admin/master") return "/system/index.html";
   if (pathname === "/admin/usuarios/novo") return "/admin/usuarios/novo.html";
+  if (pathname === "/admin/users" || pathname === "/admin/users/") return "/admin/users/index.html";
+  if (pathname === "/admin/users/new") return "/admin/users/new.html";
+  if (/^\/admin\/users\/[^/]+\/edit$/.test(pathname)) return "/admin/users/edit.html";
+  if (pathname === "/admin/users/edit") return "/admin/users/edit.html";
+  if (pathname === "/system" || pathname === "/system/") return "/system/index.html";
+  if (pathname === "/system/users" || pathname === "/system/users/") return "/system/users/index.html";
+  if (pathname === "/system/users/new") return "/system/users/new.html";
+  if (/^\/system\/users\/[^/]+\/edit$/.test(pathname)) return "/system/users/edit.html";
+  if (pathname === "/system/users/edit") return "/system/users/edit.html";
   return pathname;
 };
 
@@ -305,6 +355,9 @@ const serveStatic = async (req, res, pathname) => {
   if (!(await protectAdminHtml(req, res, staticPathname))) {
     return;
   }
+  if (!(await protectSystemHtml(req, res, staticPathname))) {
+    return;
+  }
 
   const requestedPath = path.resolve(workspaceRoot, `.${staticPathname}`);
 
@@ -336,6 +389,15 @@ const serveStatic = async (req, res, pathname) => {
 };
 
 const handleApi = async (req, res, pathname) => {
+  if (pathname.startsWith("/api/auth/system")) {
+    return runApi(systemAuthApi, req, res);
+  }
+  if (pathname.startsWith("/api/auth/restaurant")) {
+    return runApi(restaurantAuthApi, req, res);
+  }
+  if (pathname.startsWith("/api/system")) return runApi(systemApi, req, res);
+  if (pathname.startsWith("/api/tenant")) return runApi(tenantApi, req, res);
+  if (pathname.startsWith("/api/support")) return runApi(supportApi, req, res);
   if (pathname.startsWith("/api/admin")) return runApi(adminApi, req, res);
   if (pathname.startsWith("/api/customer")) return runApi(customerApi, req, res);
   if (pathname === "/api/orders/create") return runApi(orderCreateApi, req, res);

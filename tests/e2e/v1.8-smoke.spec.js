@@ -181,7 +181,7 @@ test.describe("V1.8 public smoke", () => {
   });
 });
 
-test.describe("V1.8 admin protection and kanban smoke", () => {
+test.describe("V1.8 protected surfaces and System health smoke", () => {
   test("admin routes require session", async ({ page }) => {
     const api = await request.newContext({ baseURL });
     const session = await api.get("/api/admin/session");
@@ -204,34 +204,17 @@ test.describe("V1.8 admin protection and kanban smoke", () => {
   });
 
   for (const [width, height] of KANBAN_VIEWPORTS) {
-    test(`admin kanban five columns accessible at ${width}`, async ({ page }) => {
+    test(`System health dashboard accessible at ${width}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await loginAdmin(page);
-      await expect(page.locator(".admin-board-column")).toHaveCount(5, { timeout: 20_000 });
-
-      const metrics = await page.evaluate(() => {
-        const board = document.querySelector(".admin-board");
-        const columns = Array.from(document.querySelectorAll(".admin-board-column"));
-        const boardRect = board?.getBoundingClientRect();
-        const lastRect = columns.at(-1)?.getBoundingClientRect();
-        const boardStyles = window.getComputedStyle(board || document.body);
-
-        return {
-          boardClientWidth: board?.clientWidth || 0,
-          boardScrollWidth: board?.scrollWidth || 0,
-          columnCount: columns.length,
-          lastColumnRightOffset: boardRect && lastRect ? lastRect.right - boardRect.left : 0,
-          overflowX: boardStyles.overflowX,
-        };
-      });
-
-      const fits = metrics.boardScrollWidth <= metrics.boardClientWidth + 2 &&
-        metrics.lastColumnRightOffset <= metrics.boardClientWidth + 2;
-      const intentionallyScrollable = ["auto", "scroll"].includes(metrics.overflowX) &&
-        metrics.boardScrollWidth > metrics.boardClientWidth;
-
-      expect(metrics.columnCount).toBe(5);
-      expect(fits || intentionallyScrollable).toBe(true);
+      await expect(page).toHaveURL(/\/system\/?$/);
+      await expect(
+        page.getByRole("heading", { name: "Visão geral da INOVAS" })
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator(".system-health-grid")).toBeVisible();
+      await expect(page.locator(".system-boundary")).toContainText(
+        "SystemSession sem tenant"
+      );
       await expectNoHorizontalOverflow(page);
     });
   }

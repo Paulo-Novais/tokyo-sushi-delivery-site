@@ -12,6 +12,8 @@ process.env.VALIDATION_BASE_URL = baseURL;
 process.env.E2E_ADMIN_LOGIN = process.env.E2E_ADMIN_LOGIN || "admin.e2e@local.test";
 process.env.E2E_ADMIN_PASSWORD =
   process.env.E2E_ADMIN_PASSWORD || crypto.randomBytes(24).toString("base64url");
+process.env.INOVAS_ALLOW_INVITE_LINK_COPY =
+  process.env.INOVAS_ALLOW_INVITE_LINK_COPY || "true";
 
 module.exports = defineConfig({
   testDir: "./tests",
@@ -21,6 +23,7 @@ module.exports = defineConfig({
     timeout: 15_000,
   },
   retries: process.env.CI ? 1 : 0,
+  workers: 1,
   reporter: [
     ["list"],
     ["html", { open: "never", outputFolder: "playwright-report" }],

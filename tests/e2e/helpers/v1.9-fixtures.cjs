@@ -71,7 +71,10 @@ const loginMaster = async () => {
     password: masterPassword,
   });
 
-  expect(session.response.status()).toBe(200);
+  expect(
+    session.response.status(),
+    `master login failed: ${JSON.stringify(session.payload)}`
+  ).toBe(200);
   expect(session.cookie).toContain("=");
   return { api, ...session };
 };
