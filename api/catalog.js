@@ -1,6 +1,10 @@
 const { json } = require("../lib/http.cjs");
 const { getPublicCatalogState } = require("../lib/catalog-store.cjs");
+const { getPublicDeliverySettings } = require("../lib/delivery-settings-store.cjs");
 const { parseJsonBody } = require("../lib/http.cjs");
+const {
+  getPublicRestaurantSettings,
+} = require("../lib/restaurant-settings-store.cjs");
 const {
   createPublicReview,
   getPublicReviewsSnapshot,
@@ -12,10 +16,28 @@ const {
 } = require("../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../lib/security-guardian.cjs");
 
-const resolvePublicAction = (req) =>
-  String(new URL(String(req.url || ""), "http://localhost").searchParams.get("publicView") || "catalog")
+const resolvePublicAction = (req) => {
+  const requestUrl = new URL(String(req.url || ""), "http://localhost");
+  const explicitAction = String(requestUrl.searchParams.get("publicView") || "")
     .trim()
     .toLowerCase();
+
+  if (explicitAction) {
+    return explicitAction;
+  }
+
+  const routeAction = requestUrl.pathname
+    .replace(/^\/api\//, "")
+    .replace(/^public\/?/, "")
+    .trim()
+    .toLowerCase();
+
+  return ["reviews", "delivery-settings", "restaurant-settings"].includes(
+    routeAction
+  )
+    ? routeAction
+    : "catalog";
+};
 
 const assertPublicReviewTenantCanOperate = async (tenantContext) => {
   const planAccess = await getPlanAccessForAdminModule({
@@ -100,6 +122,44 @@ module.exports = async (req, res) => {
       error: "Metodo nao permitido.",
       errorCode: "method_not_allowed",
     });
+  }
+
+  if (action === "delivery-settings" || action === "restaurant-settings") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return json(res, 405, {
+        error: "Metodo nao permitido.",
+        errorCode: "method_not_allowed",
+      });
+    }
+
+    try {
+      const tenantContext = await getRequestTenantContext(req, {
+        source: `public:${action}`,
+      });
+      const payload =
+        action === "delivery-settings"
+          ? await getPublicDeliverySettings({ tenantContext })
+          : await getPublicRestaurantSettings({ tenantContext });
+
+      return json(res, 200, {
+        ok: true,
+        ...withTenantContextPayload(payload, tenantContext),
+      });
+    } catch (error) {
+      return json(res, Number(error?.statusCode || 500), {
+        error:
+          error?.message ||
+          (action === "delivery-settings"
+            ? "Nao foi possivel carregar as configuracoes de entrega."
+            : "Nao foi possivel carregar as configuracoes do restaurante."),
+        errorCode:
+          error?.errorCode ||
+          (error?.statusCode
+            ? `public_${action.replace("-", "_")}_error`
+            : "internal_error"),
+      });
+    }
   }
 
   if (req.method !== "GET") {

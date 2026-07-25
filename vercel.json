@@ -94,6 +94,14 @@
       "destination": "/api/auth/restaurant/[...action]?action=:action"
     },
     {
+      "source": "/api/delivery-settings",
+      "destination": "/api/catalog?publicView=delivery-settings"
+    },
+    {
+      "source": "/api/restaurant-settings",
+      "destination": "/api/catalog?publicView=restaurant-settings"
+    },
+    {
       "source": "/api/admin/login",
       "destination": "/api/admin/[...action]?action=auth/login"
     },

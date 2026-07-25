@@ -320,7 +320,7 @@ const main = async () => {
     delete process.env.DATABASE_URL;
 
     const store = require("../lib/restaurant-settings-store.cjs");
-    const restaurantSettingsHandler = require("../api/restaurant-settings.js");
+    const restaurantSettingsHandler = require("../api/catalog.js");
 
     await validateStaticContracts();
     await validateStoreContracts(store);

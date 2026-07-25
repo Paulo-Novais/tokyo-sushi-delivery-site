@@ -57,8 +57,6 @@ const restaurantAuthApi = require(path.join(
 ));
 const customerApi = require(path.join(workspaceRoot, "api", "customer", "[...action].js"));
 const catalogApi = require(path.join(workspaceRoot, "api", "catalog.js"));
-const deliverySettingsApi = require(path.join(workspaceRoot, "api", "delivery-settings.js"));
-const restaurantSettingsApi = require(path.join(workspaceRoot, "api", "restaurant-settings.js"));
 const orderCreateApi = require(path.join(workspaceRoot, "api", "orders", "create.js"));
 const whatsappCodeApi = require(path.join(workspaceRoot, "api", "auth", "send-whatsapp-code.js"));
 const {
@@ -407,8 +405,8 @@ const handleApi = async (req, res, pathname) => {
     req.url = `${req.url}${separator}publicView=reviews`;
     return runApi(catalogApi, req, res);
   }
-  if (pathname === "/api/delivery-settings") return runApi(deliverySettingsApi, req, res);
-  if (pathname === "/api/restaurant-settings") return runApi(restaurantSettingsApi, req, res);
+  if (pathname === "/api/delivery-settings") return runApi(catalogApi, req, res);
+  if (pathname === "/api/restaurant-settings") return runApi(catalogApi, req, res);
   if (pathname === "/api/auth/send-whatsapp-code") return runApi(whatsappCodeApi, req, res);
   sendText(res, 404, "API route not found");
 };

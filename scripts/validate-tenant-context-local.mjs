@@ -162,8 +162,10 @@ const validateAdminApi = async ({ adminApi, adminAuth }) => {
   );
 
   assert.equal(login.statusCode, 200, "Login admin deveria funcionar.");
-  assert.equal(login.payload?.admin?.tenantContext?.restaurantKey, "default");
-  assert.equal(login.payload?.admin?.tenantContext?.tenantMode, "default_only");
+  assert.equal(login.payload?.admin?.userScope, "SYSTEM");
+  assert.equal(login.payload?.admin?.platformScope, true);
+  assert.equal(login.payload?.admin?.restaurantKey, "");
+  assert.equal(login.payload?.admin?.tenantContext, undefined);
 
   const cookie = String(login.headers["Set-Cookie"] || "")
     .split(";")[0]
@@ -177,11 +179,15 @@ const validateAdminApi = async ({ adminApi, adminAuth }) => {
       cookie,
     })
   );
-  assert.equal(orders.statusCode, 200, "API admin protegida deveria aceitar cookie valido.");
-  assert.equal(orders.payload?.admin?.tenantContext?.restaurantKey, "default");
-
-  const session = adminAuth.getAdminSessionFromCookieHeader(cookie);
-  assert.equal(session.login, "usermaster@inovas.com");
+  assert.ok(
+    [401, 403].includes(orders.statusCode),
+    "Sessao System nao deve acessar API operacional de restaurante."
+  );
+  assert.equal(
+    adminAuth.getAdminSessionFromCookieHeader(cookie),
+    null,
+    "Cookie System nao deve ser aceito pelo leitor de sessao Restaurant legado."
+  );
 };
 
 const run = async () => {
@@ -223,8 +229,8 @@ const run = async () => {
 
     const tenantContext = require(path.join(workspaceRoot, "lib/tenant-context.cjs"));
     const catalogApi = require(path.join(workspaceRoot, "api/catalog.js"));
-    const deliveryApi = require(path.join(workspaceRoot, "api/delivery-settings.js"));
-    const restaurantApi = require(path.join(workspaceRoot, "api/restaurant-settings.js"));
+    const deliveryApi = catalogApi;
+    const restaurantApi = catalogApi;
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
 
     await validateTenantResolver(tenantContext);
