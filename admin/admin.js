@@ -8621,6 +8621,7 @@ const renderRestaurantSettingsModule = () => {
 
   const snapshot = getRestaurantSettingsSnapshot();
   const summary = snapshot.summary || {};
+  const accessAddress = snapshot.accessAddress || {};
   const draft = getRestaurantSettingsDraft();
   const isBusy = adminState.isLoadingRestaurantSettings || adminState.restaurantSettingsSaving;
   const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda nao salvo";
@@ -8698,6 +8699,25 @@ const renderRestaurantSettingsModule = () => {
           </button>
         </div>
       </div>
+
+      <article class="admin-delivery-card is-wide">
+        <header class="admin-delivery-card-head">
+          <div>
+            <span class="admin-chip">Endereço de acesso</span>
+            <h3>${escapeHtml(accessAddress.displayUrl || "Não configurado")}</h3>
+            <p>${escapeHtml(accessAddress.typeLabel || "Endereço não configurado")} · ${escapeHtml(
+              accessAddress.statusLabel || "Sem status"
+            )} · ${escapeHtml(accessAddress.managementLabel || "Gerenciamento não informado")}</p>
+          </div>
+          ${
+            accessAddress.finalUrl
+              ? `<a class="admin-button admin-button-secondary" href="${escapeHtml(
+                  accessAddress.finalUrl
+                )}" target="_blank" rel="noopener noreferrer">Abrir site</a>`
+              : ""
+          }
+        </header>
+      </article>
 
       <article class="admin-delivery-card is-wide">
         <header class="admin-delivery-card-head">
@@ -12282,6 +12302,7 @@ const loadRestaurantSettings = async ({ silent = false } = {}) => {
 
     adminState.restaurantSettingsSnapshot = {
       summary: payload.summary || {},
+      accessAddress: payload.accessAddress || {},
       settings,
     };
     adminState.restaurantSettingsDraft = cloneRestaurantSettingsDraft(settings);
@@ -12712,6 +12733,10 @@ const saveRestaurantSettings = async () => {
 
     adminState.restaurantSettingsSnapshot = {
       summary: response.summary || {},
+      accessAddress:
+        response.accessAddress ||
+        adminState.restaurantSettingsSnapshot?.accessAddress ||
+        {},
       settings,
     };
     adminState.restaurantSettingsDraft = cloneRestaurantSettingsDraft(settings);

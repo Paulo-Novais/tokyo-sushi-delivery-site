@@ -51,6 +51,13 @@ const {
 const {
   getAdminAccessContext,
 } = require(path.join(workspaceRoot, "lib", "user-permissions.cjs"));
+const {
+  resolveRestaurantBySlug,
+} = require(path.join(workspaceRoot, "lib", "master-platform-store.cjs"));
+const {
+  RESTAURANT_ROUTE_COOKIE,
+  validateRestaurantSlug,
+} = require(path.join(workspaceRoot, "lib", "restaurant-public-url.cjs"));
 
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -134,6 +141,15 @@ const sendRedirect = (res, status, location) => {
   res.end();
 };
 
+const setRestaurantRouteCookie = (res, slug) => {
+  res.setHeader(
+    "Set-Cookie",
+    `${RESTAURANT_ROUTE_COOKIE}=${encodeURIComponent(
+      slug
+    )}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`
+  );
+};
+
 const isPublicAdminAsset = (pathname) =>
   pathname === "/admin/login.html" ||
   pathname === "/admin/convite.html" ||
@@ -184,8 +200,6 @@ const protectAdminHtml = async (req, res, pathname) => {
 const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
-  if (pathname === "/r/tokyo-sushi/" || pathname === "/r/tokyo-sushi/index.html") return "/tokyo.html";
-  if (pathname.startsWith("/r/tokyo-sushi/")) return `/${pathname.slice("/r/tokyo-sushi/".length)}`;
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
   if (pathname === "/admin/master") return "/admin/master.html";
   if (pathname === "/admin/usuarios/novo") return "/admin/usuarios/novo.html";
@@ -201,11 +215,88 @@ const resolveLocalRedirect = (pathname, search) => {
     return `/admin/${pathname.slice("/gestor/".length)}${search}`;
   }
 
-  if (pathname === "/r/tokyo-sushi") {
-    return `/r/tokyo-sushi/${search}`;
+  return null;
+};
+
+const PUBLIC_RESTAURANT_PAGES = new Set([
+  "acompanhar.html",
+  "avaliar.html",
+  "cardapio.html",
+  "entrega.html",
+  "historico.html",
+  "trabalhe-conosco.html",
+]);
+const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
+  "maps-config.js",
+  "script.js",
+  "site-config.js",
+  "store-hours.js",
+  "styles.css",
+  "tokyo.webmanifest",
+]);
+
+const resolveLocalRestaurantRequest = async (pathname, search) => {
+  const legacyMatch = pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
+  const cleanMatch = pathname.match(/^\/([^/]+)(\/.*)?$/);
+  const routeMatch = legacyMatch || cleanMatch;
+
+  if (!routeMatch) {
+    return null;
   }
 
-  return null;
+  const validation = validateRestaurantSlug(routeMatch[1]);
+
+  if (!validation.ok) {
+    if (
+      !legacyMatch &&
+      (validation.errorCode === "restaurant_slug_reserved" ||
+        routeMatch[1].includes("."))
+    ) {
+      return null;
+    }
+
+    return { notFound: true };
+  }
+
+  const resolution = await resolveRestaurantBySlug(validation.slug);
+
+  if (resolution?.matched !== true) {
+    return { notFound: true };
+  }
+
+  const suffix = String(routeMatch[2] || "");
+  const canonicalSlug = resolution.slug;
+
+  if (legacyMatch) {
+    const canonicalSuffix =
+      suffix === "/" || suffix === "/index.html" ? "" : suffix;
+    return {
+      redirect: `/${canonicalSlug}${canonicalSuffix}${search}`,
+      slug: canonicalSlug,
+    };
+  }
+
+  if (suffix === "/" || suffix === "/index.html") {
+    return {
+      redirect: `/${canonicalSlug}${search}`,
+      slug: canonicalSlug,
+    };
+  }
+
+  if (!suffix) {
+    return { staticPathname: "/tokyo.html", slug: canonicalSlug };
+  }
+
+  const relativePath = suffix.replace(/^\/+/, "");
+  const isAllowed =
+    PUBLIC_RESTAURANT_PAGES.has(relativePath) ||
+    PUBLIC_RESTAURANT_ROOT_ASSETS.has(relativePath) ||
+    relativePath.startsWith("assets/") ||
+    relativePath.startsWith("site-images/");
+
+  return isAllowed
+    ? { staticPathname: `/${relativePath}`, slug: canonicalSlug }
+    : { notFound: true };
 };
 
 const serveStatic = async (req, res, pathname) => {
@@ -268,6 +359,28 @@ const server = http.createServer(async (req, res) => {
 
     if (redirectLocation) {
       sendRedirect(res, 302, redirectLocation);
+      return;
+    }
+
+    const restaurantRoute = await resolveLocalRestaurantRequest(
+      pathname,
+      requestUrl.search
+    );
+
+    if (restaurantRoute?.notFound) {
+      sendText(res, 404, "Restaurante nao encontrado.");
+      return;
+    }
+
+    if (restaurantRoute?.redirect) {
+      setRestaurantRouteCookie(res, restaurantRoute.slug);
+      sendRedirect(res, 308, restaurantRoute.redirect);
+      return;
+    }
+
+    if (restaurantRoute?.staticPathname) {
+      setRestaurantRouteCookie(res, restaurantRoute.slug);
+      await serveStatic(req, res, restaurantRoute.staticPathname);
       return;
     }
 

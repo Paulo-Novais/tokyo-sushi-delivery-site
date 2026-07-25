@@ -503,10 +503,16 @@
     root.innerHTML = `
       <div class="user-access-address ${pending ? "is-pending" : ""}">
         <div>
-          <strong>${escapeHtml(address.displayUrl || address.url || "Não configurado")}</strong>
-          <small>${escapeHtml(address.typeLabel || "Endereço de acesso")} · DNS ${escapeHtml(
-            address.dnsStatus || "não informado"
-          )} · SSL ${escapeHtml(address.sslStatus || "não informado")}</small>
+          <strong>${escapeHtml(address.url || address.displayUrl || "Não configurado")}</strong>
+          <small>${escapeHtml(address.typeLabel || "Endereço de acesso")} · ${escapeHtml(
+            address.managementLabel || "Gerenciamento não informado"
+          )}${
+            address.type === "CUSTOM_DOMAIN"
+              ? ` · DNS ${escapeHtml(address.dnsStatus || "não informado")} · SSL ${escapeHtml(
+                  address.sslStatus || "não informado"
+                )}`
+              : ""
+          }</small>
         </div>
         <span class="user-access-status">${escapeHtml(address.statusLabel || address.status)}</span>
         ${
@@ -752,7 +758,7 @@
               ""
             )}.`
           : "O domínio próprio ainda está pendente e não há endereço alternativo confirmado."
-        : `${submittedUser.name} poderá acessar o restaurante pelo endereço confirmado abaixo.`;
+        : `${submittedUser.name} poderá acessar o restaurante pelo endereço ${accessValue}.`;
     details.innerHTML = [
       ["Restaurante", restaurant?.name || "Não informado"],
       ["Perfil", profileMeta.label || profile?.label || state.userType],
@@ -763,6 +769,7 @@
       ],
       ["Endereço", String(accessValue).replace(/^https?:\/\//, "")],
       ["Tipo", address.typeLabel || "Não configurado"],
+      ["Gerenciamento", address.managementLabel || "Não informado"],
     ]
       .map(
         ([label, value]) => `
@@ -787,6 +794,12 @@
         : invitation.invitationUrl
           ? `
               <strong>E-mail não configurado — copie o link seguro somente neste ambiente</strong>
+              <small>Endereço do restaurante: ${escapeHtml(
+                invitation.restaurantAccessUrl ||
+                  address.finalUrl ||
+                  address.url ||
+                  "não configurado"
+              )}</small>
               <div>
                 <code data-invitation-url>${escapeHtml(invitation.invitationUrl)}</code>
                 <button class="admin-button admin-button-secondary" type="button" data-copy-invitation>Copiar</button>

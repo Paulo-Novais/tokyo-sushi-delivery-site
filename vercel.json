@@ -42,18 +42,6 @@
       "destination": "/tokyo.html"
     },
     {
-      "source": "/r/tokyo-sushi/",
-      "destination": "/tokyo.html"
-    },
-    {
-      "source": "/r/tokyo-sushi/index.html",
-      "destination": "/tokyo.html"
-    },
-    {
-      "source": "/r/tokyo-sushi/:path*",
-      "destination": "/:path*"
-    },
-    {
       "source": "/inovas",
       "destination": "/inovas.html"
     },
@@ -256,19 +244,14 @@
       "permanent": false
     },
     {
-      "source": "/r/tokyo-sushi",
-      "destination": "/r/tokyo-sushi/",
-      "permanent": false
-    },
-    {
       "source": "/:path*",
       "has": [
         {
           "type": "host",
-          "value": "www.inovasfood.com.br"
+          "value": "inovasfood.com.br"
         }
       ],
-      "destination": "https://inovasfood.com.br/:path*",
+      "destination": "https://www.inovasfood.com.br/:path*",
       "permanent": true
     },
     {

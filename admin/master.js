@@ -151,8 +151,6 @@
     restaurantOnboardingTouchedSlug: false,
   };
 
-  const ONBOARDING_INTERNAL_HOST = "inovasfood.com.br";
-  const ONBOARDING_INTERNAL_BASE_URL = `https://${ONBOARDING_INTERNAL_HOST}`;
   const ONBOARDING_PLAN_ORDER = ["START", "BUSINESS", "PRO"];
   const ONBOARDING_PLAN_COPY = Object.freeze({
     START: {
@@ -747,7 +745,7 @@
         plan: restaurant.plan,
         status: `${restaurant.status || ""} ${restaurant.statusLabel || ""}`,
         responsible,
-        domain: restaurant.domain,
+        domain: `${restaurant.publicUrl || ""} ${restaurant.domain || ""}`,
       };
 
       return Object.keys(filters).every((key) => {
@@ -766,7 +764,10 @@
             <strong>${escapeHtml(restaurant.name)}</strong>
             <small>${escapeHtml(restaurant.slug || restaurant.restaurantKey)}</small>
           </td>
-          <td>${escapeHtml(restaurant.domain || "--")}</td>
+          <td>
+            <strong>${escapeHtml(restaurant.publicUrl || restaurant.domain || "--")}</strong>
+            <small>${escapeHtml(restaurant.publicUrl ? "Endereço INOVAS" : "Domínio cadastrado")}</small>
+          </td>
           <td>${escapeHtml(restaurant.plan || "--")}</td>
           <td>${renderStatus(restaurant.statusLabel || restaurant.status)}</td>
           <td>${escapeHtml(restaurant.registration?.city || restaurant.address?.city || restaurant.onboarding?.address?.city || "--")}</td>
@@ -1067,6 +1068,9 @@
 
   const getSlugAvailability = (slugValue) => {
     const slug = toSlug(slugValue);
+    const reservedSlugs = new Set(
+      asArray(state.snapshot?.restaurantRouting?.reservedSlugs)
+    );
 
     if (!slug || slug.length < 3) {
       return { status: "empty", label: "Informe um slug com pelo menos 3 caracteres." };
@@ -1074,6 +1078,10 @@
 
     if (getExistingSlugSet().has(slug)) {
       return { status: "invalid", label: "Ja utilizado" };
+    }
+
+    if (reservedSlugs.has(slug)) {
+      return { status: "invalid", label: "Rota reservada" };
     }
 
     return { status: "valid", label: "Disponivel" };
@@ -1870,7 +1878,9 @@
                 </div>
                 <div class="master-onboarding-preview-line">
                   <span>Seu restaurante ficará disponível em:</span>
-                  <strong data-master-onboarding-menu-url>${ONBOARDING_INTERNAL_BASE_URL}/restaurante</strong>
+                  <strong data-master-onboarding-menu-url>${escapeHtml(
+                    buildInternalMenuUrl("restaurante") || "/restaurante"
+                  )}</strong>
                 </div>
 
                 <div class="master-onboarding-domain-fields" data-master-onboarding-custom-domain hidden>
@@ -1976,7 +1986,9 @@
                   <span class="master-brand-preview-logo" data-master-onboarding-brand-mark>IF</span>
                   <div>
                     <strong data-master-onboarding-brand-name>Nome do restaurante</strong>
-                    <small data-master-onboarding-brand-url>${ONBOARDING_INTERNAL_BASE_URL}/restaurante</small>
+                    <small data-master-onboarding-brand-url>${escapeHtml(
+                      buildInternalMenuUrl("restaurante") || "/restaurante"
+                    )}</small>
                   </div>
                 </div>
               `,
@@ -2030,7 +2042,9 @@
               </div>
               <div>
                 <dt>Endereco</dt>
-                <dd data-master-onboarding-summary="address">${ONBOARDING_INTERNAL_BASE_URL}/restaurante</dd>
+                <dd data-master-onboarding-summary="address">${escapeHtml(
+                  buildInternalMenuUrl("restaurante") || "/restaurante"
+                )}</dd>
               </div>
               <div>
                 <dt>Responsavel</dt>
@@ -2855,8 +2869,18 @@
       .map((feature) => String(feature || "").trim())
       .filter(Boolean);
 
-  const buildInternalMenuUrl = (slug) =>
-    `${ONBOARDING_INTERNAL_BASE_URL}/${toSlug(slug) || "restaurante"}`;
+  const buildInternalMenuUrl = (slug) => {
+    const publicAppUrl = String(
+      state.snapshot?.restaurantRouting?.publicAppUrl ||
+        state.snapshot?.publicAppUrl ||
+        ""
+    ).replace(/\/+$/, "");
+    const normalizedSlug = toSlug(slug);
+
+    return publicAppUrl && normalizedSlug
+      ? `${publicAppUrl}/${normalizedSlug}`
+      : "";
+  };
 
   const readRestaurantOnboardingDraft = (form) => {
     const tradeName = getOnboardingValue(form, "tradeName");
@@ -2968,7 +2992,9 @@
   const RESTAURANT_ONBOARDING_SERVER_ERROR_FIELDS = Object.freeze({
     restaurant_cnpj_already_exists: "document",
     restaurant_email_already_exists: "email",
+    invalid_restaurant_slug: "slug",
     restaurant_slug_already_exists: "slug",
+    restaurant_slug_reserved: "slug",
     restaurant_domain_already_exists: "domain",
   });
 

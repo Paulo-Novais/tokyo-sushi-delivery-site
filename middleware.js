@@ -1,6 +1,8 @@
 import { next, rewrite } from "@vercel/functions";
 import adminAuth from "./lib/admin-auth.cjs";
 import appBranding from "./lib/app-branding.cjs";
+import masterPlatformStore from "./lib/master-platform-store.cjs";
+import restaurantPublicUrl from "./lib/restaurant-public-url.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
@@ -20,6 +22,30 @@ const USER_CREATION_HTML_PATHS = new Set([
 ]);
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
 const SITE_APPEARANCE = appBranding.SITE_APPEARANCE || {};
+const {
+  RESTAURANT_ROUTE_COOKIE,
+  getPublicAppHost,
+  getPublicAppUrl,
+  isPublicAppHost,
+  validateRestaurantSlug,
+} = restaurantPublicUrl;
+const { resolveRestaurantBySlug } = masterPlatformStore;
+const PUBLIC_RESTAURANT_PAGES = new Set([
+  "acompanhar.html",
+  "avaliar.html",
+  "cardapio.html",
+  "entrega.html",
+  "historico.html",
+  "trabalhe-conosco.html",
+]);
+const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
+  "maps-config.js",
+  "script.js",
+  "site-config.js",
+  "store-hours.js",
+  "styles.css",
+  "tokyo.webmanifest",
+]);
 
 const normalizePolicyHost = (value) => {
   const rawValue = String(value || "")
@@ -55,6 +81,8 @@ const PUBLIC_ALLOWED_HOSTS = new Set(
     ...(Array.isArray(DOMAIN_CONFIG.allowedHostnames) ? DOMAIN_CONFIG.allowedHostnames : []),
     SITE_APPEARANCE.platformFooter?.url,
     SITE_APPEARANCE.platformFooter?.displayUrl,
+    getPublicAppUrl(),
+    getPublicAppHost(),
   ]
     .map(normalizePolicyHost)
     .filter(Boolean)
@@ -113,6 +141,167 @@ const buildUnknownHostResponse = () =>
 
 const buildRewriteResponse = (requestUrl, destination) =>
   rewrite(new URL(destination, requestUrl));
+
+const getRestaurantRouteCookie = (requestUrl, slug) => {
+  const secure = new URL(requestUrl).protocol === "https:";
+  return `${RESTAURANT_ROUTE_COOKIE}=${encodeURIComponent(
+    slug
+  )}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
+};
+
+const attachRestaurantRouteCookie = (response, requestUrl, slug) => {
+  response.headers.append(
+    "Set-Cookie",
+    getRestaurantRouteCookie(requestUrl, slug)
+  );
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
+};
+
+const buildRestaurantNotFoundResponse = () =>
+  new Response(
+    `<!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Restaurante não encontrado | INOVAS Food</title>
+      </head>
+      <body>
+        <main>
+          <h1>Restaurante não encontrado</h1>
+          <p>Confira o endereço informado ou volte para o INOVAS Food.</p>
+          <a href="/">Voltar ao início</a>
+        </main>
+      </body>
+    </html>`,
+    {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/html; charset=utf-8",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    }
+  );
+
+const buildPermanentRestaurantRedirect = (requestUrl, pathname, slug) => {
+  const destination = new URL(requestUrl);
+  destination.pathname = pathname;
+  const response = new Response(null, {
+    status: 308,
+    headers: {
+      Location: destination.toString(),
+    },
+  });
+  return attachRestaurantRouteCookie(response, requestUrl, slug);
+};
+
+const isPublicRestaurantAssetPath = (suffix = "") => {
+  const normalizedSuffix = String(suffix || "").replace(/^\/+/, "");
+
+  return (
+    PUBLIC_RESTAURANT_PAGES.has(normalizedSuffix) ||
+    PUBLIC_RESTAURANT_ROOT_ASSETS.has(normalizedSuffix) ||
+    normalizedSuffix.startsWith("assets/") ||
+    normalizedSuffix.startsWith("site-images/")
+  );
+};
+
+const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
+  if (
+    !(
+      isPublicAppHost(rawHost) ||
+      isLocalHost(normalizePolicyHost(rawHost)) ||
+      isVercelPreviewHost(normalizePolicyHost(rawHost))
+    )
+  ) {
+    return null;
+  }
+
+  const legacyMatch = pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
+  const cleanMatch = pathname.match(/^\/([^/]+)(\/.*)?$/);
+  const routeMatch = legacyMatch || cleanMatch;
+
+  if (!routeMatch) {
+    return null;
+  }
+
+  const slugValidation = validateRestaurantSlug(routeMatch[1]);
+
+  if (!slugValidation.ok) {
+    if (
+      !legacyMatch &&
+      (slugValidation.errorCode === "restaurant_slug_reserved" ||
+        routeMatch[1].includes("."))
+    ) {
+      return null;
+    }
+
+    return buildRestaurantNotFoundResponse();
+  }
+
+  const resolution = await resolveRestaurantBySlug(slugValidation.slug);
+
+  if (resolution?.matched !== true) {
+    return buildRestaurantNotFoundResponse();
+  }
+
+  const canonicalSlug = resolution.slug;
+  const suffix = String(routeMatch[2] || "");
+
+  if (legacyMatch) {
+    const canonicalSuffix =
+      suffix === "/" || suffix === "/index.html" ? "" : suffix;
+    return buildPermanentRestaurantRedirect(
+      request.url,
+      `/${canonicalSlug}${canonicalSuffix}`,
+      canonicalSlug
+    );
+  }
+
+  if (suffix === "/" || suffix === "/index.html") {
+    return buildPermanentRestaurantRedirect(
+      request.url,
+      `/${canonicalSlug}`,
+      canonicalSlug
+    );
+  }
+
+  const destination = suffix
+    ? isPublicRestaurantAssetPath(suffix)
+      ? `/${suffix.replace(/^\/+/, "")}`
+      : ""
+    : "/tokyo.html";
+
+  if (!destination) {
+    return buildRestaurantNotFoundResponse();
+  }
+
+  return attachRestaurantRouteCookie(
+    buildRewriteResponse(request.url, destination),
+    request.url,
+    canonicalSlug
+  );
+};
+
+const resolvePublicAppCanonicalRedirect = (request, rawHost) => {
+  const normalizedRawHost = String(rawHost || "")
+    .split(":")[0]
+    .toLowerCase();
+  const configuredHost = getPublicAppHost();
+
+  if (!isPublicAppHost(normalizedRawHost) || normalizedRawHost === configuredHost) {
+    return null;
+  }
+
+  const destination = new URL(request.url);
+  const publicOrigin = new URL(getPublicAppUrl());
+  destination.protocol = publicOrigin.protocol;
+  destination.host = publicOrigin.host;
+  return Response.redirect(destination, 308);
+};
 
 const resolveRestaurantHostRewrite = (request, pathname, policyHost) => {
   if (policyHost !== RESTAURANT_PRIMARY_HOST) {
@@ -223,9 +412,26 @@ export default async function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
   const policyHost = getRequestPolicyHost(request, url);
+  const rawHost = getRawRequestHost(request, url);
 
   if (!isAllowedPublicHost(policyHost)) {
     return buildUnknownHostResponse();
+  }
+
+  const canonicalRedirect = resolvePublicAppCanonicalRedirect(request, rawHost);
+
+  if (canonicalRedirect) {
+    return canonicalRedirect;
+  }
+
+  const publicRestaurantPath = await resolvePublicRestaurantPath(
+    request,
+    pathname,
+    rawHost
+  );
+
+  if (publicRestaurantPath) {
+    return publicRestaurantPath;
   }
 
   const restaurantRewrite = resolveRestaurantHostRewrite(request, pathname, policyHost);

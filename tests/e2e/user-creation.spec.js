@@ -93,7 +93,7 @@ test.describe("Criação guiada de usuário", () => {
 
     expect(unverifiedDomain.status).toBe("PENDING_VERIFICATION");
     expect(unverifiedDomain.finalUrl).toBe(
-      "https://custom-domain-active.inovasfood.com.br"
+      "https://www.inovasfood.com.br/custom-domain-active"
     );
   });
 
@@ -115,10 +115,10 @@ test.describe("Criação guiada de usuário", () => {
     await expect(page.locator('select[name="restaurantKey"]')).toBeVisible();
     await page.locator('select[name="restaurantKey"]').selectOption("default");
     await expect(page.locator("[data-access-address]")).toContainText(
-      "tokyosushidelivery.com.br"
+      "https://www.inovasfood.com.br/tokyo-sushi"
     );
     await expect(page.locator("[data-summary-address]")).toContainText(
-      "tokyosushidelivery.com.br"
+      "www.inovasfood.com.br/tokyo-sushi"
     );
 
     const profileInputs = page.locator('input[name="userType"]');
@@ -194,6 +194,12 @@ test.describe("Criação guiada de usuário", () => {
       expect(context.canSelectRestaurant).toBe(true);
       expect(contextRestaurant.selectable).toBe(true);
       expect(contextRestaurant.accessAddress.type).toBe("INOVAS_ADDRESS");
+      expect(contextRestaurant.accessAddress.url).toBe(
+        `https://www.inovasfood.com.br/${tenant.key}`
+      );
+      expect(contextRestaurant.accessAddress.managementLabel).toBe(
+        "Gerenciado pelo INOVAS Food"
+      );
 
       const createResponse = await master.api.post("/api/admin/users/create", {
         data: {
@@ -223,6 +229,9 @@ test.describe("Criação guiada de usuário", () => {
       expect(serializedCreate).not.toContain("Temporaria123!");
       expect(created.invitation.emailSent).toBe(false);
       expect(created.invitation.invitationUrl).toContain("/admin/convite.html?token=");
+      expect(created.invitation.restaurantAccessUrl).toBe(
+        `https://www.inovasfood.com.br/${tenant.key}`
+      );
 
       const duplicateResponse = await master.api.post("/api/admin/users/create", {
         data: {
@@ -463,7 +472,9 @@ test.describe("Criação guiada de usuário", () => {
       expect(restaurant.accessAddress.displayUrl).toBe(customDomain);
       expect(restaurant.accessAddress.status).toBe("PENDING_VERIFICATION");
       expect(restaurant.accessAddress.statusLabel).toBe("Aguardando verificacao");
-      expect(restaurant.accessAddress.finalUrl).not.toBe(`https://${customDomain}`);
+      expect(restaurant.accessAddress.finalUrl).toBe(
+        `https://www.inovasfood.com.br/${key}`
+      );
     } finally {
       await master.api.dispose();
     }

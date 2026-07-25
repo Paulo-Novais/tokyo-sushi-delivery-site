@@ -250,6 +250,7 @@ const expectNoHorizontalOverflow = async (page) => {
 
 module.exports = {
   baseURL,
+  buildRestaurantPayload,
   createAdminUser,
   createApiContext,
   createPublicOrder,

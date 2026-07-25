@@ -288,13 +288,13 @@ const restaurantPayload = ({
     ? {
         type: "custom",
         slug: key,
-        internalUrl: `https://inovasfood.com.br/${key}`,
+        internalUrl: `https://www.inovasfood.com.br/${key}`,
         customDomain,
       }
     : {
         type: "inovas",
         slug: key,
-        internalUrl: `https://inovasfood.com.br/${key}`,
+        internalUrl: `https://www.inovasfood.com.br/${key}`,
       },
   features: ["delivery", "pickup", "whatsapp"],
   appearance: {
@@ -612,7 +612,10 @@ const run = async () => {
           adminApi,
           master.cookie,
           restaurantPayload({
-            key: `v110-dup-domain-${variant.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`,
+            key: `v110-dup-domain-${variant
+              .replace(/[^a-z0-9]+/gi, "-")
+              .replace(/^-+|-+$/g, "")
+              .toLowerCase()}`,
             document: nextDocument(),
             email: `dup-domain-${nextDocument()}@v110.local`,
             customDomain: variant,
