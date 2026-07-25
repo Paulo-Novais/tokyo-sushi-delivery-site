@@ -2150,6 +2150,7 @@
           <select class="admin-input" data-master-user-filter="status">
             <option value="">Todos</option>
             <option value="ACTIVE" ${filters.status === "ACTIVE" ? "selected" : ""}>Ativo</option>
+            <option value="PENDING" ${filters.status === "PENDING" ? "selected" : ""}>Pendente</option>
             <option value="INACTIVE" ${filters.status === "INACTIVE" ? "selected" : ""}>Inativo</option>
             <option value="BLOCKED" ${filters.status === "BLOCKED" ? "selected" : ""}>Bloqueado</option>
           </select>
@@ -2176,9 +2177,9 @@
             <h2>Usuários</h2>
             <p>Gerencie os usuários e permissões do sistema por restaurante.</p>
           </div>
-          <button class="admin-button admin-button-primary" type="button" data-master-user-action="new-user">
+          <a class="admin-button admin-button-primary" href="/admin/usuarios/novo">
             + Novo usuário
-          </button>
+          </a>
         </header>
         ${renderFeedback()}
         ${renderMasterUserKpis()}
@@ -3753,6 +3754,11 @@
   };
 
   const initMasterPanel = () => {
+    const requestedSection = new URLSearchParams(window.location.search).get("section");
+    if (requestedSection && MASTER_DEFAULT_MENU.some((item) => item.key === requestedSection)) {
+      state.activeSection = requestedSection;
+    }
+
     // Platform RC keeps all writes behind the existing backend; prepared actions
     // only inform the operator that the module contract exists.
     const navRoot = query("[data-master-nav]");

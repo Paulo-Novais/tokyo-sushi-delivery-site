@@ -58,6 +58,10 @@
       "destination": "/inovas.html"
     },
     {
+      "source": "/admin/usuarios/novo",
+      "destination": "/admin/usuarios/novo.html"
+    },
+    {
       "source": "/api/admin/login",
       "destination": "/api/admin/[...action]?action=auth/login"
     },

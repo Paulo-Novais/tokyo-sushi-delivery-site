@@ -5,13 +5,19 @@ import userPermissions from "./lib/user-permissions.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
+  "/admin/convite.html",
   "/api/admin/login",
   "/api/admin/logout",
   "/api/admin/session",
+  "/api/admin/auth/accept-invite",
 ]);
 const PUBLIC_ADMIN_ASSET_PATTERN =
   /^\/admin\/.+\.(css|js|map|png|jpg|jpeg|svg|webp|gif|ico)$/i;
 const MASTER_ADMIN_HTML_PATHS = new Set(["/admin/master.html", "/admin/master"]);
+const USER_CREATION_HTML_PATHS = new Set([
+  "/admin/usuarios/novo",
+  "/admin/usuarios/novo.html",
+]);
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
 const SITE_APPEARANCE = appBranding.SITE_APPEARANCE || {};
 
@@ -173,6 +179,15 @@ const buildForbiddenMasterResponse = () =>
     },
   });
 
+const buildForbiddenUserCreationResponse = () =>
+  new Response("Acesso negado para criacao de usuarios.", {
+    status: 403,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+  });
+
 const resolveAdminSessionUserType = async (session) => {
   try {
     const accessContext = await userPermissions.getAdminAccessContext(
@@ -188,6 +203,19 @@ const resolveAdminSessionUserType = async (session) => {
       .toUpperCase();
   } catch (error) {
     return "";
+  }
+};
+
+const canAccessUserCreation = async (session) => {
+  try {
+    await userPermissions.getAdminAccessContext(
+      session,
+      ["users_create"],
+      adminAuth.getConfiguredAdminUsers()
+    );
+    return true;
+  } catch (error) {
+    return false;
   }
 };
 
@@ -243,6 +271,10 @@ export default async function middleware(request) {
     if (userType !== "MASTER") {
       return buildForbiddenMasterResponse();
     }
+  }
+
+  if (USER_CREATION_HTML_PATHS.has(pathname) && !(await canAccessUserCreation(session))) {
+    return buildForbiddenUserCreationResponse();
   }
 
   return next();

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novo usuário | INOVAS Food</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="/assets/inovas-logo-header.png" />
+    <link rel="stylesheet" href="/admin/admin.css" />
+    <link rel="stylesheet" href="/admin/design-system.css" />
+    <link rel="stylesheet" href="/admin/usuarios/novo.css" />
+    <script src="/admin/usuarios/novo.js" defer></script>
+  </head>
+  <body class="admin-body user-create-body">
+    <header class="user-create-topbar">
+      <a class="user-create-brand" href="/admin/" aria-label="Voltar ao painel">
+        <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
+        <span>
+          <small>Administração</small>
+          <strong>Criação de usuário</strong>
+        </span>
+      </a>
+      <a class="admin-button admin-button-ghost" data-cancel-link href="/admin/#users">Voltar para usuários</a>
+    </header>
+
+    <main class="user-create-main" data-user-create-app>
+      <nav class="user-create-breadcrumb" aria-label="Navegação estrutural">
+        <a data-users-list-link href="/admin/#users">Usuários</a>
+        <span aria-hidden="true">/</span>
+        <strong>Novo usuário</strong>
+      </nav>
+
+      <section class="user-create-loading" data-loading-state aria-live="polite">
+        <span class="user-create-spinner" aria-hidden="true"></span>
+        <div>
+          <strong>Preparando o cadastro</strong>
+          <p>Carregando restaurante, perfis e permissões disponíveis.</p>
+        </div>
+      </section>
+
+      <section class="user-create-fatal" data-fatal-state hidden>
+        <span class="user-create-state-icon" aria-hidden="true">!</span>
+        <h1 data-fatal-title>Não foi possível abrir esta página</h1>
+        <p data-fatal-message>Tente novamente ou retorne à listagem de usuários.</p>
+        <div>
+          <button class="admin-button admin-button-primary" type="button" data-retry-load>Tentar novamente</button>
+          <a class="admin-button admin-button-secondary" data-users-list-link href="/admin/#users">Voltar</a>
+        </div>
+      </section>
+
+      <form class="user-create-form" data-user-form novalidate hidden>
+        <header class="user-create-heading">
+          <div>
+            <span class="admin-chip">Novo usuário</span>
+            <h1>Quem fará parte da equipe?</h1>
+            <p>Comece pelos dados da pessoa, escolha onde ela trabalhará e aplique um perfil pronto.</p>
+          </div>
+          <span class="user-create-security-note">
+            <span aria-hidden="true">✓</span>
+            Vínculo e permissões validados no servidor
+          </span>
+        </header>
+
+        <div class="user-create-grid">
+          <div class="user-create-sections">
+            <section class="user-create-card" aria-labelledby="user-data-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step">1</span>
+                <div>
+                  <h2 id="user-data-title">Dados do usuário</h2>
+                  <p>Informações usadas para identificar esta pessoa no painel.</p>
+                </div>
+              </header>
+              <div class="user-create-fields">
+                <label class="user-create-field user-create-field-wide" for="user-full-name">
+                  <span>Nome completo <b aria-hidden="true">*</b></span>
+                  <input id="user-full-name" class="admin-input" name="name" autocomplete="name" maxlength="160" required />
+                  <small class="user-create-field-error" id="user-full-name-error" data-field-error="name"></small>
+                </label>
+                <label class="user-create-field" for="user-email">
+                  <span>E-mail <b aria-hidden="true">*</b></span>
+                  <input id="user-email" class="admin-input" name="email" type="email" autocomplete="email" maxlength="320" required />
+                  <small class="user-create-field-error" id="user-email-error" data-field-error="email"></small>
+                </label>
+                <label class="user-create-field" for="user-phone">
+                  <span>Telefone <em>Opcional</em></span>
+                  <input id="user-phone" class="admin-input" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" />
+                  <small class="user-create-field-error" id="user-phone-error" data-field-error="phone"></small>
+                </label>
+                <label class="user-create-field user-create-field-wide" for="user-job-title">
+                  <span>Cargo ou descrição interna <em>Opcional</em></span>
+                  <input id="user-job-title" class="admin-input" name="jobTitle" maxlength="160" placeholder="Ex.: Líder do turno da noite" />
+                </label>
+              </div>
+            </section>
+
+            <section class="user-create-card" aria-labelledby="restaurant-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step">2</span>
+                <div>
+                  <h2 id="restaurant-title">Restaurante</h2>
+                  <p>O acesso e as permissões ficarão isolados neste restaurante.</p>
+                </div>
+              </header>
+              <div data-restaurant-selector></div>
+              <small class="user-create-field-error" data-field-error="restaurantKey"></small>
+            </section>
+
+            <section class="user-create-card" aria-labelledby="profile-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step">3</span>
+                <div>
+                  <h2 id="profile-title">Perfil de acesso</h2>
+                  <p>Perfis prontos aplicam permissões seguras sem exigir configuração manual.</p>
+                </div>
+              </header>
+              <fieldset class="user-profile-fieldset">
+                <legend class="sr-only">Escolha o perfil de acesso</legend>
+                <div class="user-profile-grid" data-profile-grid></div>
+              </fieldset>
+              <small class="user-create-field-error" data-field-error="userType"></small>
+            </section>
+
+            <section class="user-create-card user-permissions-card" data-custom-permissions hidden aria-labelledby="permissions-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step is-advanced">4</span>
+                <div>
+                  <h2 id="permissions-title">Permissões personalizadas</h2>
+                  <p>Selecione somente o necessário. Ações de alteração exigem visualização do módulo.</p>
+                </div>
+                <span class="user-permission-count" data-permission-count>0 selecionadas</span>
+              </header>
+              <div class="user-permission-toolbar">
+                <label for="permission-search">
+                  <span class="sr-only">Buscar permissão</span>
+                  <input id="permission-search" class="admin-input" type="search" placeholder="Buscar módulo ou permissão" data-permission-search />
+                </label>
+                <button class="admin-button admin-button-secondary" type="button" data-clear-permissions>Limpar seleção</button>
+              </div>
+              <div class="user-permission-modules" data-permission-modules></div>
+              <small class="user-create-field-error" data-field-error="permissions"></small>
+            </section>
+
+            <section class="user-create-card" aria-labelledby="status-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step">4</span>
+                <div>
+                  <h2 id="status-title">Status do usuário</h2>
+                  <p>Defina se o acesso começa ativo, pendente ou bloqueado.</p>
+                </div>
+              </header>
+              <fieldset class="user-status-fieldset">
+                <legend class="sr-only">Status inicial</legend>
+                <div class="user-status-options" data-status-options></div>
+              </fieldset>
+            </section>
+
+            <section class="user-create-card" aria-labelledby="credential-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step">5</span>
+                <div>
+                  <h2 id="credential-title">Forma de acesso</h2>
+                  <p>Envie um convite ou defina uma senha temporária segura.</p>
+                </div>
+              </header>
+              <fieldset class="user-credential-fieldset">
+                <legend class="sr-only">Escolha a forma de acesso</legend>
+                <div class="user-credential-options">
+                  <label class="user-choice-card">
+                    <input type="radio" name="credentialMode" value="INVITE" checked />
+                    <span>
+                      <strong>Enviar convite por e-mail</strong>
+                      <small>Cria o usuário como pendente para que ele defina a própria senha.</small>
+                    </span>
+                  </label>
+                  <label class="user-choice-card">
+                    <input type="radio" name="credentialMode" value="TEMPORARY_PASSWORD" />
+                    <span>
+                      <strong>Definir senha agora</strong>
+                      <small>O administrador cria uma senha temporária para o primeiro acesso.</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="user-invite-state" data-invite-state></div>
+
+              <div class="user-password-panel" data-password-panel hidden>
+                <label class="user-create-field user-create-field-wide" for="user-password">
+                  <span>Senha temporária <b aria-hidden="true">*</b></span>
+                  <span class="user-password-input">
+                    <input id="user-password" class="admin-input" name="password" type="password" autocomplete="new-password" minlength="10" />
+                    <button type="button" data-toggle-password aria-label="Mostrar senha">Mostrar</button>
+                  </span>
+                  <small>Use ao menos 10 caracteres, incluindo letras e números.</small>
+                  <small class="user-create-field-error" id="user-password-error" data-field-error="password"></small>
+                </label>
+                <div class="user-password-actions">
+                  <button class="admin-button admin-button-secondary" type="button" data-generate-password>Gerar senha forte</button>
+                  <label class="user-inline-check">
+                    <input type="checkbox" name="mustChangePassword" checked />
+                    <span>Exigir troca de senha no primeiro acesso</span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section class="user-create-card" aria-labelledby="access-address-title">
+              <header class="user-create-card-head">
+                <span class="user-create-step is-info" aria-hidden="true">↗</span>
+                <div>
+                  <h2 id="access-address-title">Endereço de acesso</h2>
+                  <p>Informação consultada no cadastro do restaurante. Não pode ser alterada aqui.</p>
+                </div>
+              </header>
+              <div data-access-address></div>
+            </section>
+
+            <div class="user-create-submit-error" data-submit-error role="alert" hidden></div>
+            <footer class="user-create-actions">
+              <a class="admin-button admin-button-secondary" data-cancel-link href="/admin/#users">Cancelar</a>
+              <button class="admin-button admin-button-primary" type="submit" data-submit-button>
+                <span data-submit-label>Salvar usuário</span>
+                <span class="user-create-button-spinner" data-submit-spinner hidden aria-hidden="true"></span>
+              </button>
+            </footer>
+          </div>
+
+          <aside class="user-summary" aria-labelledby="user-summary-title">
+            <div class="user-summary-card">
+              <header>
+                <span class="admin-chip">Resumo em tempo real</span>
+                <h2 id="user-summary-title">Novo usuário</h2>
+              </header>
+              <div class="user-summary-person">
+                <span class="user-summary-avatar" data-summary-avatar aria-hidden="true">NU</span>
+                <div>
+                  <strong data-summary-name>Nome não informado</strong>
+                  <small data-summary-email>E-mail não informado</small>
+                  <small data-summary-phone hidden></small>
+                </div>
+              </div>
+              <dl class="user-summary-list">
+                <div><dt>Restaurante</dt><dd data-summary-restaurant>Não selecionado</dd></div>
+                <div><dt>Perfil</dt><dd data-summary-profile>Não selecionado</dd></div>
+                <div><dt>Status</dt><dd data-summary-status>Pendente</dd></div>
+                <div><dt>Permissões</dt><dd data-summary-permissions>0 permissões</dd></div>
+                <div class="is-stacked"><dt>Principais acessos</dt><dd data-summary-modules>Nenhum acesso selecionado</dd></div>
+                <div><dt>Credencial</dt><dd data-summary-credential>Convite por e-mail</dd></div>
+                <div><dt>Primeiro acesso</dt><dd data-summary-first-access>Definição de senha pelo usuário</dd></div>
+              </dl>
+              <div class="user-summary-address">
+                <span>Endereço</span>
+                <strong data-summary-address>Não configurado</strong>
+                <small data-summary-address-type>—</small>
+                <span class="user-summary-domain-status" data-summary-address-status>Sem dados</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </form>
+
+      <section class="user-create-success" data-success-state hidden aria-live="polite">
+        <span class="user-create-success-icon" aria-hidden="true">✓</span>
+        <span class="admin-chip">Usuário criado</span>
+        <h1 data-success-title>Cadastro concluído</h1>
+        <p data-success-message>O usuário foi vinculado ao restaurante com sucesso.</p>
+        <dl class="user-success-details" data-success-details></dl>
+        <div class="user-success-secret" data-success-secret hidden>
+          <strong>Senha temporária — exibida somente agora</strong>
+          <div>
+            <code data-success-password></code>
+            <button class="admin-button admin-button-secondary" type="button" data-copy-password>Copiar</button>
+          </div>
+          <small>Guarde em local seguro. A API não devolve a senha nem o hash.</small>
+        </div>
+        <div class="user-success-invite" data-success-invite hidden></div>
+        <div class="user-create-success-actions">
+          <a class="admin-button admin-button-primary" data-users-list-link href="/admin/#users">Ir para usuários</a>
+          <button class="admin-button admin-button-secondary" type="button" data-create-another>Criar outro</button>
+        </div>
+      </section>
+
+      <div class="sr-only" aria-live="polite" data-live-region></div>
+    </main>
+  </body>
+</html>

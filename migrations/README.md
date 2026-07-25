@@ -30,6 +30,7 @@ Esta pasta descreve a ordem planejada de migrations para uma futura migracao mul
 | 011 | `011_prepare_reports_feature_flags_audit_scope.md` | Preparar relatorios, flags e auditoria |
 | 012 | `012_cutover_default_tenant_context.md` | Ativar contexto default-only antes do multi-restaurante real |
 | 013 | `013_prepare_physical_tenant_persistence.md` | Adicionar escopo fisico tenant/restaurante aos dados operacionais |
+| 014 | `014_extend_admin_users_creation_experience.md` | Estender usuarios com convite, status pendente, credencial e auditoria |
 
 ## Regra de Cutover
 

@@ -138,6 +138,10 @@ const createStaticServer = (rootDirectory, adminApi) =>
         pathname = "/admin/index.html";
       }
 
+      if (pathname === "/admin/usuarios/novo") {
+        pathname = "/admin/usuarios/novo.html";
+      }
+
       const requestedPath = path.resolve(rootDirectory, `.${pathname}`);
 
       if (!requestedPath.startsWith(rootDirectory)) {
@@ -403,15 +407,21 @@ const validateUsersBrowser = async (adminApi) => {
     assert.equal(await desktopPage.locator("[data-user-page]").count(), 2, "Paginacao deve expor anterior/proxima.");
     await desktopPage.locator("[data-user-new]").click();
     await waitForCondition(
-      async () => (await desktopPage.locator(".admin-users-dialog").count()) === 1,
-      "Botao Novo usuario deve abrir modal/drawer."
+      async () =>
+        desktopPage.url().includes("/admin/usuarios/novo") &&
+        (await desktopPage.locator("[data-user-form]:visible").count()) === 1,
+      "Botao Novo usuario deve abrir a pagina dedicada."
     );
     assert.equal(
-      await desktopPage.locator(".admin-users-permissions").isHidden(),
+      await desktopPage.locator("[data-custom-permissions]").isHidden(),
       true,
       "Permissoes avancadas devem permanecer ocultas."
     );
-    await desktopPage.locator("[data-user-dialog-close]").first().click();
+    assert.equal(
+      await desktopPage.locator('input[name="userType"][value="GERENTE"]').isChecked(),
+      true,
+      "Perfil pronto deve ser a experiencia inicial."
+    );
     await desktopContext.close();
 
     const masterContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
@@ -431,15 +441,14 @@ const validateUsersBrowser = async (adminApi) => {
       "Header MASTER deve identificar administracao do sistema."
     );
     await masterPage.locator("[data-user-new]").click();
-    await masterPage.locator('input[name="userScope"][value="SYSTEM"]').check();
     await waitForCondition(
-      async () => (await masterPage.locator('.admin-users-dialog input[name="restaurantKey"]').inputValue().catch(() => "__missing__")) === "",
-      "Usuario do Sistema nao deve exibir restaurante no formulario."
+      async () => (await masterPage.locator("[data-user-form]:visible").count()) === 1,
+      "MASTER deve abrir a pagina dedicada."
     );
     assert.equal(
-      await masterPage.locator('.admin-users-dialog select[name="userType"] option').first().textContent(),
-      "SOCIO",
-      "Usuario do Sistema deve iniciar com o primeiro perfil abaixo de MASTER."
+      await masterPage.locator('select[name="restaurantKey"]').count(),
+      1,
+      "MASTER deve escolher o restaurante."
     );
     await masterContext.close();
 

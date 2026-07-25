@@ -44,7 +44,13 @@ const deliverySettingsApi = require(path.join(workspaceRoot, "api", "delivery-se
 const restaurantSettingsApi = require(path.join(workspaceRoot, "api", "restaurant-settings.js"));
 const orderCreateApi = require(path.join(workspaceRoot, "api", "orders", "create.js"));
 const whatsappCodeApi = require(path.join(workspaceRoot, "api", "auth", "send-whatsapp-code.js"));
-const { getAdminSessionFromRequest } = require(path.join(workspaceRoot, "lib", "admin-auth.cjs"));
+const {
+  getAdminSessionFromRequest,
+  getConfiguredAdminUsers,
+} = require(path.join(workspaceRoot, "lib", "admin-auth.cjs"));
+const {
+  getAdminAccessContext,
+} = require(path.join(workspaceRoot, "lib", "user-permissions.cjs"));
 
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -130,12 +136,13 @@ const sendRedirect = (res, status, location) => {
 
 const isPublicAdminAsset = (pathname) =>
   pathname === "/admin/login.html" ||
+  pathname === "/admin/convite.html" ||
   pathname === "/admin/admin.css" ||
   pathname === "/admin/design-system.css" ||
   pathname === "/admin/admin.js" ||
   pathname === "/admin/master.js";
 
-const protectAdminHtml = (req, res, pathname) => {
+const protectAdminHtml = async (req, res, pathname) => {
   if (!pathname.startsWith("/admin/") || isPublicAdminAsset(pathname)) {
     return true;
   }
@@ -162,6 +169,15 @@ const protectAdminHtml = (req, res, pathname) => {
     return false;
   }
 
+  if (pathname === "/admin/usuarios/novo.html") {
+    try {
+      await getAdminAccessContext(session, ["users_create"], getConfiguredAdminUsers());
+    } catch (error) {
+      sendText(res, 403, "Acesso negado para criacao de usuarios.");
+      return false;
+    }
+  }
+
   return true;
 };
 
@@ -172,6 +188,7 @@ const resolveStaticPathname = (pathname) => {
   if (pathname.startsWith("/r/tokyo-sushi/")) return `/${pathname.slice("/r/tokyo-sushi/".length)}`;
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
   if (pathname === "/admin/master") return "/admin/master.html";
+  if (pathname === "/admin/usuarios/novo") return "/admin/usuarios/novo.html";
   return pathname;
 };
 
@@ -194,7 +211,7 @@ const resolveLocalRedirect = (pathname, search) => {
 const serveStatic = async (req, res, pathname) => {
   const staticPathname = resolveStaticPathname(pathname);
 
-  if (!protectAdminHtml(req, res, staticPathname)) {
+  if (!(await protectAdminHtml(req, res, staticPathname))) {
     return;
   }
 

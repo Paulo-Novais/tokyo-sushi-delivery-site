@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ativar convite | INOVAS Food</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="/assets/inovas-logo-header.png" />
+    <link rel="stylesheet" href="/admin/admin.css" />
+    <link rel="stylesheet" href="/admin/design-system.css" />
+    <link rel="stylesheet" href="/admin/usuarios/novo.css" />
+    <script src="/admin/convite.js" defer></script>
+  </head>
+  <body class="admin-body user-create-body">
+    <header class="user-create-topbar">
+      <a class="user-create-brand" href="/admin/login.html" aria-label="INOVAS Food">
+        <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
+        <span>
+          <small>Acesso seguro</small>
+          <strong>Ativação de convite</strong>
+        </span>
+      </a>
+      <a class="admin-button admin-button-ghost" href="/admin/login.html">Ir para o login</a>
+    </header>
+
+    <main class="user-create-main user-invite-main">
+      <form class="user-create-card user-invite-form" data-invite-form novalidate>
+        <span class="admin-chip">Primeiro acesso</span>
+        <h1>Defina sua senha</h1>
+        <p>Crie uma senha segura para ativar seu acesso ao restaurante.</p>
+
+        <label class="user-create-field" for="invite-password">
+          <span>Nova senha <b aria-hidden="true">*</b></span>
+          <span class="user-password-input">
+            <input
+              id="invite-password"
+              class="admin-input"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              minlength="10"
+              required
+            />
+            <button type="button" data-toggle-invite-password aria-label="Mostrar senha">Mostrar</button>
+          </span>
+          <small>Ao menos 10 caracteres, incluindo letras e números.</small>
+          <small class="user-create-field-error" data-invite-error="password"></small>
+        </label>
+
+        <label class="user-create-field" for="invite-password-confirm">
+          <span>Confirmar senha <b aria-hidden="true">*</b></span>
+          <input
+            id="invite-password-confirm"
+            class="admin-input"
+            name="passwordConfirm"
+            type="password"
+            autocomplete="new-password"
+            minlength="10"
+            required
+          />
+          <small class="user-create-field-error" data-invite-error="passwordConfirm"></small>
+        </label>
+
+        <div class="user-create-submit-error" data-invite-submit-error role="alert" hidden></div>
+        <button class="admin-button admin-button-primary" type="submit" data-invite-submit>
+          Ativar meu acesso
+        </button>
+      </form>
+
+      <section class="user-create-success user-invite-success" data-invite-success hidden>
+        <span class="user-create-success-icon" aria-hidden="true">✓</span>
+        <h1>Acesso ativado</h1>
+        <p>Sua senha foi definida e o convite não poderá ser utilizado novamente.</p>
+        <a class="admin-button admin-button-primary" href="/admin/login.html">Entrar no INOVAS Food</a>
+      </section>
+    </main>
+  </body>
+</html>

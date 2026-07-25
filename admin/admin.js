@@ -215,6 +215,7 @@ const USER_TYPE_LABELS = Object.freeze(
 );
 const USER_STATUS_OPTIONS = Object.freeze([
   { key: "ACTIVE", label: "Ativo" },
+  { key: "PENDING", label: "Pendente" },
   { key: "BLOCKED", label: "Bloqueado" },
 ]);
 const NEW_ADMIN_USER_LOGIN = "__new_admin_user__";
@@ -9741,6 +9742,14 @@ const renderAdminUserDialog = () => {
                   : ""
               }
               ${
+                !isCreating &&
+                selectedUser.status === "PENDING" &&
+                selectedUser.credentialMode === "INVITE" &&
+                canEditAdminUsers()
+                  ? `<button class="admin-button admin-button-secondary" type="button" data-user-resend-invite ${isBusy ? "disabled" : ""}>Reenviar convite</button>`
+                  : ""
+              }
+              ${
                 !isViewing
                   ? `<button class="admin-button admin-button-primary" type="submit" ${formDisabled ? "disabled" : ""}>
                       ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
@@ -9778,10 +9787,10 @@ const renderUsersModule = () => {
       ${
         canCreateAdminUsers()
           ? `
-            <button class="admin-button admin-button-primary admin-users-new-button" type="button" data-user-new ${isBusy ? "disabled" : ""}>
+            <a class="admin-button admin-button-primary admin-users-new-button" href="/admin/usuarios/novo" data-user-new ${isBusy ? 'aria-disabled="true"' : ""}>
               <span aria-hidden="true">+</span>
               Novo usuario
-            </button>
+            </a>
           `
           : ""
       }
@@ -12993,6 +13002,76 @@ const resetAdminUserPassword = async (form) => {
   }
 };
 
+const resendAdminUserInvitation = async () => {
+  const user = getSelectedAdminUser();
+
+  if (!user?.login || user.status !== "PENDING" || user.credentialMode !== "INVITE") {
+    adminState.actionMessage = "Este usuario nao possui um convite pendente.";
+    adminState.actionTone = "error";
+    renderModuleContent();
+    return;
+  }
+
+  adminState.userSaving = true;
+  adminState.actionMessage = "";
+  renderModuleContent();
+
+  try {
+    const response = await fetchJson("/api/admin/users/resend-invite", {
+      method: "POST",
+      body: JSON.stringify({
+        id: user.id,
+        login: user.login,
+      }),
+    });
+    const invitationUrl = String(response.invitation?.invitationUrl || "");
+    const users = Array.isArray(getUsersSnapshot().users)
+      ? getUsersSnapshot().users.map((entry) =>
+          entry.id === response.user?.id ? response.user : entry
+        )
+      : [];
+
+    adminState.usersSnapshot = {
+      ...getUsersSnapshot(),
+      users,
+    };
+    adminState.userSaving = false;
+    adminState.actionTone = "success";
+    adminState.actionMessage = response.invitation?.emailSent
+      ? "Convite reenviado com sucesso."
+      : invitationUrl
+        ? "Novo convite gerado. O link seguro foi copiado."
+        : response.message || "Novo convite gerado; envio de e-mail nao configurado.";
+
+    if (invitationUrl) {
+      try {
+        await navigator.clipboard.writeText(invitationUrl);
+      } catch (error) {
+        adminState.actionMessage =
+          "Novo convite gerado. Nao foi possivel copiar o link automaticamente.";
+      }
+    }
+
+    renderSidebarNav();
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+  } catch (error) {
+    adminState.userSaving = false;
+
+    if (error.status === 401) {
+      redirectToLogin();
+      return;
+    }
+
+    adminState.actionMessage = error.message || "Nao foi possivel gerar um novo convite.";
+    adminState.actionTone = "error";
+    renderModuleContent();
+    renderOrderDetails();
+    updateSidebarMeta();
+  }
+};
+
 const deleteAdminUserSettings = async ({ login }) => {
   const normalizedLogin = String(login || "").trim();
   const targetUser = (Array.isArray(getUsersSnapshot().users) ? getUsersSnapshot().users : []).find(
@@ -13800,6 +13879,11 @@ const removeReview = async (payload = {}) => {
 };
 
 const initDashboardPage = () => {
+  const requestedSection = new URLSearchParams(window.location.search).get("section");
+  if (requestedSection && IMPLEMENTED_SECTIONS.has(requestedSection)) {
+    adminState.activeSection = requestedSection;
+  }
+
   const refreshButtons = Array.from(document.querySelectorAll("[data-admin-refresh]"));
   const logoutButton = document.querySelector("[data-admin-logout]");
   const navRoot = document.querySelector("[data-admin-nav]");
@@ -14074,13 +14158,8 @@ const initDashboardPage = () => {
       const userNewButton = event.target.closest("[data-user-new]");
 
       if (userNewButton) {
-        adminState.selectedUserLogin = NEW_ADMIN_USER_LOGIN;
-        adminState.userDraft = getBlankAdminUser();
-        adminState.userDialogMode = "create";
-        adminState.actionMessage = "";
-        renderModuleContent();
-        renderOrderDetails();
-        updateSidebarMeta();
+        event.preventDefault();
+        window.location.href = "/admin/usuarios/novo";
         return;
       }
 
@@ -14157,6 +14236,13 @@ const initDashboardPage = () => {
           void resetAdminUserPassword(userForm);
         }
 
+        return;
+      }
+
+      const userResendInviteButton = event.target.closest("[data-user-resend-invite]");
+
+      if (userResendInviteButton) {
+        void resendAdminUserInvitation();
         return;
       }
 
