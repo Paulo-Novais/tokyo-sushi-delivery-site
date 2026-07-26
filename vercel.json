@@ -94,6 +94,18 @@
       "destination": "/api/auth/restaurant/[...action]?action=:action"
     },
     {
+      "source": "/api/system/:path*",
+      "destination": "/api/system/[...action]?action=:path"
+    },
+    {
+      "source": "/api/tenant/:path*",
+      "destination": "/api/tenant/[...action]?action=:path"
+    },
+    {
+      "source": "/api/support/:path*",
+      "destination": "/api/support/[...action]?action=:path"
+    },
+    {
       "source": "/api/delivery-settings",
       "destination": "/api/catalog?publicView=delivery-settings"
     },
