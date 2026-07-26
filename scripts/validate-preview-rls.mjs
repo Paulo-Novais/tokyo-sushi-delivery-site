@@ -378,6 +378,68 @@ try {
       }
     }
   );
+  const supportAdminIdentityProvisioned = await withScopedClient(
+    {
+      audience: "support",
+      tenantId: tenantA.tenant_id,
+      restaurantId: tenantA.restaurant_id,
+      supportMode: "ADMIN",
+    },
+    async (client) => {
+      const suffix = crypto.randomUUID();
+      const identityId = `identity_support_rls_${suffix}`;
+      const membershipId = `membership_support_rls_${suffix}`;
+      const email = `support-rls-${suffix}@preview.invalid`;
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          `
+            INSERT INTO identities (
+              id, email, login, display_name, credential_status
+            )
+            VALUES ($1, $2, $2, 'Support RLS validation', 'ACTIVE')
+          `,
+          [identityId, email]
+        );
+        await client.query(
+          `
+            INSERT INTO restaurant_memberships (
+              id,
+              identity_id,
+              tenant_id,
+              restaurant_id,
+              restaurant_key,
+              restaurant_role,
+              status
+            )
+            VALUES ($1, $2, $3, $4, $5, 'MANAGER', 'ACTIVE')
+          `,
+          [
+            membershipId,
+            identityId,
+            tenantA.tenant_id,
+            tenantA.restaurant_id,
+            tenantA.restaurant_key,
+          ]
+        );
+        const updated = await client.query(
+          `
+            UPDATE identities
+            SET display_name = 'Support RLS validation linked'
+            WHERE id = $1
+          `,
+          [identityId]
+        );
+        const visible = await client.query(
+          "SELECT count(*)::integer AS count FROM identities WHERE id = $1",
+          [identityId]
+        );
+        return updated.rowCount === 1 && visible.rows[0].count === 1;
+      } finally {
+        await client.query("ROLLBACK");
+      }
+    }
+  );
 
   const assertions = {
     noContextDenied: noContext.rows[0].count === 0,
@@ -406,6 +468,8 @@ try {
     supportAdminMembershipWriteAllowed:
       supportAdminMembershipWrite.rowCount === 1,
     tenantIdentityProvisioningAllowed: temporaryIdentityProvisioned,
+    supportAdminIdentityProvisioningAllowed:
+      supportAdminIdentityProvisioned,
   };
   const failed = Object.entries(assertions)
     .filter(([, passed]) => !passed)
