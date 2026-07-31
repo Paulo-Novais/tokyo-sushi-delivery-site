@@ -51,12 +51,12 @@ const findOrderableCatalogItem = (catalogPayload) => {
   return sectionItems.find((item) => item.id && item.name && item.isOrderable !== false) || null;
 };
 
-const buildOrderPayload = (nonce, catalogItem) => ({
+const buildOrderPayload = (nonce, catalogItem, profile) => ({
   profile: {
-    id: customer.id,
-    name: customer.name,
-    phone: customer.phone,
-    email: customer.email,
+    id: profile.id,
+    name: profile.name,
+    phone: profile.phone,
+    email: profile.email,
   },
   checkout: {
     paymentMethod: "pix",
@@ -102,7 +102,14 @@ test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
   page,
 }) => {
   const nonce = Date.now();
-  const customerKey = buildCustomerKey(customer);
+  const phoneSuffix = String(nonce).slice(-8).padStart(8, "0");
+  const testCustomer = {
+    ...customer,
+    id: `profile-ui-stage3-${nonce}`,
+    phone: `(11) 9${phoneSuffix.slice(0, 4)}-${phoneSuffix.slice(4)}`,
+    email: `cliente-ui-${nonce}@teste.invalid`,
+  };
+  const customerKey = buildCustomerKey(testCustomer);
   const orderCreationClientToken = "ui-create-device-token";
   const trackingClientToken = "ui-track-device-token";
 
@@ -142,7 +149,7 @@ test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
       "x-tokyo-customer-client-token": orderCreationClientToken,
       "x-tokyo-customer-key": customerKey,
     },
-    data: buildOrderPayload(nonce, catalogItem),
+    data: buildOrderPayload(nonce, catalogItem, testCustomer),
   });
   expect(createOrderResponse.ok()).toBeTruthy();
   const createdOrder = await createOrderResponse.json();
@@ -178,9 +185,9 @@ test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
   const phoneInput = phoneForm.locator('input[name="entry_phone"]');
   await nameInput.fill("");
   await phoneInput.fill("");
-  await nameInput.fill(customer.name);
-  await phoneInput.fill(customer.phone);
-  await expect(phoneInput).toHaveValue(/\(11\) 96666-3311|11966663311|11 96666-3311/);
+  await nameInput.fill(testCustomer.name);
+  await phoneInput.fill(testCustomer.phone);
+  await expect(phoneInput).toHaveValue(testCustomer.phone);
   await phoneForm.locator(".auth-submit").click();
 
   const previewCodeNode = page.locator(".auth-code-preview strong");

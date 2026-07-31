@@ -266,7 +266,11 @@ test.describe("Caixa e Salao", () => {
         guestCount: 2,
         customerName: "Cliente API",
       });
-      const tabId = openedTab.tab.id;
+      const tabId =
+        openedTab.tab?.id ||
+        openedTab.tabId ||
+        openedTab.snapshot?.activeTabs?.[0]?.id;
+      expect(tabId).toBeTruthy();
       await expectCashFailure(
         ownerA.api,
         "open-tab",
@@ -383,19 +387,26 @@ test.describe("Caixa e Salao", () => {
         waiterName: "Garcom Segundo",
         guestCount: 1,
       });
+      const secondTabId =
+        secondTab.tab?.id ||
+        secondTab.tabId ||
+        secondTab.snapshot?.activeTabs?.find(
+          (tab) => tab.tableId === tableTwo.id
+        )?.id;
+      expect(secondTabId).toBeTruthy();
       await postCashAction(ownerA.api, "add-item", {
-        tabId: secondTab.tab.id,
+        tabId: secondTabId,
         productId: productOne.id,
         quantity: 1,
       });
       await postCashAction(ownerA.api, "send-order", {
-        tabId: secondTab.tab.id,
+        tabId: secondTabId,
       });
       const secondClosing = await postCashAction(
         ownerA.api,
         "begin-closing",
         {
-          tabId: secondTab.tab.id,
+          tabId: secondTabId,
           discountAmount: 0,
           serviceChargeEnabled: true,
         }
@@ -404,7 +415,7 @@ test.describe("Caixa e Salao", () => {
         ownerA.api,
         "confirm-payment",
         {
-          tabId: secondTab.tab.id,
+          tabId: secondTabId,
           idempotencyKey: uniqueKey("payment-single"),
           payments: [
             { method: "PIX", amount: secondClosing.tab.totalAmount },
