@@ -148,7 +148,13 @@ const onboardRestaurant = async (masterApi, options = {}) => {
   });
   const body = await response.json().catch(() => ({}));
 
-  expect(response.status(), `onboarding ${key}`).toBe(200);
+  expect(
+    response.status(),
+    `onboarding ${key}: ${JSON.stringify({
+      error: body.error,
+      errorCode: body.errorCode,
+    })}`
+  ).toBe(200);
   expect(body.restaurant?.restaurantKey).toBe(key);
 
   return {

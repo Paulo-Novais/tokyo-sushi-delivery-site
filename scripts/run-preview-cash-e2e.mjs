@@ -77,7 +77,7 @@ try {
       )
       VALUES (
         $1, '', '', '', 'Preview System E2E', $2, $2, $3, 'ACTIVE',
-        'DESENVOLVEDOR', 'TEMPORARY_PASSWORD', TRUE, 'managed',
+        'VENDEDOR', 'TEMPORARY_PASSWORD', TRUE, 'managed',
         '2026.07.31', NOW(), NOW()
       )
     `,
@@ -85,9 +85,9 @@ try {
   );
 
   const child = spawn(
-    process.platform === "win32" ? "npx.cmd" : "npx",
+    process.execPath,
     [
-      "playwright",
+      require.resolve("@playwright/test/cli"),
       "test",
       "tests/e2e/cash-register.spec.js",
       "--project=chromium",

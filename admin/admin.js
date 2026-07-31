@@ -15442,18 +15442,7 @@ const initLoginPage = async () => {
     nextField.value = getSafeAdminRedirect();
   }
 
-  try {
-    const session = await fetchJson("/api/admin/session");
-
-    if (session.authenticated) {
-      window.location.href = getSafeAdminRedirect();
-      return;
-    }
-  } catch (error) {
-    setFeedback(feedbackNode, formatAdminLoginError(error));
-  }
-
-  form.addEventListener("submit", async (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
     const identifier = String(formData.get("identifier") || "").trim();
@@ -15492,7 +15481,19 @@ const initLoginPage = async () => {
         submitButton.textContent = "Entrar no gestor";
       }
     }
-  });
+  };
+
+  form.addEventListener("submit", handleSubmit);
+
+  try {
+    const session = await fetchJson("/api/admin/session");
+
+    if (session.authenticated) {
+      window.location.href = getSafeAdminRedirect();
+    }
+  } catch (error) {
+    setFeedback(feedbackNode, formatAdminLoginError(error));
+  }
 };
 
 const syncAdminStaticBranding = () => {
