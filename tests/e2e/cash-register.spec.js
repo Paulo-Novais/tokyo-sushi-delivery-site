@@ -8,6 +8,9 @@ const {
 } = require("./helpers/v1.9-fixtures.cjs");
 
 const workspaceRoot = path.resolve(__dirname, "../..");
+const isVercelPreviewToolbarCspError = (message) =>
+  message.includes("https://vercel.live/_next-live/feedback/feedback.js") &&
+  message.includes("Content Security Policy");
 
 test.describe.configure({ mode: "serial" });
 
@@ -18,7 +21,12 @@ test.describe("Caixa e Salao", () => {
     const failedResources = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      if (
+        message.type() === "error" &&
+        !isVercelPreviewToolbarCspError(message.text())
+      ) {
+        consoleErrors.push(message.text());
+      }
     });
     page.on("response", (response) => {
       if (response.status() >= 400) {
