@@ -1,6 +1,20 @@
 import crypto from "node:crypto";
 import { Pool } from "@neondatabase/serverless";
 
+const sanitizeError = (error) =>
+  String(error?.message || error || "unknown")
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[REDACTED_DATABASE_URL]")
+    .replace(/password=[^\s&]+/gi, "password=[REDACTED]")
+    .slice(0, 500);
+process.on("uncaughtException", (error) => {
+  console.error(`PREVIEW_RLS_VALIDATION_FAILED;message=${sanitizeError(error)}`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (error) => {
+  console.error(`PREVIEW_RLS_VALIDATION_FAILED;message=${sanitizeError(error)}`);
+  process.exit(1);
+});
+
 const ownerDatabaseUrl = String(process.env.OWNER_DATABASE_URL || "").trim();
 const runtimeDatabaseUrl = String(process.env.DATABASE_URL || "").trim();
 const runtimeRole = String(process.env.INOVAS_RUNTIME_DB_ROLE || "").trim();
@@ -57,6 +71,7 @@ const queryWithScope = async (scope, text, values = []) => {
   const pool = new Pool({
     connectionString: withScope(runtimeDatabaseUrl, scope),
   });
+  pool.on("error", () => {});
   try {
     return await pool.query(text, values);
   } finally {
@@ -68,6 +83,7 @@ const withScopedClient = async (scope, callback) => {
   const pool = new Pool({
     connectionString: withScope(runtimeDatabaseUrl, scope),
   });
+  pool.on("error", () => {});
   const client = await pool.connect();
   try {
     return await callback(client);
@@ -78,6 +94,7 @@ const withScopedClient = async (scope, callback) => {
 };
 
 const ownerPool = new Pool({ connectionString: ownerDatabaseUrl });
+ownerPool.on("error", () => {});
 const fixtureSuffix = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 const tenantA = {
   tenant_id: `tenant_rls_a_${fixtureSuffix}`,

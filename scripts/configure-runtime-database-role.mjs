@@ -6,6 +6,20 @@ import {
   runtimeTablePrivileges,
 } from "./runtime-database-privileges.mjs";
 
+const sanitizeError = (error) =>
+  String(error?.message || error || "unknown")
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[REDACTED_DATABASE_URL]")
+    .replace(/password=[^\s&]+/gi, "password=[REDACTED]")
+    .slice(0, 500);
+process.on("uncaughtException", (error) => {
+  console.error(`RUNTIME_ROLE_COMMAND_FAILED;message=${sanitizeError(error)}`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (error) => {
+  console.error(`RUNTIME_ROLE_COMMAND_FAILED;message=${sanitizeError(error)}`);
+  process.exit(1);
+});
+
 const migrationDatabaseUrl = String(
   process.env.MIGRATION_DATABASE_URL || ""
 ).trim();
@@ -76,6 +90,7 @@ assert(
 );
 
 const pool = new Pool({ connectionString: migrationDatabaseUrl });
+pool.on("error", () => {});
 const client = await pool.connect();
 
 try {
