@@ -69,10 +69,9 @@ nao recebem privilegios.
 | Schema `public` | USAGE | Resolucao das tabelas permitidas. `CREATE` nao e concedido. |
 | Sequences | Nenhuma | O catalogo auditado nao possui sequences; IDs sao gerados na aplicacao. |
 | Views/materialized views | Nenhuma | Nenhum objeto desse tipo existe ou e utilizado. |
-| Funcoes `public` | Nenhuma | O runtime nao chama funcoes proprias; rotinas `pgcrypto` nao sao necessarias. |
+| Funcoes `public` | Nenhum grant direto | O runtime nao chama funcoes proprias. As rotinas `pgcrypto`, todas sem `SECURITY DEFINER`, continuam executaveis pelo grant padrao a `PUBLIC` do Neon. |
 | Triggers | Nenhuma | Nenhum trigger existe no catalogo auditado. |
 
 As policies RLS usam `app.audience`, `app.tenant_id`, `app.restaurant_id`,
 `app.identity_id`, `app.login`, `app.support_mode` e
 `app.support_session_id`, definidos por `lib/tenant-sql.cjs` em cada transacao.
-

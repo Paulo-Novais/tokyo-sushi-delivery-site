@@ -184,21 +184,53 @@ try {
     "Sequence inventory differs from the audited allowlist."
   );
 
-  const executableFunctions = await ownerPool.query(
+  const directFunctionGrants = await ownerPool.query(
     `
       SELECT function_record.oid::regprocedure::text AS signature
       FROM pg_proc AS function_record
       INNER JOIN pg_namespace AS namespace_record
         ON namespace_record.oid = function_record.pronamespace
+      CROSS JOIN LATERAL aclexplode(
+        COALESCE(
+          function_record.proacl,
+          acldefault('f', function_record.proowner)
+        )
+      ) AS privilege_record
+      INNER JOIN pg_roles AS grantee_role
+        ON grantee_role.oid = privilege_record.grantee
       WHERE namespace_record.nspname = 'public'
-        AND has_function_privilege($1, function_record.oid, 'EXECUTE')
+        AND grantee_role.rolname = $1
+        AND privilege_record.privilege_type = 'EXECUTE'
       ORDER BY signature
     `,
     [runtimeRole]
   );
   assert(
-    executableFunctions.rowCount === Object.keys(runtimeFunctionPrivileges).length,
-    "Runtime role can execute unapproved public functions."
+    directFunctionGrants.rowCount === Object.keys(runtimeFunctionPrivileges).length,
+    "Runtime role has direct grants on unapproved public functions."
+  );
+  const publicFunctionAudit = (
+    await ownerPool.query(
+      `
+        SELECT
+          count(*) FILTER (
+            WHERE has_function_privilege($1, function_record.oid, 'EXECUTE')
+          )::integer AS executable_via_public,
+          count(*) FILTER (
+            WHERE function_record.prosecdef
+              AND has_function_privilege($1, function_record.oid, 'EXECUTE')
+          )::integer AS executable_security_definer
+        FROM pg_proc AS function_record
+        INNER JOIN pg_namespace AS namespace_record
+          ON namespace_record.oid = function_record.pronamespace
+        WHERE namespace_record.nspname = 'public'
+      `,
+      [runtimeRole]
+    )
+  ).rows[0];
+  assert(
+    publicFunctionAudit.executable_security_definer === 0,
+    "Runtime role can execute a SECURITY DEFINER function."
   );
 
   const publicTables = await ownerPool.query(`
@@ -225,7 +257,7 @@ try {
     runtimePool.query("SELECT count(*) FROM permission_definitions")
   );
   const unauthorizedFunctionDenied = await expectDenied(() =>
-    runtimePool.query("SELECT public.gen_random_uuid()")
+    runtimePool.query("SELECT pg_read_file('postgresql.conf', 0, 1)")
   );
   assert(ddlDenied, "Runtime role can create persistent tables.");
   assert(tempDenied, "Runtime role can create temporary tables.");
@@ -255,6 +287,11 @@ try {
       allowedTables: runtimeReferencedTables.length,
       allowedSequences: Object.keys(runtimeSequencePrivileges).length,
       allowedFunctions: Object.keys(runtimeFunctionPrivileges).length,
+      publicExtensionFunctions: {
+        executableViaPublic: publicFunctionAudit.executable_via_public,
+        executableSecurityDefiner: 0,
+        directRuntimeGrants: 0,
+      },
       forbiddenOperations: {
         persistentDdl: "blocked",
         temporaryDdl: "blocked",
@@ -267,4 +304,3 @@ try {
 } finally {
   await Promise.all([ownerPool.end(), runtimePool.end()]);
 }
-

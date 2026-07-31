@@ -125,7 +125,16 @@ try {
 
   await client.query("BEGIN");
   const roleResult = await client.query(
-    "SELECT 1 FROM pg_roles WHERE rolname = $1",
+    `
+      SELECT
+        rolsuper,
+        rolcreatedb,
+        rolcreaterole,
+        rolreplication,
+        rolbypassrls
+      FROM pg_roles
+      WHERE rolname = $1
+    `,
     [runtimeRole]
   );
   if (!roleResult.rowCount) {
@@ -143,16 +152,20 @@ try {
         PASSWORD ${quoteLiteral(runtimePassword)}
     `);
   } else {
+    const existingRole = roleResult.rows[0];
+    assert(
+      !existingRole.rolsuper &&
+        !existingRole.rolcreatedb &&
+        !existingRole.rolcreaterole &&
+        !existingRole.rolreplication &&
+        !existingRole.rolbypassrls,
+      "Existing runtime role has prohibited attributes."
+    );
     await client.query(`
       ALTER ROLE ${quoteIdentifier(runtimeRole)}
       WITH
         LOGIN
-        NOSUPERUSER
-        NOCREATEDB
-        NOCREATEROLE
         NOINHERIT
-        NOREPLICATION
-        NOBYPASSRLS
         CONNECTION LIMIT 50
         PASSWORD ${quoteLiteral(runtimePassword)}
     `);
@@ -221,16 +234,8 @@ try {
     )}`
   );
   await client.query(
-    `REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC`
-  );
-  await client.query(
     `REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM ${quoteIdentifier(
       runtimeRole
-    )}`
-  );
-  await client.query(
-    `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${quoteIdentifier(
-      databaseIdentity.database_user
     )}`
   );
 
@@ -320,4 +325,3 @@ try {
   client.release();
   await pool.end();
 }
-
