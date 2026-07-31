@@ -1,6 +1,19 @@
 const { test, expect, request } = require("@playwright/test");
 
 const baseURL = process.env.BASE_URL || process.env.VALIDATION_BASE_URL || "http://127.0.0.1:3000";
+const baseHost = new URL(baseURL).hostname.toLowerCase();
+const previewRestaurantSlug =
+  process.env.E2E_PUBLIC_RESTAURANT_SLUG || "tokyo-sushi";
+const isVercelPreview = baseHost.endsWith(".vercel.app");
+
+const isVercelPreviewToolbarCspError = (message) =>
+  message.includes("https://vercel.live/_next-live/feedback/feedback.js") &&
+  message.includes("Content Security Policy");
+
+const getFutureScheduledDate = () => {
+  const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  return date.toISOString().slice(0, 10);
+};
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "").slice(-11);
 
@@ -49,7 +62,7 @@ const buildOrderPayload = (nonce, catalogItem) => ({
     paymentMethod: "pix",
     fulfillmentMode: "delivery",
     timingMode: "scheduled",
-    scheduledDate: "2026-04-12",
+    scheduledDate: getFutureScheduledDate(),
     scheduledTime: "20:45",
     cashChangeRequired: "",
     cashAmountProvided: "",
@@ -98,8 +111,24 @@ test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
     extraHTTPHeaders: {
       origin: baseURL,
       accept: "application/json",
+      ...(isVercelPreview
+        ? { cookie: `inovas_restaurant_slug=${previewRestaurantSlug}` }
+        : {}),
     },
   });
+
+  if (isVercelPreview) {
+    await page.context().addCookies([
+      {
+        name: "inovas_restaurant_slug",
+        value: previewRestaurantSlug,
+        domain: baseHost,
+        path: "/",
+        secure: true,
+        sameSite: "Lax",
+      },
+    ]);
+  }
 
   const catalogResponse = await publicApi.get("/api/catalog");
   expect(catalogResponse.ok()).toBeTruthy();
@@ -125,7 +154,10 @@ test("ETAPA 3 publica: login, tracking, botao dinamico e logout", async ({
 
   const consoleErrors = [];
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (
+      message.type() === "error" &&
+      !isVercelPreviewToolbarCspError(message.text())
+    ) {
       consoleErrors.push(message.text());
     }
   });

@@ -14,6 +14,17 @@ const previewUrl = String(process.env.INOVAS_PREVIEW_URL || "")
 const confirmation = String(
   process.env.INOVAS_PREVIEW_SMOKE_CONFIRM || ""
 ).trim();
+const expectedBranchId = String(
+  process.env.INOVAS_EXPECTED_BRANCH_ID || ""
+).trim();
+const productionBranchId = String(
+  process.env.INOVAS_PRODUCTION_BRANCH_ID || ""
+).trim();
+const expectedOwnerEndpoint = String(
+  process.env.INOVAS_EXPECTED_NEON_ENDPOINT || ""
+)
+  .trim()
+  .toLowerCase();
 const ownerEndpoint = ownerDatabaseUrl
   ? new URL(ownerDatabaseUrl).hostname
   : "";
@@ -22,7 +33,11 @@ const previewHost = previewUrl ? new URL(previewUrl).hostname : "";
 if (
   !ownerDatabaseUrl ||
   confirmation !== previewUrl ||
-  ownerEndpoint !== "ep-cold-hall-ac13ibhi.sa-east-1.aws.neon.tech" ||
+  !expectedBranchId ||
+  !productionBranchId ||
+  expectedBranchId === productionBranchId ||
+  !expectedOwnerEndpoint ||
+  !ownerEndpoint.toLowerCase().startsWith(expectedOwnerEndpoint) ||
   !previewHost.endsWith(".vercel.app")
 ) {
   console.error("Authenticated Preview smoke guard rejected the request.");
@@ -156,6 +171,17 @@ const retireTechnicalIdentity = async (login) => {
 };
 
 const run = async () => {
+  const databaseIdentity = (
+    await ownerPool.query(`
+      SELECT current_setting('neon.branch_id', true) AS branch_id
+    `)
+  ).rows[0];
+  if (
+    databaseIdentity?.branch_id !== expectedBranchId ||
+    databaseIdentity?.branch_id === productionBranchId
+  ) {
+    throw new Error("Authenticated smoke connected to an unexpected branch.");
+  }
   const statuses = {};
   const systemJar = createCookieJar();
   const restaurantJar = createCookieJar();

@@ -15,6 +15,18 @@ const {
   withTenantContextPayload,
 } = require("../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../lib/security-guardian.cjs");
+const { runWithDatabaseScope } = require("../lib/tenant-sql.cjs");
+
+const runAsPublicTenant = (tenantContext, callback) =>
+  runWithDatabaseScope(
+    {
+      audience: "public",
+      tenantId: tenantContext.tenantId,
+      restaurantId: tenantContext.restaurantId,
+      restaurantKey: tenantContext.restaurantKey,
+    },
+    callback
+  );
 
 const resolvePublicAction = (req) => {
   const requestUrl = new URL(String(req.url || ""), "http://localhost");
@@ -66,7 +78,9 @@ module.exports = async (req, res) => {
         const tenantContext = await getRequestTenantContext(req, {
           source: "public:reviews:list",
         });
-        const payload = await getPublicReviewsSnapshot({ tenantContext });
+        const payload = await runAsPublicTenant(tenantContext, () =>
+          getPublicReviewsSnapshot({ tenantContext })
+        );
 
         return json(res, 200, {
           ok: true,
@@ -92,12 +106,17 @@ module.exports = async (req, res) => {
         const tenantContext = await getRequestTenantContext(req, {
           source: "public:reviews:create",
         });
-        await assertPublicReviewTenantCanOperate(tenantContext);
         const payload = parseJsonBody(req.body, { strict: true });
 
         return json(res, 200, {
           ok: true,
-          ...withTenantContextPayload(await createPublicReview(payload, { tenantContext }), tenantContext),
+          ...withTenantContextPayload(
+            await runAsPublicTenant(tenantContext, async () => {
+              await assertPublicReviewTenantCanOperate(tenantContext);
+              return createPublicReview(payload, { tenantContext });
+            }),
+            tenantContext
+          ),
         });
       } catch (error) {
         if (error?.statusCode && Number(error.statusCode) >= 400) {
@@ -137,10 +156,11 @@ module.exports = async (req, res) => {
       const tenantContext = await getRequestTenantContext(req, {
         source: `public:${action}`,
       });
-      const payload =
+      const payload = await runAsPublicTenant(tenantContext, () =>
         action === "delivery-settings"
-          ? await getPublicDeliverySettings({ tenantContext })
-          : await getPublicRestaurantSettings({ tenantContext });
+          ? getPublicDeliverySettings({ tenantContext })
+          : getPublicRestaurantSettings({ tenantContext })
+      );
 
       return json(res, 200, {
         ok: true,
@@ -174,7 +194,9 @@ module.exports = async (req, res) => {
     const tenantContext = await getRequestTenantContext(req, {
       source: "public:catalog",
     });
-    const payload = await getPublicCatalogState({ tenantContext });
+    const payload = await runAsPublicTenant(tenantContext, () =>
+      getPublicCatalogState({ tenantContext })
+    );
 
     return json(res, 200, {
       ok: true,

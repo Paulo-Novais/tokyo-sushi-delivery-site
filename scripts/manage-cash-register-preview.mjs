@@ -410,6 +410,9 @@ const scopedQueries = (sql, tenantId, restaurantId, statements) => [
 
 const validateRls = async () => {
   const { sql } = await getPreviewContext();
+  const { sql: administrativeSql } = await getPreviewContext({
+    administrative: true,
+  });
   const [role] = await sql`
     SELECT rolsuper, rolbypassrls
     FROM pg_roles
@@ -430,6 +433,15 @@ const validateRls = async () => {
   const tableB = `table_rls_b_${suffix}`;
 
   try {
+    // A previous interrupted validation may have inserted only these synthetic
+    // prefix-scoped rows. Cleanup uses the administrative test connection
+    // because the runtime allowlist intentionally grants no DELETE on tables.
+    await administrativeSql`
+      DELETE FROM dining_tables
+      WHERE id LIKE 'table_rls_a_%'
+        OR id LIKE 'table_rls_b_%'
+        OR id LIKE 'table_cross_%'
+    `;
     await sql.transaction(
       scopedQueries(sql, tenantA, restaurantA, [
         sql`
@@ -520,16 +532,10 @@ const validateRls = async () => {
       "RLS_ISOLATION_VALID;read_a=1;read_b=1;cross_tenant_write=blocked;role_bypass=false"
     );
   } finally {
-    await sql.transaction(
-      scopedQueries(sql, tenantA, restaurantA, [
-        sql`DELETE FROM dining_tables WHERE id = ${tableA}`,
-      ])
-    );
-    await sql.transaction(
-      scopedQueries(sql, tenantB, restaurantB, [
-        sql`DELETE FROM dining_tables WHERE id = ${tableB}`,
-      ])
-    );
+    await administrativeSql`
+      DELETE FROM dining_tables
+      WHERE id IN (${tableA}, ${tableB}, ${`table_cross_${suffix}`})
+    `;
   }
 };
 

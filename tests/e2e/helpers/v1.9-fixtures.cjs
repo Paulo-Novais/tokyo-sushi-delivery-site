@@ -3,6 +3,7 @@ const { expect, request } = require("@playwright/test");
 const baseURL = process.env.BASE_URL || process.env.VALIDATION_BASE_URL || "http://127.0.0.1:3000";
 const masterLogin = process.env.E2E_ADMIN_LOGIN;
 const masterPassword = process.env.E2E_ADMIN_PASSWORD;
+const isVercelPreview = new URL(baseURL).hostname.endsWith(".vercel.app");
 
 const uniqueKey = (prefix) => {
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -23,13 +24,25 @@ const createApiContext = async ({ host, cookie, ip, origin } = {}) => {
   const extraHTTPHeaders = {
     "x-forwarded-for": ip || `127.19.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}`,
   };
+  const cookiePairs = [];
 
   if (host) {
-    extraHTTPHeaders["x-forwarded-host"] = host;
+    if (isVercelPreview) {
+      const restaurantSlug = host.replace(/\.localhost$/, "");
+      cookiePairs.push(["inovas_restaurant_slug", restaurantSlug]);
+    } else {
+      extraHTTPHeaders["x-forwarded-host"] = host;
+    }
   }
 
-  if (cookie) {
-    extraHTTPHeaders.cookie = cookie;
+  for (const pair of String(cookie || "").split(";")) {
+    const separator = pair.indexOf("=");
+    if (separator > 0) {
+      cookiePairs.push([
+        pair.slice(0, separator).trim(),
+        pair.slice(separator + 1).trim(),
+      ]);
+    }
   }
 
   if (origin) {
@@ -37,7 +50,27 @@ const createApiContext = async ({ host, cookie, ip, origin } = {}) => {
     extraHTTPHeaders.referer = `${origin}/`;
   }
 
-  return request.newContext({ baseURL, extraHTTPHeaders });
+  return request.newContext({
+    baseURL,
+    extraHTTPHeaders,
+    ...(cookiePairs.length
+      ? {
+          storageState: {
+            cookies: cookiePairs.map(([name, value]) => ({
+              name,
+              value,
+              domain: new URL(baseURL).hostname,
+              path: "/",
+              expires: -1,
+              httpOnly: false,
+              secure: new URL(baseURL).protocol === "https:",
+              sameSite: "Lax",
+            })),
+            origins: [],
+          },
+        }
+      : {}),
+  });
 };
 
 const extractCookieHeader = (response) =>
@@ -265,6 +298,7 @@ module.exports = {
   createPublicOrder,
   expectNoHorizontalOverflow,
   hostForKey,
+  isVercelPreview,
   loginAdmin,
   loginMaster,
   loginTenantOwner,

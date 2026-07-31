@@ -25,13 +25,20 @@ const KANBAN_VIEWPORTS = [
   [1440, 900],
 ];
 
+const isVercelPreviewToolbarCspError = (message) =>
+  message.includes("https://vercel.live/_next-live/feedback/feedback.js") &&
+  message.includes("Content Security Policy");
+
 const collectPageSignals = (page) => {
   const consoleErrors = [];
   const pageErrors = [];
   const failedResponses = [];
 
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (
+      message.type() === "error" &&
+      !isVercelPreviewToolbarCspError(message.text())
+    ) {
       consoleErrors.push(message.text());
     }
   });

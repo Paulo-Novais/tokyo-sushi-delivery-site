@@ -17,6 +17,7 @@ const {
   withTenantContextPayload,
 } = require("../../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../../lib/security-guardian.cjs");
+const { runWithDatabaseScope } = require("../../lib/tenant-sql.cjs");
 const {
   DEFAULT_TIMEZONE,
   getBusinessHoursStatus,
@@ -120,8 +121,22 @@ const createOrderWithRetry = async (payload, tenantContext) => {
     try {
       const catalogContext = await getCatalogValidationContext({ tenantContext });
       const normalizedOrder = normalizeOrderSubmission(payload, catalogContext);
-      await assertImmediateOrderWithinBusinessHours(normalizedOrder, tenantContext);
-      const result = await createOrder(normalizedOrder, { tenantContext });
+      const result = await runWithDatabaseScope(
+        {
+          audience: "public",
+          customerKey: normalizedOrder.customer.key,
+          tenantId: tenantContext.tenantId,
+          restaurantId: tenantContext.restaurantId,
+          restaurantKey: tenantContext.restaurantKey,
+        },
+        async () => {
+          await assertImmediateOrderWithinBusinessHours(
+            normalizedOrder,
+            tenantContext
+          );
+          return createOrder(normalizedOrder, { tenantContext });
+        }
+      );
 
       return {
         normalizedOrder,
@@ -182,9 +197,19 @@ module.exports = async (req, res) => {
     const tenantContext = await getRequestTenantContext(req, {
       source: "public:orders:create",
     });
-    await assertPublicOrderTenantCanOperate(tenantContext);
     const payload = parseJsonBody(req.body, { strict: true });
-    const { normalizedOrder, result } = await createOrderWithRetry(payload, tenantContext);
+    const { normalizedOrder, result } = await runWithDatabaseScope(
+      {
+        audience: "public",
+        tenantId: tenantContext.tenantId,
+        restaurantId: tenantContext.restaurantId,
+        restaurantKey: tenantContext.restaurantKey,
+      },
+      async () => {
+        await assertPublicOrderTenantCanOperate(tenantContext);
+        return createOrderWithRetry(payload, tenantContext);
+      }
+    );
     const responseHeaders = {};
     const customerClientToken = readCustomerClientToken(req);
     const customerKeyHeader = readCustomerKeyHeader(req);

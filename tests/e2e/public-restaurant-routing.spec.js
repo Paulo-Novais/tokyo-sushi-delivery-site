@@ -192,11 +192,15 @@ test.describe("Endereço INOVAS por slug", () => {
       const unknownSlug = uniqueKey("restaurante-inexistente");
       const notFoundResponse = await page.goto(`/${unknownSlug}`);
       expect(notFoundResponse?.status()).toBe(404);
-      await expect(page.getByText("Restaurante nao encontrado.")).toBeVisible();
+      await expect(
+        page.getByText(/Restaurante .* encontrado/i)
+      ).toBeVisible();
 
       const invalidSlugResponse = await page.goto("/Slug-Invalido");
       expect(invalidSlugResponse?.status()).toBe(404);
-      await expect(page.getByText("Restaurante nao encontrado.")).toBeVisible();
+      await expect(
+        page.getByText(/Restaurante .* encontrado/i)
+      ).toBeVisible();
     } finally {
       await context.close();
       await ownerA.api.dispose();

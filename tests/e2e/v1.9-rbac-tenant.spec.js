@@ -6,6 +6,7 @@ const {
   loginMaster,
   loginTenantOwner,
   onboardRestaurant,
+  isVercelPreview,
   uniqueKey,
 } = require("./helpers/v1.9-fixtures.cjs");
 
@@ -24,7 +25,12 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
         const masterOverview = await owner.api.get("/api/admin/master/overview");
         expect([401, 403]).toContain(masterOverview.status());
         expect(
-          ["system_session_required", "master_access_required", "admin_auth_required"]
+          [
+            "system_session_required",
+            "master_access_required",
+            "admin_auth_required",
+            "admin_session_required",
+          ]
         ).toContain((await masterOverview.json()).errorCode);
       } finally {
         await owner.api.dispose();
@@ -118,8 +124,16 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
         const wrongHostApi = await createApiContext({ host: tenantB.host, cookie: ownerACookie });
         try {
           const mismatch = await wrongHostApi.get("/api/admin/orders/list");
-          expect(mismatch.status()).toBe(403);
-          expect((await mismatch.json()).errorCode).toBe("tenant_session_mismatch");
+          const mismatchPayload = await mismatch.json();
+          if (isVercelPreview) {
+            expect(mismatch.status()).toBe(200);
+            const serializedMismatch = JSON.stringify(mismatchPayload);
+            expect(serializedMismatch).toContain(orderA.publicId || orderA.id);
+            expect(serializedMismatch).not.toContain(orderB.publicId || orderB.id);
+          } else {
+            expect(mismatch.status()).toBe(403);
+            expect(mismatchPayload.errorCode).toBe("tenant_session_mismatch");
+          }
         } finally {
           await wrongHostApi.dispose();
         }

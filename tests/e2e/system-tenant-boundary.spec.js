@@ -245,7 +245,10 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       expect(startResponse.status()).toBe(201);
 
       const settingsResponse = await master.api.get("/api/tenant/settings");
-      expect(settingsResponse.status()).toBe(200);
+      expect(
+        settingsResponse.status(),
+        await settingsResponse.text()
+      ).toBe(200);
       const settingsPayload = await settingsResponse.json();
       const settings = settingsPayload.data.settings;
 

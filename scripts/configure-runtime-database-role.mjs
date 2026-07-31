@@ -50,6 +50,8 @@ const finalizeLegacyRole =
   String(process.env.INOVAS_FINALIZE_LEGACY_RUNTIME_ROLE || "") === "true";
 const requireAllTables =
   String(process.env.INOVAS_REQUIRE_ALL_RUNTIME_TABLES || "") === "true";
+const hardenExistingRuntimeRole =
+  String(process.env.INOVAS_HARDEN_EXISTING_RUNTIME_ROLE || "") === "true";
 
 const assert = (condition, message) => {
   if (!condition) {
@@ -171,13 +173,16 @@ try {
     `);
   } else {
     const existingRole = roleResult.rows[0];
+    const hasProhibitedAttributes = Boolean(
+      existingRole.rolsuper ||
+        existingRole.rolcreatedb ||
+        existingRole.rolcreaterole ||
+        existingRole.rolreplication ||
+        existingRole.rolbypassrls
+    );
     assert(
-      !existingRole.rolsuper &&
-        !existingRole.rolcreatedb &&
-        !existingRole.rolcreaterole &&
-        !existingRole.rolreplication &&
-        !existingRole.rolbypassrls,
-      "Existing runtime role has prohibited attributes."
+      !hasProhibitedAttributes || hardenExistingRuntimeRole,
+      "Existing runtime role has prohibited attributes. Set the explicit hardening flag after confirming the target branch."
     );
     if (runtimePassword) {
       assert(
@@ -189,10 +194,38 @@ try {
       ALTER ROLE ${quoteIdentifier(runtimeRole)}
       WITH
         LOGIN
+        NOSUPERUSER
+        NOCREATEDB
+        NOCREATEROLE
         NOINHERIT
+        NOREPLICATION
+        NOBYPASSRLS
         CONNECTION LIMIT 50
         ${runtimePassword ? `PASSWORD ${quoteLiteral(runtimePassword)}` : ""}
     `);
+  }
+
+  const runtimeMemberships = await client.query(
+    `
+      SELECT granted_role.rolname AS granted_role
+      FROM pg_auth_members AS membership
+      INNER JOIN pg_roles AS member_role
+        ON member_role.oid = membership.member
+      INNER JOIN pg_roles AS granted_role
+        ON granted_role.oid = membership.roleid
+      WHERE member_role.rolname = $1
+      ORDER BY granted_role.rolname
+    `,
+    [runtimeRole]
+  );
+  assert(
+    runtimeMemberships.rowCount === 0 || hardenExistingRuntimeRole,
+    "Existing runtime role has role memberships. Set the explicit hardening flag after confirming the target branch."
+  );
+  for (const { granted_role: grantedRole } of runtimeMemberships.rows) {
+    await client.query(
+      `REVOKE ${quoteIdentifier(grantedRole)} FROM ${quoteIdentifier(runtimeRole)}`
+    );
   }
   await client.query(
     `ALTER ROLE ${quoteIdentifier(
@@ -339,6 +372,10 @@ try {
       skippedMissingTables: missingTables.length,
       grantedSequences: Object.keys(runtimeSequencePrivileges).length,
       grantedFunctions: Object.keys(runtimeFunctionPrivileges).length,
+      hardenedExistingRole: Boolean(
+        roleResult.rowCount && hardenExistingRuntimeRole
+      ),
+      revokedMemberships: runtimeMemberships.rowCount,
       legacyRoleFinalized: Boolean(legacyRuntimeRole && finalizeLegacyRole),
     })
   );
