@@ -81,7 +81,7 @@ const sanitizeError = (error) =>
     .replace(/password=[^\s&]+/gi, "password=[REDACTED]")
     .slice(0, 500);
 
-const getPreviewContext = async () => {
+const getPreviewContext = async ({ administrative = false } = {}) => {
   assert(
     process.env.INOVAS_ENVIRONMENT === "preview",
     "INOVAS_ENVIRONMENT precisa ser preview."
@@ -90,11 +90,21 @@ const getPreviewContext = async () => {
     process.env.INOVAS_TENANT_MODE === "strict",
     "INOVAS_TENANT_MODE precisa ser strict no Preview."
   );
-  assert(process.env.DATABASE_URL, "DATABASE_URL Preview ausente.");
+  const connectionString = String(
+    administrative
+      ? process.env.MIGRATION_DATABASE_URL || ""
+      : process.env.DATABASE_URL || ""
+  ).trim();
+  assert(
+    connectionString,
+    administrative
+      ? "MIGRATION_DATABASE_URL Preview ausente."
+      : "DATABASE_URL Preview ausente."
+  );
   assert(process.env.NEON_PROJECT_ID, "NEON_PROJECT_ID Preview ausente.");
   assert(process.env.NEON_BRANCH_ID, "NEON_BRANCH_ID Preview ausente.");
 
-  const databaseUrl = new URL(process.env.DATABASE_URL);
+  const databaseUrl = new URL(connectionString);
   assert(
     ["postgres:", "postgresql:"].includes(databaseUrl.protocol),
     "DATABASE_URL Preview nao e PostgreSQL."
@@ -165,7 +175,9 @@ const assertMigrationDependencies = async (sql) => {
 };
 
 const applyMigration = async () => {
-  const { sql } = await getPreviewContext();
+  const { sql, databaseUrl } = await getPreviewContext({
+    administrative: true,
+  });
   await assertMigrationDependencies(sql);
   const migration = await fs.readFile(migrationPath, "utf8");
   const destructiveSql = migration
@@ -173,7 +185,7 @@ const applyMigration = async () => {
     .match(/\b(?:DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i);
   assert(!destructiveSql, "Migration 022 contem operacao destrutiva inesperada.");
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl.toString(),
   });
   await client.connect();
   try {
@@ -199,7 +211,7 @@ const applyMigration = async () => {
 };
 
 const validateSchema = async () => {
-  const { sql } = await getPreviewContext();
+  const { sql } = await getPreviewContext({ administrative: true });
   await assertMigrationDependencies(sql);
   const tables = await sql.query(
     `

@@ -50,7 +50,8 @@
     "validate:v1-2-saas-local": "node scripts/validate-v1-2-saas-local.mjs",
     "validate:v1-3-platform-local": "node scripts/validate-v1-3-platform-local.mjs",
     "validate:responsive-platform-local": "node scripts/validate-responsive-platform-local.mjs",
-    "validate:cash-register-local": "node scripts/validate-cash-register-local.mjs"
+    "validate:cash-register-local": "node scripts/validate-cash-register-local.mjs",
+    "validate:runtime-schema-boundary-local": "node scripts/validate-runtime-schema-boundary-local.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

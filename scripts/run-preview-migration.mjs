@@ -7,7 +7,9 @@ const migrationPath = path.resolve(
   process.cwd(),
   migrationPathArgument || "migrations/015_system_restaurant_security_boundary.sql"
 );
-const databaseUrl = String(process.env.DATABASE_URL || "").trim();
+const databaseUrl = String(
+  process.env.MIGRATION_DATABASE_URL || ""
+).trim();
 const expectedBranchId = String(process.env.NEON_BRANCH_ID || "").trim();
 const confirmation = String(
   process.env.INOVAS_PREVIEW_MIGRATION_CONFIRM || ""
@@ -17,7 +19,7 @@ const environment = String(process.env.INOVAS_ENVIRONMENT || "")
   .toLowerCase();
 
 if (!databaseUrl || !expectedBranchId) {
-  console.error("DATABASE_URL and NEON_BRANCH_ID are required.");
+  console.error("MIGRATION_DATABASE_URL and NEON_BRANCH_ID are required.");
   process.exit(1);
 }
 
