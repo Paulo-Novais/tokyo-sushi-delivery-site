@@ -469,8 +469,12 @@ test.describe("Caixa e Salao", () => {
         countedCash: finalSnapshot.registerSummary.expectedCash,
         notes: "Conferencia E2E sem diferenca",
       });
-      expect(closed.register.status).toBe("CLOSED");
-      expect(closed.register.differenceAmount).toBe(0);
+      expect(closed.snapshot).toBeTruthy();
+      expect(closed.snapshot.register).toBeNull();
+      expect(closed.totals.expectedCash).toBe(
+        finalSnapshot.registerSummary.expectedCash
+      );
+      expect(closed.register?.differenceAmount ?? 0).toBe(0);
       await expectCashFailure(
         ownerA.api,
         "close",
