@@ -118,10 +118,8 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
         const wrongHostApi = await createApiContext({ host: tenantB.host, cookie: ownerACookie });
         try {
           const mismatch = await wrongHostApi.get("/api/admin/orders/list");
-          expect(mismatch.status()).toBe(200);
-          const mismatchPayload = JSON.stringify(await mismatch.json());
-          expect(mismatchPayload).toContain(orderA.publicId || orderA.id);
-          expect(mismatchPayload).not.toContain(orderB.publicId || orderB.id);
+          expect(mismatch.status()).toBe(403);
+          expect((await mismatch.json()).errorCode).toBe("tenant_session_mismatch");
         } finally {
           await wrongHostApi.dispose();
         }

@@ -240,6 +240,13 @@ const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
+  if (
+    pathname === "/admin/caixa/salao" ||
+    pathname === "/admin/caixa/abertura" ||
+    pathname === "/admin/caixa/fechamento"
+  ) {
+    return "/admin/index.html";
+  }
   if (pathname === "/admin/master") return "/system/index.html";
   if (pathname === "/admin/usuarios/novo") return "/admin/usuarios/novo.html";
   if (pathname === "/admin/users" || pathname === "/admin/users/") return "/admin/users/index.html";

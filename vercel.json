@@ -66,6 +66,18 @@
       "destination": "/admin/users/edit.html"
     },
     {
+      "source": "/admin/caixa/salao",
+      "destination": "/admin/index.html?section=cash-register&cashView=floor"
+    },
+    {
+      "source": "/admin/caixa/abertura",
+      "destination": "/admin/index.html?section=cash-register&cashView=opening"
+    },
+    {
+      "source": "/admin/caixa/fechamento",
+      "destination": "/admin/index.html?section=cash-register&cashView=closing"
+    },
+    {
       "source": "/system",
       "destination": "/system/index.html"
     },
@@ -168,6 +180,10 @@
     {
       "source": "/api/admin/inventory/:action",
       "destination": "/api/admin/[...action]?action=inventory/:action"
+    },
+    {
+      "source": "/api/admin/cash-register/:action",
+      "destination": "/api/admin/[...action]?action=cash-register/:action"
     },
     {
       "source": "/api/admin/finance",

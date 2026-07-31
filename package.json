@@ -6,6 +6,7 @@
     "start:test": "node scripts/local-validation-server.cjs",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test",
+    "test:cash-register:e2e": "playwright test tests/e2e/cash-register.spec.js",
     "test:e2e:ui": "playwright test --ui",
     "validate:release": "node scripts/validate-release-local.mjs",
     "validate:release:fast": "node scripts/validate-release-local.mjs --fast",
@@ -48,7 +49,8 @@
     "validate:v1-1-users-local": "node scripts/validate-v1-1-users-local.mjs",
     "validate:v1-2-saas-local": "node scripts/validate-v1-2-saas-local.mjs",
     "validate:v1-3-platform-local": "node scripts/validate-v1-3-platform-local.mjs",
-    "validate:responsive-platform-local": "node scripts/validate-responsive-platform-local.mjs"
+    "validate:responsive-platform-local": "node scripts/validate-responsive-platform-local.mjs",
+    "validate:cash-register-local": "node scripts/validate-cash-register-local.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

@@ -58,18 +58,20 @@ const CUSTOMER_CRM_SORT_OPTIONS = [
 ];
 const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "dashboard", label: "Dashboard", helper: "Resumo do turno" },
+  { key: "users", label: "Usuarios", helper: "Equipe e acessos" },
+  { key: "cash-register", label: "Caixa", helper: "Salao e recebimentos" },
   { key: "orders", label: "Pedidos", helper: "Fila operacional" },
-  { key: "scheduled", label: "Agendamentos", helper: "Pedidos futuros" },
   { key: "menu", label: "Cardapio", helper: "Produtos e combos" },
+  { key: "scheduled", label: "Agendamentos", helper: "Pedidos futuros" },
   { key: "deliveries", label: "Entregas", helper: "Motoboys e rotas" },
   { key: "customers", label: "Clientes", helper: "Base recorrente" },
   { key: "promotions", label: "Promocoes", helper: "Campanhas e cupons" },
   { key: "metrics", label: "Metricas", helper: "Performance por admin" },
   { key: "reports", label: "Relatorios", helper: "Indicadores" },
-  { key: "inventory", label: "Estoque", helper: "Itens e validade" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
   { key: "reviews", label: "Avaliacoes", helper: "Feedback do cliente" },
   { key: "settings", label: "Configuracoes", helper: "Ajustes do sistema" },
+  { key: "inventory", label: "Estoque", helper: "Itens e validade" },
 ]);
 const SYSTEM_NAV_SECTIONS = Object.freeze([
   { key: "users", label: "Usuarios", helper: "Acessos da plataforma" },
@@ -93,6 +95,7 @@ const NAV_SECTIONS = Object.freeze([
 ]);
 const IMPLEMENTED_SECTIONS = new Set([
   "dashboard",
+  "cash-register",
   "orders",
   "scheduled",
   "menu",
@@ -109,6 +112,7 @@ const IMPLEMENTED_SECTIONS = new Set([
 ]);
 const SECTION_PERMISSION_MAP = Object.freeze({
   dashboard: "dashboard_view",
+  "cash-register": "cash_register_view",
   orders: "orders_view",
   scheduled: "orders_view",
   menu: "catalog_view",
@@ -237,6 +241,7 @@ const USER_PERMISSION_ACTIONS_FALLBACK = Object.freeze([
 ]);
 const USER_PERMISSION_MODULES_FALLBACK = Object.freeze([
   { key: "dashboard", label: "Dashboard" },
+  { key: "cash_register", label: "Caixa e salao" },
   { key: "orders", label: "Pedidos" },
   { key: "customers", label: "Clientes" },
   { key: "catalog", label: "Cardapio" },
@@ -258,6 +263,12 @@ const SECTION_TITLES = {
     description:
       "Leitura executiva da operacao com volume, receita, conclusoes e sinais de atencao do turno.",
     focus: "Visao gerencial do turno",
+  },
+  "cash-register": {
+    chip: "Caixa e salao",
+    title: "Operacao presencial",
+    description: "Mesas, comandas, pedidos e recebimentos do atendimento no salao.",
+    focus: "Turno do caixa",
   },
   orders: {
     chip: "Pedidos operacionais",
@@ -351,6 +362,8 @@ const SECTION_TITLES = {
 const NAV_ICON_SVGS = {
   dashboard:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5h7v6H4zM13 5h7v10h-7zM4 13h7v6H4zM13 17h7v2h-7z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  "cash-register":
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14v13H5zM7 4h10v3H7zM8 11h3v3H8zM14 11h2M14 14h2M8 17h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   orders:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M7 4h10l3 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8l2-4zm0 0v4h10V4M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   scheduled:
@@ -4069,6 +4082,17 @@ const renderSidebarNav = () => {
       return "Em breve";
     })();
 
+    const cashRegisterSubmenu = section.key === "cash-register" && isActive
+      ? `
+        <div class="admin-nav-submenu" aria-label="Opcoes do caixa">
+          <button type="button" data-cash-register-subview="floor">Salao</button>
+          <button type="button" data-cash-register-subview="opening">Abertura de Caixa</button>
+          <button type="button" data-cash-register-subview="closing">Fechamento de Caixa</button>
+          <span aria-disabled="true">Sangrias e Suprimentos</span>
+        </div>
+      `
+      : "";
+
     return `
       <button
         class="admin-nav-item${isActive ? " is-active" : ""}${!isImplemented ? " is-disabled" : ""}"
@@ -4083,6 +4107,7 @@ const renderSidebarNav = () => {
         </div>
         <span class="admin-nav-badge">${escapeHtml(badgeValue)}</span>
       </button>
+      ${cashRegisterSubmenu}
     `;
   }).join("");
 };
@@ -9951,6 +9976,16 @@ const renderModuleContentBody = () => {
   adminState.expandedBoardColumnKey = "";
   renderBoardColumnModal();
 
+  if (adminState.activeSection === "cash-register") {
+    const moduleRoot = document.querySelector("[data-admin-module-content]");
+    window.InovasCashRegister?.mount(moduleRoot, {
+      adminName: adminState.adminDisplayName,
+      restaurantName: adminState.adminRestaurantName,
+      permissions: adminState.adminPermissions,
+    });
+    return;
+  }
+
   if (adminState.activeSection === "scheduled") {
     renderScheduledModule();
     return;
@@ -13165,6 +13200,19 @@ const deleteAdminUserSettings = async ({ login }) => {
   }
 };
 
+const getRequestedCashRegisterView = () => {
+  const cashRegisterViewByPath = {
+    "/admin/caixa/salao": "floor",
+    "/admin/caixa/abertura": "opening",
+    "/admin/caixa/fechamento": "closing",
+  };
+  return (
+    cashRegisterViewByPath[window.location.pathname.replace(/\/+$/, "")] ||
+    new URLSearchParams(window.location.search).get("cashView") ||
+    ""
+  );
+};
+
 const loadInitialAdminSession = async () => {
   const session = await fetchJson("/api/admin/session");
 
@@ -13174,7 +13222,15 @@ const loadInitialAdminSession = async () => {
   }
 
   syncAdminAccessFromPayload(session.admin);
-  ensureActiveSectionAllowed();
+  if (
+    getRequestedCashRegisterView() &&
+    IMPLEMENTED_SECTIONS.has("cash-register") &&
+    canAccessAdminSection("cash-register")
+  ) {
+    adminState.activeSection = "cash-register";
+  } else {
+    ensureActiveSectionAllowed();
+  }
   renderSectionChrome();
   renderSidebarNav();
   renderModuleContent();
@@ -13184,6 +13240,11 @@ const loadInitialAdminSession = async () => {
 
 const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
   ensureActiveSectionAllowed();
+
+  if (adminState.activeSection === "cash-register") {
+    await window.InovasCashRegister?.load({ force: true });
+    return;
+  }
 
   if (adminState.activeSection === "users") {
     await loadUsers({ preserveSelection });
@@ -13905,6 +13966,12 @@ const removeReview = async (payload = {}) => {
 
 const initDashboardPage = () => {
   const requestedSection = new URLSearchParams(window.location.search).get("section");
+  const requestedCashRegisterView = getRequestedCashRegisterView();
+
+  if (requestedCashRegisterView) {
+    adminState.activeSection = "cash-register";
+  }
+
   if (requestedSection && IMPLEMENTED_SECTIONS.has(requestedSection)) {
     adminState.activeSection = requestedSection;
   }
@@ -13919,6 +13986,9 @@ const initDashboardPage = () => {
   const themeToggleButton = document.querySelector("[data-admin-theme-toggle]");
 
   renderSectionChrome();
+  if (requestedCashRegisterView) {
+    window.InovasCashRegister?.setView(requestedCashRegisterView, { updateUrl: false });
+  }
   syncThemeToggle();
 
   refreshButtons.forEach((refreshButton) => {
@@ -13980,19 +14050,27 @@ const initDashboardPage = () => {
 
   if (navRoot) {
     navRoot.addEventListener("click", async (event) => {
+      const cashRegisterSubviewButton = event.target.closest("[data-cash-register-subview]");
       const navButton = event.target.closest("[data-admin-section]");
 
-      if (!navButton) {
+      if (!navButton && !cashRegisterSubviewButton) {
         return;
       }
 
-      const nextSection = String(navButton.dataset.adminSection || "").trim();
+      const nextSection = cashRegisterSubviewButton
+        ? "cash-register"
+        : String(navButton.dataset.adminSection || "").trim();
 
       if (!nextSection || !IMPLEMENTED_SECTIONS.has(nextSection) || !canAccessAdminSection(nextSection)) {
         return;
       }
 
       adminState.activeSection = nextSection;
+      const nextCashRegisterView = cashRegisterSubviewButton
+        ? String(cashRegisterSubviewButton.dataset.cashRegisterSubview || "floor")
+        : nextSection === "cash-register"
+          ? "floor"
+          : "";
 
       if (nextSection === "dashboard" || nextSection === "menu") {
         adminState.searchQuery = "";
@@ -14012,6 +14090,7 @@ const initDashboardPage = () => {
 
       if (
         nextSection === "finance" ||
+        nextSection === "cash-register" ||
         nextSection === "reports" ||
         nextSection === "metrics" ||
         nextSection === "inventory" ||
@@ -14036,12 +14115,19 @@ const initDashboardPage = () => {
       renderSidebarNav();
       renderDashboardStats();
       renderModuleContent();
+      if (nextCashRegisterView) {
+        window.InovasCashRegister?.setView(nextCashRegisterView);
+      }
 
       if (nextSection !== "dashboard") {
         renderOrderDetails();
       }
 
       updateSidebarMeta();
+
+      if (nextSection === "cash-register") {
+        await window.InovasCashRegister?.load({ force: true });
+      }
 
       if (nextSection === "audit") {
         await loadAuditLog({ preserveSelection: true });
@@ -14092,7 +14178,7 @@ const initDashboardPage = () => {
       }
 
       if (
-        !["customers", "dashboard", "deliveries", "inventory", "settings", "users"].includes(adminState.activeSection) &&
+        !["cash-register", "customers", "dashboard", "deliveries", "inventory", "settings", "users"].includes(adminState.activeSection) &&
         adminState.selectedOrderId &&
         adminState.selectedOrder?.id !== adminState.selectedOrderId
       ) {
@@ -15443,7 +15529,9 @@ const syncAdminStaticBranding = () => {
     const subtitle = document.querySelector(".admin-brand-copy small");
 
     if (logo) {
-      logo.src = ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-oficial.png";
+      logo.src = resolveAdminAssetUrl(
+        ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-oficial.png"
+      );
       logo.alt = ADMIN_BRANDING.sidebarTitle || "INOVAS Food";
     }
 
