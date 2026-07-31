@@ -4,7 +4,7 @@ export const runtimeTablePrivileges = Object.freeze({
   cash_payment_sets: ["SELECT", "INSERT"],
   cash_payments: ["SELECT", "INSERT"],
   cash_register_audit_events: ["SELECT", "INSERT"],
-  cash_register_movements: ["INSERT"],
+  cash_register_movements: ["SELECT", "INSERT"],
   cash_register_sessions: ["SELECT", "INSERT", "UPDATE"],
   catalog_item_overrides: ["SELECT", "DELETE"],
   catalog_promotions: ["SELECT", "INSERT", "UPDATE", "DELETE"],

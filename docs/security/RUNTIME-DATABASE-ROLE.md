@@ -26,7 +26,7 @@ conexoes, `search_path=pg_catalog,public`, nenhum ownership e nenhum membership.
 | `cash_payment_sets` | SELECT, INSERT | Idempotencia e registro do conjunto de pagamentos. |
 | `cash_payments` | SELECT, INSERT | Persistencia dos meios e parcelas de pagamento. |
 | `cash_register_audit_events` | SELECT, INSERT | Historico e auditoria do Caixa. |
-| `cash_register_movements` | INSERT | Lancamentos financeiros gerados pelo Caixa. |
+| `cash_register_movements` | SELECT, INSERT | Lancamentos financeiros gerados pelo Caixa; `SELECT` e exigido pelo `RETURNING` atomico do fechamento. |
 | `cash_register_sessions` | SELECT, INSERT, UPDATE | Abertura, consulta e fechamento do caixa. |
 | `catalog_item_overrides` | SELECT, DELETE | Leitura e remocao de sobrescritas legadas. |
 | `catalog_promotions` | SELECT, INSERT, UPDATE, DELETE | CRUD de promocoes do cardapio. |
