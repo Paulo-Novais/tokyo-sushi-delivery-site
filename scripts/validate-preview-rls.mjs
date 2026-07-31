@@ -3,6 +3,7 @@ import { Pool } from "@neondatabase/serverless";
 
 const ownerDatabaseUrl = String(process.env.OWNER_DATABASE_URL || "").trim();
 const runtimeDatabaseUrl = String(process.env.DATABASE_URL || "").trim();
+const runtimeRole = String(process.env.INOVAS_RUNTIME_DB_ROLE || "").trim();
 const branchId = String(process.env.NEON_BRANCH_ID || "").trim();
 const confirmation = String(
   process.env.INOVAS_PREVIEW_MIGRATION_CONFIRM || ""
@@ -16,6 +17,7 @@ const expectedEndpoint = String(
 if (
   !ownerDatabaseUrl ||
   !runtimeDatabaseUrl ||
+  !/^[a-z_][a-z0-9_]{2,62}$/.test(runtimeRole) ||
   !branchId ||
   confirmation !== branchId ||
   String(process.env.INOVAS_ENVIRONMENT || "").toLowerCase() !== "preview"
@@ -81,8 +83,8 @@ try {
   const roleResult = await ownerPool.query(`
     SELECT rolsuper, rolbypassrls
     FROM pg_roles
-    WHERE rolname = 'inovas_preview_app'
-  `);
+    WHERE rolname = $1
+  `, [runtimeRole]);
   const role = roleResult.rows[0];
   if (!role || role.rolsuper || role.rolbypassrls) {
     throw new Error("Runtime role bypasses the intended RLS boundary.");
