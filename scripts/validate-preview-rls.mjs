@@ -78,6 +78,27 @@ const withScopedClient = async (scope, callback) => {
 };
 
 const ownerPool = new Pool({ connectionString: ownerDatabaseUrl });
+const fixtureSuffix = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+const tenantA = {
+  tenant_id: `tenant_rls_a_${fixtureSuffix}`,
+  restaurant_id: `restaurant_rls_a_${fixtureSuffix}`,
+  restaurant_key: `rls-a-${fixtureSuffix}`,
+  identity_id: `identity_rls_a_${fixtureSuffix}`,
+  membership_id: `membership_rls_a_${fixtureSuffix}`,
+  admin_user_id: `admin_rls_a_${fixtureSuffix}`,
+  login: `rls-a-${fixtureSuffix}@preview.invalid`,
+};
+const tenantB = {
+  tenant_id: `tenant_rls_b_${fixtureSuffix}`,
+  restaurant_id: `restaurant_rls_b_${fixtureSuffix}`,
+  restaurant_key: `rls-b-${fixtureSuffix}`,
+  identity_id: `identity_rls_b_${fixtureSuffix}`,
+  membership_id: `membership_rls_b_${fixtureSuffix}`,
+  admin_user_id: `admin_rls_b_${fixtureSuffix}`,
+  login: `rls-b-${fixtureSuffix}@preview.invalid`,
+};
+const systemIdentityId = `identity_rls_system_${fixtureSuffix}`;
+const systemPrincipalId = `principal_rls_system_${fixtureSuffix}`;
 
 try {
   const roleResult = await ownerPool.query(`
@@ -90,68 +111,84 @@ try {
     throw new Error("Runtime role bypasses the intended RLS boundary.");
   }
 
-  const scopesResult = await ownerPool.query(`
-    SELECT DISTINCT tenant_id, restaurant_id, restaurant_key
-    FROM admin_users
-    WHERE tenant_id <> ''
-      AND restaurant_id <> ''
-      AND restaurant_key <> ''
-    ORDER BY tenant_id, restaurant_id
-    LIMIT 2
-  `);
-  if (!scopesResult.rows.length) {
-    throw new Error("No Restaurant scope is available for the RLS test.");
+  const fixtureClient = await ownerPool.connect();
+  try {
+    await fixtureClient.query("BEGIN");
+    await fixtureClient.query(
+      `
+        INSERT INTO identities (id, email, login, display_name, credential_status)
+        VALUES ($1, $2, $2, 'RLS System Fixture', 'ACTIVE')
+      `,
+      [systemIdentityId, `rls-system-${fixtureSuffix}@preview.invalid`]
+    );
+    await fixtureClient.query(
+      `
+        INSERT INTO system_principals (
+          id, identity_id, system_role, status, created_by
+        )
+        VALUES ($1, $2, 'PLATFORM_OWNER', 'ACTIVE', 'rls_validation')
+      `,
+      [systemPrincipalId, systemIdentityId]
+    );
+    for (const tenant of [tenantA, tenantB]) {
+      await fixtureClient.query(
+        `
+          INSERT INTO identities (
+            id, email, login, display_name, credential_status
+          )
+          VALUES ($1, $2, $2, 'RLS Tenant Fixture', 'ACTIVE')
+        `,
+        [tenant.identity_id, tenant.login]
+      );
+      await fixtureClient.query(
+        `
+          INSERT INTO restaurant_memberships (
+            id, identity_id, tenant_id, restaurant_id, restaurant_key,
+            restaurant_role, status, invited_by
+          )
+          VALUES ($1, $2, $3, $4, $5, 'OWNER', 'ACTIVE', 'rls_validation')
+        `,
+        [
+          tenant.membership_id,
+          tenant.identity_id,
+          tenant.tenant_id,
+          tenant.restaurant_id,
+          tenant.restaurant_key,
+        ]
+      );
+      await fixtureClient.query(
+        `
+          INSERT INTO admin_users (
+            id, tenant_id, restaurant_id, restaurant_key, name, login, email,
+            password_hash, status, user_type, credential_mode,
+            must_change_password, source, profile_version
+          )
+          VALUES (
+            $1, $2, $3, $4, 'RLS Tenant Fixture', $5, $5,
+            'disabled-test-hash', 'ACTIVE', 'OWNER', 'TEMPORARY_PASSWORD',
+            TRUE, 'managed', '2026.07.31'
+          )
+        `,
+        [
+          tenant.admin_user_id,
+          tenant.tenant_id,
+          tenant.restaurant_id,
+          tenant.restaurant_key,
+          tenant.login,
+        ]
+      );
+    }
+    await fixtureClient.query("COMMIT");
+  } catch (error) {
+    await fixtureClient.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    fixtureClient.release();
   }
-  const tenantA = scopesResult.rows[0];
-  const tenantB =
-    scopesResult.rows[1] || {
-      tenant_id: "tenant_rls_unreachable",
-      restaurant_id: "restaurant_rls_unreachable",
-      restaurant_key: "rls-unreachable",
-    };
-  const tenantIdentityResult = await ownerPool.query(
-    `
-      SELECT id, identity_id
-      FROM restaurant_memberships
-      WHERE tenant_id = $1
-        AND restaurant_id = $2
-      ORDER BY created_at
-      LIMIT 1
-    `,
-    [tenantA.tenant_id, tenantA.restaurant_id]
-  );
-  const tenantMembershipId = tenantIdentityResult.rows[0]?.id || "";
-  const tenantIdentityId = tenantIdentityResult.rows[0]?.identity_id || "";
-  const tenantAdminUserResult = await ownerPool.query(
-    `
-      SELECT id, login
-      FROM admin_users
-      WHERE tenant_id = $1
-        AND restaurant_id = $2
-      ORDER BY created_at
-      LIMIT 1
-    `,
-    [tenantA.tenant_id, tenantA.restaurant_id]
-  );
-  const tenantAdminUserId = tenantAdminUserResult.rows[0]?.id || "";
-  const tenantAdminUserLogin =
-    tenantAdminUserResult.rows[0]?.login || "";
-  const systemIdentityResult = await ownerPool.query(`
-    SELECT identity_id
-    FROM system_principals
-    ORDER BY created_at
-    LIMIT 1
-  `);
-  const systemIdentityId = systemIdentityResult.rows[0]?.identity_id || "";
-  if (
-    !tenantMembershipId ||
-    !tenantIdentityId ||
-    !tenantAdminUserId ||
-    !tenantAdminUserLogin ||
-    !systemIdentityId
-  ) {
-    throw new Error("Identity scopes are unavailable for the RLS test.");
-  }
+  const tenantMembershipId = tenantA.membership_id;
+  const tenantIdentityId = tenantA.identity_id;
+  const tenantAdminUserId = tenantA.admin_user_id;
+  const tenantAdminUserLogin = tenantA.login;
 
   const noContext = await queryWithScope(
     { audience: "none" },
@@ -482,7 +519,7 @@ try {
       validated: failed.length === 0,
       branchId,
       assertions,
-      testedDistinctTenantScopes: scopesResult.rows.length,
+      testedDistinctTenantScopes: 2,
     })
   );
 
@@ -490,5 +527,31 @@ try {
     throw new Error(`RLS assertions failed: ${failed.join(", ")}`);
   }
 } finally {
+  const cleanupClient = await ownerPool.connect();
+  try {
+    await cleanupClient.query("BEGIN");
+    await cleanupClient.query(
+      "DELETE FROM admin_users WHERE id = ANY($1::text[])",
+      [[tenantA.admin_user_id, tenantB.admin_user_id]]
+    );
+    await cleanupClient.query(
+      "DELETE FROM system_principals WHERE id = $1",
+      [systemPrincipalId]
+    );
+    await cleanupClient.query(
+      "DELETE FROM restaurant_memberships WHERE id = ANY($1::text[])",
+      [[tenantA.membership_id, tenantB.membership_id]]
+    );
+    await cleanupClient.query(
+      "DELETE FROM identities WHERE id = ANY($1::text[])",
+      [[systemIdentityId, tenantA.identity_id, tenantB.identity_id]]
+    );
+    await cleanupClient.query("COMMIT");
+  } catch (error) {
+    await cleanupClient.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    cleanupClient.release();
+  }
   await ownerPool.end();
 }
