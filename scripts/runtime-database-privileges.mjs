@@ -28,9 +28,9 @@ export const runtimeTablePrivileges = Object.freeze({
   public_restaurant_routes: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   restaurant_memberships: ["SELECT", "INSERT", "UPDATE"],
   restaurant_settings: ["SELECT", "INSERT", "UPDATE"],
-  system_principals: ["INSERT", "UPDATE"],
+  system_principals: ["SELECT", "INSERT", "UPDATE"],
   system_support_sessions: ["SELECT", "INSERT", "UPDATE"],
-  tenant_health_scores: ["INSERT", "UPDATE"],
+  tenant_health_scores: ["SELECT", "INSERT", "UPDATE"],
   user_audit_events: ["INSERT"],
 });
 
@@ -40,4 +40,3 @@ export const runtimeFunctionPrivileges = Object.freeze({});
 export const runtimeReferencedTables = Object.freeze(
   Object.keys(runtimeTablePrivileges).sort()
 );
-

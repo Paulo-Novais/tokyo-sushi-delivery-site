@@ -50,9 +50,9 @@ conexoes, `search_path=pg_catalog,public`, nenhum ownership e nenhum membership.
 | `public_restaurant_routes` | SELECT, INSERT, UPDATE, DELETE | Projecao publica sincronizada de restaurantes. |
 | `restaurant_memberships` | SELECT, INSERT, UPDATE | Provisionamento e dependencia das policies de identidade. |
 | `restaurant_settings` | SELECT, INSERT, UPDATE | Leitura e upsert das configuracoes do restaurante. |
-| `system_principals` | INSERT, UPDATE | Provisionamento e upsert de principals SYSTEM. |
+| `system_principals` | SELECT, INSERT, UPDATE | Provisionamento; o upsert exige SELECT para conflito/RLS. |
 | `system_support_sessions` | SELECT, INSERT, UPDATE | Inicio, validacao e revogacao de suporte explicito. |
-| `tenant_health_scores` | INSERT, UPDATE | Upsert de saude por restaurante. |
+| `tenant_health_scores` | SELECT, INSERT, UPDATE | Upsert de saude; SELECT e exigido na resolucao de conflito. |
 | `user_audit_events` | INSERT | Registro imutavel de auditoria de usuarios. |
 
 As tabelas `integration_health`, `invitations`, `password_reset_tokens`,
