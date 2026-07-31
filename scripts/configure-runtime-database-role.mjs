@@ -57,7 +57,6 @@ assert(
   /^[a-z_][a-z0-9_]{2,62}$/.test(runtimeRole),
   "Runtime role name is invalid."
 );
-assert(runtimePassword.length >= 48, "Runtime password must have 48+ characters.");
 assert(
   confirmation === `${targetEnvironment}:${expectedBranchId}:${runtimeRole}`,
   "Runtime-role confirmation was rejected."
@@ -138,6 +137,10 @@ try {
     [runtimeRole]
   );
   if (!roleResult.rowCount) {
+    assert(
+      runtimePassword.length >= 48,
+      "A new runtime role requires a password with 48+ characters."
+    );
     await client.query(`
       CREATE ROLE ${quoteIdentifier(runtimeRole)}
       WITH
@@ -161,13 +164,19 @@ try {
         !existingRole.rolbypassrls,
       "Existing runtime role has prohibited attributes."
     );
+    if (runtimePassword) {
+      assert(
+        runtimePassword.length >= 48,
+        "Runtime password must have 48+ characters when rotation is requested."
+      );
+    }
     await client.query(`
       ALTER ROLE ${quoteIdentifier(runtimeRole)}
       WITH
         LOGIN
         NOINHERIT
         CONNECTION LIMIT 50
-        PASSWORD ${quoteLiteral(runtimePassword)}
+        ${runtimePassword ? `PASSWORD ${quoteLiteral(runtimePassword)}` : ""}
     `);
   }
   await client.query(
