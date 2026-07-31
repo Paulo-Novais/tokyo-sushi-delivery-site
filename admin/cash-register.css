@@ -1915,6 +1915,42 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
     padding: 7px;
   }
 
+  body.admin-body[data-admin-section="cash-register"] .admin-nav {
+    display: flex !important;
+    flex-wrap: nowrap;
+    gap: 6px !important;
+  }
+
+  body.admin-body[data-admin-section="cash-register"] .admin-nav-item {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    justify-content: center;
+    width: auto !important;
+    min-width: 94px !important;
+    max-width: 132px;
+    padding: 8px 10px !important;
+  }
+
+  body.admin-body[data-admin-section="cash-register"] .admin-nav-icon {
+    display: none;
+  }
+
+  body.admin-body[data-admin-section="cash-register"] .admin-nav-item > div {
+    min-width: 0;
+  }
+
+  body.admin-body[data-admin-section="cash-register"] .admin-nav-item strong {
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.admin-body[data-admin-section="cash-register"] .admin-nav-submenu {
+    flex: 0 0 auto !important;
+    min-width: max-content;
+  }
+
   .cash-header {
     padding: 12px;
   }
