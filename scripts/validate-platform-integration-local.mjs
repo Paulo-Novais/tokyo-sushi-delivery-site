@@ -342,11 +342,11 @@ const login = async (adminApi, profile, next = "/admin/") => {
   };
 };
 
-const createManagedUser = async (adminApi, masterCookie, user) => {
+const createManagedUser = async (adminApi, sessionCookie, user) => {
   const response = await runAdminApi(adminApi, {
     method: "POST",
     url: "http://localhost:3000/api/admin/users/save",
-    cookie: masterCookie,
+    cookie: sessionCookie,
     body: {
       user,
     },
@@ -404,24 +404,8 @@ const validateApiMatrix = async (adminApi) => {
   assert.equal(oldMasterLogin.statusCode, 401, "login Master antigo nao deve autenticar.");
   assert.equal(oldMasterLogin.payload?.errorCode, "invalid_credentials");
 
-  await createManagedUser(adminApi, masterCookie, {
-    name: "Owner Local",
-    login: PROFILE_FIXTURES.owner.login,
-    email: "owner.local@teste.local",
-    phone: "5511999911111",
-    password: PROFILE_FIXTURES.owner.password,
-    status: "ACTIVE",
-    userType: "OWNER",
-  });
-  await createManagedUser(adminApi, masterCookie, {
-    name: "Desenvolvedor Local",
-    login: PROFILE_FIXTURES.developer.login,
-    email: "dev.local@teste.local",
-    password: PROFILE_FIXTURES.developer.password,
-    status: "ACTIVE",
-    userType: "DESENVOLVEDOR",
-  });
-  await createManagedUser(adminApi, masterCookie, {
+  const ownerLogin = await login(adminApi, PROFILE_FIXTURES.owner);
+  await createManagedUser(adminApi, ownerLogin.cookie, {
     name: "Custom Local",
     login: PROFILE_FIXTURES.custom.login,
     email: "custom.local@teste.local",
@@ -433,7 +417,6 @@ const validateApiMatrix = async (adminApi) => {
     },
   });
 
-  const ownerLogin = await login(adminApi, PROFILE_FIXTURES.owner);
   const developerLogin = await login(adminApi, PROFILE_FIXTURES.developer);
   const customLogin = await login(adminApi, PROFILE_FIXTURES.custom);
 
@@ -446,8 +429,8 @@ const validateApiMatrix = async (adminApi) => {
   await expectApiStatus(
     adminApi,
     { url: "http://localhost:3000/api/admin/orders/list?limit=1", cookie: masterCookie },
-    200,
-    "MASTER deve acessar Gestor."
+    403,
+    "MASTER nao deve acessar operacoes do Gestor sem suporte."
   );
   const masterPanel = await expectApiStatus(
     adminApi,
@@ -481,21 +464,21 @@ const validateApiMatrix = async (adminApi) => {
   await expectApiStatus(
     adminApi,
     { url: "http://localhost:3000/api/admin/master/overview", cookie: ownerLogin.cookie },
-    403,
+    401,
     "OWNER nao deve acessar API Master."
   );
 
   await expectApiStatus(
     adminApi,
     { url: "http://localhost:3000/api/admin/orders/list?limit=1", cookie: developerLogin.cookie },
-    200,
-    "DESENVOLVEDOR deve acessar Gestor."
+    403,
+    "DESENVOLVEDOR nao deve acessar operacoes do Gestor sem suporte."
   );
   await expectApiStatus(
     adminApi,
     { url: "http://localhost:3000/api/admin/audit", cookie: developerLogin.cookie },
-    200,
-    "DESENVOLVEDOR deve acessar logs/diagnostico permitido."
+    403,
+    "DESENVOLVEDOR nao deve acessar auditoria operacional sem suporte."
   );
   await expectApiStatus(
     adminApi,
@@ -537,11 +520,15 @@ const validateApiMatrix = async (adminApi) => {
   const customMaster = await expectApiStatus(
     adminApi,
     { url: "http://localhost:3000/api/admin/master/overview", cookie: customLogin.cookie },
-    403,
+    401,
     "CUSTOM nao deve acessar API Master."
   );
   assert.ok(
-    ["master_access_required", "platform_panel_access_required"].includes(customMaster.payload?.errorCode),
+    [
+      "master_access_required",
+      "platform_panel_access_required",
+      "system_session_required",
+    ].includes(customMaster.payload?.errorCode),
     "CUSTOM deve continuar bloqueado no painel/API da plataforma."
   );
 
@@ -639,73 +626,6 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
       assert.equal(response.status, 200, `Rota publica deve continuar acessivel: ${publicRoute}`);
     }
 
-    await validateMasterHtmlServerAccess(baseURL, authCookies);
-
-    const masterContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
-    const masterPage = await masterContext.newPage();
-    masterPage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`master:${message.text()}`);
-      }
-    });
-    masterPage.on("pageerror", (error) => pageErrors.push(`master:${String(error?.message || error)}`));
-
-    await loginBrowser(masterPage, baseURL, PROFILE_FIXTURES.master, "/admin/master.html");
-    await waitForCondition(
-      async () => (await masterPage.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "master",
-      "MASTER deveria abrir /admin/master.html."
-    );
-    await waitForCondition(
-      async () => (await masterPage.locator("[data-master-section-button]").count()) >= 10,
-      "Menu Master deveria renderizar modulos da plataforma."
-    );
-    const masterNavText = await getText(masterPage, "[data-master-nav]");
-
-    ["Dashboard Geral", "Restaurantes", "Planos", "Recursos", "Dominios", "Assinaturas", "Desenvolvedor"].forEach(
-      (label) => assert.ok(masterNavText.includes(label), `Menu Master deveria conter ${label}.`)
-    );
-    ["Pedidos", "Cardapio", "Financeiro", "Estoque"].forEach((label) =>
-      assert.equal(masterNavText.includes(label), false, `Menu Master nao deveria conter item do Gestor: ${label}.`)
-    );
-    await masterContext.close();
-
-    const systemContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
-    const systemPage = await systemContext.newPage();
-    systemPage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`system:${message.text()}`);
-      }
-    });
-    systemPage.on("pageerror", (error) => pageErrors.push(`system:${String(error?.message || error)}`));
-
-    await loginBrowser(systemPage, baseURL, PROFILE_FIXTURES.master, "/admin/");
-    await waitForCondition(
-      async () => (await systemPage.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "dashboard",
-      "MASTER deveria abrir Gestor administrativo."
-    );
-    await validateRestaurantMenu(systemPage, {
-      minItems: 10,
-      includes: [
-        "Usuarios",
-        "Pedidos",
-        "Agendados",
-        "Cardapio",
-        "Entregas",
-        "Clientes",
-        "Promocoes",
-        "Metricas",
-        "Relatorios",
-        "Financeiro",
-        "Avaliacoes",
-        "Configuracoes",
-      ],
-      excludes: ["Dashboard", "Estoque", "Tokyo Sushi Delivery"],
-    });
-    assert.equal(await getText(systemPage, "[data-admin-main-title]"), "INOVAS Food");
-    assert.equal(await getText(systemPage, "[data-admin-welcome]"), "Administrador do Sistema");
-    assert.equal((await getText(systemPage, "[data-admin-main-topbar]")).includes("Tokyo Sushi Delivery"), false, "Header MASTER nao deve depender de restaurante.");
-    await systemContext.close();
-
     const ownerContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const ownerPage = await ownerContext.newPage();
     ownerPage.on("console", (message) => {
@@ -736,11 +656,11 @@ const validateBrowserLayering = async (adminApi, authContext, authCookies) => {
         "Financeiro",
         "Avaliacoes",
         "Configuracoes",
+        "Usuarios",
       ],
       excludes: ["Painel Master", "Restaurantes", "Planos", "Recursos", "Dominios", "Assinaturas", "Relatorios Gerais", "Desenvolvedor"],
     });
     assert.equal(await getText(ownerPage, "[data-admin-main-chip]"), "Tokyo Sushi Delivery");
-    assert.equal((await getText(ownerPage, "[data-admin-nav]")).includes("Usuarios"), false, "Menu de restaurante nao deve conter Usuarios.");
     await ownerContext.close();
 
     const customContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
@@ -830,6 +750,32 @@ const run = async () => {
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(PROFILE_FIXTURES.master.password);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-platform-integration";
+    process.env.ADMIN_USERS = JSON.stringify([
+      {
+        login: PROFILE_FIXTURES.master.login,
+        displayName: "Master INOVAS Food",
+        passwordHash: adminAuth.createPasswordHash(PROFILE_FIXTURES.master.password),
+        userType: "MASTER",
+        platformScope: true,
+      },
+      {
+        login: PROFILE_FIXTURES.developer.login,
+        displayName: "Desenvolvedor Local",
+        passwordHash: adminAuth.createPasswordHash(PROFILE_FIXTURES.developer.password),
+        userType: "DESENVOLVEDOR",
+        platformScope: true,
+      },
+      {
+        login: PROFILE_FIXTURES.owner.login,
+        displayName: "Owner Local",
+        email: "owner.local@teste.local",
+        passwordHash: adminAuth.createPasswordHash(PROFILE_FIXTURES.owner.password),
+        userType: "OWNER",
+        restaurantKey: "default",
+        tenantId: "tenant_default",
+        restaurantId: "restaurant_default",
+      },
+    ]);
 
     await validateStaticContracts(adminAuth);
 

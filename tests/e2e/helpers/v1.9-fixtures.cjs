@@ -73,6 +73,34 @@ const createApiContext = async ({ host, cookie, ip, origin } = {}) => {
   });
 };
 
+const createTenantBrowserContext = async (
+  browser,
+  { host, extraHTTPHeaders: requestedHeaders = {}, ...options } = {}
+) => {
+  const extraHTTPHeaders = { ...requestedHeaders };
+
+  if (host && !isVercelPreview) {
+    extraHTTPHeaders["x-forwarded-host"] = host;
+  }
+
+  const context = await browser.newContext({
+    ...options,
+    ...(Object.keys(extraHTTPHeaders).length ? { extraHTTPHeaders } : {}),
+  });
+
+  if (host && isVercelPreview) {
+    await context.addCookies([
+      {
+        name: "inovas_restaurant_slug",
+        value: host.replace(/\.localhost$/, ""),
+        url: baseURL,
+      },
+    ]);
+  }
+
+  return context;
+};
+
 const extractCookieHeader = (response) =>
   response
     .headersArray()
@@ -296,6 +324,7 @@ module.exports = {
   createAdminUser,
   createApiContext,
   createPublicOrder,
+  createTenantBrowserContext,
   expectNoHorizontalOverflow,
   hostForKey,
   isVercelPreview,

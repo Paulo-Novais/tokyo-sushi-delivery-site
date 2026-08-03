@@ -369,7 +369,7 @@ const runValidation = async () => {
     const allowed = await guardSecurity(
       buildReq({
         url: "/api/admin/dashboard",
-        headers: { cookie: masterCookie },
+        headers: { cookie: customCookie },
         tenantContext: defaultTenant,
       }),
       {

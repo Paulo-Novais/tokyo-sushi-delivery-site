@@ -80,6 +80,24 @@ const run = async () => {
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-de-permissoes";
+    process.env.ADMIN_USERS = JSON.stringify([
+      {
+        login: "usermaster@inovas.com",
+        displayName: "Master INOVAS Food",
+        passwordHash: adminAuth.createPasswordHash("novais753951"),
+        userType: "MASTER",
+        platformScope: true,
+      },
+      {
+        login: "owner@default.local",
+        displayName: "Owner Default",
+        passwordHash: adminAuth.createPasswordHash("senha-owner-default"),
+        userType: "OWNER",
+        restaurantKey: "default",
+        tenantId: "tenant_default",
+        restaurantId: "restaurant_default",
+      },
+    ]);
 
     await fs.writeFile(
       path.join(tempRoot, ".data", "admin-users.json"),
@@ -137,8 +155,8 @@ const run = async () => {
     assert.equal(masterLogin.payload?.admin?.tipo_usuario, "MASTER", "novo usuario Master deve ser MASTER");
     assert.equal(
       masterLogin.payload?.admin?.permissions?.users_view,
-      true,
-      "MASTER deve receber users_view"
+      false,
+      "MASTER nao deve receber permissao operacional de usuarios"
     );
 
     const masterCookie = extractCookieHeader(masterLogin);
@@ -158,14 +176,37 @@ const run = async () => {
       cookie: masterCookie,
     });
 
-    assert.equal(usersBefore.statusCode, 200, "MASTER deve listar usuarios");
-    assert.equal(usersBefore.payload?.restaurantKey, "default", "usuarios devem manter restaurant_key default");
+    assert.equal(usersBefore.statusCode, 403, "MASTER nao deve usar a rota operacional de usuarios");
+    assert.equal(usersBefore.payload?.errorCode, "system_session_not_tenant_session");
+
+    const ownerLogin = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "http://localhost:3000/api/admin/login",
+      body: {
+        identifier: "owner@default.local",
+        password: "senha-owner-default",
+        next: "/admin/",
+      },
+    });
+    assert.equal(ownerLogin.statusCode, 200, "OWNER default deve autenticar");
+    const ownerCookie = extractCookieHeader(ownerLogin);
+    assert.ok(ownerCookie, "login OWNER deve emitir cookie de sessao");
+
+    const restaurantUsersBefore = await runAdminApi(adminApi, {
+      url: "http://localhost:3000/api/admin/users/list",
+      cookie: ownerCookie,
+    });
+
+    assert.equal(restaurantUsersBefore.statusCode, 200, "OWNER deve listar usuarios do restaurante");
+    assert.equal(restaurantUsersBefore.payload?.restaurantKey, "default", "usuarios devem manter restaurant_key default");
     assert.ok(
-      usersBefore.payload?.users?.some((user) => user.login === "usermaster@inovas.com" && user.tipo_usuario === "MASTER"),
-      "usuario Master padrao deve aparecer materializado como MASTER"
+      restaurantUsersBefore.payload?.users?.some(
+        (user) => user.login === "owner@default.local" && user.tipo_usuario === "OWNER"
+      ),
+      "OWNER default deve aparecer na equipe do restaurante"
     );
     assert.equal(
-      usersBefore.payload?.users?.some((user) => user.login === "master.local"),
+      restaurantUsersBefore.payload?.users?.some((user) => user.login === "master.local"),
       false,
       "usuario Master antigo materializado deve ser removido da base legada"
     );
@@ -177,7 +218,7 @@ const run = async () => {
     const customSave = await runAdminApi(adminApi, {
       method: "POST",
       url: "http://localhost:3000/api/admin/users/save",
-      cookie: masterCookie,
+      cookie: ownerCookie,
       body: {
         user: {
           name: "Operador Local",
@@ -252,14 +293,14 @@ const run = async () => {
     const blockCustom = await runAdminApi(adminApi, {
       method: "POST",
       url: "http://localhost:3000/api/admin/users/status",
-      cookie: masterCookie,
+      cookie: ownerCookie,
       body: {
         login: "operador.local",
         status: "BLOCKED",
       },
     });
 
-    assert.equal(blockCustom.statusCode, 200, "MASTER deve bloquear usuario sem excluir fisicamente");
+    assert.equal(blockCustom.statusCode, 200, "OWNER deve bloquear usuario sem excluir fisicamente");
     assert.equal(blockCustom.payload?.user?.status, "BLOCKED", "status bloqueado deve ser persistido");
 
     const blockedLogin = await runAdminApi(adminApi, {

@@ -87,10 +87,10 @@ const RESPONSIVE_SCREENSHOTS = Object.freeze([
   { area: "gestor", name: "pedidos-light-mobile", path: "/admin/", section: "orders", surface: "admin", profile: "owner", theme: "light", width: 390, height: 844 },
   { area: "gestor", name: "pedidos-dark-desktop", path: "/admin/", section: "orders", surface: "admin", profile: "owner", theme: "dark", width: 1440, height: 900 },
   { area: "gestor", name: "pedidos-dark-mobile", path: "/admin/", section: "orders", surface: "admin", profile: "owner", theme: "dark", width: 390, height: 844 },
-  { area: "gestor", name: "usuarios-light-desktop", path: "/admin/", section: "users", surface: "admin", profile: "master", theme: "light", width: 1440, height: 900 },
-  { area: "gestor", name: "usuarios-light-mobile", path: "/admin/", section: "users", surface: "admin", profile: "master", theme: "light", width: 390, height: 844 },
-  { area: "gestor", name: "usuarios-dark-desktop", path: "/admin/", section: "users", surface: "admin", profile: "master", theme: "dark", width: 1440, height: 900 },
-  { area: "gestor", name: "usuarios-dark-mobile", path: "/admin/", section: "users", surface: "admin", profile: "master", theme: "dark", width: 390, height: 844 },
+  { area: "gestor", name: "usuarios-light-desktop", path: "/admin/", section: "users", surface: "admin", profile: "owner", theme: "light", width: 1440, height: 900 },
+  { area: "gestor", name: "usuarios-light-mobile", path: "/admin/", section: "users", surface: "admin", profile: "owner", theme: "light", width: 390, height: 844 },
+  { area: "gestor", name: "usuarios-dark-desktop", path: "/admin/", section: "users", surface: "admin", profile: "owner", theme: "dark", width: 1440, height: 900 },
+  { area: "gestor", name: "usuarios-dark-mobile", path: "/admin/", section: "users", surface: "admin", profile: "owner", theme: "dark", width: 390, height: 844 },
   { area: "gestor", name: "configuracoes-desktop", path: "/admin/", section: "settings", surface: "admin", profile: "owner", theme: "light", width: 1440, height: 900 },
   { area: "gestor", name: "configuracoes-mobile", path: "/admin/", section: "settings", surface: "admin", profile: "owner", theme: "light", width: 390, height: 844 },
 ]);
@@ -408,13 +408,13 @@ const loginApi = async (adminApi, profile, next = "/admin/", ip = "127.0.18.1") 
   return { response, cookie };
 };
 
-const createManagedUser = async (adminApi, masterCookie, profile) => {
+const createManagedUser = async (adminApi, sessionCookie, profile) => {
   const restaurantUserTypes = new Set(["OWNER", "GERENTE", "CAIXA", "COZINHA", "ESTOQUE", "ENTREGADOR"]);
   const phoneSuffix = String(Math.abs(profile.login.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0))).slice(0, 4).padStart(4, "0");
   const response = await runAdminApi(adminApi, {
     method: "POST",
     url: "http://localhost:3000/api/admin/users/save",
-    cookie: masterCookie,
+    cookie: sessionCookie,
     body: {
       user: {
         login: profile.login,
@@ -436,16 +436,21 @@ const createManagedUser = async (adminApi, masterCookie, profile) => {
 const seedUsersAndSessions = async (adminApi) => {
   const sessions = {};
   const master = await loginApi(adminApi, PROFILE_FIXTURES.master, "/admin/master.html", "127.0.18.1");
+  const owner = await loginApi(adminApi, PROFILE_FIXTURES.owner, "/admin/", "127.0.18.2");
+  const systemUserTypes = new Set(["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]);
 
   sessions.master = master.cookie;
+  sessions.owner = owner.cookie;
 
-  let profileIndex = 2;
+  let profileIndex = 3;
   for (const [key, profile] of Object.entries(PROFILE_FIXTURES)) {
-    if (key === "master") {
+    if (["master", "owner"].includes(key)) {
       continue;
     }
 
-    await createManagedUser(adminApi, master.cookie, profile);
+    if (!systemUserTypes.has(profile.userType)) {
+      await createManagedUser(adminApi, owner.cookie, profile);
+    }
     sessions[key] = (await loginApi(adminApi, profile, "/admin/", `127.0.18.${profileIndex}`)).cookie;
     profileIndex += 1;
   }
@@ -933,6 +938,34 @@ const run = async () => {
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(PROFILE_FIXTURES.master.password);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-responsive-platform";
+    const configuredProfileKeys = [
+      "master",
+      "owner",
+      "socio",
+      "desenvolvedor",
+      "suporte",
+      "vendedor",
+    ];
+    process.env.ADMIN_USERS = JSON.stringify(
+      configuredProfileKeys.map((key) => {
+        const profile = PROFILE_FIXTURES[key];
+        const restaurantUser = key === "owner";
+        return {
+          login: profile.login,
+          displayName: `${profile.userType} Responsive`,
+          passwordHash: adminAuth.createPasswordHash(profile.password),
+          userType: profile.userType,
+          platformScope: !restaurantUser,
+          ...(restaurantUser
+            ? {
+                restaurantKey: "default",
+                tenantId: "tenant_default",
+                restaurantId: "restaurant_default",
+              }
+            : {}),
+        };
+      })
+    );
 
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
     const sessions = await seedUsersAndSessions(adminApi);

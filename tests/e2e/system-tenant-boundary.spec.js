@@ -1,6 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const {
   createApiContext,
+  createTenantBrowserContext,
   expectNoHorizontalOverflow,
   loginAdmin,
   loginMaster,
@@ -581,7 +582,8 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       key: uniqueKey("users-ui"),
       ownerPassword: "OwnerUsersUi123!",
     });
-    const restaurantContext = await browser.newContext({
+    const restaurantContext = await createTenantBrowserContext(browser, {
+      host: restaurant.host,
       viewport: { width: 1440, height: 960 },
     });
     const restaurantPage = await restaurantContext.newPage();

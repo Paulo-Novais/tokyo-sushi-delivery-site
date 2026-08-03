@@ -170,7 +170,24 @@ const runValidation = async () => {
     process.env.ADMIN_DISPLAY_NAME = "Master V1";
     process.env.ADMIN_SESSION_SECRET = "v1-release-local-secret";
     delete process.env.ADMIN_PASSWORD_HASH;
-    delete process.env.ADMIN_USERS;
+    process.env.ADMIN_USERS = JSON.stringify([
+      {
+        login: "master@v1.local",
+        displayName: "Master V1",
+        password: "SenhaMasterV1",
+        userType: "MASTER",
+        platformScope: true,
+      },
+      {
+        login: "owner@default.local",
+        displayName: "Owner Default V1",
+        password: "SenhaOwnerDefaultV1",
+        userType: "OWNER",
+        restaurantKey: "default",
+        tenantId: "tenant_default",
+        restaurantId: "restaurant_default",
+      },
+    ]);
     delete process.env.DATABASE_URL;
     delete process.env.POSTGRES_URL;
 
@@ -278,6 +295,23 @@ const runValidation = async () => {
     });
     assert.equal(wrongTenantLogin.statusCode, 403, "admin de restaurante nao deve logar no tenant default.");
 
+    const defaultOwnerLogin = await runJsonApi(adminApi, {
+      method: "POST",
+      url: "http://localhost:3000/api/admin/login",
+      host: "localhost:3000",
+      body: {
+        identifier: "owner@default.local",
+        password: "SenhaOwnerDefaultV1",
+      },
+    });
+    assert.equal(
+      defaultOwnerLogin.statusCode,
+      200,
+      "OWNER default deve autenticar no tenant default."
+    );
+    const defaultOwnerCookie = extractCookieHeader(defaultOwnerLogin);
+    assert.ok(defaultOwnerCookie, "login OWNER default deve emitir cookie.");
+
     const createdOrder = await runJsonApi(orderCreateApi, {
       method: "POST",
       url: "http://pizzaria-v1.localhost/api/orders/create",
@@ -302,7 +336,7 @@ const runValidation = async () => {
     const defaultOrders = await runJsonApi(adminApi, {
       url: "http://localhost:3000/api/admin/orders/list?limit=50",
       host: "localhost:3000",
-      cookie: masterCookie,
+      cookie: defaultOwnerCookie,
     });
     assert.equal(defaultOrders.statusCode, 200, "Tokyo/default deve continuar listando pedidos.");
     assert.equal(

@@ -1,5 +1,6 @@
 const { test, expect } = require("@playwright/test");
 const {
+  createTenantBrowserContext,
   expectNoHorizontalOverflow,
   loginMaster,
   loginTenantOwner,
@@ -58,7 +59,8 @@ test.describe("Criação profissional de usuário", () => {
       key: uniqueKey("user-create-ui"),
       ownerPassword: "OwnerCreateUi123!",
     });
-    const context = await browser.newContext({
+    const context = await createTenantBrowserContext(browser, {
+      host: restaurant.host,
       viewport: { width: 1440, height: 960 },
     });
     const page = await context.newPage();

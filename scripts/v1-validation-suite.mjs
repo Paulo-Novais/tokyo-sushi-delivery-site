@@ -305,12 +305,13 @@ const updateSubscription = async (adminApi, masterCookie, body, ip = "127.0.3.1"
   return response.payload;
 };
 
-const createAdminUser = async (adminApi, masterCookie, user, ip = "127.0.4.1") => {
+const createAdminUser = async (adminApi, sessionCookie, user, ip = "127.0.4.1") => {
+  const host = user.restaurantKey ? `${user.restaurantKey}.localhost` : MASTER_HOST;
   const response = await runJsonApi(adminApi, {
     method: "POST",
-    url: `http://${MASTER_HOST}/api/admin/users/save`,
-    host: MASTER_HOST,
-    cookie: masterCookie,
+    url: `http://${host}/api/admin/users/save`,
+    host,
+    cookie: sessionCookie,
     ip,
     body: { user },
   });
@@ -436,7 +437,7 @@ export const runSecurityHardening = async () =>
     });
     assertStatus(crossTenant, 403, "Usuario do tenant A nao deve acessar tenant B");
 
-    await createAdminUser(adminApi, master.cookie, {
+    await createAdminUser(adminApi, ownerA.cookie, {
       login: "sempermissao@piloto-a.local",
       email: "sempermissao@piloto-a.local",
       name: "Sem Permissao",
@@ -762,6 +763,12 @@ export const runRbac = async () =>
       ownerLogin: "owner@rbac-b.local",
       ownerPassword: "SenhaOwnerRbacB",
     });
+    const ownerA = await loginAdmin(adminApi, {
+      host: "rbac-a.localhost",
+      identifier: "owner@rbac-a.local",
+      password: "SenhaOwnerRbacA",
+      ip: "127.0.10.20",
+    });
 
     const users = [
       ["gestor@rbac-a.local", { dashboard_view: true, orders_view: true, customers_view: true, reports_view: true }],
@@ -775,7 +782,7 @@ export const runRbac = async () =>
     ];
 
     for (const [login, permissions] of users) {
-      await createAdminUser(adminApi, master.cookie, {
+      await createAdminUser(adminApi, ownerA.cookie, {
         login,
         email: login,
         name: login.split("@")[0],
@@ -816,7 +823,7 @@ export const runRbac = async () =>
         cookie: gestor.cookie,
         ip: "127.0.10.7",
       }),
-      403,
+      401,
       "Gestor nao deve acessar plataforma"
     );
     assertStatus(
@@ -880,12 +887,6 @@ export const runRbac = async () =>
       "Usuario sem perfil/permissao nao deve acessar admin"
     );
 
-    const ownerA = await loginAdmin(adminApi, {
-      host: "rbac-a.localhost",
-      identifier: "owner@rbac-a.local",
-      password: "SenhaOwnerRbacA",
-      ip: "127.0.10.14",
-    });
     assertStatus(
       await runJsonApi(adminApi, {
         url: "http://rbac-a.localhost/api/admin/master/overview",
@@ -893,7 +894,7 @@ export const runRbac = async () =>
         cookie: ownerA.cookie,
         ip: "127.0.10.15",
       }),
-      403,
+      401,
       "Admin Restaurante nao deve virar Admin Geral"
     );
   });
@@ -1008,7 +1009,7 @@ export const runExport = async () =>
     assert.ok(serializedB.includes(orderB.publicId));
     assert.equal(serializedB.includes(orderA.publicId), false, "Exportacao B nao deve conter dados A");
 
-    await createAdminUser(adminApi, master.cookie, {
+    await createAdminUser(adminApi, ownerA.cookie, {
       login: "sem-export@export-a.local",
       email: "sem-export@export-a.local",
       name: "Sem Export",

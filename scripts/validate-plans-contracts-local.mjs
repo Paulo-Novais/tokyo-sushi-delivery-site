@@ -272,11 +272,11 @@ const login = async (adminApi, identifier, password, next = "/admin/") => {
   return { response, cookie };
 };
 
-const createUser = async (adminApi, masterCookie, user) => {
+const createUser = async (adminApi, sessionCookie, user) => {
   const response = await runAdminApi(adminApi, {
     method: "POST",
     url: "http://localhost:3000/api/admin/users/save",
-    cookie: masterCookie,
+    cookie: sessionCookie,
     body: { user },
   });
 
@@ -380,19 +380,8 @@ const validatePlanModel = async (masterStore) => {
 };
 
 const validateApiAccess = async (adminApi, tempRoot) => {
-  const masterLogin = await login(adminApi, "usermaster@inovas.com", "novais753951", "/admin/master.html");
-  const masterCookie = masterLogin.cookie;
-
-  await createUser(adminApi, masterCookie, {
-    name: "Owner Planos",
-    login: "owner.planos",
-    email: "owner.planos@teste.local",
-    phone: "5511999912121",
-    password: "senha-owner",
-    status: "ACTIVE",
-    userType: "OWNER",
-  });
-  await createUser(adminApi, masterCookie, {
+  const ownerLogin = await login(adminApi, "owner.planos", "senha-owner");
+  await createUser(adminApi, ownerLogin.cookie, {
     name: "Custom Sem Financeiro",
     login: "custom.sem.financeiro",
     email: "custom.sem.financeiro@teste.local",
@@ -404,7 +393,6 @@ const validateApiAccess = async (adminApi, tempRoot) => {
     },
   });
 
-  const ownerLogin = await login(adminApi, "owner.planos", "senha-owner");
   const customLogin = await login(adminApi, "custom.sem.financeiro", "senha-custom");
 
   const premiumFinance = await runAdminApi(adminApi, {
@@ -498,10 +486,10 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     );
     const startNavText = await getNavText(startPage);
 
-    ["Pedidos", "Cardapio"].forEach((label) => {
+    ["Pedidos", "Cardapio", "Usuarios"].forEach((label) => {
       assert.ok(startNavText.includes(label), `Menu START deveria conter ${label}.`);
     });
-    ["Usuarios", "Financeiro", "Estoque", "Clientes", "Promocoes", "Relatorios", "Avaliacoes"].forEach((label) => {
+    ["Financeiro", "Estoque", "Clientes", "Promocoes", "Relatorios", "Avaliacoes"].forEach((label) => {
       assert.equal(startNavText.includes(label), false, `Menu START nao deveria conter ${label}.`);
     });
     await startContext.close();
@@ -524,38 +512,10 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     );
     const premiumNavText = await getNavText(premiumPage);
 
-    ["Financeiro", "Estoque", "Clientes", "Promocoes"].forEach((label) => {
+    ["Financeiro", "Estoque", "Clientes", "Promocoes", "Usuarios"].forEach((label) => {
       assert.ok(premiumNavText.includes(label), `Menu PREMIUM deveria conter ${label}.`);
     });
-    assert.equal(
-      premiumNavText.includes("Usuarios"),
-      false,
-      "Menu PREMIUM de usuario de restaurante nao deveria conter Usuarios."
-    );
     await premiumContext.close();
-
-    const systemContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
-    const systemPage = await systemContext.newPage();
-    systemPage.on("console", (message) => {
-      if (message.type() === "error") {
-        consoleErrors.push(`system:${message.text()}`);
-      }
-    });
-    systemPage.on("pageerror", (error) => pageErrors.push(`system:${String(error?.message || error)}`));
-
-    await loginBrowser(systemPage, baseURL, "usermaster@inovas.com", "novais753951");
-    await waitForCondition(
-      async () => (await systemPage.locator("[data-admin-nav] [data-admin-section]").count()) >= 10,
-      "Menu MASTER deveria renderizar navegacao do sistema."
-    );
-    const systemNavText = await getNavText(systemPage);
-    assert.ok(systemNavText.includes("Usuarios"), "Menu MASTER deveria conter Usuarios.");
-    assert.equal(
-      await systemPage.locator('[data-admin-section="users"]').count(),
-      1,
-      "Menu MASTER deveria expor a secao Usuarios por seletor estavel."
-    );
-    await systemContext.close();
 
     const customContext = await browser.newContext({ baseURL, viewport: { width: 1440, height: 960 } });
     const customPage = await customContext.newPage();
@@ -611,6 +571,25 @@ const run = async () => {
     process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-planos-contratos";
+    process.env.ADMIN_USERS = JSON.stringify([
+      {
+        login: "usermaster@inovas.com",
+        displayName: "Master INOVAS Food",
+        passwordHash: adminAuth.createPasswordHash("novais753951"),
+        userType: "MASTER",
+        platformScope: true,
+      },
+      {
+        login: "owner.planos",
+        displayName: "Owner Planos",
+        email: "owner.planos@teste.local",
+        passwordHash: adminAuth.createPasswordHash("senha-owner"),
+        userType: "OWNER",
+        restaurantKey: "default",
+        tenantId: "tenant_default",
+        restaurantId: "restaurant_default",
+      },
+    ]);
 
     const masterStore = require(path.join(workspaceRoot, "lib/master-platform-store.cjs"));
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
