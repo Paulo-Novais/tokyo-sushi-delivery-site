@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const masterPlatformStore = require("../../lib/master-platform-store.cjs");
+const domainTopology = require("../../lib/domain-topology.cjs");
 const tenantResolution = require("../../lib/tenant-resolution.cjs");
 
 const originalLookup = masterPlatformStore.findPublicRestaurantRoute;
@@ -9,6 +10,9 @@ const originalEnvironment = {
   INOVAS_TENANT_MODE: process.env.INOVAS_TENANT_MODE,
   NODE_ENV: process.env.NODE_ENV,
   VERCEL: process.env.VERCEL,
+  PUBLIC_APP_URL: process.env.PUBLIC_APP_URL,
+  INOVAS_PUBLIC_APP_URL: process.env.INOVAS_PUBLIC_APP_URL,
+  INOVAS_PLATFORM_HOSTS: process.env.INOVAS_PLATFORM_HOSTS,
 };
 
 const routes = [
@@ -82,6 +86,9 @@ test.beforeEach(() => {
   process.env.NODE_ENV = "development";
   process.env.INOVAS_TENANT_MODE = "pilot";
   delete process.env.VERCEL;
+  delete process.env.PUBLIC_APP_URL;
+  delete process.env.INOVAS_PUBLIC_APP_URL;
+  delete process.env.INOVAS_PLATFORM_HOSTS;
   installRouteRepository();
 });
 
@@ -104,6 +111,81 @@ test("resolves exact domains, www aliases and registered subdomains", async () =
   assert.equal(alias.restaurantKey, "pilot-a");
   assert.equal(exact.hostKind, tenantResolution.HOST_KINDS.CUSTOM_DOMAIN);
   assert.equal(exact.cachePolicy, "request_only");
+});
+
+test("classifies the canonical platform, its alias, Preview, localhost and restaurant hosts", () => {
+  assert.equal(domainTopology.getPlatformUrl(), "https://inovasfood.com.br");
+  assert.deepEqual(
+    {
+      type: domainTopology.classifyDomainHost("inovasfood.com.br").type,
+      variant: domainTopology.classifyDomainHost("inovasfood.com.br").variant,
+    },
+    {
+      type: domainTopology.HOST_TYPES.PLATFORM,
+      variant: domainTopology.PLATFORM_HOST_VARIANTS.CANONICAL,
+    }
+  );
+  assert.equal(
+    domainTopology.classifyDomainHost("www.inovasfood.com.br").variant,
+    domainTopology.PLATFORM_HOST_VARIANTS.ALIAS
+  );
+  assert.equal(
+    domainTopology.classifyDomainHost("tenant-preview.vercel.app").type,
+    domainTopology.HOST_TYPES.PLATFORM
+  );
+  assert.equal(
+    domainTopology.classifyDomainHost("localhost:3000").type,
+    domainTopology.HOST_TYPES.PLATFORM
+  );
+  assert.equal(
+    domainTopology.classifyDomainHost("[::1]:3000").type,
+    domainTopology.HOST_TYPES.PLATFORM
+  );
+  assert.equal(
+    domainTopology.classifyDomainHost("tokyosushidelivery.com.br").type,
+    domainTopology.HOST_TYPES.RESTAURANT
+  );
+});
+
+test("does not let legacy or restaurant URL configuration redefine the canonical platform", () => {
+  process.env.PUBLIC_APP_URL = "https://www.inovasfood.com.br";
+  assert.equal(domainTopology.getPlatformUrl(), "https://inovasfood.com.br");
+
+  process.env.PUBLIC_APP_URL = "https://tokyosushidelivery.com.br";
+  assert.equal(domainTopology.getPlatformUrl(), "https://inovasfood.com.br");
+  assert.equal(
+    domainTopology.classifyDomainHost("tokyosushidelivery.com.br").type,
+    domainTopology.HOST_TYPES.RESTAURANT
+  );
+});
+
+test("keeps administrative surfaces on the platform and storefront APIs public", () => {
+  [
+    "/admin/",
+    "/admin/caixa/salao",
+    "/master/",
+    "/system/users",
+    "/api/admin/login",
+    "/api/auth/restaurant/login",
+  ].forEach((pathname) => {
+    assert.equal(domainTopology.isPlatformOnlyPath(pathname), true, pathname);
+  });
+
+  ["/", "/cardapio.html", "/api/catalog", "/api/orders/create"].forEach(
+    (pathname) => {
+      assert.equal(domainTopology.isPlatformOnlyPath(pathname), false, pathname);
+    }
+  );
+});
+
+test("builds one-way platform canonical redirects without losing path or query", () => {
+  const destination = domainTopology.buildCanonicalPlatformUrl(
+    "https://www.inovasfood.com.br/admin/?next=%2Fadmin%2Fcaixa%2Fsalao"
+  );
+
+  assert.equal(destination.origin, "https://inovasfood.com.br");
+  assert.equal(destination.pathname, "/admin/");
+  assert.equal(destination.searchParams.get("next"), "/admin/caixa/salao");
 });
 
 test("uses the original forwarded host behind Vercel and the local proxy", () => {

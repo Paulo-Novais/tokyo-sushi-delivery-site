@@ -196,11 +196,11 @@ const assertStatus = (response, statusCode, message) => {
   assert.equal(response.statusCode, statusCode, `${message}: ${JSON.stringify(response.payload)}`);
 };
 
-const loginAdmin = async (adminApi, { host = MASTER_HOST, identifier, password, ip = "127.0.1.1" }) => {
+const loginAdmin = async (adminApi, { identifier, password, ip = "127.0.1.1" }) => {
   const response = await runJsonApi(adminApi, {
     method: "POST",
-    url: `http://${host}/api/admin/login`,
-    host,
+    url: `http://${MASTER_HOST}/api/admin/login`,
+    host: MASTER_HOST,
     ip,
     body: { identifier, password },
   });

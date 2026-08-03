@@ -15,7 +15,7 @@ const {
 test.describe("Endereço INOVAS por slug", () => {
   test("centraliza URL e rejeita sintaxe inválida ou rotas reservadas", async () => {
     expect(buildRestaurantPublicUrl("tokyosushidelivery")).toBe(
-      "https://www.inovasfood.com.br/tokyosushidelivery"
+      "https://inovasfood.com.br/tokyosushidelivery"
     );
     expect(validateRestaurantSlug("restaurante-123").ok).toBe(true);
 
@@ -102,10 +102,10 @@ test.describe("Endereço INOVAS por slug", () => {
       ownerPassword: "OwnerRouteB123!",
     });
     expect(tenantA.payload.restaurant.publicUrl).toBe(
-      `https://www.inovasfood.com.br/${tenantA.key}`
+      `https://inovasfood.com.br/${tenantA.key}`
     );
     expect(tenantB.payload.tenant.publicUrl).toBe(
-      `https://www.inovasfood.com.br/${tenantB.key}`
+      `https://inovasfood.com.br/${tenantB.key}`
     );
     const ownerA = await loginTenantOwner(tenantA);
     const ownerB = await loginTenantOwner(tenantB);

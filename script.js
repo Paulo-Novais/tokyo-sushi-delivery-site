@@ -368,8 +368,8 @@ const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
     description:
       TOKYO_SITE_APPEARANCE.platformFooter?.description ||
       "Plataforma profissional para restaurantes",
-    url: TOKYO_SITE_APPEARANCE.platformFooter?.url || "https://www.inovasfood.com.br",
-    displayUrl: TOKYO_SITE_APPEARANCE.platformFooter?.displayUrl || "www.inovasfood.com.br",
+    url: TOKYO_SITE_APPEARANCE.platformFooter?.url || "https://inovasfood.com.br",
+    displayUrl: TOKYO_SITE_APPEARANCE.platformFooter?.displayUrl || "inovasfood.com.br",
   },
   whatsapp: FALLBACK_WHATSAPP_NUMBER,
   address: DELIVERY_STORE_ADDRESS,
@@ -6250,12 +6250,12 @@ const normalizePublicPlatformFooter = (source = {}, defaults = RESTAURANT_SETTIN
     ),
     url: normalizePublicSettingsText(
       footer.url,
-      fallback.url || "https://www.inovasfood.com.br",
+      fallback.url || "https://inovasfood.com.br",
       2048
     ),
     displayUrl: normalizePublicSettingsText(
       footer.displayUrl,
-      fallback.displayUrl || "www.inovasfood.com.br",
+      fallback.displayUrl || "inovasfood.com.br",
       120
     ),
   };
@@ -7705,8 +7705,8 @@ const syncPlatformFooter = (settings) => {
     }
 
     if (link) {
-      link.textContent = footer.displayUrl || "www.inovasfood.com.br";
-      link.href = normalizePublicExternalHref(footer.url || "https://www.inovasfood.com.br");
+      link.textContent = footer.displayUrl || "inovasfood.com.br";
+      link.href = normalizePublicExternalHref(footer.url || "https://inovasfood.com.br");
     }
   });
 };
@@ -10010,8 +10010,8 @@ const createSiteFooter = () => {
                 <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
               </div>
             </div>
-            <a href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://www.inovasfood.com.br"))}" target="_blank" rel="noreferrer" data-platform-branding-link>
-              ${escapeHtml(platformFooter.displayUrl || "www.inovasfood.com.br")}
+            <a href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://inovasfood.com.br"))}" target="_blank" rel="noreferrer" data-platform-branding-link>
+              ${escapeHtml(platformFooter.displayUrl || "inovasfood.com.br")}
             </a>
           </div>
         </div>

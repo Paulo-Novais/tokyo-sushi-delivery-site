@@ -1,6 +1,5 @@
 const { test, expect } = require("@playwright/test");
 const {
-  createTenantBrowserContext,
   expectNoHorizontalOverflow,
   loginMaster,
   loginTenantOwner,
@@ -47,7 +46,7 @@ test.describe("Criação profissional de usuário", () => {
     ]);
     expect(pendingDomain.status).toBe("PENDING_VERIFICATION");
     expect(pendingDomain.finalUrl).toBe(
-      "https://www.inovasfood.com.br/custom-domain-active"
+      "https://inovasfood.com.br/custom-domain-active"
     );
   });
 
@@ -59,8 +58,7 @@ test.describe("Criação profissional de usuário", () => {
       key: uniqueKey("user-create-ui"),
       ownerPassword: "OwnerCreateUi123!",
     });
-    const context = await createTenantBrowserContext(browser, {
-      host: restaurant.host,
+    const context = await browser.newContext({
       viewport: { width: 1440, height: 960 },
     });
     const page = await context.newPage();

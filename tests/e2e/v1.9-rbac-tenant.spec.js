@@ -55,7 +55,7 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
       expect(customCreate.status()).toBe(201);
       await ownerForUserCreation.api.dispose();
 
-      const customApi = await createApiContext({ host: tenant.host });
+      const customApi = await createApiContext();
       const customSession = await loginAdmin(customApi, {
         identifier: customLogin,
         password: customPassword,

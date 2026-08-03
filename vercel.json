@@ -341,17 +341,6 @@
       "has": [
         {
           "type": "host",
-          "value": "inovasfood.com.br"
-        }
-      ],
-      "destination": "https://www.inovasfood.com.br/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
           "value": "www.tokyosushidelivery.com.br"
         }
       ],

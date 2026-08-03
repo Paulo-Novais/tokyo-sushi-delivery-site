@@ -28,9 +28,12 @@ const syntaxFiles = [
   "tests/e2e/v1.9-responsive.spec.js",
   "lib/admin-api.cjs",
   "lib/app-branding.cjs",
+  "lib/domain-auth-api.cjs",
+  "lib/domain-topology.cjs",
   "lib/master-platform-store.cjs",
   "lib/tenant-context.cjs",
   "lib/tenant-resolution.cjs",
+  "middleware.js",
   "tests/unit/tenant-resolution.test.cjs",
 ];
 

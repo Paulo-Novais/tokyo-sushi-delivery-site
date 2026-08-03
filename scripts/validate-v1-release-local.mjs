@@ -272,20 +272,6 @@ const runValidation = async () => {
 
     const ownerLogin = await runJsonApi(adminApi, {
       method: "POST",
-      url: "http://pizzaria-v1.localhost/api/admin/login",
-      host: "pizzaria-v1.localhost",
-      body: {
-        identifier: "owner@pizzaria-v1.local",
-        password: "SenhaOwnerV1",
-      },
-    });
-    assert.equal(ownerLogin.statusCode, 200, "admin do restaurante deve autenticar no proprio dominio.");
-    assert.equal(ownerLogin.payload?.admin?.restaurantKey, "pizzaria-v1");
-    const ownerCookie = extractCookieHeader(ownerLogin);
-    assert.ok(ownerCookie, "login OWNER do tenant deve emitir cookie.");
-
-    const wrongTenantLogin = await runJsonApi(adminApi, {
-      method: "POST",
       url: "http://localhost:3000/api/admin/login",
       host: "localhost:3000",
       body: {
@@ -293,7 +279,26 @@ const runValidation = async () => {
         password: "SenhaOwnerV1",
       },
     });
-    assert.equal(wrongTenantLogin.statusCode, 403, "admin de restaurante nao deve logar no tenant default.");
+    assert.equal(ownerLogin.statusCode, 200, "admin do restaurante deve autenticar na plataforma.");
+    assert.equal(ownerLogin.payload?.admin?.restaurantKey, "pizzaria-v1");
+    const ownerCookie = extractCookieHeader(ownerLogin);
+    assert.ok(ownerCookie, "login OWNER do tenant deve emitir cookie.");
+
+    const wrongTenantLogin = await runJsonApi(adminApi, {
+      method: "POST",
+      url: "http://pizzaria-v1.localhost/api/admin/login",
+      host: "pizzaria-v1.localhost",
+      body: {
+        identifier: "owner@pizzaria-v1.local",
+        password: "SenhaOwnerV1",
+      },
+    });
+    assert.equal(
+      wrongTenantLogin.statusCode,
+      404,
+      "dominio do restaurante nao deve autenticar o painel administrativo."
+    );
+    assert.equal(wrongTenantLogin.payload?.errorCode, "platform_host_required");
 
     const defaultOwnerLogin = await runJsonApi(adminApi, {
       method: "POST",
@@ -323,8 +328,8 @@ const runValidation = async () => {
     assert.equal(createdOrder.payload?.tenantContext?.restaurantKey, "pizzaria-v1");
 
     const ownerOrders = await runJsonApi(adminApi, {
-      url: "http://pizzaria-v1.localhost/api/admin/orders/list?limit=20",
-      host: "pizzaria-v1.localhost",
+      url: "http://localhost:3000/api/admin/orders/list?limit=20",
+      host: "localhost:3000",
       cookie: ownerCookie,
     });
     assert.equal(ownerOrders.statusCode, 200, "admin do tenant deve listar pedidos do proprio tenant.");
@@ -346,8 +351,8 @@ const runValidation = async () => {
     );
 
     const financeBlocked = await runJsonApi(adminApi, {
-      url: "http://pizzaria-v1.localhost/api/admin/finance",
-      host: "pizzaria-v1.localhost",
+      url: "http://localhost:3000/api/admin/finance",
+      host: "localhost:3000",
       cookie: ownerCookie,
     });
     assert.equal(financeBlocked.statusCode, 403, "plano START deve bloquear financeiro.");
@@ -367,8 +372,8 @@ const runValidation = async () => {
     assert.equal(expiredSubscription.payload?.subscription?.contractStatus, "EXPIRED");
 
     const expiredOrders = await runJsonApi(adminApi, {
-      url: "http://pizzaria-v1.localhost/api/admin/orders/list?limit=20",
-      host: "pizzaria-v1.localhost",
+      url: "http://localhost:3000/api/admin/orders/list?limit=20",
+      host: "localhost:3000",
       cookie: ownerCookie,
     });
     assert.equal(expiredOrders.statusCode, 403, "assinatura vencida deve bloquear operacao admin.");

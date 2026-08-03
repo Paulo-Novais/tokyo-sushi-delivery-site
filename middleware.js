@@ -5,6 +5,7 @@ import restaurantPublicUrl from "./lib/restaurant-public-url.cjs";
 import tenantResolution from "./lib/tenant-resolution.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
 import domainSessions from "./lib/domain-sessions.cjs";
+import domainTopology from "./lib/domain-topology.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -41,10 +42,15 @@ const {
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
 const {
   RESTAURANT_ROUTE_COOKIE,
-  getPublicAppHost,
-  getPublicAppUrl,
-  isPublicAppHost,
 } = restaurantPublicUrl;
+const {
+  HOST_TYPES,
+  PLATFORM_HOST_VARIANTS,
+  buildCanonicalPlatformUrl,
+  classifyDomainHost,
+  isPlatformApiPath,
+  isPlatformOnlyPath,
+} = domainTopology;
 const {
   HOST_KINDS,
   classifyTenantHost,
@@ -248,20 +254,50 @@ const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
 };
 
 const resolvePublicAppCanonicalRedirect = (request, rawHost) => {
-  const normalizedRawHost = String(rawHost || "")
-    .split(":")[0]
-    .toLowerCase();
-  const configuredHost = getPublicAppHost();
+  const classification = classifyDomainHost(rawHost);
 
-  if (!isPublicAppHost(normalizedRawHost) || normalizedRawHost === configuredHost) {
+  if (
+    classification.type !== HOST_TYPES.PLATFORM ||
+    classification.variant !== PLATFORM_HOST_VARIANTS.ALIAS
+  ) {
     return null;
   }
 
-  const destination = new URL(request.url);
-  const publicOrigin = new URL(getPublicAppUrl());
-  destination.protocol = publicOrigin.protocol;
-  destination.host = publicOrigin.host;
-  return Response.redirect(destination, 308);
+  return Response.redirect(buildCanonicalPlatformUrl(request.url), 308);
+};
+
+const buildPlatformHostRequiredResponse = () =>
+  new Response(
+    JSON.stringify({
+      error: "Esta rota pertence a plataforma INOVAS Food.",
+      errorCode: "platform_host_required",
+    }),
+    {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    }
+  );
+
+const resolvePlatformSurfaceBoundary = (request, pathname, hostClassification) => {
+  if (
+    hostClassification.type !== HOST_TYPES.RESTAURANT ||
+    !isPlatformOnlyPath(pathname)
+  ) {
+    return null;
+  }
+
+  if (
+    isPlatformApiPath(pathname) ||
+    !["GET", "HEAD"].includes(String(request.method || "GET").toUpperCase())
+  ) {
+    return buildPlatformHostRequiredResponse();
+  }
+
+  return Response.redirect(buildCanonicalPlatformUrl(request.url), 308);
 };
 
 const resolveRestaurantHostRewrite = (
@@ -304,6 +340,14 @@ const buildGestorRedirectUrl = (requestUrl) => {
   const suffix = url.pathname.replace(/^\/gestor\/?/, "");
   const targetPath = suffix ? `/admin/${suffix}` : "/admin/";
   const target = new URL(targetPath, requestUrl);
+  target.search = url.search;
+  return target;
+};
+
+const buildMasterRedirectUrl = (requestUrl) => {
+  const url = new URL(requestUrl);
+  const suffix = url.pathname.replace(/^\/master\/?/, "");
+  const target = new URL(suffix ? `/system/${suffix}` : "/system", requestUrl);
   target.search = url.search;
   return target;
 };
@@ -377,6 +421,7 @@ export default async function middleware(request) {
   const pathname = url.pathname;
   const policyHost = getRequestPolicyHost(request, url);
   const rawHost = getRawRequestHost(request, url);
+  const hostClassification = classifyDomainHost(rawHost);
   const hostKind = classifyTenantHost(policyHost);
   const hostResolution =
     hostKind === HOST_KINDS.CUSTOM_DOMAIN
@@ -391,6 +436,16 @@ export default async function middleware(request) {
 
   if (canonicalRedirect) {
     return canonicalRedirect;
+  }
+
+  const platformSurfaceBoundary = resolvePlatformSurfaceBoundary(
+    request,
+    pathname,
+    hostClassification
+  );
+
+  if (platformSurfaceBoundary) {
+    return platformSurfaceBoundary;
   }
 
   const publicRestaurantPath = await resolvePublicRestaurantPath(
@@ -416,6 +471,10 @@ export default async function middleware(request) {
 
   if (pathname === "/gestor" || pathname === "/gestor/" || pathname.startsWith("/gestor/")) {
     return Response.redirect(buildGestorRedirectUrl(request.url), 307);
+  }
+
+  if (pathname === "/master" || pathname === "/master/" || pathname.startsWith("/master/")) {
+    return Response.redirect(buildMasterRedirectUrl(request.url), 307);
   }
 
   const systemSession = getDomainSessionFromRequest(

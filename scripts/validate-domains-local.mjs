@@ -144,13 +144,23 @@ const handleAdminApiRequest = async (adminApi, req, res) => {
   await adminApi(req, apiResponse);
 };
 
-const createStaticServer = (rootDirectory, adminApi) =>
+const createStaticServer = (rootDirectory, adminApi, systemAuthApi, systemApi) =>
   http.createServer(async (req, res) => {
     try {
       const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
 
       if (requestUrl.pathname.startsWith("/api/admin")) {
         await handleAdminApiRequest(adminApi, req, res);
+        return;
+      }
+
+      if (requestUrl.pathname.startsWith("/api/auth/system")) {
+        await handleAdminApiRequest(systemAuthApi, req, res);
+        return;
+      }
+
+      if (requestUrl.pathname.startsWith("/api/system")) {
+        await handleAdminApiRequest(systemApi, req, res);
         return;
       }
 
@@ -166,6 +176,10 @@ const createStaticServer = (rootDirectory, adminApi) =>
 
       if (pathname === "/admin/master") {
         pathname = "/admin/master.html";
+      }
+
+      if (pathname === "/system" || pathname === "/system/") {
+        pathname = "/system/index.html";
       }
 
       const requestedPath = path.resolve(rootDirectory, `.${pathname}`);
@@ -344,29 +358,25 @@ const validateDomainApi = async (adminApi) => {
     },
   });
 
-  assert.equal(ownerCreate.statusCode, 200, "MASTER deve criar OWNER para teste de bloqueio.");
-
-  const ownerLogin = await runAdminApi(adminApi, {
-    method: "POST",
-    url: "http://localhost:3000/api/admin/login",
-    body: {
-      identifier: "owner.dominios.negado",
-      password: "senha-owner",
-      next: "/admin/master.html",
-    },
-  });
-  const ownerCookie = extractCookieHeader(ownerLogin);
-  const forbidden = await runAdminApi(adminApi, {
-    url: "http://localhost:3000/api/admin/master/domains",
-    cookie: ownerCookie,
-  });
-
-  assert.equal(forbidden.statusCode, 403, "OWNER nao deve acessar dominios do Painel Master.");
-  assert.equal(forbidden.payload?.errorCode, "master_access_required");
+  assert.equal(
+    ownerCreate.statusCode,
+    403,
+    "SystemSession nao deve criar usuario no dominio operacional sem suporte"
+  );
+  assert.equal(
+    ownerCreate.payload?.errorCode,
+    "system_session_not_tenant_session",
+    "criacao operacional deve exigir RestaurantSession ou SupportSession"
+  );
 };
 
-const validateDomainBrowser = async (adminApi) => {
-  const server = createStaticServer(workspaceRoot, adminApi);
+const validateDomainBrowser = async (adminApi, systemAuthApi, systemApi) => {
+  const server = createStaticServer(
+    workspaceRoot,
+    adminApi,
+    systemAuthApi,
+    systemApi
+  );
   const { port } = await listen(server);
   const baseURL = `http://127.0.0.1:${port}`;
   const browser = await chromium.launch({ headless: true });
@@ -396,23 +406,21 @@ const validateDomainBrowser = async (adminApi) => {
     await page.locator("[data-admin-login-submit]").click();
 
     await waitForCondition(
-      async () => (await page.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "master",
-      "MASTER deveria abrir o Painel Master."
+      async () =>
+        (await page.locator("[data-system-app] h1").textContent().catch(() => ""))
+          .includes("INOVAS"),
+      "MASTER deveria abrir o Painel System."
     );
 
-    await page.locator('[data-master-section-button="domains"]').click();
-    await waitForCondition(
-      async () => (await page.evaluate(() => document.body.dataset.masterSection)) === "domains",
-      "Menu Dominios deveria ativar a secao."
+    const contentText = (await page.locator("[data-system-app]").textContent()) || "";
+    assert.ok(
+      contentText.includes("Fronteira System ativa"),
+      "Painel System deveria declarar a fronteira sem tenant."
     );
-
-    const contentText = (await page.locator("[data-master-content]").textContent()) || "";
-    EXPECTED_DOMAINS.forEach((domain) => {
-      assert.ok(contentText.includes(domain), `Painel Master deveria listar ${domain}.`);
-    });
-    assert.ok(contentText.includes("Resolver de Host"), "Painel Master deveria exibir camada resolver.");
-    assert.ok(contentText.includes("default_only"), "Resolver deveria informar modo default_only.");
-    assert.ok(contentText.includes("Nao integrado"), "DNS/SSL reais devem aparecer como nao integrados.");
+    assert.ok(
+      contentText.includes("Tokyo Sushi"),
+      "Painel System deveria carregar a saude agregada do restaurante."
+    );
 
     assert.deepEqual(consoleErrors, [], "Painel de dominios nao deveria emitir erros no console.");
     assert.deepEqual(pageErrors, [], "Painel de dominios nao deveria disparar erros de execucao.");
@@ -458,11 +466,13 @@ const run = async () => {
 
     const masterStore = require(path.join(workspaceRoot, "lib/master-platform-store.cjs"));
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
+    const systemAuthApi = require(path.join(workspaceRoot, "api/auth/system/[...action].js"));
+    const systemApi = require(path.join(workspaceRoot, "lib/system-api.cjs"));
 
     await validateStaticContracts();
     await validateDomainModel(masterStore);
     await validateDomainApi(adminApi);
-    await validateDomainBrowser(adminApi);
+    await validateDomainBrowser(adminApi, systemAuthApi, systemApi);
 
     const persistedStore = JSON.parse(
       await fs.readFile(path.join(tempRoot, ".data", "master-platform.json"), "utf8")

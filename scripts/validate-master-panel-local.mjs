@@ -138,13 +138,23 @@ const handleAdminApiRequest = async (adminApi, req, res) => {
   await adminApi(req, apiResponse);
 };
 
-const createStaticServer = (rootDirectory, adminApi) =>
+const createStaticServer = (rootDirectory, adminApi, systemAuthApi, systemApi) =>
   http.createServer(async (req, res) => {
     try {
       const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
 
       if (requestUrl.pathname.startsWith("/api/admin")) {
         await handleAdminApiRequest(adminApi, req, res);
+        return;
+      }
+
+      if (requestUrl.pathname.startsWith("/api/auth/system")) {
+        await handleAdminApiRequest(systemAuthApi, req, res);
+        return;
+      }
+
+      if (requestUrl.pathname.startsWith("/api/system")) {
+        await handleAdminApiRequest(systemApi, req, res);
         return;
       }
 
@@ -160,6 +170,10 @@ const createStaticServer = (rootDirectory, adminApi) =>
 
       if (pathname === "/admin/master") {
         pathname = "/admin/master.html";
+      }
+
+      if (pathname === "/system" || pathname === "/system/") {
+        pathname = "/system/index.html";
       }
 
       const requestedPath = path.resolve(rootDirectory, `.${pathname}`);
@@ -308,31 +322,25 @@ const validateApi = async (adminApi) => {
     },
   });
 
-  assert.equal(customSave.statusCode, 200, "MASTER deve criar usuario CUSTOM para teste.");
-
-  const customLogin = await runAdminApi(adminApi, {
-    method: "POST",
-    url: "http://localhost:3000/api/admin/login",
-    body: {
-      identifier: "operador.master.negado",
-      password: "senha-custom",
-      next: "/admin/master.html",
-    },
-  });
-
-  assert.equal(customLogin.statusCode, 200, "CUSTOM ativo deve autenticar.");
-  const customCookie = extractCookieHeader(customLogin);
-  const forbiddenMaster = await runAdminApi(adminApi, {
-    url: "http://localhost:3000/api/admin/master/overview",
-    cookie: customCookie,
-  });
-
-  assert.equal(forbiddenMaster.statusCode, 403, "CUSTOM nao deve acessar Painel Master.");
-  assert.equal(forbiddenMaster.payload?.errorCode, "master_access_required");
+  assert.equal(
+    customSave.statusCode,
+    403,
+    "SystemSession nao deve criar usuario operacional sem suporte"
+  );
+  assert.equal(
+    customSave.payload?.errorCode,
+    "system_session_not_tenant_session",
+    "Painel Master deve permanecer separado do dominio Restaurant"
+  );
 };
 
-const validateBrowser = async (adminApi) => {
-  const server = createStaticServer(workspaceRoot, adminApi);
+const validateBrowser = async (adminApi, systemAuthApi, systemApi) => {
+  const server = createStaticServer(
+    workspaceRoot,
+    adminApi,
+    systemAuthApi,
+    systemApi
+  );
   const { port } = await listen(server);
   const baseURL = `http://127.0.0.1:${port}`;
   const browser = await chromium.launch({ headless: true });
@@ -366,45 +374,27 @@ const validateBrowser = async (adminApi) => {
     await page.locator('input[name="password"]').fill("novais753951");
     await page.locator("[data-admin-login-submit]").click();
 
-    await waitForCondition(
-      async () =>
-        (await page.evaluate(() => document.body.dataset.adminPage).catch(() => "")) === "master" &&
-        (await page.evaluate(() => document.body.dataset.masterSection).catch(() => "")) === "dashboard",
-      "Login MASTER deveria abrir o Painel Master."
+    await waitForText(
+      page,
+      "[data-system-app]",
+      "INOVAS",
+      "Login MASTER deveria abrir o Painel System."
+    );
+    await waitForText(
+      page,
+      "[data-system-app]",
+      "Fronteira System ativa",
+      "Painel System deveria declarar escopo sem tenant."
+    );
+    await waitForText(
+      page,
+      "[data-system-app]",
+      "Tokyo Sushi",
+      "Painel System deveria apresentar a saude agregada do Tokyo."
     );
 
-    await waitForText(page, "body", "Painel Master", "Painel Master deveria renderizar o titulo.");
-    await waitForText(page, "body", "Dashboard Geral", "Dashboard Geral deveria aparecer.");
-    await waitForText(page, "body", "Restaurantes", "Menu de restaurantes deveria aparecer.");
-    await waitForText(page, "body", "Planos", "Menu de planos deveria aparecer.");
-    await waitForText(page, "body", "Recursos", "Menu de recursos deveria aparecer.");
-
-    await page.locator('[data-master-section-button="restaurants"]').click();
-    await waitForCondition(
-      async () => (await page.evaluate(() => document.body.dataset.masterSection)) === "restaurants",
-      "Menu Restaurantes deveria ativar a secao."
-    );
-    await waitForText(page, "[data-master-content]", "Tokyo Sushi", "Tokyo Sushi deveria existir como Cliente Modelo.");
-    await waitForText(page, "[data-master-content]", "Cliente Modelo", "Status Cliente Modelo deveria aparecer.");
-
-    await page.locator('[data-master-section-button="plans"]').click();
-    await waitForText(page, "[data-master-content]", "START", "Plano START deveria aparecer.");
-    await waitForText(page, "[data-master-content]", "PRO", "Plano PRO deveria aparecer.");
-    await waitForText(page, "[data-master-content]", "PREMIUM", "Plano PREMIUM deveria aparecer.");
-
-    await page.locator('[data-master-section-button="resources"]').click();
-    await waitForText(page, "[data-master-content]", "finance", "Recurso financeiro deveria aparecer.");
-    await waitForText(page, "[data-master-content]", "whatsappAI", "Recurso futuro WhatsApp AI deveria aparecer.");
-
-    await page.locator('[data-master-section-button="domains"]').click();
-    await waitForText(page, "[data-master-content]", "Dominio principal", "Modulo Dominios deveria renderizar.");
-
-    await page.locator('[data-master-section-button="developer"]').click();
-    await waitForText(page, "[data-master-content]", "validate:master-panel-local", "Area tecnica deveria listar a nova validacao.");
-    await waitForText(page, "[data-master-content]", "whatsappAI", "Area tecnica deveria listar feature flags.");
-
-    assert.deepEqual(consoleErrors, [], "Painel Master nao deveria emitir erros no console.");
-    assert.deepEqual(pageErrors, [], "Painel Master nao deveria disparar erros de execucao.");
+    assert.deepEqual(consoleErrors, [], "Painel System nao deveria emitir erros no console.");
+    assert.deepEqual(pageErrors, [], "Painel System nao deveria disparar erros de execucao.");
   } finally {
     await browser.close();
     await closeServer(server);
@@ -444,9 +434,11 @@ const run = async () => {
     process.env.ADMIN_SESSION_SECRET = "segredo-local-master-panel";
 
     const adminApi = require(path.join(workspaceRoot, "lib/admin-api.cjs"));
+    const systemAuthApi = require(path.join(workspaceRoot, "api/auth/system/[...action].js"));
+    const systemApi = require(path.join(workspaceRoot, "lib/system-api.cjs"));
 
     await validateApi(adminApi);
-    await validateBrowser(adminApi);
+    await validateBrowser(adminApi, systemAuthApi, systemApi);
 
     const masterStore = JSON.parse(
       await fs.readFile(path.join(tempRoot, ".data", "master-platform.json"), "utf8")

@@ -29,13 +29,17 @@ const buildMockResponse = () => {
   };
 };
 
-const runAdminApi = async (handler, { method = "GET", url, body = null, cookie = "" }) => {
+const runAdminApi = async (
+  handler,
+  { method = "GET", url, body = null, cookie = "", host = "" }
+) => {
+  const requestUrl = new URL(url);
   const req = {
     method,
     url,
     headers: {
-      host: "localhost:3000",
-      "x-forwarded-proto": "http",
+      host: host || requestUrl.host,
+      "x-forwarded-proto": requestUrl.protocol.replace(":", ""),
       "user-agent": "admin-platform-owner-validation",
       accept: "application/json",
       ...(cookie ? { cookie } : {}),
@@ -72,7 +76,7 @@ const run = async () => {
     await fs.mkdir(path.join(tempRoot, ".data"), { recursive: true });
     process.chdir(tempRoot);
     process.env.NODE_ENV = "development";
-    process.env.INOVAS_TENANT_MODE = "default_only";
+    process.env.INOVAS_TENANT_MODE = "strict";
     process.env.ADMIN_SESSION_SECRET = "admin-platform-owner-local-secret";
     delete process.env.ADMIN_LOGIN;
     delete process.env.ADMIN_PASSWORD;
@@ -183,6 +187,31 @@ const run = async () => {
       "store local nao deve manter usuario legacy_env removido"
     );
 
+    const ownerLoginOnRestaurantHost = await runAdminApi(adminApi, {
+      method: "POST",
+      url: "https://tokyosushidelivery.com.br/api/admin/login",
+      body: {
+        identifier: "paulo.novais96@gmail.com",
+        password: "senha-owner-local",
+      },
+    });
+
+    assert.equal(
+      ownerLoginOnRestaurantHost.statusCode,
+      404,
+      "dominio do restaurante nao deve criar sessao administrativa"
+    );
+    assert.equal(
+      ownerLoginOnRestaurantHost.payload?.errorCode,
+      "platform_host_required",
+      "login administrativo deve exigir o host da plataforma"
+    );
+    assert.equal(
+      extractCookieHeader(ownerLoginOnRestaurantHost),
+      "",
+      "host do restaurante nao deve receber cookie administrativo"
+    );
+
     const ownerLogin = await runAdminApi(adminApi, {
       method: "POST",
       url: "http://localhost:3000/api/admin/login",
@@ -216,11 +245,11 @@ const run = async () => {
       cookie: ownerCookie,
     });
 
-    assert.equal(ownerMasterPanel.statusCode, 403, "OWNER nao deve acessar Painel Master");
+    assert.equal(ownerMasterPanel.statusCode, 401, "RestaurantSession nao deve acessar Painel Master");
     assert.equal(
       ownerMasterPanel.payload?.errorCode,
-      "master_access_required",
-      "bloqueio do Painel Master deve exigir MASTER"
+      "system_session_required",
+      "bloqueio do Painel Master deve exigir SystemSession"
     );
 
     console.log("Validacao local MASTER plataforma e OWNER Tokyo concluida com sucesso.");

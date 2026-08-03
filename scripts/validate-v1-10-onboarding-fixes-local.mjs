@@ -288,13 +288,13 @@ const restaurantPayload = ({
     ? {
         type: "custom",
         slug: key,
-        internalUrl: `https://www.inovasfood.com.br/${key}`,
+        internalUrl: `https://inovasfood.com.br/${key}`,
         customDomain,
       }
     : {
         type: "inovas",
         slug: key,
-        internalUrl: `https://www.inovasfood.com.br/${key}`,
+        internalUrl: `https://inovasfood.com.br/${key}`,
       },
   features: ["delivery", "pickup", "whatsapp"],
   appearance: {

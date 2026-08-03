@@ -148,11 +148,13 @@ const validatePublicApis = async ({ catalogApi, deliveryApi, restaurantApi }) =>
 };
 
 const validateAdminApi = async ({ adminApi, adminAuth }) => {
+  const platformHost = "inovasfood.com.br";
   const login = await runApi(
     adminApi,
     buildReq({
       method: "POST",
-      url: "https://tokyosushidelivery.com.br/api/admin/login",
+      url: `https://${platformHost}/api/admin/login`,
+      host: platformHost,
       body: JSON.stringify({
         identifier: "usermaster@inovas.com",
         password: "novais753951",
@@ -175,7 +177,8 @@ const validateAdminApi = async ({ adminApi, adminAuth }) => {
   const orders = await runApi(
     adminApi,
     buildReq({
-      url: "https://tokyosushidelivery.com.br/api/admin/orders/list",
+      url: `https://${platformHost}/api/admin/orders/list`,
+      host: platformHost,
       cookie,
     })
   );

@@ -1,7 +1,6 @@
 const { test, expect } = require("@playwright/test");
 const {
   createApiContext,
-  createTenantBrowserContext,
   expectNoHorizontalOverflow,
   loginAdmin,
   loginMaster,
@@ -395,7 +394,6 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       const temporaryPassword = created.data.access.temporaryPassword;
 
       memberApi = await createApiContext({
-        host: restaurant.host,
         origin: process.env.VALIDATION_BASE_URL,
       });
       const memberLogin = await loginAdmin(memberApi, {
@@ -582,8 +580,7 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       key: uniqueKey("users-ui"),
       ownerPassword: "OwnerUsersUi123!",
     });
-    const restaurantContext = await createTenantBrowserContext(browser, {
-      host: restaurant.host,
+    const restaurantContext = await browser.newContext({
       viewport: { width: 1440, height: 960 },
     });
     const restaurantPage = await restaurantContext.newPage();

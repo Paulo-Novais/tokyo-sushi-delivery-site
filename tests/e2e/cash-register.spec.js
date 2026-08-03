@@ -67,7 +67,6 @@ test.describe("Caixa e Salao", () => {
     try {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.setExtraHTTPHeaders({
-        "x-forwarded-host": restaurant.host,
         "x-forwarded-for": "127.31.41.51",
       });
       await page.goto(

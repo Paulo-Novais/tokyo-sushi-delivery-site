@@ -228,7 +228,7 @@ const onboardRestaurant = async (masterApi, options = {}) => {
 };
 
 const loginTenantOwner = async ({ host, ownerLogin, ownerPassword }) => {
-  const api = await createApiContext({ host, origin: baseURL });
+  const api = await createApiContext({ origin: baseURL });
   const session = await loginAdmin(api, {
     identifier: ownerLogin,
     password: ownerPassword,
