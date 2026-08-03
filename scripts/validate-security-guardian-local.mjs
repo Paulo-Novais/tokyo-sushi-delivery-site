@@ -199,7 +199,7 @@ const runValidation = async () => {
           }
         );
       },
-      ["tenant_context_required", "tenant_domain_not_found"]
+      ["tenant_context_required", "tenant_host_not_found"]
     );
     process.env.INOVAS_TENANT_MODE = "default_only";
 

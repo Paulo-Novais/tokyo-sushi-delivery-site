@@ -5,6 +5,7 @@
   "scripts": {
     "start:test": "node scripts/local-validation-server.cjs",
     "test": "npm run test:e2e",
+    "test:tenant-resolution": "node --test tests/unit/tenant-resolution.test.cjs",
     "test:e2e": "playwright test",
     "test:cash-register:e2e": "playwright test tests/e2e/cash-register.spec.js",
     "test:e2e:ui": "playwright test --ui",

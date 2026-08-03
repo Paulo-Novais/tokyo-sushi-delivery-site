@@ -71,11 +71,11 @@ const {
   requireSystemSession,
 } = require(path.join(workspaceRoot, "lib", "domain-access.cjs"));
 const {
+  parsePublicRestaurantPath,
   resolveRestaurantBySlug,
-} = require(path.join(workspaceRoot, "lib", "master-platform-store.cjs"));
+} = require(path.join(workspaceRoot, "lib", "tenant-resolution.cjs"));
 const {
   RESTAURANT_ROUTE_COOKIE,
-  validateRestaurantSlug,
 } = require(path.join(workspaceRoot, "lib", "restaurant-public-url.cjs"));
 
 const MIME_TYPES = new Map([
@@ -291,38 +291,26 @@ const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
 ]);
 
 const resolveLocalRestaurantRequest = async (pathname, search) => {
-  const legacyMatch = pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
-  const cleanMatch = pathname.match(/^\/([^/]+)(\/.*)?$/);
-  const routeMatch = legacyMatch || cleanMatch;
+  const route = parsePublicRestaurantPath(pathname);
 
-  if (!routeMatch) {
+  if (!route.recognized) {
     return null;
   }
 
-  const validation = validateRestaurantSlug(routeMatch[1]);
-
-  if (!validation.ok) {
-    if (
-      !legacyMatch &&
-      (validation.errorCode === "restaurant_slug_reserved" ||
-        routeMatch[1].includes("."))
-    ) {
-      return null;
-    }
-
+  if (!route.valid) {
     return { notFound: true };
   }
 
-  const resolution = await resolveRestaurantBySlug(validation.slug);
+  const resolution = await resolveRestaurantBySlug(route.slug);
 
   if (resolution?.matched !== true) {
     return { notFound: true };
   }
 
-  const suffix = String(routeMatch[2] || "");
+  const suffix = route.suffix;
   const canonicalSlug = resolution.slug;
 
-  if (legacyMatch) {
+  if (route.legacy) {
     const canonicalSuffix =
       suffix === "/" || suffix === "/index.html" ? "" : suffix;
     return {

@@ -1,8 +1,8 @@
 import { next, rewrite } from "@vercel/functions";
 import adminAuth from "./lib/admin-auth.cjs";
 import appBranding from "./lib/app-branding.cjs";
-import masterPlatformStore from "./lib/master-platform-store.cjs";
 import restaurantPublicUrl from "./lib/restaurant-public-url.cjs";
+import tenantResolution from "./lib/tenant-resolution.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
 import domainSessions from "./lib/domain-sessions.cjs";
 
@@ -39,15 +39,21 @@ const {
   getDomainSessionFromRequest,
 } = domainSessions;
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
-const SITE_APPEARANCE = appBranding.SITE_APPEARANCE || {};
 const {
   RESTAURANT_ROUTE_COOKIE,
   getPublicAppHost,
   getPublicAppUrl,
   isPublicAppHost,
-  validateRestaurantSlug,
 } = restaurantPublicUrl;
-const { resolveRestaurantBySlug } = masterPlatformStore;
+const {
+  HOST_KINDS,
+  classifyTenantHost,
+  isPathTenantHost,
+  normalizeTenantHost,
+  parsePublicRestaurantPath,
+  resolveRestaurantByHost,
+  resolveRestaurantBySlug,
+} = tenantResolution;
 const PUBLIC_RESTAURANT_PAGES = new Set([
   "acompanhar.html",
   "avaliar.html",
@@ -65,47 +71,8 @@ const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
   "tokyo.webmanifest",
 ]);
 
-const normalizePolicyHost = (value) => {
-  const rawValue = String(value || "")
-    .split(",")[0]
-    .trim()
-    .toLowerCase();
-
-  if (!rawValue) {
-    return "";
-  }
-
-  try {
-    return new URL(rawValue.includes("://") ? rawValue : `https://${rawValue}`).hostname
-      .replace(/^www\./, "")
-      .toLowerCase();
-  } catch (error) {
-    return rawValue
-      .replace(/^https?:\/\//, "")
-      .replace(/^\[/, "")
-      .replace(/\]$/, "")
-      .split("/")[0]
-      .split(":")[0]
-      .replace(/^www\./, "")
-      .trim()
-      .toLowerCase();
-  }
-};
-
-const PUBLIC_ALLOWED_HOSTS = new Set(
-  [
-    DOMAIN_CONFIG.primaryDomain,
-    ...(Array.isArray(DOMAIN_CONFIG.alternateDomains) ? DOMAIN_CONFIG.alternateDomains : []),
-    ...(Array.isArray(DOMAIN_CONFIG.allowedHostnames) ? DOMAIN_CONFIG.allowedHostnames : []),
-    SITE_APPEARANCE.platformFooter?.url,
-    SITE_APPEARANCE.platformFooter?.displayUrl,
-    getPublicAppUrl(),
-    getPublicAppHost(),
-  ]
-    .map(normalizePolicyHost)
-    .filter(Boolean)
-);
-const RESTAURANT_PRIMARY_HOST = normalizePolicyHost(DOMAIN_CONFIG.primaryDomain);
+const normalizePolicyHost = normalizeTenantHost;
+const RESTAURANT_PRIMARY_HOST = normalizeTenantHost(DOMAIN_CONFIG.primaryDomain);
 
 const isPublicAdminPath = (pathname) =>
   PUBLIC_ADMIN_PATHS.has(pathname) || PUBLIC_ADMIN_ASSET_PATTERN.test(pathname);
@@ -122,12 +89,6 @@ const isAdminControlledPath = (pathname) =>
 
 const isSystemControlledPath = (pathname) =>
   SYSTEM_CONTROLLED_PATTERN.test(pathname);
-
-const isLocalHost = (host) =>
-  ["localhost", "127.0.0.1", "::1"].includes(host);
-
-const isVercelPreviewHost = (host) =>
-  host.endsWith(".vercel.app") || host.endsWith(".vercel.sh");
 
 const getRequestPolicyHost = (request, requestUrl) =>
   normalizePolicyHost(
@@ -146,9 +107,6 @@ const getRawRequestHost = (request, requestUrl) =>
     .split(",")[0]
     .trim()
     .toLowerCase();
-
-const isAllowedPublicHost = (host) =>
-  !host || isLocalHost(host) || isVercelPreviewHost(host) || PUBLIC_ALLOWED_HOSTS.has(host);
 
 const buildUnknownHostResponse = () =>
   new Response("Dominio nao vinculado a este projeto.", {
@@ -231,48 +189,30 @@ const isPublicRestaurantAssetPath = (suffix = "") => {
 };
 
 const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
-  if (
-    !(
-      isPublicAppHost(rawHost) ||
-      isLocalHost(normalizePolicyHost(rawHost)) ||
-      isVercelPreviewHost(normalizePolicyHost(rawHost))
-    )
-  ) {
+  if (!isPathTenantHost(rawHost)) {
     return null;
   }
 
-  const legacyMatch = pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
-  const cleanMatch = pathname.match(/^\/([^/]+)(\/.*)?$/);
-  const routeMatch = legacyMatch || cleanMatch;
+  const route = parsePublicRestaurantPath(pathname);
 
-  if (!routeMatch) {
+  if (!route.recognized) {
     return null;
   }
 
-  const slugValidation = validateRestaurantSlug(routeMatch[1]);
-
-  if (!slugValidation.ok) {
-    if (
-      !legacyMatch &&
-      (slugValidation.errorCode === "restaurant_slug_reserved" ||
-        routeMatch[1].includes("."))
-    ) {
-      return null;
-    }
-
+  if (!route.valid) {
     return buildRestaurantNotFoundResponse();
   }
 
-  const resolution = await resolveRestaurantBySlug(slugValidation.slug);
+  const resolution = await resolveRestaurantBySlug(route.slug);
 
   if (resolution?.matched !== true) {
     return buildRestaurantNotFoundResponse();
   }
 
   const canonicalSlug = resolution.slug;
-  const suffix = String(routeMatch[2] || "");
+  const suffix = route.suffix;
 
-  if (legacyMatch) {
+  if (route.legacy) {
     const canonicalSuffix =
       suffix === "/" || suffix === "/index.html" ? "" : suffix;
     return buildPermanentRestaurantRedirect(
@@ -324,20 +264,21 @@ const resolvePublicAppCanonicalRedirect = (request, rawHost) => {
   return Response.redirect(destination, 308);
 };
 
-const resolveRestaurantHostRewrite = (request, pathname, policyHost) => {
-  if (policyHost !== RESTAURANT_PRIMARY_HOST) {
+const resolveRestaurantHostRewrite = (
+  request,
+  pathname,
+  policyHost,
+  hostResolution
+) => {
+  if (hostResolution?.matched !== true) {
     return null;
   }
 
-  if (getRawRequestHost(request, new URL(request.url)).replace(/^https?:\/\//, "").startsWith("www.")) {
-    return null;
-  }
-
-  if (pathname === "/robots.txt") {
+  if (policyHost === RESTAURANT_PRIMARY_HOST && pathname === "/robots.txt") {
     return buildRewriteResponse(request.url, "/tokyo-robots.txt");
   }
 
-  if (pathname === "/sitemap.xml") {
+  if (policyHost === RESTAURANT_PRIMARY_HOST && pathname === "/sitemap.xml") {
     return buildRewriteResponse(request.url, "/tokyo-sitemap.xml");
   }
 
@@ -345,12 +286,14 @@ const resolveRestaurantHostRewrite = (request, pathname, policyHost) => {
     return buildRewriteResponse(request.url, "/tokyo.html");
   }
 
-  if (pathname === "/r/tokyo-sushi/" || pathname === "/r/tokyo-sushi/index.html") {
+  const legacyPrefix = `/r/${hostResolution.slug}`;
+
+  if (pathname === `${legacyPrefix}/` || pathname === `${legacyPrefix}/index.html`) {
     return buildRewriteResponse(request.url, "/tokyo.html");
   }
 
-  if (pathname.startsWith("/r/tokyo-sushi/")) {
-    return buildRewriteResponse(request.url, `/${pathname.slice("/r/tokyo-sushi/".length)}`);
+  if (pathname.startsWith(`${legacyPrefix}/`)) {
+    return buildRewriteResponse(request.url, `/${pathname.slice(legacyPrefix.length + 1)}`);
   }
 
   return null;
@@ -434,8 +377,13 @@ export default async function middleware(request) {
   const pathname = url.pathname;
   const policyHost = getRequestPolicyHost(request, url);
   const rawHost = getRawRequestHost(request, url);
+  const hostKind = classifyTenantHost(policyHost);
+  const hostResolution =
+    hostKind === HOST_KINDS.CUSTOM_DOMAIN
+      ? await resolveRestaurantByHost(policyHost)
+      : null;
 
-  if (!isAllowedPublicHost(policyHost)) {
+  if (hostKind === HOST_KINDS.CUSTOM_DOMAIN && hostResolution?.matched !== true) {
     return buildUnknownHostResponse();
   }
 
@@ -455,7 +403,12 @@ export default async function middleware(request) {
     return publicRestaurantPath;
   }
 
-  const restaurantRewrite = resolveRestaurantHostRewrite(request, pathname, policyHost);
+  const restaurantRewrite = resolveRestaurantHostRewrite(
+    request,
+    pathname,
+    policyHost,
+    hostResolution
+  );
 
   if (restaurantRewrite) {
     return restaurantRewrite;
