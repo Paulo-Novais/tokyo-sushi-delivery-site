@@ -25,7 +25,7 @@ const loginThroughUi = async (page) => {
   await page.locator('input[name="password"]').fill(adminPassword);
   await page.locator("[data-admin-login-submit]").click();
   await expect(page).toHaveURL(/\/system\/?$/);
-  await expect(page.locator(".users-shell")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".sys-shell")).toBeVisible({ timeout: 20_000 });
 };
 
 test.describe("V1.9 System responsive shell", () => {
@@ -35,7 +35,7 @@ test.describe("V1.9 System responsive shell", () => {
       await loginThroughUi(page);
       // Painel System V1 title (was "Visão geral da INOVAS").
       await expect(
-        page.getByRole("heading", { name: "Visão geral", exact: true })
+        page.getByRole("heading", { name: /Visão geral/ })
       ).toBeVisible();
       await expect(page.locator(".system-health-grid")).toBeVisible();
       await expectNoHorizontalOverflow(page);

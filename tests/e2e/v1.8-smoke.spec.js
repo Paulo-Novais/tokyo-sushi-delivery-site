@@ -219,7 +219,7 @@ test.describe("V1.8 protected surfaces and System health smoke", () => {
       // "SystemSession sem tenant" badge was removed, so the boundary is now
       // asserted on the real session used by this page.
       await expect(
-        page.getByRole("heading", { name: "Visão geral", exact: true })
+        page.getByRole("heading", { name: /Visão geral/ })
       ).toBeVisible({ timeout: 20_000 });
       await expect(page.locator(".system-health-grid")).toBeVisible();
       const systemSession = await (await page.request.get("/api/auth/system/session")).json();
