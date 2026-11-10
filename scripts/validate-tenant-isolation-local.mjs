@@ -76,7 +76,7 @@ const hasName = (items = [], name) => Boolean(findByName(items, name));
 const flattenCatalogItems = (catalog) =>
   (Array.isArray(catalog?.sections) ? catalog.sections : []).flatMap((section) => section.items || []);
 
-const buildOrderPayload = (label) => ({
+const buildOrderPayload = (label, catalogItem) => ({
   profile: {
     id: `profile-${label}`,
     name: `Cliente ${label}`,
@@ -95,11 +95,11 @@ const buildOrderPayload = (label) => ({
   },
   items: [
     {
-      id: "carpaccio-salmao",
-      name: "Carpaccio de Salmao",
-      category: "Carpaccio",
+      id: catalogItem.id,
+      name: catalogItem.name,
+      category: catalogItem.category,
       quantity: 1,
-      price: 58.5,
+      price: catalogItem.price,
     },
   ],
   addons: [],
@@ -404,10 +404,45 @@ const validateOrderCustomerFinanceIsolation = async ({
   optionsA,
   optionsB,
 }) => {
+  const orderSectionA = await catalog.saveCatalogSection(
+    { title: "Pedidos Tenant A", description: "Fixture de pedido A" },
+    actor,
+    optionsA
+  );
+  const orderSectionB = await catalog.saveCatalogSection(
+    { title: "Pedidos Tenant B", description: "Fixture de pedido B" },
+    actor,
+    optionsB
+  );
+  await catalog.saveCatalogItem(
+    {
+      sectionId: orderSectionA.sectionId,
+      name: "Produto Pedido Tenant A",
+      category: "Pedidos Tenant A",
+      price: 31,
+      availabilityState: "active",
+    },
+    actor,
+    optionsA
+  );
+  await catalog.saveCatalogItem(
+    {
+      sectionId: orderSectionB.sectionId,
+      name: "Produto Pedido Tenant B",
+      category: "Pedidos Tenant B",
+      price: 32,
+      availabilityState: "active",
+    },
+    actor,
+    optionsB
+  );
   const catalogContextA = await catalog.getCatalogValidationContext(optionsA);
   const catalogContextB = await catalog.getCatalogValidationContext(optionsB);
-  const normalizedA = orderPayload.normalizeOrderSubmission(buildOrderPayload("a"), catalogContextA);
-  const normalizedB = orderPayload.normalizeOrderSubmission(buildOrderPayload("b"), catalogContextB);
+  const orderableA = [...catalogContextA.itemMap.values()].find((item) => item.isOrderable);
+  const orderableB = [...catalogContextB.itemMap.values()].find((item) => item.isOrderable);
+  assert.ok(orderableA && orderableB, "cada tenant deve possuir um item disponivel para o pedido");
+  const normalizedA = orderPayload.normalizeOrderSubmission(buildOrderPayload("a", orderableA), catalogContextA);
+  const normalizedB = orderPayload.normalizeOrderSubmission(buildOrderPayload("b", orderableB), catalogContextB);
 
   const createdA = await orders.createOrder(normalizedA, optionsA);
   const createdB = await orders.createOrder(normalizedB, optionsB);

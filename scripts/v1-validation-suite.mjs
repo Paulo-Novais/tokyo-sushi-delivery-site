@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
+const { LEGACY_RESTAURANT_PERMISSION_MAP } = require("../lib/access-policy.cjs");
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const realDataDirectory = path.join(workspaceRoot, ".data");
 
@@ -24,6 +25,7 @@ const touchedEnvKeys = [
   "POSTGRES_URL",
   "NODE_ENV",
   "INOVAS_TENANT_MODE",
+  "INOVAS_ALLOW_TENANT_CATALOG_FALLBACK",
 ];
 
 const getDirectoryFingerprint = async (directoryPath) => {
@@ -95,6 +97,11 @@ const withV1Workspace = async (prefix, fn, { tenantMode = "pilot" } = {}) => {
     process.chdir(tempRoot);
     process.env.NODE_ENV = "development";
     process.env.INOVAS_TENANT_MODE = tenantMode;
+    // Since the tenant-catalog isolation fix, a new restaurant starts with an
+    // empty catalog. Disposable validation tenants use the default catalog as a
+    // deterministic fixture, exactly like scripts/local-validation-server.cjs.
+    // The isolation itself is covered by tests/unit/catalog-tenant-isolation.test.cjs.
+    process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
     process.env.ADMIN_LOGIN = MASTER_LOGIN;
     process.env.ADMIN_PASSWORD = MASTER_PASSWORD;
     process.env.ADMIN_DISPLAY_NAME = "Master V1 Final";
@@ -307,13 +314,28 @@ const updateSubscription = async (adminApi, masterCookie, body, ip = "127.0.3.1"
 
 const createAdminUser = async (adminApi, sessionCookie, user, ip = "127.0.4.1") => {
   const host = user.restaurantKey ? `${user.restaurantKey}.localhost` : MASTER_HOST;
+  const scopedUser = {
+    ...user,
+    userScope: user.userScope || (user.restaurantKey ? "RESTAURANT" : "SYSTEM"),
+    platformScope:
+      user.platformScope === undefined ? !user.restaurantKey : user.platformScope,
+  };
+  if (
+    scopedUser.userType === "CUSTOM" &&
+    !Array.isArray(scopedUser.grantOverrides)
+  ) {
+    scopedUser.grantOverrides = Object.entries(scopedUser.permissions || {})
+      .filter(([, enabled]) => enabled === true)
+      .map(([permission]) => LEGACY_RESTAURANT_PERMISSION_MAP[permission])
+      .filter(Boolean);
+  }
   const response = await runJsonApi(adminApi, {
     method: "POST",
     url: `http://${host}/api/admin/users/save`,
     host,
     cookie: sessionCookie,
     ip,
-    body: { user },
+    body: { user: scopedUser },
   });
 
   assertStatus(response, 200, `Usuario ${user.login} deveria ser criado`);

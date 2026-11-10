@@ -19,6 +19,8 @@
   const ROLE_COPY = Object.freeze({
     OWNER: "Controle integral do restaurante e proteção de propriedade.",
     ADMIN: "Administração ampla da operação e da equipe.",
+    OPERATOR: "Acesso ao painel, Caixa e Pedidos.",
+    WAITER: "Acesso ao painel, Mesas, Salão e Pedidos.",
     MANAGER: "Coordenação da operação e acompanhamento gerencial.",
     CASHIER: "Pedidos, clientes e rotinas financeiras de caixa.",
     SERVICE: "Atendimento, clientes, pedidos e entregas.",
@@ -29,6 +31,7 @@
     READ_ONLY: "Consulta sem ações de alteração.",
     CUSTOM: "Permissões configuradas individualmente.",
     MASTER: "Administração integral da plataforma INOVAS.",
+    ADMINISTRADOR: "Administração da plataforma sem poderes reservados ao Master.",
     SOCIO: "Visão estratégica com restrições administrativas críticas.",
     SUPORTE: "Diagnóstico da plataforma e suporte controlado.",
     DESENVOLVEDOR: "Saúde técnica, auditoria e suporte administrativo.",
@@ -40,7 +43,7 @@
   });
 
   const MODULE_LABELS = Object.freeze({
-    dashboard: "Dashboard",
+    dashboard: "Painel",
     restaurants: "Restaurantes",
     plans: "Planos",
     domains: "Domínios",
@@ -57,7 +60,127 @@
     delivery: "Entregas",
     reports: "Relatórios",
     settings: "Configurações",
+    integrations: "Integrações",
+    roles: "Perfis e permissões",
+    navigation: "Visibilidade do menu",
+    cash_register: "Caixa",
+    promotions: "Promoções",
+    reviews: "Avaliações",
+    business_hours: "Horários de funcionamento",
+    special_dates: "Datas especiais",
   });
+
+  const ACTION_LABELS = Object.freeze({
+    view: "Visualizar",
+    manage: "Administrar",
+    create: "Criar",
+    edit: "Editar",
+    delete: "Excluir",
+    suspend: "Suspender",
+    start: "Iniciar",
+    admin: "Administrar",
+    export: "Exportar",
+    refund: "Estornar",
+    cancel: "Cancelar",
+    configure: "Configurar",
+    open: "Abrir",
+    close: "Fechar",
+    open_tab: "Abrir comanda",
+    add_item: "Adicionar item",
+    send_order: "Enviar pedido",
+    discount: "Aplicar desconto",
+    remove_service: "Remover serviço",
+    close_tab: "Fechar conta",
+    confirm_payment: "Confirmar pagamento",
+    history: "Visualizar histórico",
+    permissions: "Alterar permissões",
+    dashboard: "Painel",
+    users: "Usuários",
+    cash_register: "Caixa",
+    orders: "Pedidos",
+    catalog: "Cardápio",
+    scheduled: "Agendamentos",
+    delivery: "Entregas",
+    customers: "Clientes",
+    promotions: "Promoções",
+    metrics: "Métricas",
+    reports: "Relatórios",
+    financial: "Financeiro",
+    reviews: "Avaliações",
+    settings: "Configurações",
+    inventory: "Estoque",
+    printing: "Impressão",
+    production: "Produção",
+    tables: "Mesas",
+    dining_room: "Salão",
+    delivery_channel: "Delivery",
+    loyalty: "Fidelidade",
+    coupons: "Cupons",
+    marketing: "Marketing",
+    api: "API",
+    integrations: "Integrações",
+  });
+
+  const ROLE_LABELS = Object.freeze({
+    MASTER: "Master",
+    ADMINISTRADOR: "Administrador",
+    SOCIO: "Sócio",
+    SUPORTE: "Suporte",
+    DESENVOLVEDOR: "Desenvolvedor",
+    FINANCEIRO_INOVAS: "Financeiro",
+    AUDITOR: "Auditoria",
+    OWNER: "Proprietário",
+    ADMIN: "Administrador",
+    MANAGER: "Gerente",
+    OPERATOR: "Operador",
+    SERVICE: "Operador",
+    CASHIER: "Caixa",
+    WAITER: "Garçom",
+    KITCHEN: "Cozinha",
+    INVENTORY: "Estoque",
+    DELIVERY: "Entregador",
+    CUSTOM: "Personalizado",
+  });
+
+  const INVITATION_LABELS = Object.freeze({
+    PENDING: "Pendente",
+    EXPIRED: "Expirado",
+    ACCEPTED: "Aceito",
+    USED: "Utilizado",
+    REVOKED: "Revogado",
+    NOT_CREATED: "Não criado",
+  });
+
+  const EVENT_LABELS = Object.freeze({
+    SYSTEM_USER_CREATED: "Usuário INOVAS criado",
+    SYSTEM_USER_UPDATED: "Usuário INOVAS atualizado",
+    SYSTEM_USER_BLOCKED: "Usuário INOVAS bloqueado",
+    SYSTEM_USER_DEACTIVATED: "Usuário INOVAS desativado",
+    SYSTEM_USER_ACTIVATED: "Usuário INOVAS ativado",
+    SYSTEM_USER_SESSIONS_REVOKED: "Sessões do usuário encerradas",
+    SYSTEM_USER_INVITATION_REISSUED: "Convite do usuário reenviado",
+    RESTAURANT_USER_CREATED: "Usuário do restaurante criado",
+    RESTAURANT_USER_UPDATED: "Usuário do restaurante atualizado",
+    RESTAURANT_USER_BLOCKED: "Usuário do restaurante bloqueado",
+    RESTAURANT_USER_ACTIVATED: "Usuário do restaurante ativado",
+  });
+
+  const translateRole = (value) => ROLE_LABELS[String(value || "").toUpperCase()] || "Perfil personalizado";
+  const translateInvitation = (value) => INVITATION_LABELS[String(value || "NOT_CREATED").toUpperCase()] || "Não informado";
+  const translateEvent = (value) => EVENT_LABELS[String(value || "").toUpperCase()] || "Evento administrativo";
+  const translateRisk = (value) => ({ LOW: "Baixo", MEDIUM: "Médio", HIGH: "Alto", CRITICAL: "Crítico" })[String(value || "").toUpperCase()] || "Não informado";
+  const translateSupportMode = (value) => ({ VIEW: "visualização", ADMIN: "administrativo" })[String(value || "").toUpperCase()] || "controlado";
+  const translateSource = (value) => ({ legacy_env: "Configuração segura", panel: "Cadastro administrativo", invitation: "Convite", migration: "Migração" })[String(value || "").toLowerCase()] || "Cadastro administrativo";
+  const hasEffectivePermission = (permission) =>
+    new Set(state.session?.effectivePermissions || []).has(permission);
+  const canCreateUserAccounts = () =>
+    isSystem
+      ? hasEffectivePermission("system.users.manage")
+      : hasEffectivePermission("tenant.users.manage") || hasEffectivePermission("tenant.users.create");
+  const canEditUserAccounts = () =>
+    isSystem
+      ? hasEffectivePermission("system.users.manage")
+      : hasEffectivePermission("tenant.users.manage") || hasEffectivePermission("tenant.users.edit");
 
   const state = {
     session: null,
@@ -193,25 +316,35 @@
   const renderSidebar = () => {
     if (!sidebar) return;
     const systemLinks = [
-      ["Visão geral", "/system", "VI"],
-      ["Restaurantes", "/system#restaurants", "RE"],
-      ["Saúde", "/system#health", "SA"],
-      ["Integrações", "/system#integrations", "IN"],
-      ["Usuários INOVAS", "/system/users", "US"],
-      ["Auditoria", "/system#audit", "AU"],
-      ["Suporte", "/system#support", "SU"],
+      ["Visão geral", "/system", "VI", "system.dashboard.view"],
+      ["Restaurantes", "/system#restaurants", "RE", "system.restaurants.view"],
+      ["Saúde", "/system#health", "SA", "system.health.view"],
+      ["Integrações", "/system#integrations", "IN", "system.integrations.view"],
+      ["Usuários INOVAS", "/system/users", "US", "system.users.view"],
+      ["Perfis e permissões", "/system/roles", "PE", "system.roles.view"],
+      ["Auditoria", "/system#audit", "AU", "system.audit.view"],
+      ["Suporte", "/system#support", "SU", "system.support.start"],
+      ["Configurações", "/system#settings", "CO", "system.settings.view"],
     ];
     const restaurantLinks = [
-      ["Visão geral", "/admin/", "VI"],
-      ["Pedidos", "/admin/#orders", "PE"],
-      ["Cardápio", "/admin/#catalog", "CA"],
-      ["Clientes", "/admin/#customers", "CL"],
-      ["Estoque", "/admin/#inventory", "ES"],
-      ["Financeiro", "/admin/#finance", "FI"],
-      ["Usuários", "/admin/users", "US"],
-      ["Configurações", "/admin/#settings", "CO"],
+      ["Visão geral", "/admin/", "VI", "tenant.navigation.dashboard", "tenant.dashboard.view"],
+      ["Pedidos", "/admin/#orders", "PE", "tenant.navigation.orders", "tenant.orders.view"],
+      ["Cardápio", "/admin/#catalog", "CA", "tenant.navigation.catalog", "tenant.catalog.view"],
+      ["Clientes", "/admin/#customers", "CL", "tenant.navigation.customers", "tenant.customers.view"],
+      ["Estoque", "/admin/#inventory", "ES", "tenant.navigation.inventory", "tenant.inventory.view"],
+      ["Financeiro", "/admin/#finance", "FI", "tenant.navigation.financial", "tenant.financial.view"],
+      ["Usuários", "/admin/users", "US", "tenant.navigation.users", "tenant.users.view"],
+      ["Configurações", "/admin/#settings", "CO", "tenant.navigation.settings", "tenant.settings.view"],
     ];
-    const links = isSystem ? systemLinks : restaurantLinks;
+    const effective = new Set(state.session?.effectivePermissions || []);
+    const navigationIsEnforced = [...effective].some((permission) => permission.startsWith("tenant.navigation."));
+    const links = isSystem
+      ? systemLinks.filter(([, , , permission]) => effective.has(permission))
+      : restaurantLinks.filter(([, , , menuPermission, functionalPermission]) =>
+          navigationIsEnforced
+            ? effective.has(menuPermission) && effective.has(functionalPermission)
+            : !effective.size || effective.has(functionalPermission)
+        );
     sidebar.innerHTML = `
       <a class="users-brand" href="${homePath}">
         <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
@@ -237,16 +370,62 @@
           .join("")}
       </nav>
       <div class="users-sidebar-foot">
-        <strong>${escapeHtml(
-          state.session?.displayName || state.session?.login || "Conta autenticada"
-        )}</strong><br />
-        ${escapeHtml(
-          isSystem
-            ? `${state.session?.role || "SYSTEM"} · tenant nulo`
-            : `${state.session?.role || "RESTAURANT"} · ${state.session?.restaurantKey || "tenant protegido"}`
-        )}
+        <div class="users-sidebar-account">
+          <strong>${escapeHtml(
+            state.session?.displayName || state.session?.login || "Conta autenticada"
+          )}</strong>
+          <span>${escapeHtml(
+            isSystem
+              ? `${translateRole(state.session?.role)} · sem restaurante vinculado`
+              : `${translateRole(state.session?.role)} · ${state.session?.restaurantKey || "restaurante protegido"}`
+          )}</span>
+        </div>
+        <button class="users-logout" type="button" data-users-logout>
+          <span class="users-nav-icon" aria-hidden="true">↪</span>
+          <span>Sair</span>
+        </button>
       </div>
     `;
+  };
+
+  const clearAuthenticationState = () => {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        const key = storage.key(index) || "";
+        if (/auth|session|token|support/i.test(key)) storage.removeItem(key);
+      }
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch("/api/admin/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+    } catch {
+      // A limpeza local e a troca de página continuam mesmo se a rede falhar.
+    }
+    clearAuthenticationState();
+    window.location.replace(isSystem ? "/system/login.html" : "/admin/login.html");
+  };
+
+  const redirectWrongAudience = async (error) => {
+    if (!isSystem || error?.status !== 401) return false;
+    try {
+      const response = await fetch("/api/auth/restaurant/session", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && payload.authenticated === true) {
+        window.location.replace("/admin/");
+        return true;
+      }
+    } catch {}
+    window.location.replace("/system/login.html");
+    return true;
   };
 
   const renderSupportBanner = () => {
@@ -255,7 +434,7 @@
     supportBanner.hidden = false;
     supportBanner.innerHTML = `
       <div>
-        <strong>Suporte ${escapeHtml(support.mode)} ativo · ${escapeHtml(
+        <strong>Suporte em modo de ${escapeHtml(translateSupportMode(support.mode))} · ${escapeHtml(
           support.restaurantName || state.session.restaurantKey
         )}</strong>
         Motivo: ${escapeHtml(support.reason)} · expira em ${escapeHtml(
@@ -303,7 +482,7 @@
           <h2>Não foi possível abrir esta área</h2>
           <p>${escapeHtml(error?.message || "Tente novamente em instantes.")}</p>
           <a class="users-button users-button-primary" href="${
-            error?.status === 401 ? "/admin/login.html" : window.location.href
+            error?.status === 401 ? (isSystem ? "/system/login.html" : "/admin/login.html") : window.location.href
           }">${error?.status === 401 ? "Entrar novamente" : "Tentar novamente"}</a>
         </div>
       </section>
@@ -419,7 +598,7 @@
       <header class="users-page-head">
         <div>
           <span class="users-eyebrow">${
-            isSystem ? "Identidades internas · SYSTEM" : "Equipe · RESTAURANT"
+            isSystem ? "Identidades internas · plataforma" : "Equipe · restaurante"
           }</span>
           <h1>${isSystem ? "Usuários INOVAS" : "Usuários"}</h1>
           <p>${
@@ -428,9 +607,9 @@
               : "Gerencie os acessos, perfis e permissões da equipe deste restaurante."
           }</p>
         </div>
-        <a class="users-button users-button-primary" href="${listPath}/new">
+        ${canCreateUserAccounts() ? `<a class="users-button users-button-primary" href="${listPath}/new">
           <span aria-hidden="true">＋</span> Novo usuário
-        </a>
+        </a>` : ""}
       </header>
       <section class="users-summary" aria-label="Resumo de usuários">
         ${renderStat("", "Total", state.summary.total ?? state.users.length, "Todos os cadastros")}
@@ -441,7 +620,7 @@
           "__authority__",
           isSystem ? "Alta autoridade" : "Proprietários",
           ownersOrAdmins,
-          isSystem ? "Master ou Sócio" : "Owners ativos"
+          isSystem ? "Master ou Administrador" : "Proprietários ativos"
         )}
       </section>
       <section class="users-panel">
@@ -510,7 +689,7 @@
                   (source) =>
                     `<option value="${escapeHtml(source)}" ${
                       state.filters.source === source ? "selected" : ""
-                    }>${escapeHtml(source)}</option>`
+                    }>${escapeHtml(translateSource(source))}</option>`
                 )
                 .join("")}
             </select>
@@ -607,7 +786,9 @@
                   ${
                     activeFilters
                       ? '<button class="users-button users-button-secondary" type="button" data-clear-filters>Limpar filtros</button>'
-                      : `<a class="users-button users-button-primary" href="${listPath}/new">Novo usuário</a>`
+                      : canCreateUserAccounts()
+                        ? `<a class="users-button users-button-primary" href="${listPath}/new">Novo usuário</a>`
+                        : ""
                   }
                 </div>
               </div>
@@ -668,7 +849,7 @@
               <strong>${escapeHtml(user.name)}</strong>
               <small>${escapeHtml(user.jobTitle || "Função não informada")}</small>
               <span class="users-badges">
-                ${isOwner ? '<span class="users-badge is-owner">Owner</span>' : ""}
+                ${isOwner ? '<span class="users-badge is-owner">Proprietário</span>' : ""}
                 ${customized ? '<span class="users-badge">Personalizado</span>' : ""}
               </span>
             </span>
@@ -682,7 +863,7 @@
         </td>
         <td data-label="Perfil">
           <span class="users-role">
-            <strong>${escapeHtml(user.roleLabel || user.role)}</strong>
+            <strong>${escapeHtml(user.roleLabel || translateRole(user.role))}</strong>
             <small>${escapeHtml(ROLE_COPY[user.role] || "Perfil de acesso")}</small>
           </span>
         </td>
@@ -694,7 +875,7 @@
         )}</span></td>
         <td data-label="Último acesso">${escapeHtml(formatDate(user.lastAccessAt))}</td>
         <td data-label="Origem">${escapeHtml(
-          user.source === "legacy_env" ? "Configuração segura" : "Painel"
+          translateSource(user.source)
         )}</td>
         <td data-label="Ações">
           <div class="users-actions">
@@ -703,9 +884,9 @@
             )}" title="Ver detalhes" aria-label="Ver detalhes de ${escapeHtml(
               user.name
             )}">···</button>
-            <a class="users-icon-button" href="${listPath}/${encodeURIComponent(
+            ${canEditUserAccounts() ? `<a class="users-icon-button" href="${listPath}/${encodeURIComponent(
               user.id
-            )}/edit" title="Editar" aria-label="Editar ${escapeHtml(user.name)}">✎</a>
+            )}/edit" title="Editar" aria-label="Editar ${escapeHtml(user.name)}">✎</a>` : ""}
           </div>
         </td>
       </tr>
@@ -728,6 +909,7 @@
         : status.key === "INACTIVE"
           ? { action: "activate", label: "Reativar", danger: false }
           : { action: "block", label: "Bloquear", danger: true };
+    const canManage = canEditUserAccounts();
     dialog.innerHTML = `
       <header class="users-dialog-head">
         <div>
@@ -741,14 +923,14 @@
           ${[
             ["E-mail", user.email],
             ["Telefone", user.phone || "Não informado"],
-            ["Perfil", user.roleLabel || user.role],
+            ["Perfil", user.roleLabel || translateRole(user.role)],
             [isSystem ? "Área" : "Setor", user.department || "Não informado"],
             ["Status", status.label],
             ["Último acesso", formatDate(user.lastAccessAt)],
             ["Criado em", formatDate(user.createdAt)],
             ["Criado por", user.createdBy || "Sistema"],
             ["Permissões efetivas", `${permissionCount} concedidas`],
-            ["Convite", user.invitation?.state || "Não criado"],
+            ["Convite", translateInvitation(user.invitation?.state)],
           ]
             .map(
               ([label, value]) => `
@@ -775,7 +957,7 @@
                   .map(
                     (event) =>
                       `<li><strong>${escapeHtml(
-                        event.action || "EVENTO"
+                        translateEvent(event.action)
                       )}</strong> · ${escapeHtml(
                         formatDate(event.createdAt)
                       )} · ${escapeHtml(
@@ -788,7 +970,7 @@
         </section>
       </div>
       <footer class="users-dialog-actions">
-        ${
+        ${canManage ? `${
           invitePending
             ? `<button class="users-button users-button-secondary" type="button" data-user-resend="${escapeHtml(
                 user.id
@@ -813,7 +995,7 @@
         )}" data-next-action="${primaryLifecycle.action}">${primaryLifecycle.label}</button>
         <a class="users-button users-button-primary" href="${listPath}/${encodeURIComponent(
           user.id
-        )}/edit">Editar</a>
+        )}/edit">Editar</a>` : '<button class="users-button users-button-secondary" type="button" data-dialog-close>Fechar</button>'}
       </footer>
     `;
     dialog.showModal();
@@ -846,6 +1028,11 @@
   };
 
   const initializeEditorState = () => {
+    if (isSystem && !hasEffectivePermission("system.users.manage")) {
+      const error = new Error("Seu perfil não possui permissão para administrar usuários INOVAS.");
+      error.status = 403;
+      throw error;
+    }
     const identifier = getEditorIdentifier();
     state.selectedUser =
       mode === "edit"
@@ -894,17 +1081,20 @@
 
   const renderPermissionEditor = () => {
     if (isSystem) {
-      const permissions = getSelectedRoleDefinition()?.permissions || [];
+      const definitions = new Map(getPermissions().map((permission) => [permission.key, permission]));
+      const permissions = (getSelectedRoleDefinition()?.permissions || [])
+        .map((permissionKey) => definitions.get(permissionKey))
+        .filter(Boolean);
       return `
         <div class="users-security-note">
-          As permissões System são determinadas pelo papel selecionado e nunca incluem
+          As permissões da plataforma são determinadas pelo perfil selecionado e nunca incluem
           permissões operacionais de restaurante.
         </div>
-        <div class="users-badges" style="margin-top:12px">
+        <div class="users-permission-list" style="margin-top:12px">
           ${permissions
             .map(
               (permission) =>
-                `<span class="users-badge">${escapeHtml(permission)}</span>`
+                `<section class="users-permission-group"><h3>${escapeHtml(MODULE_LABELS[permission.module] || "Área administrativa")}</h3><div class="users-permission-option"><span><strong>${escapeHtml(ACTION_LABELS[permission.action] || "Ação administrativa")}</strong><small>${escapeHtml(permission.description)}</small></span><span class="users-risk is-${String(permission.riskLevel || "low").toLowerCase()}">${escapeHtml(translateRisk(permission.riskLevel))}</span></div></section>`
             )
             .join("")}
         </div>
@@ -917,7 +1107,7 @@
           .map(
             ([module, permissions]) => `
               <section class="users-permission-group">
-                <h3>${escapeHtml(MODULE_LABELS[module] || module)}</h3>
+                <h3>${escapeHtml(MODULE_LABELS[module] || "Área administrativa")}</h3>
                 ${permissions
                   .map(
                     (permission) => `
@@ -930,13 +1120,13 @@
                             : ""
                         } />
                         <span>
-                          <strong>${escapeHtml(permission.action)}</strong>
+                          <strong>${escapeHtml(ACTION_LABELS[permission.action] || "Ação administrativa")}</strong>
                           <small>${escapeHtml(permission.description)}</small>
                         </span>
                         <span class="users-risk ${String(
                           permission.riskLevel
                         ).toLowerCase().replace(/^/, "is-")}">${escapeHtml(
-                          permission.riskLevel
+                          translateRisk(permission.riskLevel)
                         )}</span>
                       </label>
                     `
@@ -968,13 +1158,13 @@
       <header class="users-page-head users-editor-title">
         <div>
           <span class="users-eyebrow">${
-            isSystem ? "Conta interna · SYSTEM" : "Vínculo da equipe · RESTAURANT"
+            isSystem ? "Conta interna · plataforma" : "Vínculo da equipe · restaurante"
           }</span>
           <h1>${isEditing ? "Editar usuário" : "Criar novo usuário"}</h1>
           <p>${
             isSystem
               ? "Defina identidade, área e papel da plataforma. Nenhum restaurante será associado."
-              : "O restaurante e o tenant são obtidos exclusivamente da sessão autenticada."
+              : "O restaurante é obtido exclusivamente da sessão autenticada."
           }</p>
         </div>
       </header>
@@ -1058,7 +1248,7 @@
                   <h2>${isSystem ? "Permissões do papel" : "Matriz de permissões"}</h2>
                   <p>${
                     isSystem
-                      ? "Vocabulário exclusivo system.*."
+                      ? "Permissões exclusivas da administração da plataforma."
                       : "Dependências são aplicadas automaticamente e validadas novamente no servidor."
                   }</p>
                 </div>
@@ -1199,7 +1389,7 @@
     </div>
     <div class="users-summary-list">
       <div class="users-summary-row"><span>Domínio</span><strong>${
-        isSystem ? "SYSTEM" : "RESTAURANT"
+        isSystem ? "Plataforma" : "Restaurante"
       }</strong></div>
       <div class="users-summary-row"><span>Perfil</span><strong>${escapeHtml(
         role?.label || "Não selecionado"
@@ -1214,8 +1404,8 @@
     </div>
     <div class="users-security-note">
       ${isSystem
-        ? "Esta conta não receberá tenant, restaurante ou permissões tenant.*."
-        : "Tenant e restaurante são vinculados pela sessão; campos enviados pelo cliente são rejeitados."}
+        ? "Esta conta não receberá vínculo nem permissões operacionais de restaurante."
+        : "O restaurante é vinculado pela sessão; alterações de escopo enviadas pelo navegador são rejeitadas."}
     </div>
     ${
       criticalCount
@@ -1615,6 +1805,10 @@
   });
 
   document.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-users-logout]")) {
+      await logout();
+      return;
+    }
     const clear = event.target.closest("[data-clear-filters]");
     if (clear) {
       state.filters = {
@@ -1714,9 +1908,13 @@
         renderList();
       }
     } catch (error) {
+      if (await redirectWrongAudience(error)) return;
       renderFatal(error);
     }
   };
 
   init();
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) void init();
+  });
 })();

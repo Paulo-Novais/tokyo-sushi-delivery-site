@@ -39,7 +39,8 @@ const syntaxFiles = [
 
 const fastCommands = [
   [npmCommand, ["audit", "--omit=dev"], "npm audit --omit=dev"],
-  [npmCommand, ["run", "test:tenant-resolution"], "test:tenant-resolution"],
+  [npmCommand, ["run", "test:unit"], "test:unit"],
+  [npmCommand, ["run", "validate:public-build"], "validate:public-build"],
   [npmCommand, ["run", "validate:v1-final-local"], "validate:v1-final-local"],
   [npmCommand, ["run", "validate:responsive-platform-local"], "validate:responsive-platform-local"],
   [npmCommand, ["run", "validate:admin-kanban-volume:local"], "validate:admin-kanban-volume:local"],
@@ -50,7 +51,11 @@ const fastCommands = [
 
 const fullCommands = [
   [npmCommand, ["audit", "--omit=dev"], "npm audit --omit=dev"],
-  [npmCommand, ["run", "test:tenant-resolution"], "test:tenant-resolution"],
+  [npmCommand, ["run", "test:unit"], "test:unit"],
+  [npmCommand, ["run", "validate:public-build"], "validate:public-build"],
+  [npmCommand, ["run", "validate:user-boundaries-local"], "validate:user-boundaries-local"],
+  [npmCommand, ["run", "validate:cash-register-local"], "validate:cash-register-local"],
+  [npmCommand, ["run", "validate:runtime-schema-boundary-local"], "validate:runtime-schema-boundary-local"],
   [npmCommand, ["run", "validate:v1-1-users-local"], "validate:v1-1-users-local"],
   [npmCommand, ["run", "validate:v1-2-saas-local"], "validate:v1-2-saas-local"],
   [npmCommand, ["run", "validate:v1-3-platform-local"], "validate:v1-3-platform-local"],
@@ -70,6 +75,7 @@ const fullCommands = [
   [npmCommand, ["run", "validate:stage-3-ui-local"], "validate:stage-3-ui-local"],
   [npmCommand, ["run", "validate:whatsapp"], "validate:whatsapp"],
   [npmCommand, ["run", "test:e2e"], "test:e2e"],
+  [npmCommand, ["run", "test:e2e:public-build"], "test:e2e:public-build"],
 ];
 
 const secretPatterns = [

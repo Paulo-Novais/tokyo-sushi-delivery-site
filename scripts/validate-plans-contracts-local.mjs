@@ -7,6 +7,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -272,12 +276,15 @@ const login = async (adminApi, identifier, password, next = "/admin/") => {
   return { response, cookie };
 };
 
+const SYSTEM_USER_TYPES = new Set(["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]);
+
 const createUser = async (adminApi, sessionCookie, user) => {
   const response = await runAdminApi(adminApi, {
     method: "POST",
     url: "http://localhost:3000/api/admin/users/save",
     cookie: sessionCookie,
-    body: { user },
+    // Explicit identity domain (migration 026), as sent by the admin UI.
+    body: { user: { userScope: SYSTEM_USER_TYPES.has(user.userType) ? "SYSTEM" : "RESTAURANT", ...user } },
   });
 
   assert.equal(response.statusCode, 200, `Usuario ${user.login} deveria ser criado.`);
@@ -568,14 +575,14 @@ const run = async () => {
     const adminAuth = require(path.join(workspaceRoot, "lib/admin-auth.cjs"));
 
     process.env.ADMIN_LOGIN = "usermaster@inovas.com";
-    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
+    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(TEST_PASSWORD_1);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-planos-contratos";
     process.env.ADMIN_USERS = JSON.stringify([
       {
         login: "usermaster@inovas.com",
         displayName: "Master INOVAS Food",
-        passwordHash: adminAuth.createPasswordHash("novais753951"),
+        passwordHash: adminAuth.createPasswordHash(TEST_PASSWORD_1),
         userType: "MASTER",
         platformScope: true,
       },

@@ -128,6 +128,23 @@ const SECTION_PERMISSION_MAP = Object.freeze({
   users: "users_view",
   audit: "developer_logs_view",
 });
+const SECTION_MENU_VISIBILITY_MAP = Object.freeze({
+  dashboard: "menu_dashboard_view",
+  users: "menu_users_view",
+  "cash-register": "menu_cash_register_view",
+  orders: "menu_orders_view",
+  scheduled: "menu_scheduled_view",
+  menu: "menu_catalog_view",
+  deliveries: "menu_delivery_view",
+  customers: "menu_customers_view",
+  promotions: "menu_promotions_view",
+  metrics: "menu_metrics_view",
+  reports: "menu_reports_view",
+  finance: "menu_financial_view",
+  reviews: "menu_reviews_view",
+  settings: "menu_settings_view",
+  inventory: "menu_inventory_view",
+});
 const SECTION_FEATURE_MAP = Object.freeze({
   orders: "orders",
   scheduled: "scheduledOrders",
@@ -1084,8 +1101,18 @@ const hasPlanFeatureForSection = (sectionKey) => {
   return releasedFeatures.includes(featureKey);
 };
 
+const hasMenuVisibilityPermission = (sectionKey) => {
+  if (adminState.adminPermissions?.menu_visibility_enforced !== true) {
+    return true;
+  }
+
+  return hasAdminPermission(SECTION_MENU_VISIBILITY_MAP[sectionKey] || "");
+};
+
 const canAccessAdminSection = (sectionKey) =>
-  hasAdminPermission(SECTION_PERMISSION_MAP[sectionKey] || "") && hasPlanFeatureForSection(sectionKey);
+  hasMenuVisibilityPermission(sectionKey) &&
+  hasAdminPermission(SECTION_PERMISSION_MAP[sectionKey] || "") &&
+  hasPlanFeatureForSection(sectionKey);
 
 const getNavigationSectionsForActor = () =>
   isSystemAdminActor() ? SYSTEM_NAV_SECTIONS : RESTAURANT_NAV_SECTIONS;
@@ -15431,6 +15458,9 @@ const initLoginPage = async () => {
   const form = document.querySelector("[data-admin-login-form]");
   const submitButton = document.querySelector("[data-admin-login-submit]");
   const feedbackNode = document.querySelector("[data-admin-login-feedback]");
+  const restaurantSelection = document.querySelector(
+    "[data-restaurant-selection]"
+  );
 
   if (!form) {
     return;
@@ -15442,8 +15472,7 @@ const initLoginPage = async () => {
     nextField.value = getSafeAdminRedirect();
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const performLogin = async (restaurantKey = "") => {
     const formData = new FormData(form);
     const identifier = String(formData.get("identifier") || "").trim();
     const password = String(formData.get("password") || "");
@@ -15468,12 +15497,41 @@ const initLoginPage = async () => {
           identifier,
           password,
           next,
+          ...(restaurantKey ? { restaurantKey } : {}),
         }),
       });
 
       setFeedback(feedbackNode, "Login validado. Abrindo painel...", "success");
-      window.location.href = payload.redirectTo || "/admin/";
+      window.location.replace(payload.redirectTo || "/admin/");
     } catch (error) {
+      const restaurants = Array.isArray(error?.payload?.details?.restaurants)
+        ? error.payload.details.restaurants
+        : [];
+      if (
+        error.errorCode === "restaurant_selection_required" &&
+        restaurantSelection &&
+        restaurants.length
+      ) {
+        restaurantSelection.hidden = false;
+        restaurantSelection.innerHTML = `
+          <strong>Selecione o estabelecimento</strong>
+          <div>
+            ${restaurants
+              .map(
+                (restaurant) => `
+                  <button type="button" class="admin-button admin-button-secondary"
+                    data-restaurant-login="${escapeHtml(
+                      restaurant.restaurantKey
+                    )}">
+                    ${escapeHtml(restaurant.restaurantKey)}
+                    <small>${escapeHtml(restaurant.role || "Membro")}</small>
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
       setFeedback(feedbackNode, formatAdminLoginError(error));
     } finally {
       if (submitButton) {
@@ -15483,7 +15541,21 @@ const initLoginPage = async () => {
     }
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (restaurantSelection) {
+      restaurantSelection.hidden = true;
+      restaurantSelection.innerHTML = "";
+    }
+    await performLogin();
+  };
+
   form.addEventListener("submit", handleSubmit);
+  restaurantSelection?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-restaurant-login]");
+    if (!button) return;
+    void performLogin(button.dataset.restaurantLogin || "");
+  });
 
   try {
     const session = await fetchJson("/api/admin/session");

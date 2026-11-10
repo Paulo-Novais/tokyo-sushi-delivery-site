@@ -7,6 +7,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -314,7 +318,7 @@ const validateDomainApi = async (adminApi) => {
     url: "http://localhost:3000/api/admin/login",
     body: {
       identifier: "usermaster@inovas.com",
-      password: "novais753951",
+      password: TEST_PASSWORD_1,
       next: "/admin/master.html",
     },
   });
@@ -402,7 +406,7 @@ const validateDomainBrowser = async (adminApi, systemAuthApi, systemApi) => {
       "Login administrativo deveria carregar."
     );
     await page.locator('input[name="identifier"]').fill("usermaster@inovas.com");
-    await page.locator('input[name="password"]').fill("novais753951");
+    await page.locator('input[name="password"]').fill(TEST_PASSWORD_1);
     await page.locator("[data-admin-login-submit]").click();
 
     await waitForCondition(
@@ -460,7 +464,7 @@ const run = async () => {
     const adminAuth = require(path.join(workspaceRoot, "lib/admin-auth.cjs"));
 
     process.env.ADMIN_LOGIN = "usermaster@inovas.com";
-    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
+    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(TEST_PASSWORD_1);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-dominios";
 

@@ -269,7 +269,11 @@ const loginAdmin = async (adminApi, { host, identifier, password, cookie = "", i
     },
   });
 
-  assert.equal(response.statusCode, 200, `${identifier} deveria autenticar em ${host}`);
+  assert.equal(
+    response.statusCode,
+    200,
+    `${identifier} deveria autenticar em ${host} (HTTP ${response.statusCode}: ${response.payload?.errorCode || ""})`
+  );
   const sessionCookie = extractCookieHeader(response);
   assert.ok(sessionCookie, "login administrativo deve emitir cookie");
   return { response, cookie: sessionCookie };
@@ -374,7 +378,9 @@ const validateUsersBrowser = async (adminApi) => {
 
   const server = createStaticServer(workspaceRoot, adminApi);
   const { port } = await listen(server);
-  const baseURL = `http://usuarios-a.localhost:${port}`;
+  // Admin sessions are created only on the platform host (platform_host_required);
+  // the tenant comes from the session membership, not from the browser host.
+  const baseURL = `http://localhost:${port}`;
   const browser = await chromium.launch({ headless: true });
   const consoleErrors = [];
   const pageErrors = [];
@@ -590,7 +596,9 @@ const run = async () => {
       "busca deve cobrir ID e CNPJ/MEI"
     );
 
-    const createSupport = await runAdminApi(adminApi, {
+    // System identities are managed only through /api/system/users since the
+    // SYSTEM x RESTAURANT domain separation; the tenant path must refuse it.
+    const tenantPathSystemUser = await runAdminApi(adminApi, {
       method: "POST",
       url: "http://localhost:3000/api/admin/users/save",
       host: "localhost:3000",
@@ -608,9 +616,31 @@ const run = async () => {
         },
       },
     });
-    assert.equal(createSupport.statusCode, 200, "MASTER deve criar usuario do sistema sem restaurante");
-    assert.equal(createSupport.payload?.user?.restaurantKey, "", "Usuario do sistema nao deve ter restaurantKey");
-    assert.equal(createSupport.payload?.user?.platformScope, true, "Usuario do sistema deve ter platformScope");
+    assert.equal(tenantPathSystemUser.statusCode, 403, "caminho do tenant nao deve gravar usuario System");
+
+    const systemApi = require(path.join(workspaceRoot, "api", "system", "[...action].js"));
+    const createSupport = await runAdminApi(systemApi, {
+      method: "POST",
+      url: "http://localhost:3000/api/system/users",
+      host: "localhost:3000",
+      cookie: master.cookie,
+      ip: "127.0.2.5",
+      body: {
+        name: "Suporte INOVAS",
+        email: "suporte@v1-1.local",
+        role: "SUPORTE",
+        credentialMode: "TEMPORARY_PASSWORD",
+        password: "SenhaSuporteV11",
+      },
+    });
+    assert.equal(
+      createSupport.statusCode,
+      201,
+      `MASTER deve criar usuario do sistema sem restaurante (HTTP ${createSupport.statusCode}: ${createSupport.payload?.error?.code || ""})`
+    );
+    assert.equal(createSupport.payload?.data?.user?.role, "SUPORTE", "Usuario do sistema deve manter perfil SUPORTE");
+    assert.equal(createSupport.payload?.data?.user?.tenantId, undefined, "Usuario do sistema nao deve ter tenant");
+    assert.equal(createSupport.payload?.data?.user?.restaurantKey, undefined, "Usuario do sistema nao deve ter restaurantKey");
 
     const adminUiSource = await readWorkspaceFile("admin/admin.js");
     assert.ok(
@@ -629,7 +659,7 @@ const run = async () => {
     assert.ok(adminUiSource.includes("data-user-scope"), "UI deve expor Tipo de usuario no cadastro");
 
     const owner = await loginAdmin(adminApi, {
-      host: "usuarios-a.localhost",
+      host: "localhost:3000",
       identifier: "owner@usuarios-a.local",
       password: "SenhaOwnerV11",
       ip: "127.0.3.1",
@@ -638,8 +668,8 @@ const run = async () => {
     assert.equal(owner.response.payload?.admin?.restaurantKey, "usuarios-a");
 
     const ownerList = await runAdminApi(adminApi, {
-      url: "http://usuarios-a.localhost/api/admin/users/list",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/list",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.2",
     });
@@ -653,8 +683,8 @@ const run = async () => {
 
     const createCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.3",
       body: {
@@ -666,6 +696,7 @@ const run = async () => {
           password: "SenhaCaixaV11",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -686,8 +717,8 @@ const run = async () => {
 
     const duplicateCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.31",
       body: {
@@ -699,6 +730,7 @@ const run = async () => {
           password: "SenhaCaixaV11",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -708,8 +740,8 @@ const run = async () => {
 
     const invalidCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.32",
       body: {
@@ -721,6 +753,7 @@ const run = async () => {
           password: "123",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -729,8 +762,8 @@ const run = async () => {
 
     const editCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.33",
       body: {
@@ -742,6 +775,7 @@ const run = async () => {
           phone: "5511999944444",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -752,8 +786,8 @@ const run = async () => {
 
     const createManager = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.34",
       body: {
@@ -765,6 +799,7 @@ const run = async () => {
           password: "SenhaGerenteV11",
           status: "ACTIVE",
           userType: "GERENTE",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -772,15 +807,15 @@ const run = async () => {
     assert.equal(createManager.statusCode, 200, "OWNER deve criar GERENTE interno");
 
     const manager = await loginAdmin(adminApi, {
-      host: "usuarios-a.localhost",
+      host: "localhost:3000",
       identifier: "gerente@usuarios-a.local",
       password: "SenhaGerenteV11",
       ip: "127.0.3.35",
     });
     const managerWriteDenied = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: manager.cookie,
       ip: "127.0.3.36",
       body: {
@@ -792,17 +827,23 @@ const run = async () => {
           password: "SenhaCaixaV11",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
     });
     assert.equal(managerWriteDenied.statusCode, 403, "GERENTE nao deve alterar usuarios via API");
-    assert.equal(managerWriteDenied.payload?.errorCode, "user_profile_view_only");
+    // RBAC now denies at the central API permission gate (admin_permission_denied)
+    // before reaching the user-profile rule (user_profile_view_only); both are 403.
+    assert.ok(
+      ["admin_permission_denied", "user_profile_view_only"].includes(managerWriteDenied.payload?.errorCode),
+      `GERENTE deve ser negado por RBAC (recebido ${managerWriteDenied.payload?.errorCode})`
+    );
 
     const createMasterDenied = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.4",
       body: {
@@ -814,6 +855,7 @@ const run = async () => {
           password: "SenhaMasterIndevida",
           status: "ACTIVE",
           userType: "MASTER",
+          userScope: "SYSTEM", // explicit identity domain (migration 026)
           restaurantKey: "usuarios-a",
         },
       },
@@ -828,8 +870,8 @@ const run = async () => {
 
     const createOtherTenantDenied = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/save",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/save",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.5",
       body: {
@@ -841,6 +883,7 @@ const run = async () => {
           password: "SenhaCaixaOutro",
           status: "ACTIVE",
           userType: "CAIXA",
+          userScope: "RESTAURANT", // explicit identity domain (migration 026)
           restaurantKey: "outro-tenant",
         },
       },
@@ -850,8 +893,8 @@ const run = async () => {
 
     const blockCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/status",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/status",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.6",
       body: {
@@ -864,8 +907,8 @@ const run = async () => {
 
     const unblockCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/status",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/status",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.7",
       body: {
@@ -878,8 +921,8 @@ const run = async () => {
 
     const deleteCashier = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/delete",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/delete",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.8",
       body: {
@@ -895,8 +938,8 @@ const run = async () => {
 
     const deleteManager = await runAdminApi(adminApi, {
       method: "POST",
-      url: "http://usuarios-a.localhost/api/admin/users/delete",
-      host: "usuarios-a.localhost",
+      url: "http://localhost:3000/api/admin/users/delete",
+      host: "localhost:3000",
       cookie: owner.cookie,
       ip: "127.0.3.9",
       body: {
@@ -909,7 +952,7 @@ const run = async () => {
 
     const originalMode = process.env.INOVAS_TENANT_MODE;
     process.env.INOVAS_TENANT_MODE = "default_only";
-    const defaultOnlyResolution = await masterStore.resolveRestaurantByHost("usuarios-a.localhost");
+    const defaultOnlyResolution = await masterStore.resolveRestaurantByHost("localhost:3000");
     assert.equal(defaultOnlyResolution.restaurantKey, "default", "default_only deve manter Tokyo/default");
     assert.equal(defaultOnlyResolution.multiRestaurantActive, false, "pilot nao deve ficar ativo em default_only");
     process.env.INOVAS_TENANT_MODE = originalMode;

@@ -23,7 +23,11 @@ const runNodeValidationScript = ([label, scriptPath]) => {
   console.log(`\n[v1-final] ${label}`);
   const result = spawnSync(process.execPath, [scriptPath], {
     cwd: workspaceRoot,
-    env: process.env,
+    // Legacy scripts create disposable tenants that order items from the default
+    // catalog. Since the tenant-catalog isolation fix this needs the explicit
+    // test-only fixture switch (same as scripts/local-validation-server.cjs).
+    // Isolation itself: tests/unit/catalog-tenant-isolation.test.cjs.
+    env: { ...process.env, INOVAS_ALLOW_TENANT_CATALOG_FALLBACK: "true" },
     stdio: "inherit",
   });
 

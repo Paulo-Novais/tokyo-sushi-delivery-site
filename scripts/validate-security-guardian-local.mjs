@@ -162,6 +162,8 @@ const runValidation = async () => {
         name: "Custom Security",
         password: "SenhaCustom123",
         userType: "CUSTOM",
+        // Explicit identity domain (migration 026): the role never chooses it.
+        userScope: "RESTAURANT",
         permissions: {
           dashboard_view: true,
         },

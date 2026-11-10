@@ -6,6 +6,9 @@ import tenantResolution from "./lib/tenant-resolution.cjs";
 import userPermissions from "./lib/user-permissions.cjs";
 import domainSessions from "./lib/domain-sessions.cjs";
 import domainTopology from "./lib/domain-topology.cjs";
+import identityDomainStore from "./lib/identity-domain-store.cjs";
+import tenantSql from "./lib/tenant-sql.cjs";
+import publicSurfacePolicy from "./lib/public-surface-policy.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -39,6 +42,8 @@ const {
   SESSION_AUDIENCES,
   getDomainSessionFromRequest,
 } = domainSessions;
+const { appendAuditEvent } = identityDomainStore;
+const { enterDatabaseScope } = tenantSql;
 const DOMAIN_CONFIG = appBranding.DOMAIN_CONFIG || {};
 const {
   RESTAURANT_ROUTE_COOKIE,
@@ -170,6 +175,39 @@ const buildRestaurantNotFoundResponse = () =>
       },
     }
   );
+
+const recordSystemBoundaryDenial = async (request, session, pathname, redirectTo = "") => {
+  if (!session?.identityId) return;
+  try {
+    enterDatabaseScope({
+      audience: "restaurant",
+      identityId: session.identityId,
+      sessionId: session.sessionId,
+      tenantId: session.tenantId,
+      restaurantId: session.restaurantId,
+      restaurantKey: session.restaurantKey,
+    });
+    await appendAuditEvent({
+      actorIdentityId: session.identityId,
+      actorType: "RESTAURANT",
+      tenantId: session.tenantId,
+      restaurantId: session.restaurantId,
+      eventType: "SYSTEM_ACCESS_DENIED",
+      result: "DENIED",
+      reason: "restaurant_identity_on_system_route",
+      metadata: {
+        path: pathname,
+        redirectTo,
+        restaurantKey: session.restaurantKey,
+      },
+    });
+  } catch (error) {
+    console.error("[system-boundary-audit]", {
+      path: pathname,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
 
 const buildPermanentRestaurantRedirect = (requestUrl, pathname, slug) => {
   const destination = new URL(requestUrl);
@@ -419,6 +457,19 @@ const canAccessUserCreation = async (session) => {
 export default async function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
+
+  // Defense in depth: internal modules, scripts, docs and configs are never
+  // static content, even if the build output ever includes them by mistake.
+  if (publicSurfacePolicy.isPrivateStaticPath(pathname)) {
+    return new Response("Not Found", {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
   const policyHost = getRequestPolicyHost(request, url);
   const rawHost = getRawRequestHost(request, url);
   const hostClassification = classifyDomainHost(rawHost);
@@ -501,7 +552,14 @@ export default async function middleware(request) {
   if (isSystemControlledPath(pathname)) {
     if (!systemSession) {
       if (pathname.startsWith("/api/")) {
+        if (restaurantSession) {
+          await recordSystemBoundaryDenial(request, restaurantSession, pathname);
+        }
         return buildUnauthorizedApiResponse();
+      }
+      if (restaurantSession) {
+        await recordSystemBoundaryDenial(request, restaurantSession, pathname, "/admin/");
+        return Response.redirect(new URL("/admin/", request.url), 307);
       }
       const systemLogin = new URL("/system/login.html", request.url);
       systemLogin.searchParams.set("next", `${pathname}${url.search}`);

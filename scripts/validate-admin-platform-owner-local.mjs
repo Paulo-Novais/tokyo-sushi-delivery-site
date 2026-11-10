@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// Per-run random credential: test fixtures must never reuse a real password.
+const MASTER_TEST_PASSWORD = `master-${require("node:crypto").randomBytes(18).toString("base64url")}`;
 
 const buildMockResponse = () => {
   const headers = {};
@@ -89,7 +91,7 @@ const run = async () => {
       {
         login: "usermaster@gmail.com",
         displayName: "Master INOVAS Food",
-        passwordHash: adminAuth.createPasswordHash("novais96"),
+        passwordHash: adminAuth.createPasswordHash(MASTER_TEST_PASSWORD),
         userType: "MASTER",
         platformScope: true,
       },
@@ -161,7 +163,7 @@ const run = async () => {
       url: "http://localhost:3000/api/admin/login",
       body: {
         identifier: "usermaster@gmail.com",
-        password: "novais96",
+        password: MASTER_TEST_PASSWORD,
       },
     });
 

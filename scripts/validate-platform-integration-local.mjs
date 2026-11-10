@@ -7,6 +7,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,7 +40,7 @@ const PUBLIC_ROUTES = [
 ];
 
 const PROFILE_FIXTURES = Object.freeze({
-  master: { login: "usermaster@inovas.com", password: "novais753951" },
+  master: { login: "usermaster@inovas.com", password: TEST_PASSWORD_1 },
   owner: { login: "owner.local", password: "senha-owner" },
   developer: { login: "dev.local", password: "senha-dev" },
   custom: { login: "custom.local", password: "senha-custom" },
@@ -348,11 +352,21 @@ const createManagedUser = async (adminApi, sessionCookie, user) => {
     url: "http://localhost:3000/api/admin/users/save",
     cookie: sessionCookie,
     body: {
-      user,
+      // Explicit identity domain (migration 026), as sent by the admin UI.
+      user: {
+        userScope: ["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"].includes(user.userType)
+          ? "SYSTEM"
+          : "RESTAURANT",
+        ...user,
+      },
     },
   });
 
-  assert.equal(response.statusCode, 200, `Usuario ${user.login} deveria ser criado.`);
+  assert.equal(
+    response.statusCode,
+    200,
+    `Usuario ${user.login} deveria ser criado (HTTP ${response.statusCode}: ${response.payload?.errorCode || ""}).`
+  );
   const systemUserTypes = new Set(["MASTER", "SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"]);
   assert.equal(response.payload?.user?.restaurantKey, systemUserTypes.has(user.userType) ? "" : "default");
   assert.equal(response.payload?.user?.tipo_usuario, user.userType);

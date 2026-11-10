@@ -4,6 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -157,7 +161,7 @@ const validateAdminApi = async ({ adminApi, adminAuth }) => {
       host: platformHost,
       body: JSON.stringify({
         identifier: "usermaster@inovas.com",
-        password: "novais753951",
+        password: TEST_PASSWORD_1,
         next: "/admin/",
       }),
     })
@@ -226,7 +230,7 @@ const run = async () => {
     const adminAuth = require(path.join(workspaceRoot, "lib/admin-auth.cjs"));
 
     process.env.ADMIN_LOGIN = "usermaster@inovas.com";
-    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
+    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(TEST_PASSWORD_1);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-tenant-context";
 

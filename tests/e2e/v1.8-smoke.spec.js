@@ -215,13 +215,16 @@ test.describe("V1.8 protected surfaces and System health smoke", () => {
       await page.setViewportSize({ width, height });
       await loginAdmin(page);
       await expect(page).toHaveURL(/\/system\/?$/);
+      // Painel System V1: page title is "Visão geral"; the old visual
+      // "SystemSession sem tenant" badge was removed, so the boundary is now
+      // asserted on the real session used by this page.
       await expect(
-        page.getByRole("heading", { name: "Visão geral da INOVAS" })
+        page.getByRole("heading", { name: "Visão geral", exact: true })
       ).toBeVisible({ timeout: 20_000 });
       await expect(page.locator(".system-health-grid")).toBeVisible();
-      await expect(page.locator(".system-boundary")).toContainText(
-        "SystemSession sem tenant"
-      );
+      const systemSession = await (await page.request.get("/api/auth/system/session")).json();
+      expect(systemSession.data.session.audience).toBe("system");
+      expect(systemSession.data.session.tenantId).toBeNull();
       await expectNoHorizontalOverflow(page);
     });
   }

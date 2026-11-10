@@ -119,7 +119,10 @@ const createOrderWithRetry = async (payload, tenantContext) => {
 
   for (let attempt = 0; attempt <= ORDER_CREATE_RETRY_DELAYS_MS.length; attempt += 1) {
     try {
-      const catalogContext = await getCatalogValidationContext({ tenantContext });
+      const catalogContext = await getCatalogValidationContext({
+        tenantContext,
+        salesChannel: "delivery",
+      });
       const normalizedOrder = normalizeOrderSubmission(payload, catalogContext);
       const result = await runWithDatabaseScope(
         {

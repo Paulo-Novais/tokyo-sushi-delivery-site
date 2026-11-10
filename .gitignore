@@ -25,3 +25,9 @@ node_modules/
 .env.*
 !.env.example
 .env*.local
+
+# Build estatico gerado por scripts/build-public.mjs (Vercel outputDirectory)
+public/
+
+# Capturas geradas pelos testes e2e
+artifacts/

@@ -7,6 +7,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -274,27 +278,33 @@ const assertOfficialLogo = async (page, selector, message) => {
   );
 };
 
-const saveSystemUser = async (adminApi, cookie, userType, index) => {
+// Since the SYSTEM x RESTAURANT domain separation, System identities are managed
+// only through /api/system/users (the tenant path /api/admin/users/save refuses
+// a SystemSession with system_session_not_tenant_session).
+const saveSystemUser = async (_adminApi, cookie, userType, index) => {
   const loginId = `${userType.toLowerCase()}-v13@inovas.local`;
-  const response = await runAdminApi(adminApi, {
+  const systemApi = require(path.join(workspaceRoot, "api", "system", "[...action].js"));
+  const response = await runAdminApi(systemApi, {
     method: "POST",
-    url: "http://localhost:3000/api/admin/users/save",
+    url: "http://localhost:3000/api/system/users",
     cookie,
     ip: `127.0.13.${index}`,
     body: {
-      user: {
-        login: loginId,
-        email: loginId,
-        name: `${userType} V1.3`,
-        password: "SenhaV13Platform",
-        status: "ACTIVE",
-        userType,
-      },
+      name: `${userType} V1.3`,
+      email: loginId,
+      role: userType,
+      credentialMode: "TEMPORARY_PASSWORD",
+      password: "SenhaV13Platform",
     },
   });
 
-  assert.equal(response.statusCode, 200, `${userType} deveria ser criado por MASTER.`);
-  assert.equal(response.payload?.user?.restaurantKey || "", "", `${userType} nao deve receber restaurantKey.`);
+  assert.equal(
+    response.statusCode,
+    201,
+    `${userType} deveria ser criado por MASTER (HTTP ${response.statusCode}: ${response.payload?.error?.code || response.payload?.errorCode || ""}).`
+  );
+  assert.equal(response.payload?.data?.user?.role, userType, `${userType} deve manter o perfil System.`);
+  assert.equal(response.payload?.data?.user?.tenantId, undefined, `${userType} nao deve receber tenant.`);
 
   return loginId;
 };
@@ -303,7 +313,7 @@ const validateApi = async (adminApi) => {
   // API layer: validates platform scope without relying on frontend-only menus.
   const master = await login(adminApi, {
     identifier: "usermaster@inovas.com",
-    password: "novais753951",
+    password: TEST_PASSWORD_1,
     ip: "127.0.13.1",
   });
 
@@ -363,7 +373,9 @@ const validateApi = async (adminApi) => {
   assert.ok(snapshot.settings?.api?.status, "Configuracoes devem preparar API.");
   assert.ok(snapshot.settings?.tokens?.status, "Configuracoes devem preparar tokens.");
 
-  const userTypes = ["SOCIO", "DESENVOLVEDOR", "SUPORTE", "VENDEDOR"];
+  // VENDEDOR is the legacy name of the System role COMERCIAL
+  // (lib/access-policy.cjs alias); /api/system/users only accepts modern keys.
+  const userTypes = ["SOCIO", "DESENVOLVEDOR", "SUPORTE", "COMERCIAL"];
   const createdUsers = [];
 
   for (let index = 0; index < userTypes.length; index += 1) {
@@ -374,7 +386,7 @@ const validateApi = async (adminApi) => {
     ["SOCIO", 200],
     ["DESENVOLVEDOR", 403],
     ["SUPORTE", 403],
-    ["VENDEDOR", 403],
+    ["COMERCIAL", 403],
   ]);
 
   for (let index = 0; index < userTypes.length; index += 1) {
@@ -432,7 +444,7 @@ const validateBrowser = async (adminApi) => {
       "Login admin deve carregar a logo oficial INOVAS Food."
     );
     await page.locator('input[name="identifier"]').fill("usermaster@inovas.com");
-    await page.locator('input[name="password"]').fill("novais753951");
+    await page.locator('input[name="password"]').fill(TEST_PASSWORD_1);
     await page.locator("[data-admin-login-submit]").click();
 
     await waitForCondition(
@@ -523,7 +535,7 @@ const run = async () => {
     const adminAuth = require(path.join(workspaceRoot, "lib/admin-auth.cjs"));
 
     process.env.ADMIN_LOGIN = "usermaster@inovas.com";
-    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash("novais753951");
+    process.env.ADMIN_PASSWORD_HASH = adminAuth.createPasswordHash(TEST_PASSWORD_1);
     process.env.ADMIN_DISPLAY_NAME = "Master INOVAS Food";
     process.env.ADMIN_SESSION_SECRET = "segredo-local-v13-platform";
 

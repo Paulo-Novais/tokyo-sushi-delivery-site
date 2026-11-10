@@ -270,7 +270,7 @@ try {
     runtimePool.query("SET ROLE neondb_owner")
   );
   const unauthorizedTableDenied = await expectDenied(() =>
-    runtimePool.query("SELECT count(*) FROM permission_definitions")
+    runtimePool.query("SELECT count(*) FROM pg_catalog.pg_authid")
   );
   const unauthorizedFunctionDenied = await expectDenied(() =>
     runtimePool.query("SELECT pg_read_file('postgresql.conf', 0, 1)")

@@ -33,8 +33,9 @@ test.describe("V1.9 System responsive shell", () => {
     test(`System dashboard stays usable at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await loginThroughUi(page);
+      // Painel System V1 title (was "Visão geral da INOVAS").
       await expect(
-        page.getByRole("heading", { name: "Visão geral da INOVAS" })
+        page.getByRole("heading", { name: "Visão geral", exact: true })
       ).toBeVisible();
       await expect(page.locator(".system-health-grid")).toBeVisible();
       await expectNoHorizontalOverflow(page);

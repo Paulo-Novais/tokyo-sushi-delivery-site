@@ -341,6 +341,29 @@ a.admin-action-button {
   color: #d5ffe8;
 }
 
+.admin-restaurant-selection {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--admin-border, #dbe3ef);
+  border-radius: 14px;
+  background: var(--admin-surface-soft, #f7f9fc);
+}
+
+.admin-restaurant-selection > div {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-restaurant-selection button {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.admin-restaurant-selection button small {
+  opacity: 0.72;
+}
+
 .admin-shell {
   min-height: 100vh;
   display: grid;

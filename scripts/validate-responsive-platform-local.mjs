@@ -7,6 +7,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { randomBytes as inovasTestRandomBytes } from "node:crypto";
+// Per-run random credentials: test fixtures must never reuse a real password.
+const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}`;
+
 
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,7 +21,7 @@ const reportJsonPath = path.join(auditRoot, "responsive-audit-report.json");
 const ADMIN_THEME_STORAGE_KEY = "tokyo_admin_theme";
 
 const PROFILE_FIXTURES = Object.freeze({
-  master: { login: "usermaster@inovas.com", password: "novais753951", userType: "MASTER" },
+  master: { login: "usermaster@inovas.com", password: TEST_PASSWORD_1, userType: "MASTER" },
   owner: { login: "owner.responsive@inovas.local", password: "SenhaResponsiveOwner", userType: "OWNER" },
   gerente: { login: "gerente.responsive@inovas.local", password: "SenhaResponsiveGerente", userType: "GERENTE" },
   caixa: { login: "caixa.responsive@inovas.local", password: "SenhaResponsiveCaixa", userType: "CAIXA" },
@@ -425,11 +429,18 @@ const createManagedUser = async (adminApi, sessionCookie, profile) => {
         restaurantKey: restaurantUserTypes.has(profile.userType) ? "default" : "",
         status: "ACTIVE",
         userType: profile.userType,
+        // Identity domain is explicit since migration 026 (the role never picks it);
+        // the admin UI sends it the same way (admin/admin.js).
+        userScope: restaurantUserTypes.has(profile.userType) ? "RESTAURANT" : "SYSTEM",
       },
     },
   });
 
-  assert.equal(response.statusCode, 200, `Usuario ${profile.userType} deveria ser criado.`);
+  assert.equal(
+    response.statusCode,
+    200,
+    `Usuario ${profile.userType} deveria ser criado (HTTP ${response.statusCode}: ${JSON.stringify(response.payload?.errorCode || response.payload?.error || response.payload)}).`
+  );
   return response.payload?.user || null;
 };
 

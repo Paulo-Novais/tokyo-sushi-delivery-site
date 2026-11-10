@@ -5,6 +5,11 @@ const os = require("node:os");
 const path = require("node:path");
 
 const workspaceRoot = path.resolve(__dirname, "..");
+// INOVAS_STATIC_ROOT=public serves the production build output (scripts/build-public.mjs).
+const staticRoot = process.env.INOVAS_STATIC_ROOT
+  ? path.resolve(workspaceRoot, process.env.INOVAS_STATIC_ROOT)
+  : workspaceRoot;
+const { isPrivateStaticPath } = require(path.join(workspaceRoot, "lib", "public-surface-policy.cjs"));
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "inovas-local-server-"));
 const tempDataRoot = path.join(tempRoot, ".data");
 
@@ -21,6 +26,9 @@ const sessionSecret = process.env.E2E_SESSION_SECRET || crypto.randomBytes(32).t
 
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.INOVAS_TENANT_MODE = process.env.INOVAS_TENANT_MODE || "pilot";
+// Disposable E2E tenants use the default catalog as a deterministic fixture.
+// Runtime environments never enable this compatibility switch.
+process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
 process.env.ADMIN_LOGIN = adminLogin;
 process.env.ADMIN_PASSWORD = adminPassword;
 process.env.ADMIN_DISPLAY_NAME = process.env.E2E_ADMIN_DISPLAY_NAME || "Admin E2E";
@@ -67,6 +75,7 @@ const {
   getAdminAccessContext,
 } = require(path.join(workspaceRoot, "lib", "user-permissions.cjs"));
 const {
+  requireDirectRestaurantSession,
   requireRestaurantAccess,
   requireSystemSession,
 } = require(path.join(workspaceRoot, "lib", "domain-access.cjs"));
@@ -100,7 +109,7 @@ const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Content-Security-Policy":
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://maps.gstatic.com https://maps.googleapis.com; connect-src 'self' https://maps.googleapis.com https://graph.facebook.com; font-src 'self' data:; form-action 'self'; upgrade-insecure-requests",
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://maps.gstatic.com https://maps.googleapis.com https://blogger.googleusercontent.com https://images.unsplash.com; connect-src 'self' https://maps.googleapis.com https://graph.facebook.com; font-src 'self' data:; form-action 'self'; upgrade-insecure-requests",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()",
   "X-Frame-Options": "DENY",
   "Cross-Origin-Opener-Policy": "same-origin",
@@ -230,6 +239,12 @@ const protectSystemHtml = async (req, res, pathname) => {
     await requireSystemSession(req);
     return true;
   } catch {
+    try {
+      if (await requireDirectRestaurantSession(req)) {
+        sendRedirect(res, 302, "/admin/");
+        return false;
+      }
+    } catch {}
     const next = encodeURIComponent(pathname);
     sendRedirect(res, 302, `/system/login.html?next=${next}`);
     return false;
@@ -258,6 +273,7 @@ const resolveStaticPathname = (pathname) => {
   if (pathname === "/system/users/new") return "/system/users/new.html";
   if (/^\/system\/users\/[^/]+\/edit$/.test(pathname)) return "/system/users/edit.html";
   if (pathname === "/system/users/edit") return "/system/users/edit.html";
+  if (pathname === "/system/roles" || pathname === "/system/roles/") return "/system/roles/index.html";
   return pathname;
 };
 
@@ -352,9 +368,15 @@ const serveStatic = async (req, res, pathname) => {
     return;
   }
 
-  const requestedPath = path.resolve(workspaceRoot, `.${staticPathname}`);
+  // Same static surface as production (lib/public-surface-policy.cjs).
+  if (isPrivateStaticPath(staticPathname)) {
+    sendText(res, 404, "Not found");
+    return;
+  }
 
-  if (!requestedPath.startsWith(workspaceRoot)) {
+  const requestedPath = path.resolve(staticRoot, `.${staticPathname}`);
+
+  if (!requestedPath.startsWith(staticRoot)) {
     sendText(res, 403, "Forbidden");
     return;
   }

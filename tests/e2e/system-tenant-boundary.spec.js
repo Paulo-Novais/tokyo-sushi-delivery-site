@@ -612,4 +612,94 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
     await restaurantContext.close();
     await master.api.dispose();
   });
+
+  test("restaurant identity never renders the System shell and logout prevents session replay", async ({
+    browser,
+  }) => {
+    const master = await loginMaster();
+    const restaurant = await onboardRestaurant(master.api, {
+      key: uniqueKey("system-denied"),
+      ownerPassword: "OwnerSystemDenied123!",
+    });
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 860 },
+    });
+    const page = await context.newPage();
+
+    try {
+      const ownerLogin = await page.request.post("/api/admin/login", {
+        data: {
+          identifier: restaurant.ownerLogin,
+          password: restaurant.ownerPassword,
+        },
+      });
+      expect(ownerLogin.status()).toBe(200);
+      const activeRestaurantSession = await page.request.get(
+        "/api/auth/restaurant/session"
+      );
+      expect(activeRestaurantSession.status()).toBe(200);
+      expect((await activeRestaurantSession.json()).authenticated).toBe(true);
+
+      await page.goto("/system/users");
+      await expect(page).toHaveURL(/\/admin\/?$/);
+      await expect(page.getByText("Usuários INOVAS", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Auditoria", { exact: true })).toHaveCount(0);
+
+      await page.goto("/admin/users");
+      await expect(page.locator("[data-users-logout]").first()).toBeVisible();
+      await page.locator("[data-users-logout]").first().click();
+      await expect(page).toHaveURL(/\/admin\/login\.html$/);
+
+      const session = await page.request.get("/api/auth/restaurant/session");
+      expect([200, 401]).toContain(session.status());
+      if (session.status() === 200) {
+        expect((await session.json()).authenticated).toBe(false);
+      }
+
+      await page.goBack();
+      await expect(page).toHaveURL(/\/admin\/login\.html/);
+      await expect(page.getByRole("heading", { name: "Usuários", exact: true })).toHaveCount(0);
+    } finally {
+      await context.close();
+      await master.api.dispose();
+    }
+  });
+
+  test("MASTER can open the permission matrix and fully terminate a System session", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 860 },
+    });
+    const page = await context.newPage();
+
+    try {
+      const login = await page.request.post("/api/admin/login", {
+        data: { identifier: masterLogin, password: masterPassword },
+      });
+      expect(login.status()).toBe(200);
+
+      await page.goto("/system/roles");
+      await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "+ Novo perfil" })).toBeVisible();
+      await expect(page.getByText("Master", { exact: true }).first()).toBeVisible();
+      await expect(page.locator("[data-roles-logout]").first()).toBeVisible();
+
+      await page.locator("[data-roles-logout]").first().click();
+      await expect(page).toHaveURL(/\/system\/login\.html$/);
+      const session = await page.request.get("/api/auth/system/session");
+      expect([200, 401]).toContain(session.status());
+      if (session.status() === 200) {
+        expect((await session.json()).authenticated).toBe(false);
+      }
+
+      await page.goBack();
+      expect(page.url()).not.toMatch(/\/system\/roles/);
+      await page.goto("/system/roles");
+      await expect(page).toHaveURL(/\/system\/login\.html/);
+      await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
 });
