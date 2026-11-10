@@ -21,8 +21,6 @@
     opening: "/admin/caixa/abertura",
     closing: "/admin/caixa/fechamento",
   });
-  const MAX_TABLES = 200;
-  const MAX_GUESTS = 100;
   const state = {
     root: null,
     context: {},
@@ -37,7 +35,6 @@
     selectedTabId: "",
     selectedPane: "consumption",
     openTableId: "",
-    editOccupancyOpen: false,
     paymentDraft: [],
     closingDraft: null,
     loading: false,
@@ -93,8 +90,6 @@
     const number = Number(normalized);
     return Number.isFinite(number) ? number : 0;
   };
-  const isIntegerBetween = (value, min, max) =>
-    Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
   const newIdempotencyKey = () =>
     window.crypto?.randomUUID?.() ||
     `cash-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -335,9 +330,6 @@
               <div><dt>Taxa de servico</dt><dd>${escapeHtml(
                 `${register.serviceChargeRate}%`
               )}</dd></div>
-              <div><dt>Mesas no turno</dt><dd>${escapeHtml(
-                snapshot.tables.length
-              )}</dd></div>
               <div><dt>Observacao</dt><dd>${escapeHtml(
                 register.openingNotes || "Sem observacao"
               )}</dd></div>
@@ -352,23 +344,13 @@
         <form class="cash-focused-card" data-cash-form="open-register">
           <span class="cash-kicker">Abertura de Caixa</span>
           <h3>Iniciar o turno</h3>
-          <p>Defina as mesas deste turno. A configuracao podera ser alterada novamente na proxima abertura.</p>
+          <p>O operador autenticado sera registrado automaticamente na auditoria.</p>
           <div class="cash-form-grid">
             <label>
               <span>Operador</span>
               <input value="${escapeHtml(
                 state.context.adminName || "Operador autenticado"
               )}" disabled />
-            </label>
-            <label>
-              <span>Quantidade inicial de mesas</span>
-              <input name="tableCount" type="number" min="1" max="${MAX_TABLES}" step="1" inputmode="numeric" value="${escapeHtml(
-                Math.min(
-                  MAX_TABLES,
-                  Math.max(1, Number(snapshot.lastClosedRegister?.tableCount || 12))
-                )
-              )}" required />
-              <small>Configuracao do Salao · limite de ${MAX_TABLES} mesas</small>
             </label>
             <label>
               <span>Valor inicial</span>
@@ -532,13 +514,6 @@
           <div><span class="cash-kicker">Salao</span><h3>Mesas</h3></div>
           <div class="cash-table-panel-controls">
             <strong>${escapeHtml(snapshot.tables.length)}</strong>
-            <button class="cash-add-table-button" type="button" data-cash-action="add-table" ${
-              snapshot.tables.length >= MAX_TABLES ||
-              state.busyAction ||
-              !hasPermission("cash_register_open")
-                ? "disabled"
-                : ""
-            }>+ Adicionar mesa</button>
             <button class="cash-mobile-collapse" type="button" data-cash-action="toggle-tables" aria-expanded="${
               state.tablesCollapsed ? "false" : "true"
             }">${state.tablesCollapsed ? "Mostrar" : "Recolher"}</button>
@@ -574,23 +549,24 @@
                       )} ${
                         tab?.id === state.selectedTabId ? "is-selected" : ""
                       }" data-cash-table="${escapeHtml(table.id)}">
+                        <span class="cash-table-number">${escapeHtml(
+                          table.number || table.label
+                        )}</span>
                         <span class="cash-table-icon" aria-hidden="true">
                           <svg viewBox="0 0 24 24" fill="none"><path d="M4 11h16M6 11v6M18 11v6M8 8h8v3H8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </span>
-                        <span class="cash-table-number ${
-                          tab?.customerName ? "is-customer" : ""
-                        }">${escapeHtml(tab?.customerName || table.label)}</span>
                         <strong>${escapeHtml(tableStatusLabel(table.status))}</strong>
                         ${
                           tab
-                            ? `<small class="cash-table-occupancy">${escapeHtml(
-                                tab.customerName
-                                  ? `${table.label} · ${tab.guestCount} pessoas`
-                                  : `${tab.guestCount} pessoas`
-                              )}</small>
-                               <b>${escapeHtml(money(tab.totalAmount))}</b>
-                               <small>${escapeHtml(elapsed(tab.openedAt))}</small>`
-                            : `<small class="cash-table-occupancy">Livre</small>`
+                            ? `<b>${escapeHtml(money(tab.totalAmount))}</b>
+                               <small>${escapeHtml(
+                                 `${tab.guestCount} pessoa(s) · ${elapsed(
+                                   tab.openedAt
+                                 )}`
+                               )}</small>`
+                            : `<small>${escapeHtml(
+                                `${table.capacity} lugares`
+                              )}</small>`
                         }
                       </button>
                     `;
@@ -919,33 +895,20 @@
     return `
       <main class="cash-command-panel">
         <header class="cash-command-header">
-          <div class="cash-command-identity">
-            <span class="cash-command-table">${escapeHtml(
-              tab.customerName || table.label
-            )}</span>
-            ${
-              tab.customerName
-                ? `<small>${escapeHtml(table.label)}</small>`
-                : ""
-            }
+          <div>
+            <span class="cash-command-table">${escapeHtml(table.label)}</span>
             <span class="cash-command-status is-${escapeHtml(
               tab.status.toLowerCase()
             )}">${escapeHtml(
               tab.status === "AWAITING_PAYMENT" ? "Aguardando pagamento" : "Ocupada"
             )}</span>
           </div>
-          <div class="cash-command-header-actions">
-            <button class="cash-edit-occupancy-button" type="button" data-cash-action="edit-occupancy">Editar ocupacao</button>
-            <button class="cash-print-button" type="button" data-cash-action="print">Imprimir comanda</button>
-          </div>
+          <button class="cash-print-button" type="button" data-cash-action="print">Imprimir comanda</button>
           <dl>
             <div><dt>Comanda</dt><dd>${escapeHtml(tab.publicId)}</dd></div>
             <div><dt>Aberta em</dt><dd>${escapeHtml(dateTime(tab.openedAt))}</dd></div>
             <div><dt>Garcom</dt><dd>${escapeHtml(tab.waiterName)}</dd></div>
-            <div><dt>Cliente</dt><dd>${escapeHtml(
-              tab.customerName || "Nao informado"
-            )}</dd></div>
-            <div><dt>Pessoas</dt><dd>${escapeHtml(tab.guestCount)}</dd></div>
+            <div><dt>Clientes</dt><dd>${escapeHtml(tab.guestCount)}</dd></div>
           </dl>
         </header>
         <nav class="cash-command-tabs">
@@ -1136,6 +1099,23 @@
     `;
   };
 
+  const renderConfigureTables = () => `
+    <section class="cash-focused-view cash-setup-view">
+      <form class="cash-focused-card" data-cash-form="configure-tables">
+        <span class="cash-kicker">Configuracao inicial</span>
+        <h3>Configure as mesas reais do salao</h3>
+        <p>Nenhuma mesa foi cadastrada para este restaurante. Esta configuracao sera persistida no tenant atual.</p>
+        <div class="cash-form-grid">
+          <label><span>Quantidade de mesas</span><input name="count" type="number" min="1" max="80" value="12" required /></label>
+          <label><span>Lugares por mesa</span><input name="capacity" type="number" min="1" max="50" value="4" required /></label>
+        </div>
+        <button class="cash-primary-button" type="submit" ${
+          state.busyAction ? "disabled" : ""
+        }>Configurar Salao</button>
+      </form>
+    </section>
+  `;
+
   const renderOpenTableModal = () => {
     const table = getSnapshot().tables.find(
       (entry) => entry.id === state.openTableId
@@ -1148,12 +1128,12 @@
           <input type="hidden" name="tableId" value="${escapeHtml(table.id)}" />
           <span class="cash-kicker">Nova comanda</span>
           <h3>${escapeHtml(table.label)}</h3>
-          <p>Informe a ocupacao real desta mesa.</p>
-          <label><span>Quantas pessoas estao nesta mesa?</span><input name="guestCount" type="number" min="1" max="${MAX_GUESTS}" step="1" inputmode="numeric" value="1" required /></label>
-          <label><span>Nome do cliente ou responsavel (opcional)</span><input name="customerName" maxlength="180" placeholder="Ex.: Daniel" /></label>
+          <p>${escapeHtml(`${table.capacity} lugares disponiveis`)}</p>
+          <label><span>Quantidade de clientes</span><input name="guestCount" type="number" min="1" max="100" value="2" required /></label>
           <label><span>Garcom responsavel</span><input name="waiterName" value="${escapeHtml(
             state.context.adminName || ""
           )}" required /></label>
+          <label><span>Cliente (opcional)</span><input name="customerName" maxlength="180" placeholder="Nome do cliente" /></label>
           <div class="cash-modal-actions">
             <button class="cash-secondary-button" type="button" data-cash-action="close-modal">Cancelar</button>
             <button class="cash-primary-button" type="submit">Abrir Comanda</button>
@@ -1163,55 +1143,24 @@
     `;
   };
 
-  const renderEditOccupancyModal = () => {
-    const tab = getActiveTab();
-    const table = getSelectedTable();
-    if (!state.editOccupancyOpen || !tab || !table) return "";
-    return `
-      <div class="cash-modal" role="presentation">
-        <button type="button" class="cash-modal-backdrop" data-cash-action="close-modal" aria-label="Fechar"></button>
-        <form class="cash-modal-dialog" data-cash-form="update-tab">
-          <input type="hidden" name="tabId" value="${escapeHtml(tab.id)}" />
-          <span class="cash-kicker">Editar ocupacao</span>
-          <h3>${escapeHtml(tab.customerName || table.label)}</h3>
-          <p>${escapeHtml(table.label)} · alteracoes registradas na auditoria.</p>
-          <label><span>Quantidade de pessoas</span><input name="guestCount" type="number" min="1" max="${MAX_GUESTS}" step="1" inputmode="numeric" value="${escapeHtml(
-            tab.guestCount
-          )}" required /></label>
-          <label><span>Nome do cliente ou responsavel (opcional)</span><input name="customerName" maxlength="180" value="${escapeHtml(
-            tab.customerName || ""
-          )}" placeholder="Ex.: Daniel" /></label>
-          <div class="cash-modal-actions">
-            <button class="cash-secondary-button" type="button" data-cash-action="close-modal">Cancelar</button>
-            <button class="cash-primary-button" type="submit">Salvar alteracoes</button>
-          </div>
-        </form>
-      </div>
-    `;
-  };
-
   const renderFloorView = () => {
     const snapshot = getSnapshot();
-    if (!snapshot.register) {
-      return `
-        <section class="cash-focused-view cash-setup-view">
-          <article class="cash-focused-card">
-            <span class="cash-kicker">Caixa fechado</span>
-            <h3>Abra o Caixa para configurar o Salao</h3>
-            <p>A quantidade inicial de mesas sera definida para o novo turno.</p>
-            <button class="cash-primary-button" type="button" data-cash-view="opening">Abrir Caixa</button>
-          </article>
-        </section>
-      `;
-    }
+    if (!snapshot.tables.length) return renderConfigureTables();
     return `
       <section class="cash-floor-layout">
         ${renderTablePanel()}
         ${renderCommandPanel()}
         ${renderPaymentPanel()}
       </section>
+      ${
+        snapshot.register
+          ? ""
+          : `<div class="cash-register-blocker">
+              <div><span>!</span><strong>Caixa fechado</strong><p>Abra o caixa para iniciar comandas e registrar vendas.</p>
+              <button class="cash-primary-button" type="button" data-cash-view="opening">Abrir Caixa</button></div>
+            </div>`
+      }
       ${renderOpenTableModal()}
-      ${renderEditOccupancyModal()}
     `;
   };
 
@@ -1349,14 +1298,8 @@
     } else if (action === "toggle-tables") {
       state.tablesCollapsed = !state.tablesCollapsed;
       render();
-    } else if (action === "add-table") {
-      await postAction("add-table", {}, "add-table");
-    } else if (action === "edit-occupancy") {
-      state.editOccupancyOpen = true;
-      render();
     } else if (action === "close-modal") {
       state.openTableId = "";
-      state.editOccupancyOpen = false;
       render();
     } else if (action === "print") {
       window.print();
@@ -1421,35 +1364,24 @@
     event.preventDefault();
     const data = Object.fromEntries(new FormData(form).entries());
     const type = form.dataset.cashForm;
-    if (type === "open-register") {
-      if (!isIntegerBetween(data.tableCount, 1, MAX_TABLES)) {
-        setMessage(
-          `A quantidade de mesas deve ser um numero inteiro entre 1 e ${MAX_TABLES}.`,
-          "error"
-        );
-        render();
-        return;
-      }
+    if (type === "configure-tables") {
+      await postAction(
+        "configure-tables",
+        { count: Number(data.count), capacity: Number(data.capacity) },
+        "configure-tables"
+      );
+    } else if (type === "open-register") {
       await postAction(
         "open",
         {
           openingAmount: toNumber(data.openingAmount),
           serviceChargeRate: toNumber(data.serviceChargeRate),
-          tableCount: Number(data.tableCount),
           notes: data.notes || "",
         },
         "open-register"
       );
       if (getSnapshot().register) setView("floor");
     } else if (type === "open-tab") {
-      if (!isIntegerBetween(data.guestCount, 1, MAX_GUESTS)) {
-        setMessage(
-          `A quantidade de pessoas deve ser um numero inteiro entre 1 e ${MAX_GUESTS}.`,
-          "error"
-        );
-        render();
-        return;
-      }
       const result = await postAction(
         "open-tab",
         {
@@ -1464,29 +1396,6 @@
         state.openTableId = "";
         state.selectedTabId = result.tab?.id || result.tabId || state.selectedTabId;
         state.closingDraft = null;
-        render();
-      }
-    } else if (type === "update-tab") {
-      if (!isIntegerBetween(data.guestCount, 1, MAX_GUESTS)) {
-        setMessage(
-          `A quantidade de pessoas deve ser um numero inteiro entre 1 e ${MAX_GUESTS}.`,
-          "error"
-        );
-        render();
-        return;
-      }
-      const result = await postAction(
-        "update-tab",
-        {
-          tabId: data.tabId,
-          guestCount: Number(data.guestCount),
-          customerName: data.customerName || "",
-        },
-        "update-tab"
-      );
-      if (result) {
-        state.editOccupancyOpen = false;
-        render();
       }
     } else if (type === "close-register") {
       if (

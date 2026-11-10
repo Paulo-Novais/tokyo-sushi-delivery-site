@@ -105,24 +105,19 @@ const run = async () => {
     assert.equal(snapshotA.register, null, "caixa deve iniciar fechado");
     assert.equal(snapshotA.tables.length, 0, "salao deve iniciar sem configuracao artificial");
 
-    await expectErrorCode(
-      () =>
-        cash.openCashRegister(
-          { openingAmount: 0, serviceChargeRate: 10, tableCount: 201 },
-          actor,
-          optionsA
-        ),
-      "cash_register_invalid_integer",
-      "limite de 200 mesas"
+    await cash.configureDiningTables({ count: 4, capacity: 4 }, actor, optionsA);
+    await cash.configureDiningTables({ count: 2, capacity: 6 }, actor, optionsB);
+    snapshotA = await cash.getCashRegisterSnapshot(optionsA);
+    const snapshotBInitial = await cash.getCashRegisterSnapshot(optionsB);
+    assert.equal(snapshotA.tables.length, 4, "tenant A deve ter quatro mesas");
+    assert.equal(snapshotBInitial.tables.length, 2, "tenant B deve ter duas mesas");
+    assert.ok(
+      snapshotA.tables.every((table) => table.tenantId === tenantA.tenantId),
+      "mesas devem carregar tenant_id"
     );
 
     await cash.openCashRegister(
-      {
-        openingAmount: 150,
-        serviceChargeRate: 10,
-        tableCount: 12,
-        notes: "Turno de validacao",
-      },
+      { openingAmount: 150, serviceChargeRate: 10, notes: "Turno de validacao" },
       actor,
       optionsA
     );
@@ -134,39 +129,9 @@ const run = async () => {
 
     snapshotA = await cash.getCashRegisterSnapshot(optionsA);
     assert.equal(snapshotA.register.status, "OPEN", "caixa deve ficar aberto");
-    assert.equal(snapshotA.tables.length, 12, "abertura deve criar Mesa 1 ate Mesa 12");
-    assert.deepEqual(
-      snapshotA.tables.map((table) => table.label),
-      Array.from({ length: 12 }, (_, index) => `Mesa ${index + 1}`),
-      "mesas do turno devem ter numeracao sequencial"
-    );
-    for (let index = 0; index < 5; index += 1) {
-      await cash.addDiningTable(actor, optionsA);
-    }
-    snapshotA = await cash.getCashRegisterSnapshot(optionsA);
-    assert.equal(snapshotA.tables.length, 17, "cinco inclusoes devem resultar em 17 mesas");
-    assert.equal(snapshotA.tables[16].label, "Mesa 17", "inclusao deve continuar a sequencia");
     assert.equal(snapshotA.register.openingAmount, 150, "fundo inicial deve persistir");
     assert.equal(snapshotA.register.openingUserLogin, actor.login, "operador deve persistir");
     assert.equal((await cash.getCashRegisterSnapshot(optionsB)).register, null, "caixa nao pode vazar");
-
-    await cash.openCashRegister(
-      { openingAmount: 0, serviceChargeRate: 10, tableCount: 199 },
-      actor,
-      optionsB
-    );
-    await cash.addDiningTable(actor, optionsB);
-    assert.equal(
-      (await cash.getCashRegisterSnapshot(optionsB)).tables.length,
-      200,
-      "o limite de 200 mesas deve funcionar"
-    );
-    await expectErrorCode(
-      () => cash.addDiningTable(actor, optionsB),
-      "cash_register_table_limit_reached",
-      "bloqueio acima de 200 mesas"
-    );
-    await cash.closeCashRegister({ countedCash: 0 }, actor, optionsB);
 
     const tableOne = snapshotA.tables[0];
     const tabResult = await cash.openDiningTab(
@@ -175,7 +140,7 @@ const run = async () => {
         waiterName: "Joao Garcom",
         waiterLogin: "joao.garcom",
         guestCount: 2,
-        customerName: "Daniel",
+        customerName: "Cliente Salao",
       },
       actor,
       optionsA
@@ -190,57 +155,7 @@ const run = async () => {
       "dining_table_already_has_tab",
       "dupla ocupacao da mesa"
     );
-    await cash.updateDiningTabOccupancy(
-      { tabId: tabResult.tab.id, customerName: "Daniel", guestCount: 6 },
-      actor,
-      optionsA
-    );
-    snapshotA = await cash.getCashRegisterSnapshot(optionsA);
-    assert.equal(snapshotA.activeTabs[0].customerName, "Daniel", "nome deve persistir");
-    assert.equal(snapshotA.activeTabs[0].guestCount, 6, "ocupacao editada deve persistir");
-    assert.equal(
-      snapshotA.tables[0].activeTab.customerName,
-      "Daniel",
-      "card deve receber o nome da comanda"
-    );
-    await expectErrorCode(
-      () =>
-        cash.updateDiningTabOccupancy(
-          { tabId: tabResult.tab.id, customerName: "Daniel", guestCount: 101 },
-          actor,
-          optionsA
-        ),
-      "cash_register_invalid_integer",
-      "bloqueio acima de 100 pessoas"
-    );
 
-    const fixtureSection = await catalog.saveCatalogSection(
-      { title: "Produtos do Caixa", description: "Fixture isolada do validador" },
-      actor,
-      optionsA
-    );
-    await catalog.saveCatalogItem(
-      {
-        sectionId: fixtureSection.sectionId,
-        name: "Produto Caixa A",
-        category: "Produtos do Caixa",
-        price: 25,
-        availabilityState: "active",
-      },
-      actor,
-      optionsA
-    );
-    await catalog.saveCatalogItem(
-      {
-        sectionId: fixtureSection.sectionId,
-        name: "Produto Caixa B",
-        category: "Produtos do Caixa",
-        price: 35,
-        availabilityState: "active",
-      },
-      actor,
-      optionsA
-    );
     const catalogContext = await catalog.getCatalogValidationContext(optionsA);
     const products = [...catalogContext.itemMap.values()].filter(
       (item) =>
@@ -393,7 +308,6 @@ const run = async () => {
     snapshotA = await cash.getCashRegisterSnapshot(optionsA);
     assert.equal(snapshotA.activeTabs.length, 0, "comanda paga deve sair das comandas ativas");
     assert.equal(snapshotA.tables[0].status, "FREE", "mesa deve ser liberada apenas apos pagamento");
-    assert.equal(snapshotA.tables[0].activeTab, null, "nome e ocupacao nao podem ficar no card livre");
     assert.equal(snapshotA.recentTabs[0].status, "CLOSED", "historico deve manter a comanda");
     assert.equal(snapshotA.recentTabs[0].payments.length, 2, "historico deve manter pagamentos");
     assert.equal(snapshotA.registerSummary.closedTabs, 1, "resumo deve contabilizar a conta");
@@ -403,26 +317,12 @@ const run = async () => {
       "resumo do caixa deve refletir venda confirmada"
     );
 
-    await expectErrorCode(
-      () =>
-        cash.openDiningTab(
-          {
-            tableId: snapshotA.tables[1].id,
-            waiterName: "Maria Garcom",
-            guestCount: 101,
-          },
-          actor,
-          optionsA
-        ),
-      "cash_register_invalid_integer",
-      "abertura acima de 100 pessoas"
-    );
     const secondTab = await cash.openDiningTab(
       {
         tableId: snapshotA.tables[1].id,
         waiterName: "Maria Garcom",
         waiterLogin: "maria.garcom",
-        guestCount: 100,
+        guestCount: 1,
       },
       actor,
       optionsA
@@ -480,18 +380,6 @@ const run = async () => {
       "operacao sem caixa aberto"
     );
 
-    await cash.openCashRegister(
-      { openingAmount: 0, serviceChargeRate: 10, tableCount: 8 },
-      actor,
-      optionsA
-    );
-    assert.equal(
-      (await cash.getCashRegisterSnapshot(optionsA)).tables.length,
-      8,
-      "nova abertura deve aceitar outra quantidade de mesas"
-    );
-    await cash.closeCashRegister({ countedCash: 0 }, actor, optionsA);
-
     const finalA = await cash.getCashRegisterSnapshot(optionsA);
     const finalB = await cash.getCashRegisterSnapshot(optionsB);
     assert.equal(finalA.register, null, "snapshot final nao deve expor caixa aberto");
@@ -501,10 +389,7 @@ const run = async () => {
     const eventTypes = new Set(finalA.auditEvents.map((event) => event.eventType));
     [
       "REGISTER_OPENED",
-      "TABLES_CONFIGURED",
-      "TABLE_ADDED",
       "TAB_OPENED",
-      "TAB_OCCUPANCY_UPDATED",
       "ITEM_ADDED",
       "ORDER_SENT",
       "TAB_AWAITING_PAYMENT",
@@ -532,21 +417,14 @@ const run = async () => {
     assert.equal(waiterPermissions.cash_register_confirm_payment, false, "Garcom nao deve receber");
 
     const migration = await fs.readFile(
-      path.join(
-        workspaceRoot,
-        "migrations",
-        "029_cash_register_shift_tables_and_occupancy.sql"
-      ),
+      path.join(workspaceRoot, "migrations", "022_cash_register_dining_room.sql"),
       "utf8"
     );
     assert.match(migration, /ENABLE ROW LEVEL SECURITY/, "migration deve habilitar RLS");
     assert.match(migration, /tenant_id[\s\S]+restaurant_id/, "migration deve escopar tenant/restaurante");
-    assert.match(
-      migration,
-      /cash_register_table_assignments/,
-      "migration deve vincular mesas ao caixa"
-    );
-    assert.match(migration, /table_number BETWEEN 1 AND 200/, "migration deve limitar mesas");
+    assert.match(migration, /cash_register_sessions_one_open_uidx/, "migration deve impedir dois caixas");
+    assert.match(migration, /dining_tabs_one_active_per_table_uidx/, "migration deve impedir dupla mesa");
+    assert.match(migration, /cash_payment_sets_idempotency_uidx|idempotency_key/, "migration deve ser idempotente");
     assert.doesNotMatch(migration, /DROP TABLE|TRUNCATE TABLE/, "migration de subida deve ser aditiva");
 
     const persisted = JSON.parse(

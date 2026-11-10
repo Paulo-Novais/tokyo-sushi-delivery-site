@@ -1,5 +1,4 @@
 const path = require("node:path");
-const fs = require("node:fs/promises");
 const { test, expect } = require("@playwright/test");
 const {
   expectNoHorizontalOverflow,
@@ -61,7 +60,7 @@ test.describe("Caixa e Salao", () => {
     const master = await loginMaster();
     const restaurant = await onboardRestaurant(master.api, {
       key: uniqueKey("cash-ui"),
-      name: "Kasulo",
+      name: "Restaurante Caixa UI",
       ownerPassword: "OwnerCashUi123!",
     });
 
@@ -81,16 +80,23 @@ test.describe("Caixa e Salao", () => {
       await expect(page.locator(".cash-register-module")).toBeVisible({
         timeout: 20_000,
       });
-      await expect(page.getByText("Abra o Caixa para configurar o Salao")).toBeVisible();
+      await expect(page.getByText("Configure as mesas reais do salao")).toBeVisible();
+
+      await page.locator('[data-cash-form="configure-tables"] input[name="count"]').fill("6");
+      await page
+        .locator('[data-cash-form="configure-tables"] input[name="capacity"]')
+        .fill("4");
+      await page
+        .locator('[data-cash-form="configure-tables"] button[type="submit"]')
+        .click();
+      await expect(page.locator(".cash-table-card")).toHaveCount(6);
+      await expect(page.getByText("Caixa fechado", { exact: true })).toBeVisible();
 
       await page.locator('[data-cash-view="opening"]').click();
       await expect(page).toHaveURL(/\/admin\/caixa\/abertura$/);
       await page
         .locator('[data-cash-form="open-register"] input[name="openingAmount"]')
         .fill("100");
-      await page
-        .locator('[data-cash-form="open-register"] input[name="tableCount"]')
-        .fill("12");
       await page
         .locator('[data-cash-form="open-register"] textarea[name="notes"]')
         .fill("Abertura do teste E2E");
@@ -99,52 +105,22 @@ test.describe("Caixa e Salao", () => {
         .click();
       await expect(page).toHaveURL(/\/admin\/caixa\/salao$/);
       await expect(page.getByText("CAIXA ABERTO", { exact: true })).toBeVisible();
-      await expect(page.locator(".cash-table-card")).toHaveCount(12);
-      for (let index = 0; index < 5; index += 1) {
-        await page.locator('[data-cash-action="add-table"]').click();
-        await expect(page.locator(".cash-table-card")).toHaveCount(13 + index);
-      }
-      await expect(page.getByText("Mesa 17", { exact: true })).toBeVisible();
 
       await page.locator(".cash-table-card").first().click();
       await expect(page.locator('[data-cash-form="open-tab"]')).toBeVisible();
-      const guestCountInput = page.locator(
-        '[data-cash-form="open-tab"] input[name="guestCount"]'
-      );
-      await guestCountInput.fill("");
       await page
-        .locator('[data-cash-form="open-tab"] button[type="submit"]')
-        .click();
-      await expect(guestCountInput).toBeFocused();
-      await expect(page.locator('[data-cash-form="open-tab"]')).toBeVisible();
-      await guestCountInput.fill("5");
+        .locator('[data-cash-form="open-tab"] input[name="guestCount"]')
+        .fill("2");
       await page
         .locator('[data-cash-form="open-tab"] input[name="waiterName"]')
         .fill("Garcom E2E");
       await page
         .locator('[data-cash-form="open-tab"] input[name="customerName"]')
-        .fill("Daniel");
+        .fill("Cliente Presencial");
       await page
         .locator('[data-cash-form="open-tab"] button[type="submit"]')
         .click();
       await expect(page.getByText("Comanda vazia")).toBeVisible();
-      await expect(page.locator(".cash-table-number", { hasText: "Daniel" })).toBeVisible();
-      await page.locator('[data-cash-action="edit-occupancy"]').click();
-      await page
-        .locator('[data-cash-form="update-tab"] input[name="guestCount"]')
-        .fill("6");
-      await page
-        .locator('[data-cash-form="update-tab"] input[name="customerName"]')
-        .fill("Daniel Editado");
-      await page
-        .locator('[data-cash-form="update-tab"] button[type="submit"]')
-        .click();
-      await expect(page.getByText("Mesa 1 · 6 pessoas", { exact: true })).toBeVisible();
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(
-        page.locator(".cash-table-number", { hasText: "Daniel Editado" })
-      ).toBeVisible();
-      await expect(page.getByText("Mesa 1 · 6 pessoas", { exact: true })).toBeVisible();
 
       const productButtons = page.locator("[data-cash-product]");
       expect(await productButtons.count()).toBeGreaterThan(1);
@@ -163,45 +139,23 @@ test.describe("Caixa e Salao", () => {
       await page.locator('[data-cash-pane="orders"]').click();
       await expect(page.locator(".cash-batch-list article")).toHaveCount(2);
       await page.locator('[data-cash-pane="consumption"]').click();
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(
-        page.locator(".cash-table-number", { hasText: "Daniel Editado" })
-      ).toBeVisible();
 
-      const screenshotDirectory = path.join(
-        workspaceRoot,
-        "artifacts",
-        "cash-register-shift-tables"
-      );
-      await fs.mkdir(screenshotDirectory, { recursive: true });
-      const responsiveViewports = [
-        { width: 1366, height: 768, screenshot: "caixa-1366x768.png" },
-        { width: 1280, height: 720, screenshot: "caixa-1280x720.png" },
-        { width: 1024, height: 768, screenshot: "caixa-1024x768.png" },
-        { width: 1280, height: 800 },
-        { width: 1440, height: 900 },
-        { width: 1920, height: 1080 },
-      ];
-      for (const viewport of responsiveViewports) {
-        await page.setViewportSize({
-          width: viewport.width,
-          height: viewport.height,
-        });
-        await expect(page.locator(".cash-payment-panel")).toBeVisible();
-        await expect(page.locator('[data-cash-action="add-table"]')).toBeVisible();
-        await expect(page.locator('[data-cash-action="edit-occupancy"]')).toBeVisible();
-        await expect(page.locator('[data-cash-action="begin-closing"]')).toBeVisible();
-        await expectNoHorizontalOverflow(page);
-        if (viewport.screenshot) {
-          await page.screenshot({
-            path: path.join(screenshotDirectory, viewport.screenshot),
-            fullPage: true,
-          });
-        }
-      }
-
-      await page.setViewportSize({ width: 1180, height: 820 });
       await expectNoHorizontalOverflow(page);
+      await page.screenshot({
+        path: path.join(workspaceRoot, "_tmp_cash_register_desktop.png"),
+        fullPage: true,
+      });
+
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await expect(page.locator(".cash-payment-panel")).toBeVisible();
+      expect(
+        (await page.locator(".admin-sidebar").boundingBox())?.width || Infinity
+      ).toBeLessThanOrEqual(220);
+      await expectNoHorizontalOverflow(page);
+      await page.screenshot({
+        path: path.join(workspaceRoot, "_tmp_cash_register_tablet.png"),
+        fullPage: true,
+      });
 
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(page.locator(".cash-mobile-collapse")).toBeVisible();
@@ -211,7 +165,10 @@ test.describe("Caixa e Salao", () => {
       await page.locator(".cash-mobile-collapse").click();
       await expect(page.locator(".cash-tables-panel")).toHaveClass(/is-collapsed/);
       await expectNoHorizontalOverflow(page);
-      await expect(page.locator('[data-cash-action="add-table"]')).toBeVisible();
+      await page.screenshot({
+        path: path.join(workspaceRoot, "_tmp_cash_register_mobile.png"),
+        fullPage: true,
+      });
 
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.locator('[data-cash-action="begin-closing"]').click();
@@ -220,8 +177,7 @@ test.describe("Caixa e Salao", () => {
       await expect(page.locator('[data-cash-action="confirm-payment"]')).toBeEnabled();
       await page.locator('[data-cash-action="confirm-payment"]').click();
       await expect(page.getByText("Pagamento confirmado e mesa liberada.")).toBeVisible();
-      await expect(page.locator(".cash-table-card.is-free")).toHaveCount(17);
-      await expect(page.getByText("Mesa 1", { exact: true })).toBeVisible();
+      await expect(page.locator(".cash-table-card.is-free")).toHaveCount(6);
       await expect(page.getByText("Comprovante nao fiscal")).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Imprimir comprovante" })
@@ -236,25 +192,6 @@ test.describe("Caixa e Salao", () => {
         .click();
       await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
       await expect(page.getByText("Nao ha caixa aberto")).toBeVisible();
-
-      await page.locator('[data-cash-register-subview="opening"]').click();
-      const nextOpeningTableCount = page.locator(
-        '[data-cash-form="open-register"] input[name="tableCount"]'
-      );
-      await expect(nextOpeningTableCount).toHaveValue("17");
-      await nextOpeningTableCount.fill("8");
-      await page
-        .locator('[data-cash-form="open-register"] button[type="submit"]')
-        .click();
-      await expect(page.locator(".cash-table-card")).toHaveCount(8);
-      await expect(page.getByText("Mesa 8", { exact: true })).toBeVisible();
-      await expect(page.getByText("Mesa 9", { exact: true })).toHaveCount(0);
-      await page.locator('[data-cash-register-subview="closing"]').click();
-      page.once("dialog", (dialog) => dialog.accept());
-      await page
-        .locator('[data-cash-form="close-register"] button[type="submit"]')
-        .click();
-      await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
 
       expect(pageErrors).toEqual([]);
       expect(
@@ -282,15 +219,20 @@ test.describe("Caixa e Salao", () => {
     const ownerB = await loginTenantOwner(restaurantB);
 
     try {
+      await postCashAction(ownerA.api, "configure-tables", {
+        count: 3,
+        capacity: 4,
+      });
+      await postCashAction(ownerB.api, "configure-tables", {
+        count: 2,
+        capacity: 6,
+      });
       const opened = await postCashAction(ownerA.api, "open", {
         openingAmount: 150,
         serviceChargeRate: 10,
-        tableCount: 3,
         notes: "Turno E2E API",
       });
       expect(opened.snapshot.register.status).toBe("OPEN");
-      await postCashAction(ownerA.api, "add-table");
-      expect(opened.snapshot.tables).toHaveLength(3);
       await expectCashFailure(
         ownerA.api,
         "open",
@@ -328,19 +270,6 @@ test.describe("Caixa e Salao", () => {
         openedTab.tabId ||
         openedTab.snapshot?.activeTabs?.[0]?.id;
       expect(tabId).toBeTruthy();
-      const updatedOccupancy = await postCashAction(ownerA.api, "update-tab", {
-        tabId,
-        guestCount: 5,
-        customerName: "Daniel",
-      });
-      expect(updatedOccupancy.snapshot.activeTabs[0].customerName).toBe("Daniel");
-      expect(updatedOccupancy.snapshot.activeTabs[0].guestCount).toBe(5);
-      await expectCashFailure(
-        ownerA.api,
-        "update-tab",
-        { tabId, guestCount: 101, customerName: "Daniel" },
-        "cash_register_invalid_integer"
-      );
       await expectCashFailure(
         ownerA.api,
         "open-tab",
@@ -452,16 +381,10 @@ test.describe("Caixa e Salao", () => {
       );
       expect(duplicatePayment.alreadyProcessed).toBe(true);
 
-      await expectCashFailure(
-        ownerA.api,
-        "open-tab",
-        { tableId: tableTwo.id, waiterName: "Garcom Segundo", guestCount: 101 },
-        "cash_register_invalid_integer"
-      );
       const secondTab = await postCashAction(ownerA.api, "open-tab", {
         tableId: tableTwo.id,
         waiterName: "Garcom Segundo",
-        guestCount: 100,
+        guestCount: 1,
       });
       const secondTabId =
         secondTab.tab?.id ||
@@ -470,14 +393,6 @@ test.describe("Caixa e Salao", () => {
           (tab) => tab.tableId === tableTwo.id
         )?.id;
       expect(secondTabId).toBeTruthy();
-      expect(
-        secondTab.snapshot.activeTabs.find((tab) => tab.id === secondTabId)
-          ?.customerName
-      ).toBe("");
-      expect(
-        secondTab.snapshot.activeTabs.find((tab) => tab.id === secondTabId)
-          ?.guestCount
-      ).toBe(100);
       await postCashAction(ownerA.api, "add-item", {
         tabId: secondTabId,
         productId: productOne.id,
@@ -524,10 +439,7 @@ test.describe("Caixa e Salao", () => {
       );
       [
         "REGISTER_OPENED",
-        "TABLES_CONFIGURED",
-        "TABLE_ADDED",
         "TAB_OPENED",
-        "TAB_OCCUPANCY_UPDATED",
         "ITEM_ADDED",
         "ORDER_SENT",
         "TAB_AWAITING_PAYMENT",
@@ -549,28 +461,8 @@ test.describe("Caixa e Salao", () => {
       expect(isolatedResponse.status()).toBe(200);
       const isolated = await isolatedResponse.json();
       expect(isolated.register).toBeNull();
-      expect(isolated.tables).toHaveLength(0);
+      expect(isolated.tables).toHaveLength(2);
       expect(isolated.activeTabs).toHaveLength(0);
-
-      await expectCashFailure(
-        ownerB.api,
-        "open",
-        { openingAmount: 0, serviceChargeRate: 10, tableCount: 201 },
-        "cash_register_invalid_integer"
-      );
-      const limitOpened = await postCashAction(ownerB.api, "open", {
-        openingAmount: 0,
-        serviceChargeRate: 10,
-        tableCount: 200,
-      });
-      expect(limitOpened.snapshot.tables).toHaveLength(200);
-      await expectCashFailure(
-        ownerB.api,
-        "add-table",
-        {},
-        "cash_register_table_limit_reached"
-      );
-      await postCashAction(ownerB.api, "close", { countedCash: 0 });
 
       const closed = await postCashAction(ownerA.api, "close", {
         countedCash: finalSnapshot.registerSummary.expectedCash,

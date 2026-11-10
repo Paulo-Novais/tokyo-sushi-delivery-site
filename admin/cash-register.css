@@ -344,25 +344,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   cursor: pointer;
 }
 
-.cash-add-table-button {
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px solid #fed7aa;
-  border-radius: 8px;
-  background: #fff7ed;
-  color: var(--cash-orange-dark);
-  font: inherit;
-  font-size: 0.67rem;
-  font-weight: 800;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.cash-add-table-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .cash-search {
   display: flex;
   align-items: center;
@@ -448,7 +429,7 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 .cash-table-card {
   position: relative;
   display: grid;
-  min-height: 124px;
+  min-height: 112px;
   place-items: center;
   align-content: center;
   gap: 3px;
@@ -472,18 +453,9 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 }
 
 .cash-table-number {
-  max-width: 100%;
   color: var(--cash-ink);
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 900;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-  text-align: center;
-}
-
-.cash-table-number.is-customer {
-  color: var(--cash-orange-dark);
-  font-size: 1rem;
 }
 
 .cash-table-icon {
@@ -505,15 +477,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 .cash-table-card > small {
   color: var(--cash-muted);
   font-size: 0.61rem;
-}
-
-.cash-table-card > .cash-table-occupancy {
-  max-width: 100%;
-  color: #475467;
-  font-size: 0.64rem;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-  text-align: center;
 }
 
 .cash-table-card.is-free .cash-table-icon,
@@ -596,36 +559,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.cash-command-identity {
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.cash-command-identity > small {
-  flex-basis: 100%;
-  color: var(--cash-muted);
-  font-size: 0.69rem;
-  font-weight: 750;
-}
-
-.cash-command-header-actions {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.cash-edit-occupancy-button {
-  min-height: 34px;
-  padding: 0 11px;
-  border: 1px solid #fed7aa;
-  border-radius: 8px;
-  background: #fff7ed;
-  color: var(--cash-orange-dark);
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 800;
-  cursor: pointer;
 }
 
 .cash-command-table {
@@ -1006,13 +939,9 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 }
 
 .cash-product-browser {
-  display: flex;
-  flex: 0 1 310px;
-  min-height: 170px;
-  flex-direction: column;
+  flex: 0 0 auto;
   padding: 10px 14px 11px;
   border-top: 1px solid var(--cash-line);
-  overflow: hidden;
 }
 
 .cash-product-browser-head {
@@ -1055,8 +984,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   display: grid;
   grid-template-columns: repeat(5, minmax(84px, 1fr));
   gap: 7px;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .cash-product-card {
@@ -1116,7 +1043,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 
 .cash-command-actions {
   display: grid;
-  flex: 0 0 auto;
   grid-template-columns: minmax(110px, 0.65fr) minmax(180px, 1fr);
   gap: 9px;
   padding: 10px 14px;
@@ -1531,12 +1457,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   box-shadow: 0 0 0 3px rgba(255, 98, 0, 0.1);
 }
 
-.cash-form-grid label > small {
-  color: var(--cash-muted);
-  font-size: 0.66rem;
-  line-height: 1.35;
-}
-
 .cash-form-grid input:disabled {
   color: #667085;
   background: #f9fafb;
@@ -1672,9 +1592,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 24px 72px rgba(15, 23, 42, 0.24);
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .cash-modal-actions {
@@ -1797,52 +1714,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   }
 }
 
-@media (max-width: 1280px) and (max-height: 820px) {
-  body.admin-body[data-admin-section="cash-register"] .admin-main-shell {
-    padding: 8px;
-  }
-
-  .cash-register-module {
-    min-height: calc(100vh - 16px);
-  }
-
-  .cash-header {
-    min-height: 62px;
-    margin-bottom: 7px;
-    padding: 8px 12px;
-  }
-
-  .cash-register-meta > span {
-    min-height: 42px;
-    padding-block: 4px;
-  }
-
-  .cash-icon-button {
-    width: 42px;
-    height: 42px;
-    padding: 11px;
-  }
-
-  .cash-floor-layout {
-    gap: 8px;
-    min-height: calc(100vh - 85px);
-  }
-
-  .cash-tables-panel,
-  .cash-command-panel,
-  .cash-payment-panel {
-    max-height: calc(100vh - 120px);
-  }
-
-  .cash-table-card {
-    min-height: 108px;
-  }
-
-  .cash-product-card {
-    min-height: 92px;
-  }
-}
-
 @media (min-width: 761px) and (max-width: 1180px) {
   body.admin-body[data-admin-section="cash-register"] .admin-shell {
     grid-template-columns: 210px minmax(0, 1fr) !important;
@@ -1895,10 +1766,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
   .cash-tables-panel,
   .cash-command-panel {
     max-height: 680px;
-  }
-
-  .cash-payment-panel {
-    max-height: none;
   }
 
   .cash-closing-kpis {
@@ -2094,15 +1961,6 @@ body.admin-body[data-admin-section="cash-register"] .admin-board-panel::after {
 
   .cash-table-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cash-table-panel-controls {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .cash-add-table-button {
-    order: 3;
   }
 
   .cash-product-browser-head {
