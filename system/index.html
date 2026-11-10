@@ -6,23 +6,28 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Visão geral | Painel System INOVAS</title>
     <link rel="icon" href="/assets/inovas-logo-header.png" />
-    <link rel="stylesheet" href="/admin/users/users.css" />
+    <link rel="stylesheet" href="/system/system.css" />
+    <script src="/system/system-shell.js" defer></script>
     <script src="/system/system.js" defer></script>
   </head>
-  <body class="users-body" data-user-domain="SYSTEM">
-    <div class="users-shell">
-      <aside class="users-sidebar" data-system-sidebar></aside>
-      <main class="users-main">
-        <header class="users-mobilebar">
-          <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
-          <span class="users-mobile-actions"><a href="/system">Painel</a><button type="button" data-system-logout aria-label="Sair">Sair</button></span>
+  <body class="sys-body" data-user-domain="SYSTEM">
+    <div class="sys-shell">
+      <aside class="sys-sidebar" data-sys-sidebar aria-label="Menu do Painel System"></aside>
+      <div class="sys-backdrop" data-sys-backdrop></div>
+      <main class="sys-main">
+        <header class="sys-topbar">
+          <a href="/system"><img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" /></a>
+          <button type="button" class="sys-icon-btn" data-sys-menu-toggle aria-label="Abrir menu" aria-expanded="false">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18 M3 12h18 M3 18h18"></path></svg>
+          </button>
         </header>
-        <div class="users-content" data-system-app>
-          <div class="users-loading"><span class="users-spinner" aria-hidden="true"></span><span>Carregando Painel System…</span></div>
+        <div class="sys-content" data-system-app>
+          <div class="sys-loading"><span class="sys-spinner" aria-hidden="true"></span><span>Carregando a plataforma…</span></div>
         </div>
+        <nav class="sys-bottomnav" data-sys-bottomnav aria-label="Navegação rápida"></nav>
       </main>
     </div>
-    <div class="users-toast" data-users-toast role="status" aria-live="polite" hidden></div>
-    <dialog class="users-dialog" data-system-dialog></dialog>
+    <div class="sys-toast" data-system-toast role="status" aria-live="polite" hidden></div>
+    <dialog class="sys-dialog" data-system-dialog></dialog>
   </body>
 </html>

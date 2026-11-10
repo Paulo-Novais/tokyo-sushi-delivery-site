@@ -25,10 +25,17 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     feedback.hidden = true;
-    submitButton.disabled = true;
-    submitButton.textContent = "Entrando...";
 
     const formData = new FormData(form);
+    const identifier = String(formData.get("identifier") || "").trim();
+    const password = String(formData.get("password") || "");
+    if (!identifier || !password) {
+      showFeedback("Informe o e-mail e a senha para entrar.");
+      return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Entrando…";
 
     try {
       const response = await fetch("/api/auth/system/login", {
@@ -37,22 +44,22 @@
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          identifier: String(formData.get("identifier") || "").trim(),
-          password: String(formData.get("password") || ""),
-        }),
+        body: JSON.stringify({ identifier, password }),
       });
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok || payload.success !== true) {
+        // Mensagem genérica: não revela se o e-mail existe.
         throw new Error(
-          payload.error?.message ||
-            payload.error ||
-            "Não foi possível autenticar esta conta administrativa."
+          response.status === 401 || response.status === 403
+            ? "E-mail ou senha incorretos. Confira os dados e tente novamente."
+            : payload.error?.message ||
+              payload.error ||
+              "Não foi possível entrar agora. Tente novamente em instantes."
         );
       }
 
-      showFeedback("Acesso autorizado. Abrindo a plataforma...", "success");
+      showFeedback("Acesso autorizado. Abrindo a plataforma…", "success");
       window.location.assign(resolveNextPath());
     } catch (error) {
       showFeedback(
@@ -60,7 +67,7 @@
       );
     } finally {
       submitButton.disabled = false;
-      submitButton.textContent = "Entrar no Painel System";
+      submitButton.textContent = "Entrar";
     }
   });
 })();
