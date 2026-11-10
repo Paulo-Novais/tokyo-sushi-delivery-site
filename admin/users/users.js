@@ -315,6 +315,16 @@
 
   const renderSidebar = () => {
     if (!sidebar) return;
+    if (isSystem && window.InovasSystemShell) {
+      // Painel System redesenhado: sidebar, barra superior e navegação inferior
+      // vêm do shell compartilhado (system/system-shell.js).
+      window.InovasSystemShell.mount({
+        session: state.session,
+        activeKey: "users",
+        logoutAttribute: "data-users-logout",
+      });
+      return;
+    }
     const systemLinks = [
       ["Visão geral", "/system", "VI", "system.dashboard.view"],
       ["Restaurantes", "/system#restaurants", "RE", "system.restaurants.view"],

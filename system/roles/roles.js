@@ -99,10 +99,84 @@
     ADMINISTRADOR: "Administrador",
     SOCIO: "Sócio",
     SUPORTE: "Suporte",
-    FINANCEIRO_INOVAS: "Financeiro",
+    FINANCEIRO_INOVAS: "Financeiro INOVAS",
     DESENVOLVEDOR: "Desenvolvedor",
-    AUDITOR: "Auditoria",
+    AUDITOR: "Auditor",
+    IMPLANTACAO: "Implantação",
+    CUSTOMER_SUCCESS: "Customer Success",
+    COMERCIAL: "Comercial",
   });
+
+  const RISK_LABELS = Object.freeze({
+    MEDIUM: ["Médio", "neutral"],
+    HIGH: ["Alto", "warn"],
+    CRITICAL: ["Crítico", "crit"],
+  });
+
+  const checkIcon = () =>
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>';
+
+  const roleLabelOf = (role) => role.label || ROLE_LABELS[role.key] || role.key;
+
+  const joinNames = (names) => {
+    if (!names.length) return "ninguém";
+    if (names.length === 1) return names[0];
+    return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+  };
+
+  // Matriz perfil × permissão (somente leitura; a fonte é lib/access-policy.cjs via API).
+  const renderSystemMatrix = () => {
+    const roles = [...(state.policy?.roles || [])].sort(
+      (left, right) => Number(right.authority || 0) - Number(left.authority || 0)
+    );
+    const permissions = (state.policy?.permissions || []).filter(
+      (permission) => permission.module !== "navigation"
+    );
+    if (!roles.length || !permissions.length) return "";
+    const rolesWith = (key) => roles.filter((role) => (role.permissions || []).includes(key));
+    const names = (key) => rolesWith(key).map(roleLabelOf);
+    const common = permissions.filter((permission) => rolesWith(permission.key).length === roles.length);
+    const navigation = (window.InovasSystemShell?.NAVIGATION || []).map((item) => ({
+      label: item.label,
+      permission: item.permission,
+    }));
+
+    const summary = [
+      ["Suspender restaurante", `Só ${joinNames(names("system.restaurants.suspend"))} ${names("system.restaurants.suspend").length === 1 ? "tem" : "têm"} system.restaurants.suspend.`],
+      ["Usuários e faturamento", `${joinNames(names("system.users.manage"))} administra usuários; ${joinNames(names("system.billing.manage"))} administra faturamento.`],
+      ["Suporte administrativo", `${joinNames(names("system.support.admin"))} ${names("system.support.admin").length === 1 ? "abre" : "abrem"} sessão administrativa.`],
+      ["Base comum", common.length ? `Todos os perfis têm: ${common.map((permission) => permission.description || permission.key).join(" ")}` : "Nenhuma permissão é comum a todos os perfis."],
+    ];
+
+    const headerCells = roles
+      .map((role) => `<th scope="col">${escapeHtml(roleLabelOf(role))}<small>nível ${escapeHtml(String(role.authority ?? 0))}</small></th>`)
+      .join("");
+    const cell = (granted) =>
+      `<td>${granted ? `<span class="is-granted" title="Permitido">${checkIcon()}<span class="sr-only">Sim</span></span>` : '<span class="is-denied" aria-label="Não">—</span>'}</td>`;
+
+    return `
+      <section class="sys-summary-grid" aria-label="Resumo das permissões">
+        ${summary.map(([title, text]) => `<article><strong>${escapeHtml(title)}</strong><p>${escapeHtml(text)}</p></article>`).join("")}
+      </section>
+      <section class="sys-card" aria-labelledby="matriz-permissoes" style="margin-bottom:20px">
+        <div class="sys-card-head"><h2 id="matriz-permissoes">Permissões por perfil</h2><span>Perfis ordenados por nível de autoridade (maior à esquerda)</span></div>
+        <div class="sys-matrix-wrap"><table class="sys-matrix"><thead><tr><th scope="col">Permissão</th>${headerCells}</tr></thead><tbody>
+          ${permissions
+            .map((permission) => {
+              const risk = RISK_LABELS[String(permission.riskLevel || "").toUpperCase()];
+              return `<tr><td><strong>${escapeHtml(permission.description || permission.key)} ${risk ? `<span class="sys-pill is-${risk[1]}">${risk[0]}</span>` : ""}</strong><code>${escapeHtml(permission.key)}</code></td>${roles.map((role) => cell((role.permissions || []).includes(permission.key))).join("")}</tr>`;
+            })
+            .join("")}
+        </tbody></table></div>
+      </section>
+      ${navigation.length ? `
+      <section class="sys-card" aria-labelledby="matriz-menus" style="margin-bottom:20px">
+        <div class="sys-card-head"><div><h2 id="matriz-menus">Menus visíveis por perfil <span class="sys-pill is-brand">Derivado das permissões</span></h2><p>Cada menu aparece só se o perfil tiver a permissão ligada a ele. Esconder um menu não protege nada: toda rota e API continuam checando permissão no servidor.</p></div></div>
+        <div class="sys-matrix-wrap"><table class="sys-matrix"><thead><tr><th scope="col">Menu</th>${roles.map((role) => `<th scope="col">${escapeHtml(roleLabelOf(role))}</th>`).join("")}</tr></thead><tbody>
+          ${navigation.map((item) => `<tr><td><strong>${escapeHtml(item.label)}</strong><code>exige ${escapeHtml(item.permission)}</code></td>${roles.map((role) => cell((role.permissions || []).includes(item.permission))).join("")}</tr>`).join("")}
+        </tbody></table></div>
+      </section>` : ""}`;
+  };
 
   const escapeHtml = (value) =>
     String(value ?? "")
@@ -145,6 +219,14 @@
     new Set(state.session?.effectivePermissions || []).has(permission);
 
   const renderSidebar = () => {
+    if (window.InovasSystemShell) {
+      window.InovasSystemShell.mount({
+        session: state.session,
+        activeKey: "roles",
+        logoutAttribute: "data-roles-logout",
+      });
+      return;
+    }
     const links = [
       ["Visão geral", "/system", "VI", "system.dashboard.view"],
       ["Restaurantes", "/system#restaurants", "RE", "system.restaurants.view"],
@@ -200,12 +282,12 @@
     const query = state.search.toLowerCase();
     const canManage = hasPermission("system.roles.manage");
     app.innerHTML = `
-      <nav class="users-breadcrumb"><a href="/system">Sistema</a><span>/</span><strong>Perfis e permissões</strong></nav>
+      <nav class="users-breadcrumb"><a href="/system">Sistema</a><span>/</span><strong>Perfis e menus</strong></nav>
       <header class="users-page-head">
         <div>
-          <span class="users-eyebrow">Controle de acesso · matriz administrável</span>
-          <h1>Perfis e permissões</h1>
-          <p>Perfis agrupam permissões independentes. Alterações passam a valer na próxima validação de sessão.</p>
+          <span class="users-eyebrow">Equipe INOVAS · controle de acesso</span>
+          <h1>Perfis e menus</h1>
+          <p>Quais permissões cada perfil tem hoje e quais menus isso libera. Nomes de perfis e permissões vêm da política de acesso; a matriz é só de leitura e o editor abaixo exige permissão administrativa.</p>
         </div>
         ${canManage ? '<button class="users-button users-button-primary" type="button" data-role-new>+ Novo perfil</button>' : ""}
       </header>
@@ -213,6 +295,7 @@
         <button type="button" data-role-domain="SYSTEM" class="${state.domain === "SYSTEM" ? "is-active" : ""}">Usuários INOVAS</button>
         <button type="button" data-role-domain="RESTAURANT" class="${state.domain === "RESTAURANT" ? "is-active" : ""}">Usuários de restaurante</button>
       </div>
+      ${state.domain === "SYSTEM" ? renderSystemMatrix() : ""}
       <div class="roles-layout">
         <aside class="users-panel roles-list">
           <div class="users-filter-meta"><strong>${state.domain === "SYSTEM" ? "Perfis INOVAS" : "Perfis de restaurante"}</strong><span>${state.policy?.roles?.length || 0}</span></div>
@@ -398,7 +481,7 @@
       await loadPolicy();
     } catch (error) {
       if (error.status === 401) return window.location.replace("/system/login.html");
-      app.innerHTML = `<section class="users-panel users-error"><div><span class="users-avatar">!</span><h2>Não foi possível abrir a matriz</h2><p>${escapeHtml(error.message)}</p></div></section>`;
+      app.innerHTML = `<section class="users-panel users-error"><div><span class="users-avatar">!</span><h2>Não foi possível abrir a matriz de perfis</h2><p>${escapeHtml(error.message)}</p></div></section>`;
     }
   };
 
