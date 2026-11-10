@@ -1,0 +1,240 @@
+/*
+ * Novo Gestor INOVAS — etapa 1: menu lateral.
+ * Camada só visual, carregada por último. Não muda nenhuma regra de Caixa,
+ * Pedidos ou Delivery: todos os botões e seções continuam os mesmos.
+ */
+
+html body.admin-body .admin-sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+/* O Gestor usa só o tema claro. */
+html body.admin-body .admin-theme-toggle {
+  display: none !important;
+}
+
+/* Blocos informativos que o novo desenho tirou do menu. */
+html body.admin-body .admin-sidebar > .admin-sidebar-card {
+  display: none !important;
+}
+
+html body.admin-body .admin-sidebar .admin-brand-copy {
+  padding: 12px !important;
+  border-radius: 8px !important;
+  background: #f3f4f6 !important;
+}
+
+html body.admin-body .admin-sidebar .admin-brand-copy .admin-eyebrow {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: #4b5563 !important;
+}
+
+html body.admin-body .admin-sidebar .admin-brand-copy strong {
+  font-size: 16px !important;
+  color: #111827 !important;
+}
+
+html body.admin-body .admin-sidebar .admin-brand-copy small {
+  display: none !important;
+}
+
+/* ---------- Itens do menu ---------- */
+html body.admin-body .admin-nav {
+  display: grid !important;
+  gap: 2px !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item {
+  grid-template-columns: 20px minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #374151 !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item:hover {
+  background: #f9fafb !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item:focus-visible {
+  outline: 3px solid #1d4ed8 !important;
+  outline-offset: 2px !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item strong {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  color: #374151 !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item small {
+  display: none !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-icon {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #6b7280 !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item.is-active {
+  background: #fff1e6 !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item.is-active strong {
+  font-weight: 600 !important;
+  color: #111827 !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item.is-active .admin-nav-icon {
+  color: #c2410c !important;
+}
+
+/* Contadores discretos: número não é alerta. */
+html body.admin-body .admin-nav .admin-nav-badge {
+  min-width: 0 !important;
+  padding: 2px 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #f3f4f6 !important;
+  box-shadow: none !important;
+  color: #374151 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item.is-active .admin-nav-badge {
+  background: #ffffff !important;
+  color: #374151 !important;
+}
+
+/* ---------- Ordem e agrupamento do novo desenho ----------
+   Painel · Caixa · Pedidos (Agendamentos, Entregas) · Cardápio (Estoque) ·
+   Clientes (Promoções, Avaliações) · Resultados (Financeiro, Relatórios) ·
+   Configurações (Usuários). */
+html body.admin-body .admin-nav > * {
+  order: 90;
+}
+
+html body.admin-body .admin-nav [data-admin-section="dashboard"] { order: 1; }
+html body.admin-body .admin-nav [data-admin-section="cash-register"],
+html body.admin-body .admin-nav .admin-nav-submenu { order: 2; }
+html body.admin-body .admin-nav [data-admin-section="orders"] { order: 3; }
+html body.admin-body .admin-nav [data-admin-section="scheduled"] { order: 4; }
+html body.admin-body .admin-nav [data-admin-section="deliveries"] { order: 5; }
+html body.admin-body .admin-nav [data-admin-section="menu"] { order: 6; }
+html body.admin-body .admin-nav [data-admin-section="inventory"] { order: 7; }
+html body.admin-body .admin-nav [data-admin-section="customers"] { order: 8; }
+html body.admin-body .admin-nav [data-admin-section="promotions"] { order: 9; }
+html body.admin-body .admin-nav [data-admin-section="reviews"] { order: 10; }
+html body.admin-body .admin-nav [data-admin-section="metrics"] { order: 11; }
+html body.admin-body .admin-nav [data-admin-section="finance"] { order: 12; }
+html body.admin-body .admin-nav [data-admin-section="reports"] { order: 13; }
+html body.admin-body .admin-nav [data-admin-section="settings"] { order: 14; }
+html body.admin-body .admin-nav [data-admin-section="users"] { order: 15; }
+
+html body.admin-body .admin-nav :is(
+  [data-admin-section="orders"],
+  [data-admin-section="menu"],
+  [data-admin-section="customers"],
+  [data-admin-section="metrics"],
+  [data-admin-section="settings"]
+) {
+  margin-top: 6px !important;
+}
+
+/* Telas que no novo desenho ficam dentro de um item principal. */
+html body.admin-body .admin-nav :is(
+  [data-admin-section="scheduled"],
+  [data-admin-section="deliveries"],
+  [data-admin-section="inventory"],
+  [data-admin-section="promotions"],
+  [data-admin-section="reviews"],
+  [data-admin-section="finance"],
+  [data-admin-section="reports"],
+  [data-admin-section="users"]
+) {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  margin-left: 30px !important;
+  padding-left: 12px !important;
+}
+
+html body.admin-body .admin-nav :is(
+  [data-admin-section="scheduled"],
+  [data-admin-section="deliveries"],
+  [data-admin-section="inventory"],
+  [data-admin-section="promotions"],
+  [data-admin-section="reviews"],
+  [data-admin-section="finance"],
+  [data-admin-section="reports"],
+  [data-admin-section="users"]
+) .admin-nav-icon {
+  display: none !important;
+}
+
+html body.admin-body .admin-nav :is(
+  [data-admin-section="scheduled"],
+  [data-admin-section="deliveries"],
+  [data-admin-section="inventory"],
+  [data-admin-section="promotions"],
+  [data-admin-section="reviews"],
+  [data-admin-section="finance"],
+  [data-admin-section="reports"],
+  [data-admin-section="users"]
+) strong {
+  font-size: 13px !important;
+}
+
+/* ---------- Rodapé: usuário e sair ---------- */
+html body.admin-body .admin-sidebar .admin-sidebar-operator {
+  padding: 12px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body .admin-sidebar .admin-sidebar-operator-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+html body.admin-body .admin-sidebar [data-admin-logout] {
+  min-height: 44px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+/* O Caixa já funciona: o selo "Em breve" confundia. */
+html body.admin-body .admin-nav [data-admin-section="cash-register"] .admin-nav-badge {
+  display: none !important;
+}

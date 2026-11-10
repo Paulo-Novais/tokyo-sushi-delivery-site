@@ -57,20 +57,20 @@ const CUSTOMER_CRM_SORT_OPTIONS = [
   { key: "lapsed-desc", label: "Mais tempo sem compra" },
 ];
 const RESTAURANT_NAV_SECTIONS = Object.freeze([
-  { key: "dashboard", label: "Dashboard", helper: "Resumo do turno" },
-  { key: "users", label: "Usuarios", helper: "Equipe e acessos" },
+  { key: "dashboard", label: "Painel", helper: "Resumo do turno" },
+  { key: "users", label: "Usuários", helper: "Equipe e acessos" },
   { key: "cash-register", label: "Caixa", helper: "Salao e recebimentos" },
   { key: "orders", label: "Pedidos", helper: "Fila operacional" },
-  { key: "menu", label: "Cardapio", helper: "Produtos e combos" },
+  { key: "menu", label: "Cardápio", helper: "Produtos e combos" },
   { key: "scheduled", label: "Agendamentos", helper: "Pedidos futuros" },
   { key: "deliveries", label: "Entregas", helper: "Motoboys e rotas" },
   { key: "customers", label: "Clientes", helper: "Base recorrente" },
-  { key: "promotions", label: "Promocoes", helper: "Campanhas e cupons" },
-  { key: "metrics", label: "Metricas", helper: "Performance por admin" },
-  { key: "reports", label: "Relatorios", helper: "Indicadores" },
+  { key: "promotions", label: "Promoções", helper: "Campanhas e cupons" },
+  { key: "metrics", label: "Resultados", helper: "Performance por admin" },
+  { key: "reports", label: "Relatórios", helper: "Indicadores" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
-  { key: "reviews", label: "Avaliacoes", helper: "Feedback do cliente" },
-  { key: "settings", label: "Configuracoes", helper: "Ajustes do sistema" },
+  { key: "reviews", label: "Avaliações", helper: "Feedback do cliente" },
+  { key: "settings", label: "Configurações", helper: "Ajustes do sistema" },
   { key: "inventory", label: "Estoque", helper: "Itens e validade" },
 ]);
 const SYSTEM_NAV_SECTIONS = Object.freeze([
