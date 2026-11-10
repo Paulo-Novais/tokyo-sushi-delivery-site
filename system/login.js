@@ -48,7 +48,7 @@
         throw new Error(
           payload.error?.message ||
             payload.error ||
-            "Não foi possível autenticar esta conta System."
+            "E-mail ou senha incorretos."
         );
       }
 
@@ -60,7 +60,7 @@
       );
     } finally {
       submitButton.disabled = false;
-      submitButton.textContent = "Entrar no System";
+      submitButton.textContent = "Entrar";
     }
   });
 })();

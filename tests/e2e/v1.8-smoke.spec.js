@@ -220,7 +220,7 @@ test.describe("V1.8 protected surfaces and System health smoke", () => {
       ).toBeVisible({ timeout: 20_000 });
       await expect(page.locator(".system-health-grid")).toBeVisible();
       await expect(page.locator(".system-boundary")).toContainText(
-        "SystemSession sem tenant"
+        "Sessão System sem tenant"
       );
       await expectNoHorizontalOverflow(page);
     });
