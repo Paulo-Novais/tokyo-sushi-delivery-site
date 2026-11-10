@@ -1,126 +1,194 @@
+/* Painel System INOVAS Food — telas Visão geral, Restaurantes, Suporte e
+   Auditoria. Dados reais vêm de /api/system/* e /api/support/*; o menu é
+   filtrado pelas permissões da sessão, mas toda permissão é checada no
+   servidor. */
 (() => {
   "use strict";
 
+  const shell = window.InovasSystemShell;
   const app = document.querySelector("[data-system-app]");
-  const sidebar = document.querySelector("[data-system-sidebar]");
-  const toast = document.querySelector("[data-users-toast]");
+  const toast = document.querySelector("[data-system-toast]");
   const dialog = document.querySelector("[data-system-dialog]");
-  const state = { session: null, routeData: null };
+  if (!shell || !app) return;
 
-  const NAVIGATION = Object.freeze([
-    { key: "overview", label: "Visão geral", href: "/system", icon: "VI", permission: "system.dashboard.view", endpoint: "/api/system/overview" },
-    { key: "restaurants", label: "Restaurantes", href: "/system#restaurants", icon: "RE", permission: "system.restaurants.view", endpoint: "/api/system/restaurants" },
-    { key: "health", label: "Saúde", href: "/system#health", icon: "SA", permission: "system.health.view", endpoint: "/api/system/health" },
-    { key: "integrations", label: "Integrações", href: "/system#integrations", icon: "IN", permission: "system.integrations.view", endpoint: "/api/system/integrations" },
-    { key: "users", label: "Usuários INOVAS", href: "/system/users", icon: "US", permission: "system.users.view", external: true },
-    { key: "roles", label: "Perfis e permissões", href: "/system/roles", icon: "PE", permission: "system.roles.view", external: true },
-    { key: "audit", label: "Auditoria", href: "/system#audit", icon: "AU", permission: "system.audit.view", endpoint: "/api/system/audit" },
-    { key: "support", label: "Suporte", href: "/system#support", icon: "SU", permission: "system.support.start", endpoint: "/api/system/support" },
-    { key: "settings", label: "Configurações", href: "/system#settings", icon: "CO", permission: "system.settings.view", endpoint: "/api/system/settings" },
-  ]);
+  const { icon, escapeHtml, translateRole } = shell;
 
-  const STATUS_LABELS = Object.freeze({
-    HEALTHY: "Saudável",
-    ONLINE: "Online",
-    DEGRADED: "Degradado",
-    OFFLINE: "Fora do ar",
-    ACTIVE: "Ativo",
-    ATIVO: "Ativo",
-    INACTIVE: "Inativo",
-    BLOCKED: "Bloqueado",
-    PENDING: "Pendente",
-    PENDING_VERIFICATION: "Aguardando verificação",
-    CLIENTE_MODELO: "Cliente modelo",
-    PILOT: "Piloto",
-    TRIAL: "Avaliação",
-    CONFIGURED: "Configurado",
-    CURRENT: "Atual",
-    PARTIAL: "Parcial",
-    NOT_CONFIGURED: "Não configurado",
-    NOT_REGISTERED: "Não cadastrado",
-    NOT_IMPLEMENTED: "Não implementado",
-    UNKNOWN: "Não informado",
-    SUCCESS: "Concluído",
-    FAILED: "Falhou",
-    ERROR: "Erro",
-    REVOKED: "Encerrado",
-    VIEW: "Visualização",
-    ADMIN: "Administrativo",
-    FILE: "Arquivo local",
-    NEON: "Banco Neon",
-    DISABLED: "Desativado",
+  const ROUTES = Object.freeze({
+    overview: { key: "overview", label: "Visão geral", permission: "system.dashboard.view", endpoint: "/api/system/overview" },
+    restaurants: { key: "restaurants", label: "Restaurantes", permission: "system.restaurants.view", endpoint: "/api/system/restaurants" },
+    support: { key: "support", label: "Suporte", permission: "system.support.start", endpoint: "/api/system/support" },
+    audit: { key: "audit", label: "Auditoria", permission: "system.audit.view", endpoint: "/api/system/audit" },
+  });
+
+  // Rotas antigas (Saúde, Integrações, Configurações) foram absorvidas.
+  const ROUTE_ALIASES = Object.freeze({
+    dashboard: "overview",
+    health: "overview",
+    settings: "overview",
+    integrations: "restaurants",
   });
 
   const EVENT_LABELS = Object.freeze({
     SUPPORT_SESSION_STARTED: "Sessão de suporte iniciada",
     SUPPORT_SESSION_REVOKED: "Sessão de suporte encerrada",
-    SYSTEM_USER_CREATED: "Usuário INOVAS criado",
-    SYSTEM_USER_UPDATED: "Usuário INOVAS atualizado",
-    SYSTEM_USER_BLOCKED: "Usuário INOVAS bloqueado",
-    SYSTEM_USER_DEACTIVATED: "Usuário INOVAS desativado",
-    SYSTEM_USER_ACTIVATED: "Usuário INOVAS ativado",
-    SYSTEM_USER_SESSIONS_REVOKED: "Sessões do usuário encerradas",
-    SYSTEM_USER_INVITATION_REISSUED: "Convite do usuário reenviado",
+    SYSTEM_USER_CREATED: "Usuário criado",
+    SYSTEM_USER_UPDATED: "Usuário atualizado",
+    SYSTEM_USER_BLOCKED: "Usuário bloqueado",
+    SYSTEM_USER_DEACTIVATED: "Usuário desativado",
+    SYSTEM_USER_ACTIVATED: "Usuário ativado",
+    SYSTEM_USER_SESSIONS_REVOKED: "Sessões encerradas",
+    SYSTEM_USER_INVITATION_REISSUED: "Convite reenviado",
+    SYSTEM_ACCESS_DENIED: "Acesso negado",
     ROLE_CREATED: "Perfil criado",
     ROLE_UPDATED: "Perfil atualizado",
     ROLE_DUPLICATED: "Perfil duplicado",
     ROLE_DEACTIVATED: "Perfil removido",
     IDENTITY_SCOPE_RECOVERED: "Vínculo de identidade restaurado",
     SYSTEM_MASTER_RBAC_REPAIRED: "Permissões do perfil Master restauradas",
+    LOGIN_SUCCESS: "Login realizado",
+    LOGIN_FAILED: "Falha de login",
+    LOGOUT: "Saída da sessão",
   });
 
-  const ROLE_LABELS = Object.freeze({
-    MASTER: "Master",
-    ADMINISTRADOR: "Administrador",
-    SUPORTE: "Suporte",
-    FINANCEIRO_INOVAS: "Financeiro",
-    DESENVOLVEDOR: "Desenvolvedor",
-    AUDITOR: "Auditoria",
-    SYSTEM: "Sistema",
-    RESTAURANT: "Restaurante",
-    SUPPORT: "Suporte",
-    MIGRATION: "Migração",
-    PLATFORM: "Plataforma",
+  const HEALTH_LABELS = Object.freeze({
+    ONLINE: ["Online", "ok"],
+    HEALTHY: ["Online", "ok"],
+    DEGRADED: ["Degradado", "warn"],
+    OFFLINE: ["Offline", "crit"],
   });
 
-  const escapeHtml = (value) =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  const DOMAIN_LABELS = Object.freeze({
+    ACTIVE: "Ativo",
+    ATIVO: "Ativo",
+    HEALTHY: "Ativo",
+    VERIFIED: "Ativo",
+    PENDING: "Verificação pendente",
+    PENDING_VERIFICATION: "Verificação pendente",
+    PENDING_DNS: "Verificação pendente",
+    INACTIVE: "Inativo",
+    DISABLED: "Inativo",
+    NOT_CONFIGURED: "Não configurado",
+    SIMULATED: "Simulado",
+    SIMULATION: "Simulado",
+    OK: "Ativo",
+    DEGRADED: "Degradado",
+    ERROR: "Com falha",
+    FAILED: "Com falha",
+    UNKNOWN: "Não informado",
+  });
 
-  const normalizeStatus = (value) => String(value || "UNKNOWN").trim().toUpperCase();
-  const translateStatus = (value) => STATUS_LABELS[normalizeStatus(value)] || "Não informado";
-  const translateRole = (value) => ROLE_LABELS[normalizeStatus(value)] || String(value || "Perfil personalizado");
-  const translateEvent = (value) => EVENT_LABELS[normalizeStatus(value)] || "Evento administrativo";
-  const translatePlan = (value) => ({ PREMIUM: "Premium", TRIAL: "Avaliação", FREE: "Gratuito", BASIC: "Básico", ENTERPRISE: "Empresarial" })[normalizeStatus(value)] || String(value || "Não informado");
-  const translateRestaurantMode = (value) => ({ DEFAULT_ONLY: "Somente restaurante padrão", PATH_PRIMARY: "Endereço por caminho", CUSTOM_DOMAIN: "Domínio personalizado", SUBDOMAIN: "Subdomínio" })[normalizeStatus(value)] || (value ? "Modo configurado" : "Não informado");
-  const statusClass = (value) => {
-    const status = normalizeStatus(value);
-    if (["HEALTHY", "ONLINE", "ACTIVE", "ATIVO", "CONFIGURED", "CURRENT", "SUCCESS", "CLIENTE_MODELO", "PILOT", "TRIAL"].includes(status)) return "is-active";
-    if (["DEGRADED", "PARTIAL", "PENDING", "PENDING_VERIFICATION"].includes(status)) return "is-pending";
-    if (["FAILED", "ERROR", "OFFLINE", "BLOCKED"].includes(status)) return "is-blocked";
-    return "";
+  const RESTAURANT_STATUS_LABELS = Object.freeze({
+    ACTIVE: "Ativo",
+    ATIVO: "Ativo",
+    CLIENTE_MODELO: "Cliente modelo",
+    PILOT: "Piloto",
+    TRIAL: "Avaliação",
+    CONFIGURED: "Configurado",
+    SUSPENDED: "Suspenso",
+    INACTIVE: "Inativo",
+    BLOCKED: "Bloqueado",
+    NOT_REGISTERED: "Não cadastrado",
+    PENDING: "Pendente",
+  });
+
+  const PLAN_LABELS = Object.freeze({
+    PREMIUM: "Premium",
+    TRIAL: "Avaliação",
+    FREE: "Gratuito",
+    BASIC: "Básico",
+    START: "Start",
+    BUSINESS: "Business",
+    PRO: "Pro",
+    ENTERPRISE: "Empresarial",
+  });
+
+  const RESULT_LABELS = Object.freeze({
+    SUCCESS: ["Sucesso", "ok"],
+    DENIED: ["Negado", "crit"],
+    FAILED: ["Falhou", "crit"],
+    FAILURE: ["Falhou", "crit"],
+    ERROR: ["Erro", "crit"],
+    REVOKED: ["Encerrado", "neutral"],
+  });
+
+  const state = {
+    session: null,
+    route: "overview",
+    query: new URLSearchParams(),
+    data: null,
+    selectedRestaurantKey: "",
+    selectedAuditId: "",
+    filters: {
+      restaurants: { search: "", status: "", plan: "", domain: "" },
+      audit: { search: "", period: "30", event: "", result: "" },
+    },
+    support: { restaurantKey: "", mode: "VIEW", reason: "", confirmed: false },
   };
 
-  const formatDate = (value) => {
-    if (!value) return "Nunca";
+  /* ---------- utilidades ---------- */
+
+  const normalize = (value) => String(value || "").trim().toUpperCase();
+  const getPermissions = () => new Set(state.session?.effectivePermissions || []);
+  const hasPermission = (permission) => getPermissions().has(permission);
+
+  const translateHealth = (value) => HEALTH_LABELS[normalize(value)] || ["Não aferido", "neutral"];
+  const humanize = (value) => {
+    const text = String(value || "").trim().toLowerCase().replace(/_/g, " ");
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : "Não informado";
+  };
+  const translateDomain = (value) => DOMAIN_LABELS[normalize(value)] || humanize(value);
+  const translateRestaurantStatus = (value) => RESTAURANT_STATUS_LABELS[normalize(value)] || humanize(value);
+  const translatePlan = (value) => PLAN_LABELS[normalize(value)] || (value ? humanize(value) : "Sem plano");
+  const translateEvent = (value) => EVENT_LABELS[normalize(value)] || "Evento administrativo";
+  const translateResult = (value) => RESULT_LABELS[normalize(value)] || [humanize(value), "neutral"];
+  const translateMode = (value) => (normalize(value) === "ADMIN" ? "Administrativo" : "Visualização");
+
+  const scoreTone = (score) => {
+    const value = Number(score);
+    if (!Number.isFinite(value)) return "neutral";
+    if (value >= 80) return "ok";
+    if (value >= 50) return "warn";
+    return "crit";
+  };
+
+  const pad = (value) => String(value).padStart(2, "0");
+
+  const parseDate = (value) => {
+    if (!value) return null;
     const date = new Date(value);
-    return Number.isNaN(date.getTime())
-      ? "Não informado"
-      : new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+    return Number.isNaN(date.getTime()) ? null : date;
   };
 
-  const getInitials = (value) =>
-    String(value || "RE")
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0))
-      .join("")
-      .toUpperCase();
+  const formatShort = (value) => {
+    const date = parseDate(value);
+    if (!date) return "—";
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const formatDay = (value) => {
+    const date = parseDate(value);
+    if (!date) return "—";
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  };
+
+  const formatFull = (value) => {
+    const date = parseDate(value);
+    if (!date) return "—";
+    return `${formatDay(date)}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const formatTime = (value) => {
+    const date = parseDate(value);
+    return date ? `${pad(date.getHours())}:${pad(date.getMinutes())}` : "—";
+  };
+
+  const minutesLeft = (value) => {
+    const date = parseDate(value);
+    if (!date) return 0;
+    return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 60000));
+  };
+
+  const plural = (count, singular, pluralForm) => `${count} ${count === 1 ? singular : pluralForm}`;
 
   const requestJson = async (url, options = {}) => {
     const response = await fetch(url, {
@@ -135,6 +203,7 @@
     if (!response.ok || payload.success === false) {
       const error = new Error(payload?.error?.message || "Não foi possível concluir a solicitação.");
       error.status = response.status;
+      error.code = payload?.error?.code || "";
       throw error;
     }
     return payload;
@@ -145,238 +214,621 @@
     toast.textContent = message;
     toast.hidden = false;
     window.clearTimeout(notify.timer);
-    notify.timer = window.setTimeout(() => { toast.hidden = true; }, 4200);
+    notify.timer = window.setTimeout(() => {
+      toast.hidden = true;
+    }, 4200);
   };
 
-  const getPermissions = () => new Set(state.session?.effectivePermissions || []);
-  const hasPermission = (permission) => getPermissions().has(permission);
-  const visibleNavigation = () => NAVIGATION.filter((item) => hasPermission(item.permission));
-  const getRouteKey = () => {
-    const key = window.location.hash.replace(/^#/, "").split("?")[0].trim();
-    return key || "overview";
+  const parseHash = () => {
+    const raw = window.location.hash.replace(/^#/, "");
+    const [path, queryString = ""] = raw.split("?");
+    const key = path.trim() || "overview";
+    return { key: ROUTE_ALIASES[key] || key, query: new URLSearchParams(queryString) };
   };
 
-  const renderSidebar = () => {
-    const routeKey = getRouteKey();
-    sidebar.innerHTML = `
-      <a class="users-brand" href="/system">
-        <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
-        <span class="users-brand-copy"><small>Plataforma</small><strong>Painel System</strong></span>
-      </a>
-      <nav class="users-nav" aria-label="Navegação principal">
-        ${visibleNavigation().map((item) => `
-          <a href="${item.href}" ${item.key === routeKey || (item.key === "overview" && routeKey === "") ? 'aria-current="page"' : ""}>
-            <span class="users-nav-icon" aria-hidden="true">${item.icon}</span>${escapeHtml(item.label)}
-          </a>`).join("")}
-      </nav>
-      <div class="users-sidebar-foot">
-        <div class="users-sidebar-account">
-          <strong>${escapeHtml(state.session.displayName || state.session.login)}</strong>
-          <span>${escapeHtml(translateRole(state.session.role))} · sem restaurante vinculado</span>
-        </div>
-        <button class="users-logout" type="button" data-system-logout>
-          <span class="users-nav-icon" aria-hidden="true">↪</span><span>Sair</span>
-        </button>
-      </div>`;
+  const statusPill = (label, tone, { dot = true } = {}) =>
+    `<span class="${dot ? "sys-status" : "sys-pill"} is-${tone}">${escapeHtml(label)}</span>`;
+
+  const meter = (score) => {
+    const value = Math.max(0, Math.min(100, Number(score) || 0));
+    return `<span class="sys-meter" role="img" aria-label="Health Score ${value} de 100"><span class="is-${scoreTone(score)}" style="width:${value}%"></span></span>`;
   };
 
-  const renderLoading = (label) => {
-    app.innerHTML = `<div class="users-loading"><span class="users-spinner" aria-hidden="true"></span><span>Carregando ${escapeHtml(label.toLowerCase())}…</span></div>`;
-  };
-
-  const renderPageHead = ({ eyebrow, title, description, action = "" }) => `
-    <nav class="users-breadcrumb"><a href="/system">Sistema</a><span>/</span><strong>${escapeHtml(title)}</strong></nav>
-    <header class="users-page-head">
-      <div><span class="users-eyebrow">${escapeHtml(eyebrow)}</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>
-      ${action}
+  const renderHead = ({ eyebrow, title, description, actions = "" }) => `
+    <header class="sys-page-head">
+      <div>
+        <span class="sys-eyebrow">${escapeHtml(eyebrow)}</span>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(description)}</p>
+      </div>
+      ${actions ? `<div class="sys-page-actions">${actions}</div>` : ""}
     </header>`;
 
-  const renderStatus = (status) => `<span class="users-status ${statusClass(status)}">${escapeHtml(translateStatus(status))}</span>`;
+  const renderEmpty = (title, text) => `
+    <div class="sys-empty"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></div>`;
 
-  const renderAuditRows = (events, limit = events.length) => {
-    const visible = events.slice(0, limit);
-    if (!visible.length) return '<div class="users-empty"><div><h2>Nenhum evento registrado</h2><p>A trilha aparecerá quando ocorrer uma ação administrativa.</p></div></div>';
-    return `<div class="system-table-wrap"><table class="system-table"><thead><tr><th>Data</th><th>Evento</th><th>Responsável</th><th>Escopo</th><th>Resultado</th></tr></thead><tbody>
-      ${visible.map((event) => `<tr>
-        <td>${escapeHtml(formatDate(event.createdAt))}</td>
-        <td><strong>${escapeHtml(translateEvent(event.eventType))}</strong>${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}</td>
-        <td>${escapeHtml(event.actorName || event.actorLogin || translateRole(event.actorType))}</td>
-        <td>${escapeHtml(event.restaurantId ? "Restaurante" : "Plataforma")}</td>
-        <td>${renderStatus(event.result)}</td>
-      </tr>`).join("")}</tbody></table></div>`;
+  const renderLoading = (label) => {
+    app.innerHTML = `<div class="sys-loading"><span class="sys-spinner" aria-hidden="true"></span><span>Carregando ${escapeHtml(label.toLowerCase())}…</span></div>`;
+  };
+
+  const renderError = (error) => {
+    const forbidden = error?.status === 403;
+    app.innerHTML = `
+      <section class="sys-card sys-error">
+        <span class="sys-eyebrow">${forbidden ? "Sem permissão" : "Falha ao carregar"}</span>
+        <h2>${forbidden ? "Seu perfil não tem acesso a esta área" : "Não foi possível abrir esta área"}</h2>
+        <p>${escapeHtml(error?.message || "Tente novamente em instantes.")}</p>
+        <div class="sys-actions">
+          <button class="sys-btn sys-btn-primary" type="button" data-system-retry>Tentar novamente</button>
+          <a class="sys-btn sys-btn-secondary" href="/system">Voltar à visão geral</a>
+        </div>
+      </section>`;
+  };
+
+  /* ---------- Visão geral ---------- */
+
+  const buildAttentionItems = (data) => {
+    const items = [];
+    const tenantHealth = data.health?.tenantHealth || [];
+    for (const tenant of tenantHealth) {
+      const health = normalize(tenant.status);
+      if (health === "OFFLINE") {
+        items.push({ tone: "crit", label: "Crítico", title: "Restaurante fora do ar", subtitle: `${tenant.restaurantName} · Health Score ${tenant.score}`, key: tenant.restaurantKey });
+      } else if (health === "DEGRADED") {
+        items.push({ tone: "warn", label: "Atenção", title: "Restaurante degradado", subtitle: `${tenant.restaurantName} · Health Score ${tenant.score}`, key: tenant.restaurantKey });
+      }
+      if (["PENDING", "PENDING_VERIFICATION", "PENDING_DNS"].includes(normalize(tenant.domainStatus))) {
+        items.push({ tone: "warn", label: "Atenção", title: "Domínio aguardando verificação", subtitle: tenant.restaurantName, key: tenant.restaurantKey });
+      }
+      if (Number(tenant.failedIntegrations) > 0) {
+        items.push({ tone: "warn", label: "Atenção", title: plural(Number(tenant.failedIntegrations), "integração com falha", "integrações com falha"), subtitle: tenant.restaurantName, key: tenant.restaurantKey });
+      }
+      if (Number(tenant.criticalErrors) > 0) {
+        items.push({ tone: "crit", label: "Crítico", title: plural(Number(tenant.criticalErrors), "erro crítico", "erros críticos"), subtitle: tenant.restaurantName, key: tenant.restaurantKey });
+      }
+    }
+    const platformFailures = Number(data.overview?.integrations?.attention || 0);
+    if (platformFailures > 0) {
+      items.push({ tone: "warn", label: "Atenção", title: plural(platformFailures, "integração da plataforma com falha", "integrações da plataforma com falha"), subtitle: "Conectores globais da INOVAS Food", key: "" });
+    }
+    return items;
+  };
+
+  const renderSupportSessionCard = (session) => {
+    const total = Math.max(1, (parseDate(session.expiresAt)?.getTime() || 0) - (parseDate(session.createdAt)?.getTime() || 0));
+    const left = Math.max(0, (parseDate(session.expiresAt)?.getTime() || 0) - Date.now());
+    const percent = Math.max(0, Math.min(100, Math.round((left / total) * 100)));
+    return `
+      <article class="sys-card" style="box-shadow:none">
+        <div class="sys-card-body" style="display:grid;gap:8px">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+            <strong>${escapeHtml(session.restaurantName || session.restaurantKey || "Restaurante")}</strong>
+            ${statusPill(translateMode(session.mode), normalize(session.mode) === "ADMIN" ? "warn" : "neutral", { dot: false })}
+          </div>
+          <span class="sys-hint">Aberta por ${escapeHtml(session.displayName || session.login || "usuário da equipe")} · motivo registrado na auditoria</span>
+          <span class="sys-meter" aria-hidden="true"><span style="width:${percent}%;background:#ff6a00"></span></span>
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+            <span><strong>${minutesLeft(session.expiresAt)} min restantes</strong></span>
+            <a class="sys-btn sys-btn-secondary sys-btn-sm" href="/system#support">Gerenciar</a>
+          </div>
+        </div>
+      </article>`;
   };
 
   const renderOverview = (data) => {
     const summary = data.health?.summary || {};
     const overview = data.overview || {};
+    const tenantHealth = data.health?.tenantHealth || [];
+    const degraded = Number(summary.degradedRestaurants || overview.restaurants?.degraded || 0);
+    const critical = Number(summary.criticalAlerts || 0);
+    const failures = Number(summary.integrationFailures || 0) + Number(overview.integrations?.attention || 0);
+    const attention = buildAttentionItems(data);
+    const supportSessions = data.activeSupportSessions || [];
+
+    let bannerTone = "ok";
+    let bannerText = "<strong>Plataforma operando normalmente.</strong> Nenhum restaurante degradado e nenhuma falha de integração no momento.";
+    if (critical > 0) {
+      bannerTone = "crit";
+      bannerText = `<strong>Plataforma com alerta crítico.</strong> ${plural(critical, "alerta crítico precisa", "alertas críticos precisam")} de ação imediata.`;
+    } else if (degraded > 0 || failures > 0) {
+      bannerTone = "warn";
+      bannerText = `<strong>Plataforma operando com atenção.</strong> ${plural(degraded, "restaurante degradado", "restaurantes degradados")} e ${plural(failures, "falha de integração", "falhas de integração")} precisam de acompanhamento.`;
+    }
+    const platformState = bannerTone === "crit" ? "Crítico" : bannerTone === "warn" ? "Atenção" : "Normal";
+
     app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Plataforma · visão administrativa", title: "Visão geral", description: "Acompanhamento administrativo e técnico da INOVAS Food, sem conteúdo operacional dos restaurantes.", action: hasPermission("system.users.view") ? '<a class="users-button users-button-primary" href="/system/users">Usuários INOVAS</a>' : "" })}
-      <section class="system-health-grid" aria-label="Indicadores da plataforma">
-        ${[
-          ["Estado da plataforma", translateStatus(summary.status), "Última verificação consolidada"],
-          ["Restaurantes", overview.restaurants?.total || 0, `${overview.restaurants?.active || 0} ativos`],
-          ["Integrações configuradas", overview.integrations?.configured || 0, `${overview.integrations?.attention || 0} requerem atenção`],
-          ["Sessões de suporte", overview.activeSupportSessions || 0, "Ativas para esta conta"],
-        ].map(([label, value, helper]) => `<article class="system-health-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(helper)}</small></article>`).join("")}
+      ${renderHead({
+        eyebrow: "Plataforma · saúde agregada",
+        title: "Visão geral da INOVAS",
+        description: "Estado técnico e operacional agregado. Nenhum pedido, cliente ou valor financeiro de restaurante aparece nesta tela.",
+        actions: hasPermission("system.support.start") ? '<a class="sys-btn sys-btn-primary" href="/system#support">Iniciar suporte</a>' : "",
+      })}
+      <div class="sys-banner is-${bannerTone}" role="status">${icon(bannerTone === "ok" ? "check" : "warning")}<span>${bannerText}</span></div>
+      <section class="sys-kpis system-health-grid" aria-label="Indicadores de saúde">
+        <article class="sys-kpi"><span>Estado da plataforma</span><strong>${platformState}</strong><small>Saúde global</small></article>
+        <article class="sys-kpi"><span>Restaurantes ativos</span><strong>${escapeHtml(String(summary.activeRestaurants ?? overview.restaurants?.active ?? 0))}</strong><small>${escapeHtml(String(summary.totalRestaurants ?? overview.restaurants?.total ?? 0))} cadastrados</small></article>
+        <article class="sys-kpi"><span>Degradados</span><strong>${degraded}</strong><small>Requerem acompanhamento</small></article>
+        <article class="sys-kpi"><span>Alertas críticos</span><strong>${critical}</strong><small>${plural(failures, "falha de integração", "falhas de integração")}</small></article>
       </section>
-      <div class="system-dashboard-grid">
-        <section class="users-panel">
-          <div class="users-filter-meta"><strong>Acessos rápidos</strong><span>Somente áreas permitidas</span></div>
-          <div class="system-quick-grid">${visibleNavigation().filter((item) => !item.external && item.key !== "overview").map((item) => `<a href="${item.href}"><span class="users-nav-icon">${item.icon}</span><strong>${escapeHtml(item.label)}</strong><small>Abrir área administrativa</small></a>`).join("")}</div>
+      <section class="sys-card" aria-labelledby="atencao" style="margin-bottom:20px">
+        <div class="sys-card-head"><h2 id="atencao">Precisa de atenção</h2><span class="sys-pill">${plural(attention.length, "item", "itens")}</span></div>
+        ${attention.length ? `<div class="sys-list">${attention
+          .map(
+            (item) => `<div class="sys-list-item">${statusPill(item.label, item.tone, { dot: false })}<div class="sys-list-copy"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.subtitle)}</span></div>${item.key && hasPermission("system.restaurants.view") ? `<a class="sys-btn sys-btn-secondary sys-btn-sm" href="/system#restaurants?key=${encodeURIComponent(item.key)}">Abrir restaurante</a>` : ""}</div>`
+          )
+          .join("")}</div>` : renderEmpty("Nada pendente", "Nenhum restaurante ou integração precisa de acompanhamento agora.")}
+      </section>
+      <div class="sys-split">
+        <section class="sys-card" aria-labelledby="saude">
+          <div class="sys-card-head"><h2 id="saude">Health Score por restaurante</h2><span>Atualizado em ${escapeHtml(formatFull(data.health?.generatedAt))}</span></div>
+          ${tenantHealth.length ? `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Health Score por restaurante"><thead><tr><th>Restaurante</th><th>Estado</th><th>Health Score</th><th>Domínio</th></tr></thead><tbody>
+            ${tenantHealth
+              .map((tenant) => {
+                const [healthLabel, tone] = translateHealth(tenant.status);
+                return `<tr><td data-label="Restaurante"><strong>${escapeHtml(tenant.restaurantName)}</strong><small>${escapeHtml(tenant.restaurantKey)}</small></td><td data-label="Estado">${statusPill(healthLabel, tone)}</td><td data-label="Health Score"><span class="sys-score"><strong>${escapeHtml(String(tenant.score))}</strong>${meter(tenant.score)}</span></td><td data-label="Domínio">${escapeHtml(translateDomain(tenant.domainStatus))}</td></tr>`;
+              })
+              .join("")}
+          </tbody></table></div>` : renderEmpty("Nenhum restaurante aferido", "A saúde aparecerá após o primeiro restaurante ser provisionado.")}
         </section>
-        <section class="users-panel">
-          <div class="users-filter-meta"><strong>Atividade recente</strong>${hasPermission("system.audit.view") ? '<a href="/system#audit">Ver auditoria</a>' : ""}</div>
-          ${renderAuditRows(overview.recentAuditEvents || [], 6)}
-        </section>
+        <div class="sys-stack">
+          <section class="sys-card" aria-labelledby="sessoes">
+            <div class="sys-card-head"><h2 id="sessoes">Sessões de suporte ativas</h2></div>
+            <div class="sys-card-body" style="display:grid;gap:12px">
+              ${supportSessions.length ? supportSessions.map(renderSupportSessionCard).join("") : '<p class="sys-hint" style="margin:0">Nenhuma sessão de suporte ativa para esta conta.</p>'}
+            </div>
+          </section>
+          <section class="sys-card" aria-labelledby="fronteira">
+            <div class="sys-card-head"><h2 id="fronteira">Fronteira System ativa</h2></div>
+            <div class="sys-card-body">
+              <ul class="sys-checklist">
+                ${[
+                  "Sessão System sem tenant e sem restaurante.",
+                  "Sem acesso a pedidos, clientes ou financeiro de restaurantes.",
+                  "Permissões apenas do vocabulário system.*",
+                  "Acesso operacional só por sessão de suporte explícita e auditada.",
+                  "Cookies e APIs separados por domínio.",
+                ]
+                  .map((text) => `<li>${icon("check", 18, "#16a34a")}<span>${escapeHtml(text)}</span></li>`)
+                  .join("")}
+              </ul>
+            </div>
+          </section>
+        </div>
       </div>`;
+  };
+
+  /* ---------- Restaurantes ---------- */
+
+  const restaurantMatches = (restaurant, filters) => {
+    const search = filters.search.trim().toLowerCase();
+    if (search && !`${restaurant.name} ${restaurant.slug} ${restaurant.restaurantKey} ${restaurant.owner || ""}`.toLowerCase().includes(search)) return false;
+    if (filters.status && normalize(restaurant.health?.status || "UNKNOWN") !== filters.status) return false;
+    if (filters.plan && normalize(restaurant.plan || "NONE") !== filters.plan) return false;
+    if (filters.domain && normalize(restaurant.health?.domainStatus || "UNKNOWN") !== filters.domain) return false;
+    return true;
+  };
+
+  const renderRestaurantDetail = (restaurant) => {
+    if (!restaurant) {
+      return `<aside class="sys-card sys-detail">${renderEmpty("Nenhum restaurante selecionado", "Clique em uma linha da lista para ver os detalhes.")}</aside>`;
+    }
+    const [healthLabel, tone] = translateHealth(restaurant.health?.status);
+    const health = restaurant.health || {};
+    const failed = Number(health.failedIntegrations || 0);
+    const pendingJobs = Number(health.pendingJobs || 0);
+    const backup = normalize(health.backupStatus);
+    const canSupport = hasPermission("system.support.start") && restaurant.administrativeActions?.supportAvailable;
+    return `
+      <aside class="sys-card sys-detail" aria-label="Restaurante selecionado">
+        <div>
+          <span class="sys-eyebrow">Restaurante selecionado</span>
+          <h2>${escapeHtml(restaurant.name)}</h2>
+          ${statusPill(healthLabel, tone)} ${statusPill(translateRestaurantStatus(restaurant.status), "neutral", { dot: false })}
+        </div>
+        <dl class="sys-facts">
+          <div class="sys-fact"><span>Identificador</span><strong>${escapeHtml(restaurant.restaurantKey)}</strong></div>
+          <div class="sys-fact"><span>Endereço público</span><strong>${escapeHtml(restaurant.publicUrl || `/${restaurant.slug || restaurant.restaurantKey}`)}</strong></div>
+          <div class="sys-fact"><span>Plano</span><strong>${escapeHtml(translatePlan(restaurant.plan))}</strong></div>
+          <div class="sys-fact"><span>Domínio</span><strong>${escapeHtml(translateDomain(health.domainStatus))}${restaurant.domain ? `<br><small class="sys-hint">${escapeHtml(restaurant.domain)}</small>` : ""}</strong></div>
+          <div class="sys-fact"><span>Responsável</span><strong>${escapeHtml(restaurant.owner || "Não informado")}</strong></div>
+          <div class="sys-fact"><span>Usuários</span><strong>${escapeHtml(String(restaurant.activeUserCount ?? 0))} ativos de ${escapeHtml(String(restaurant.userCount ?? 0))}</strong></div>
+          <div class="sys-fact"><span>Atualizado em</span><strong>${escapeHtml(formatDay(restaurant.updatedAt))}</strong></div>
+        </dl>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><strong>Health Score</strong><strong style="font-size:20px">${escapeHtml(String(health.score ?? "—"))}</strong></div>
+          ${meter(health.score)}
+        </div>
+        <div>
+          <h3 class="sys-subhead">Integrações e rotinas</h3>
+          <dl class="sys-facts">
+            <div class="sys-fact"><span>Integrações</span>${failed > 0 ? statusPill(`${failed} com falha`, "warn", { dot: false }) : statusPill("OK", "ok", { dot: false })}</div>
+            <div class="sys-fact"><span>Rotinas pendentes</span>${pendingJobs > 0 ? statusPill(`${pendingJobs} pendentes`, "warn", { dot: false }) : statusPill("Nenhuma", "ok", { dot: false })}</div>
+            <div class="sys-fact"><span>Backup</span>${backup && !["OK", "HEALTHY", "CURRENT", "SUCCESS"].includes(backup) ? statusPill(backup === "UNKNOWN" ? "Não aferido" : "Atenção", backup === "UNKNOWN" ? "neutral" : "warn", { dot: false }) : statusPill("OK", "ok", { dot: false })}</div>
+          </dl>
+        </div>
+        <div class="sys-note">${icon("lock", 18)}<span>Pedidos, clientes e financeiro deste restaurante não aparecem aqui. Para ver, abra uma sessão de suporte; o motivo fica registrado.</span></div>
+        <div class="sys-action-stack">
+          ${canSupport
+            ? `<a class="sys-btn sys-btn-primary" href="/system#support?key=${encodeURIComponent(restaurant.restaurantKey)}">Iniciar suporte (visualização)</a>`
+            : '<button class="sys-btn sys-btn-primary" type="button" disabled>Iniciar suporte (visualização)</button>'}
+          <p class="sys-action-help">Requer system.support.start${restaurant.administrativeActions?.supportAvailable ? "" : " · restaurante não provisionado"}</p>
+          <button class="sys-btn sys-btn-secondary" type="button" disabled aria-disabled="true">Editar dados de plataforma</button>
+          <p class="sys-action-help">Requer system.restaurants.edit · ainda não disponível nesta versão</p>
+          <button class="sys-btn sys-btn-danger" type="button" disabled aria-disabled="true">Suspender acesso</button>
+          <p class="sys-action-help">Ação crítica · requer system.restaurants.suspend e motivo · ainda não disponível nesta versão</p>
+        </div>
+      </aside>`;
+  };
+
+  const renderRestaurantsList = () => {
+    const root = document.querySelector("[data-restaurant-list]");
+    const detailRoot = document.querySelector("[data-restaurant-detail]");
+    if (!root || !state.data) return;
+    const filters = state.filters.restaurants;
+    const restaurants = (state.data.restaurants || []).filter((restaurant) => restaurantMatches(restaurant, filters));
+    if (!restaurants.some((restaurant) => restaurant.restaurantKey === state.selectedRestaurantKey)) {
+      state.selectedRestaurantKey = restaurants[0]?.restaurantKey || "";
+    }
+    root.innerHTML = restaurants.length
+      ? `<div class="sys-table-caption">${plural(restaurants.length, "restaurante", "restaurantes")} · clique em uma linha para ver os detalhes</div>
+        <div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Restaurantes"><thead><tr><th>Restaurante</th><th>Estado</th><th>Plano</th><th>Domínio</th></tr></thead><tbody>
+        ${restaurants
+          .map((restaurant) => {
+            const [healthLabel, tone] = translateHealth(restaurant.health?.status);
+            const selected = restaurant.restaurantKey === state.selectedRestaurantKey;
+            return `<tr class="is-clickable ${selected ? "is-selected" : ""}" data-restaurant-row="${escapeHtml(restaurant.restaurantKey)}" tabindex="0" role="button" aria-pressed="${selected}"><td data-label="Restaurante"><strong>${escapeHtml(restaurant.name)}</strong><small>${escapeHtml(restaurant.slug || restaurant.restaurantKey)}</small></td><td data-label="Estado">${statusPill(healthLabel, tone)}</td><td data-label="Plano">${escapeHtml(translatePlan(restaurant.plan))}</td><td data-label="Domínio">${escapeHtml(translateDomain(restaurant.health?.domainStatus))}</td></tr>`;
+          })
+          .join("")}
+        </tbody></table></div>`
+      : renderEmpty("Nenhum restaurante encontrado", "Ajuste a busca ou os filtros para ampliar a lista.");
+    if (detailRoot) {
+      detailRoot.innerHTML = renderRestaurantDetail(restaurants.find((restaurant) => restaurant.restaurantKey === state.selectedRestaurantKey));
+    }
   };
 
   const renderRestaurants = (data) => {
     const restaurants = data.restaurants || [];
+    const options = (values, translate) =>
+      [...new Set(values.filter(Boolean).map(normalize))].map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(translate(value))}</option>`).join("");
     app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Restaurantes · administração", title: "Restaurantes", description: "Cadastro, responsável, plano e saúde cadastral dos restaurantes existentes." })}
-      <section class="system-restaurant-grid">
-        ${restaurants.map((restaurant) => `<article class="users-panel system-restaurant-card">
-          <header><span class="system-restaurant-logo"><span aria-hidden="true">${escapeHtml(getInitials(restaurant.name))}</span><img src="${escapeHtml(restaurant.logo)}" alt="Logo de ${escapeHtml(restaurant.name)}" hidden onload="this.hidden=false" onerror="this.hidden=true" /></span><div><span class="users-eyebrow">${escapeHtml(restaurant.slug)}</span><h2>${escapeHtml(restaurant.name)}</h2><div class="users-badges">${renderStatus(restaurant.status)}${restaurant.health ? renderStatus(restaurant.health.status) : '<span class="users-status">Saúde não aferida</span>'}</div></div></header>
-          <dl class="system-detail-list">
-            <div><dt>Slug</dt><dd>${escapeHtml(restaurant.slug || "Não informado")}</dd></div>
-            <div><dt>Plano</dt><dd>${escapeHtml(translatePlan(restaurant.plan))}</dd></div>
-            <div><dt>Domínio</dt><dd>${escapeHtml(restaurant.domain || "Não configurado")}</dd></div>
-            <div><dt>Proprietário</dt><dd>${escapeHtml(restaurant.owner || "Não informado")}</dd></div>
-            <div><dt>Usuários</dt><dd>${escapeHtml(String(restaurant.userCount ?? 0))} (${escapeHtml(String(restaurant.activeUserCount ?? 0))} ativos)</dd></div>
-            <div><dt>Produtos</dt><dd>${restaurant.productCount === null ? "Não disponível" : escapeHtml(String(restaurant.productCount))}<small>${escapeHtml(restaurant.productCountSource || "")}</small></dd></div>
-            <div><dt>Saúde</dt><dd>${restaurant.health ? `${escapeHtml(String(restaurant.health.score))}/100 · ${escapeHtml(translateStatus(restaurant.health.status))}` : "Não aferida"}</dd></div>
-            <div><dt>Identificador</dt><dd>${escapeHtml(restaurant.restaurantKey)}</dd></div>
-          </dl>
-          <footer class="system-card-actions">
-            <button class="users-button users-button-secondary" type="button" data-copy-value="${escapeHtml(restaurant.slug)}">Copiar slug</button>
-            ${hasPermission("system.support.start") && restaurant.administrativeActions?.supportAvailable ? `<button class="users-button users-button-primary" type="button" data-support-start="${escapeHtml(restaurant.restaurantKey)}">Iniciar suporte</button>` : ""}
-            ${restaurant.publicUrl ? `<a class="users-button users-button-secondary" href="${escapeHtml(restaurant.publicUrl)}" target="_blank" rel="noreferrer">Abrir endereço público</a>` : ""}
-          </footer>
-        </article>`).join("") || '<div class="users-empty"><div><h2>Nenhum restaurante cadastrado</h2><p>O cadastro aparecerá após o provisionamento administrativo.</p></div></div>'}
+      ${renderHead({
+        eyebrow: "Plataforma · cadastros",
+        title: "Restaurantes",
+        description: "Cadastro, plano, domínio e saúde de cada restaurante. Dados operacionais só por sessão de suporte.",
+      })}
+      <div class="sys-toolbar">
+        <label class="sys-search"><span class="sr-only">Buscar por nome ou identificador</span>${icon("search", 18, "#6b7280")}<input class="sys-input" type="search" data-restaurant-filter="search" placeholder="Buscar por nome ou identificador" value="${escapeHtml(state.filters.restaurants.search)}" /></label>
+        <label><span class="sr-only">Estado</span><select class="sys-select" data-restaurant-filter="status"><option value="">Estado: todos</option>${options(restaurants.map((item) => item.health?.status), (value) => translateHealth(value)[0])}</select></label>
+        <label><span class="sr-only">Plano</span><select class="sys-select" data-restaurant-filter="plan"><option value="">Plano: todos</option>${options(restaurants.map((item) => item.plan), translatePlan)}</select></label>
+        <label><span class="sr-only">Domínio</span><select class="sys-select" data-restaurant-filter="domain"><option value="">Domínio: todos</option>${options(restaurants.map((item) => item.health?.domainStatus), translateDomain)}</select></label>
+      </div>
+      <div class="sys-rest-layout">
+        <section class="sys-card" data-restaurant-list aria-label="Lista de restaurantes"></section>
+        <div data-restaurant-detail></div>
+      </div>`;
+    for (const select of app.querySelectorAll("select[data-restaurant-filter]")) {
+      select.value = state.filters.restaurants[select.dataset.restaurantFilter] || "";
+    }
+    renderRestaurantsList();
+  };
+
+  /* ---------- Suporte ---------- */
+
+  const supportIsValid = () => {
+    const support = state.support;
+    return Boolean(support.restaurantKey) && support.reason.trim().length >= 10 && support.confirmed && (support.mode !== "ADMIN" || hasPermission("system.support.admin"));
+  };
+
+  const syncSupportForm = () => {
+    const form = document.querySelector("[data-support-form]");
+    if (!form) return;
+    const support = state.support;
+    for (const choice of form.querySelectorAll("[data-support-mode]")) {
+      choice.classList.toggle("is-selected", choice.dataset.supportMode === support.mode);
+    }
+    const warning = form.querySelector("[data-support-admin-warning]");
+    if (warning) warning.hidden = support.mode !== "ADMIN";
+    const counter = form.querySelector("[data-support-counter]");
+    if (counter) {
+      const length = support.reason.trim().length;
+      counter.textContent = `${length} de 10 caracteres no mínimo`;
+      counter.classList.toggle("is-error", length > 0 && length < 10);
+    }
+    const submit = form.querySelector("[data-support-submit]");
+    if (submit) {
+      submit.disabled = !supportIsValid();
+      submit.textContent = `Iniciar sessão — ${support.mode === "ADMIN" ? "15" : "30"} min`;
+    }
+  };
+
+  const renderSupport = (data) => {
+    const restaurants = (data.restaurants || []).filter((restaurant) => restaurant.administrativeActions?.supportAvailable !== false);
+    const active = data.activeSupportSessions || [];
+    const ended = (data.history || []).filter((event) => normalize(event.eventType) === "SUPPORT_SESSION_REVOKED").slice(0, 5);
+    if (!restaurants.some((restaurant) => restaurant.restaurantKey === state.support.restaurantKey)) {
+      const requested = state.query.get("key");
+      state.support.restaurantKey = requested && restaurants.some((restaurant) => restaurant.restaurantKey === requested) ? requested : restaurants[0]?.restaurantKey || "";
+    }
+    const canAdmin = hasPermission("system.support.admin");
+    if (!canAdmin && state.support.mode === "ADMIN") state.support.mode = "VIEW";
+
+    app.innerHTML = `
+      ${renderHead({
+        eyebrow: "Operação · acesso temporário",
+        title: "Suporte auditado",
+        description: "O único caminho para ver dados de um restaurante. Toda sessão tem modo, motivo e prazo, e fica registrada na auditoria.",
+      })}
+      <div class="sys-support-layout">
+        <section class="sys-card">
+          <div class="sys-card-body">
+            <h2 style="margin-bottom:16px">Iniciar sessão de suporte</h2>
+            <form class="sys-form" data-support-form novalidate>
+              <label class="sys-field">
+                <span>Restaurante</span>
+                <select class="sys-input" name="restaurantKey" data-support-field="restaurantKey" ${restaurants.length ? "" : "disabled"}>
+                  ${restaurants.length ? restaurants.map((restaurant) => `<option value="${escapeHtml(restaurant.restaurantKey)}" ${restaurant.restaurantKey === state.support.restaurantKey ? "selected" : ""}>${escapeHtml(restaurant.name)}</option>`).join("") : '<option value="">Nenhum restaurante disponível</option>'}
+                </select>
+              </label>
+              <fieldset class="sys-field" style="border:0;padding:0;margin:0">
+                <legend style="font-weight:600;padding:0;margin-bottom:6px">Modo de acesso</legend>
+                <div class="sys-choices">
+                  <label class="sys-choice ${state.support.mode === "VIEW" ? "is-selected" : ""}" data-support-mode="VIEW">
+                    <input class="sr-only" type="radio" name="mode" value="VIEW" ${state.support.mode === "VIEW" ? "checked" : ""} />
+                    <strong>Visualização</strong><span>Leitura dos dados do restaurante, sem alterar nada.</span><small>30 min · requer system.support.start</small>
+                  </label>
+                  <label class="sys-choice ${state.support.mode === "ADMIN" ? "is-selected" : ""} ${canAdmin ? "" : "is-disabled"}" data-support-mode="ADMIN">
+                    <input class="sr-only" type="radio" name="mode" value="ADMIN" ${state.support.mode === "ADMIN" ? "checked" : ""} ${canAdmin ? "" : "disabled"} />
+                    <strong>Administrativo</strong><span>Permite ajustes controlados, com mais rastreio.</span><small>15 min · requer system.support.admin · crítico${canAdmin ? "" : " · seu perfil não tem esta permissão"}</small>
+                  </label>
+                </div>
+              </fieldset>
+              <div class="sys-banner is-warn is-compact" data-support-admin-warning ${state.support.mode === "ADMIN" ? "" : "hidden"}>${icon("warning", 18)}<span>O modo administrativo permite alterar dados do restaurante. Use só quando a visualização não resolver; a sessão dura menos.</span></div>
+              <label class="sys-field">
+                <span>Motivo do acesso</span>
+                <textarea class="sys-textarea" name="reason" data-support-field="reason" minlength="10" maxlength="500" placeholder="Descreva o que precisa verificar ou ajustar">${escapeHtml(state.support.reason)}</textarea>
+                <span class="sys-hint" data-support-counter aria-live="polite">0 de 10 caracteres no mínimo</span>
+              </label>
+              <label class="sys-check">
+                <input type="checkbox" name="confirmed" data-support-field="confirmed" ${state.support.confirmed ? "checked" : ""} />
+                <span>Confirmo que este acesso é necessário e que ele será registrado na auditoria.</span>
+              </label>
+              <div class="sys-banner is-crit is-compact" data-support-error hidden></div>
+              <button class="sys-btn sys-btn-primary sys-btn-block" type="submit" data-support-submit disabled>Iniciar sessão — 30 min</button>
+            </form>
+          </div>
+        </section>
+        <div class="sys-stack">
+          <section class="sys-card" aria-labelledby="sessoes-ativas">
+            <div class="sys-card-head"><h2 id="sessoes-ativas">Sessões ativas</h2></div>
+            <div class="sys-card-body" style="display:grid;gap:12px">
+              ${active.length
+                ? active
+                    .map(
+                      (session) => `
+                        <article class="sys-card" style="box-shadow:none"><div class="sys-card-body" style="display:grid;gap:8px">
+                          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><strong>${escapeHtml(session.restaurantName || session.restaurantKey)}</strong>${statusPill(translateMode(session.mode), normalize(session.mode) === "ADMIN" ? "warn" : "neutral", { dot: false })}</div>
+                          <span class="sys-hint">${escapeHtml(session.displayName || session.login || "Equipe INOVAS")} · iniciada às ${escapeHtml(formatTime(session.createdAt))}</span>
+                          <span>Motivo: ${escapeHtml(session.reason || "registrado na auditoria")}</span>
+                          <span class="sys-meter" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, Math.round((minutesLeft(session.expiresAt) / (normalize(session.mode) === "ADMIN" ? 15 : 30)) * 100)))}%;background:#ff6a00"></span></span>
+                          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><strong>${minutesLeft(session.expiresAt)} min restantes</strong><button class="sys-btn sys-btn-danger sys-btn-sm" type="button" data-support-revoke="${escapeHtml(session.id || session.supportSessionId || "")}">Encerrar agora</button></div>
+                        </div></article>`
+                    )
+                    .join("")
+                : '<p class="sys-hint" style="margin:0">Nenhuma sessão de suporte ativa para esta conta.</p>'}
+            </div>
+          </section>
+          <section class="sys-card" aria-labelledby="encerradas">
+            <div class="sys-card-head"><h2 id="encerradas">Encerradas recentemente</h2></div>
+            <div class="sys-list">
+              ${ended.length
+                ? ended
+                    .map(
+                      (event) => `<div class="sys-list-item"><div class="sys-list-copy"><strong>${escapeHtml(event.restaurantName || event.targetName || "Restaurante")}</strong><span>${escapeHtml(event.metadata?.mode ? translateMode(event.metadata.mode) : "Sessão de suporte")} · ${escapeHtml(event.actorName || event.actorLogin || "Equipe INOVAS")}</span><span>${escapeHtml(event.reason || "Encerrada")}</span></div><span class="sys-hint">${escapeHtml(formatShort(event.createdAt))}</span></div>`
+                    )
+                    .join("")
+                : '<div class="sys-list-item"><span class="sys-hint">Nenhuma sessão encerrada recentemente.</span></div>'}
+              ${hasPermission("system.audit.view") ? '<div class="sys-list-item"><a class="sys-link" href="/system#audit?event=SUPPORT_SESSION_STARTED">Ver todos os eventos na auditoria</a></div>' : ""}
+            </div>
+          </section>
+        </div>
+      </div>`;
+    syncSupportForm();
+  };
+
+  const startSupport = async (form) => {
+    const errorNode = form.querySelector("[data-support-error]");
+    const submit = form.querySelector("[data-support-submit]");
+    if (!supportIsValid()) return;
+    errorNode.hidden = true;
+    submit.disabled = true;
+    submit.textContent = "Iniciando sessão…";
+    try {
+      const payload = await requestJson("/api/support/start", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantKey: state.support.restaurantKey,
+          mode: state.support.mode,
+          reason: state.support.reason.trim(),
+          confirmed: state.support.confirmed === true,
+        }),
+      });
+      const session = payload.data?.supportSession || {};
+      state.support = { restaurantKey: state.support.restaurantKey, mode: "VIEW", reason: "", confirmed: false };
+      notify("Sessão de suporte criada e registrada na auditoria.");
+      if (dialog) {
+        dialog.innerHTML = `
+          <div class="sys-dialog-head"><div><span class="sys-eyebrow">Suporte auditado</span><h2>Sessão criada</h2></div><button class="sys-icon-btn" type="button" data-dialog-close aria-label="Fechar">${icon("close")}</button></div>
+          <div class="sys-dialog-body">
+            <p style="margin:0">Acesso ${escapeHtml(translateMode(session.mode).toLowerCase())} a <strong>${escapeHtml(session.restaurantName || "restaurante")}</strong> até ${escapeHtml(formatFull(session.expiresAt))}. O acesso é temporário, restrito a este restaurante e registrado na auditoria.</p>
+          </div>
+          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Fechar</button><a class="sys-btn sys-btn-primary" href="${escapeHtml(payload.data?.redirectTo || "/admin")}">Abrir restaurante em suporte</a></div>`;
+        dialog.showModal();
+      }
+      await loadRoute();
+    } catch (error) {
+      errorNode.textContent = error.message;
+      errorNode.hidden = false;
+      submit.disabled = false;
+      syncSupportForm();
+    }
+  };
+
+  const revokeSupport = async () => {
+    try {
+      await requestJson("/api/support/revoke", { method: "POST" });
+      notify("Sessão de suporte encerrada.");
+      await loadRoute();
+    } catch (error) {
+      notify(error.status === 404 ? "Só é possível encerrar por aqui a sessão aberta neste navegador. As demais expiram sozinhas." : error.message);
+    }
+  };
+
+  /* ---------- Auditoria ---------- */
+
+  const describeTarget = (event) =>
+    event.targetName ||
+    event.restaurantName ||
+    event.targetLogin ||
+    event.metadata?.path ||
+    event.metadata?.target ||
+    (event.restaurantId ? "Restaurante" : "") ||
+    (event.targetIdentityId ? "Usuário" : "") ||
+    "Plataforma";
+
+  const auditMatches = (event, filters) => {
+    const search = filters.search.trim().toLowerCase();
+    if (search && !`${translateEvent(event.eventType)} ${event.eventType} ${event.actorName || ""} ${event.actorLogin || ""} ${describeTarget(event)} ${event.reason || ""} ${event.requestId || ""}`.toLowerCase().includes(search)) return false;
+    if (filters.event && normalize(event.eventType) !== filters.event) return false;
+    if (filters.result && normalize(event.result) !== filters.result) return false;
+    if (filters.period && filters.period !== "all") {
+      const date = parseDate(event.createdAt);
+      if (!date || Date.now() - date.getTime() > Number(filters.period) * 86400000) return false;
+    }
+    return true;
+  };
+
+  const renderKeyValues = (value) => {
+    if (!value || typeof value !== "object" || !Object.keys(value).length) return '<p class="sys-hint" style="margin:0">Sem dados registrados.</p>';
+    return Object.entries(value)
+      .slice(0, 12)
+      .map(([key, entry]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(typeof entry === "object" && entry !== null ? JSON.stringify(entry) : String(entry ?? "—"))}</strong></div>`)
+      .join("");
+  };
+
+  const renderAuditDetail = (event) => {
+    const root = document.querySelector("[data-audit-detail]");
+    if (!root) return;
+    if (!event) {
+      root.innerHTML = "";
+      return;
+    }
+    const [resultLabel] = translateResult(event.result);
+    root.innerHTML = `
+      <section class="sys-card" aria-label="Detalhe do evento destacado">
+        <div class="sys-card-head"><div><span class="sys-eyebrow">Detalhe do evento destacado</span><h2>${escapeHtml(translateEvent(event.eventType))} · ${escapeHtml(formatShort(event.createdAt))}</h2></div><span>Request ID: ${escapeHtml(event.requestId || "—")}</span></div>
+        <div class="sys-card-body sys-audit-detail">
+          <div class="sys-kv"><h3>Antes</h3>${renderKeyValues(event.before)}</div>
+          <div class="sys-kv"><h3>Depois</h3>${renderKeyValues(event.after)}</div>
+          <div class="sys-kv"><h3>Contexto</h3>
+            <p><span>Ator:</span> ${escapeHtml(event.actorName || event.actorLogin || "Sistema")}${event.actorType ? ` (${escapeHtml(translateRole(event.actorType))})` : ""}</p>
+            <p><span>Alvo:</span> ${escapeHtml(describeTarget(event))}</p>
+            <p><span>Resultado:</span> ${escapeHtml(resultLabel)}</p>
+            <p><span>Motivo:</span> ${escapeHtml(event.reason || "—")}</p>
+            ${event.supportSessionId ? `<p><span>Sessão de suporte:</span> ${escapeHtml(event.supportSessionId)}</p>` : ""}
+            ${event.metadata && Object.keys(event.metadata).length ? renderKeyValues(event.metadata) : ""}
+          </div>
+        </div>
       </section>`;
   };
 
-  const renderHealth = (data) => {
-    const health = data.health || {};
-    app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Diagnóstico · dados verificados", title: "Saúde", description: "Verificações executadas nesta solicitação. Serviços ausentes são informados como não configurados." })}
-      <section class="system-health-grid">
-        ${[
-          ["Estado geral", translateStatus(health.summary?.status), "Saúde agregada"],
-          ["Tempo médio de resposta", Number.isFinite(health.averageResponseMs) ? `${health.averageResponseMs} ms` : "Não aferido", "Média das verificações atuais"],
-          ["Restaurantes ativos", health.summary?.activeRestaurants || 0, `${health.summary?.totalRestaurants || 0} cadastrados`],
-          ["Alertas críticos", health.summary?.criticalAlerts || 0, `${health.summary?.integrationFailures || 0} falhas de integração`],
-        ].map(([label, value, helper]) => `<article class="system-health-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(helper)}</small></article>`).join("")}
-      </section>
-      <section class="users-panel">
-        <div class="users-filter-meta"><strong>Componentes da plataforma</strong><span>Verificado em ${escapeHtml(formatDate(health.generatedAt))}</span></div>
-        <div class="system-component-grid">${(health.components || []).map((component) => `<article><span class="system-component-icon">${escapeHtml(component.name.slice(0, 2).toUpperCase())}</span><div><strong>${escapeHtml(component.name)}</strong><small>${escapeHtml(component.detail)}</small></div><div>${renderStatus(component.status)}<small>${Number.isFinite(component.latencyMs) ? `${component.latencyMs} ms` : "Sem medição de latência"}</small></div></article>`).join("")}</div>
-      </section>
-      <section class="users-panel system-section-gap">
-        <div class="users-filter-meta"><strong>Saúde por restaurante</strong><span>Indicador cadastral e de domínio</span></div>
-        <div class="system-health-list">${(health.tenantHealth || []).map((tenant) => `<article class="system-tenant-health"><span><strong>${escapeHtml(tenant.restaurantName)}</strong><small>${escapeHtml(tenant.restaurantKey)}</small></span>${renderStatus(tenant.status)}<div class="system-score"><strong>${escapeHtml(String(tenant.score))}</strong><span class="system-score-meter"><span style="width:${Math.max(0, Math.min(100, Number(tenant.score || 0)))}%"></span></span></div><span><small>Domínio</small><strong>${escapeHtml(translateStatus(tenant.domainStatus))}</strong></span></article>`).join("") || '<p class="system-inline-empty">Nenhum indicador de restaurante disponível.</p>'}</div>
-      </section>`;
-  };
-
-  const renderIntegrations = (data) => {
-    const integrations = data.integrations || [];
-    app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Conectores · configuração", title: "Integrações", description: "Estado real das integrações configuradas e estrutura preparada para os conectores futuros." })}
-      <section class="users-panel">
-        <div class="users-filter-meta"><strong>${integrations.length} integrações mapeadas</strong><span>Atualizado em ${escapeHtml(formatDate(data.generatedAt))}</span></div>
-        <div class="system-integration-grid">${integrations.map((integration) => `<article><header><span class="system-component-icon">${escapeHtml(integration.name.slice(0, 2).toUpperCase())}</span><div><h2>${escapeHtml(integration.name)}</h2><small>${escapeHtml(integration.configuration)}</small></div>${renderStatus(integration.status)}</header><dl><div><dt>Última sincronização</dt><dd>${escapeHtml(formatDate(integration.lastSyncAt))}</dd></div><div><dt>Última falha</dt><dd>${escapeHtml(formatDate(integration.lastFailureAt))}</dd></div></dl>${integration.errorCode ? '<p class="system-warning">A integração registrou uma falha.</p>' : ""}</article>`).join("")}</div>
-      </section>`;
+  const renderAuditRows = () => {
+    const root = document.querySelector("[data-audit-results]");
+    if (!root || !state.data) return;
+    const events = (state.data.events || []).filter((event) => auditMatches(event, state.filters.audit));
+    if (!events.some((event) => event.id === state.selectedAuditId)) state.selectedAuditId = events[0]?.id || "";
+    root.innerHTML = events.length
+      ? `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Eventos de auditoria"><thead><tr><th>Quando</th><th>Evento</th><th>Ator</th><th>Alvo</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>
+        ${events
+          .slice(0, 100)
+          .map((event) => {
+            const [resultLabel, tone] = translateResult(event.result);
+            const selected = event.id === state.selectedAuditId;
+            return `<tr class="is-clickable ${selected ? "is-selected" : ""}" data-audit-row="${escapeHtml(event.id)}" tabindex="0" role="button" aria-pressed="${selected}"><td data-label="Quando">${escapeHtml(formatShort(event.createdAt))}</td><td data-label="Evento"><strong>${escapeHtml(translateEvent(event.eventType))}</strong><code>${escapeHtml(event.eventType)}</code></td><td data-label="Ator">${escapeHtml(event.actorName || event.actorLogin || "Sistema")}</td><td data-label="Alvo">${escapeHtml(describeTarget(event))}</td><td data-label="Resultado">${statusPill(resultLabel, tone, { dot: false })}</td><td data-label="Motivo">${escapeHtml(event.reason || "—")}</td></tr>`;
+          })
+          .join("")}
+        </tbody></table></div>${events.length > 100 ? `<div class="sys-table-caption">Mostrando 100 de ${events.length} eventos. Refine os filtros para ver os demais.</div>` : ""}`
+      : renderEmpty("Nenhum evento encontrado", "Ajuste o período ou os filtros para ampliar a busca.");
+    renderAuditDetail(events.find((event) => event.id === state.selectedAuditId));
   };
 
   const renderAudit = (data) => {
     const events = data.events || [];
+    if (state.query.get("event")) state.filters.audit.event = normalize(state.query.get("event"));
+    const eventTypes = [...new Set(events.map((event) => normalize(event.eventType)))].sort();
     app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Conformidade · histórico", title: "Auditoria", description: "Trilha administrativa real de identidades, perfis, sessões e suporte." })}
-      <section class="users-panel">
-        <div class="system-toolbar"><label class="users-field"><span>Pesquisar evento</span><input class="users-input" type="search" data-audit-search placeholder="Evento, responsável ou motivo" /></label><span>${events.length} evento(s)</span></div>
-        <div data-audit-results>${renderAuditRows(events)}</div>
-      </section>`;
-  };
-
-  const renderSupportSearchResults = (query = "") => {
-    const root = document.querySelector("[data-support-results]");
-    if (!root || !state.routeData) return;
-    const search = query.trim().toLowerCase();
-    if (!search) {
-      root.innerHTML = '<p class="system-inline-empty">Digite um nome, e-mail, slug ou restaurante para pesquisar.</p>';
-      return;
+      ${renderHead({
+        eyebrow: "Operação · rastreabilidade",
+        title: "Auditoria",
+        description: "Quem fez o quê, em quem e por quê. Somente leitura: nenhum evento pode ser editado ou apagado por aqui.",
+      })}
+      <div class="sys-toolbar">
+        <label class="sys-search"><span class="sr-only">Buscar por ator, alvo ou request ID</span>${icon("search", 18, "#6b7280")}<input class="sys-input" type="search" data-audit-filter="search" placeholder="Buscar por ator, alvo ou request ID" value="${escapeHtml(state.filters.audit.search)}" /></label>
+        <label><span class="sr-only">Período</span><select class="sys-select" data-audit-filter="period"><option value="7">Período: 7 dias</option><option value="30">Período: 30 dias</option><option value="90">Período: 90 dias</option><option value="all">Período: tudo</option></select></label>
+        <label><span class="sr-only">Evento</span><select class="sys-select" data-audit-filter="event"><option value="">Evento: todos</option>${eventTypes.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(translateEvent(type))}</option>`).join("")}</select></label>
+        <label><span class="sr-only">Resultado</span><select class="sys-select" data-audit-filter="result"><option value="">Resultado: todos</option><option value="SUCCESS">Sucesso</option><option value="DENIED">Negado</option><option value="FAILED">Falhou</option></select></label>
+      </div>
+      <div class="sys-stack">
+        <section class="sys-card" data-audit-results aria-label="Eventos"></section>
+        <div data-audit-detail></div>
+      </div>`;
+    for (const select of app.querySelectorAll("select[data-audit-filter]")) {
+      select.value = state.filters.audit[select.dataset.auditFilter] || "";
+      if (select.value !== (state.filters.audit[select.dataset.auditFilter] || "")) {
+        state.filters.audit[select.dataset.auditFilter] = select.value;
+      }
     }
-    const users = (state.routeData.users || []).filter((user) => `${user.name} ${user.email} ${user.roleLabel}`.toLowerCase().includes(search));
-    const restaurants = (state.routeData.restaurants || []).filter((restaurant) => `${restaurant.name} ${restaurant.slug} ${restaurant.owner} ${restaurant.ownerLogin}`.toLowerCase().includes(search));
-    root.innerHTML = `<div class="system-search-results">${users.map((user) => `<article><span class="users-avatar">${escapeHtml((user.name || "US").slice(0, 2).toUpperCase())}</span><div><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.email)} · ${escapeHtml(user.roleLabel || translateRole(user.role))}</small></div><a href="/system/users/${encodeURIComponent(user.id)}/edit">Abrir usuário</a></article>`).join("")}${restaurants.map((restaurant) => `<article><img src="${escapeHtml(restaurant.logo)}" alt="" /><div><strong>${escapeHtml(restaurant.name)}</strong><small>${escapeHtml(restaurant.slug)} · ${escapeHtml(restaurant.owner || "Responsável não informado")}</small></div>${restaurant.administrativeActions?.supportAvailable ? `<button type="button" data-support-start="${escapeHtml(restaurant.restaurantKey)}">Iniciar suporte</button>` : ""}</article>`).join("")}${!users.length && !restaurants.length ? '<p class="system-inline-empty">Nenhum resultado encontrado.</p>' : ""}</div>`;
+    renderAuditRows();
   };
 
-  const renderSupport = (data) => {
-    app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Atendimento · acesso controlado", title: "Suporte", description: "Pesquisa administrativa, sessões ativas e histórico auditado de suporte." })}
-      <section class="system-health-grid">
-        <article class="system-health-card"><span>Chamados</span><strong>${data.ticketing?.available ? escapeHtml(String(data.ticketing.total || 0)) : "Não integrado"}</strong><small>${escapeHtml(data.ticketing?.message || "Sem provedor configurado")}</small></article>
-        <article class="system-health-card"><span>Sessões administrativas</span><strong>${escapeHtml(String(data.activeSystemSessions?.length || 0))}</strong><small>Ativas para esta conta</small></article>
-        <article class="system-health-card"><span>Sessões de suporte</span><strong>${escapeHtml(String(data.activeSupportSessions?.length || 0))}</strong><small>Ativas para esta conta</small></article>
-        <article class="system-health-card"><span>Histórico</span><strong>${escapeHtml(String(data.history?.length || 0))}</strong><small>Eventos de suporte registrados</small></article>
-      </section>
-      <section class="users-panel">
-        <div class="system-toolbar"><label class="users-field"><span>Pesquisar usuário ou restaurante</span><input class="users-input" type="search" data-support-search placeholder="Nome, e-mail, slug ou restaurante" /></label><span>Busca administrativa</span></div>
-        <div data-support-results><p class="system-inline-empty">Digite um nome, e-mail, slug ou restaurante para pesquisar.</p></div>
-      </section>
-      <section class="users-panel system-section-gap"><div class="users-filter-meta"><strong>Sessões ativas</strong><span>Acesso temporário e auditado</span></div><div class="system-session-list">${(data.activeSupportSessions || []).map((session) => `<article><div><strong>${escapeHtml(session.restaurantName)}</strong><small>${escapeHtml(translateStatus(session.mode))} · ${escapeHtml(session.reason)}</small></div><div>${renderStatus(session.status)}<small>Expira em ${escapeHtml(formatDate(session.expiresAt))}</small></div></article>`).join("") || '<p class="system-inline-empty">Nenhuma sessão de suporte ativa.</p>'}</div></section>
-      <section class="users-panel system-section-gap"><div class="users-filter-meta"><strong>Histórico de suporte</strong><span>Eventos mais recentes</span></div>${renderAuditRows(data.history || [])}</section>`;
-  };
+  /* ---------- roteamento ---------- */
 
-  const renderSettings = (data) => {
-    const settings = data.settings || {};
-    app.innerHTML = `
-      ${renderPageHead({ eyebrow: "Plataforma · leitura segura", title: "Configurações", description: "Resumo das configurações administrativas sem exibir segredos ou credenciais." })}
-      <section class="users-panel"><div class="system-settings-grid">${[
-        ["Nome da plataforma", settings.platformName || "Não informado"],
-        ["Domínio", settings.domain || "Não configurado"],
-        ["Endereço do site", settings.site || "Não configurado"],
-        ["E-mail de suporte", settings.supportEmail || "Não configurado"],
-        ["E-mail financeiro", settings.financialEmail || "Não configurado"],
-        ["WhatsApp", settings.whatsapp || "Não configurado"],
-        ["Modo de manutenção", settings.maintenanceMode ? "Ativo" : "Inativo"],
-        ["Versão", settings.version || "Não informada"],
-        ["Persistência", translateStatus(settings.storageMode)],
-        ["Modo de restaurantes", translateRestaurantMode(settings.tenantMode)],
-      ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div></section>`;
-  };
+  const renderers = { overview: renderOverview, restaurants: renderRestaurants, support: renderSupport, audit: renderAudit };
 
-  const renderers = { overview: renderOverview, restaurants: renderRestaurants, health: renderHealth, integrations: renderIntegrations, audit: renderAudit, support: renderSupport, settings: renderSettings };
-
-  const renderError = (error) => {
-    app.innerHTML = `<section class="users-panel users-error"><div><span class="users-avatar">!</span><h2>Não foi possível abrir esta área</h2><p>${escapeHtml(error.message)}</p><button class="users-button users-button-primary" type="button" data-system-retry>Tentar novamente</button></div></section>`;
-  };
+  const firstAllowedRoute = () => Object.values(ROUTES).find((route) => hasPermission(route.permission));
 
   const loadRoute = async () => {
-    const routeKey = getRouteKey();
-    const route = NAVIGATION.find((item) => item.key === routeKey && !item.external);
+    const { key, query } = parseHash();
+    const route = ROUTES[key];
     if (!route || !hasPermission(route.permission)) {
-      const first = visibleNavigation().find((item) => !item.external);
-      if (first && first.key !== routeKey) {
-        window.location.replace(first.href);
+      const fallback = firstAllowedRoute();
+      if (fallback && fallback.key !== key) {
+        window.location.replace(fallback.key === "overview" ? "/system" : `/system#${fallback.key}`);
         return;
       }
-      throw new Error("Seu perfil não possui acesso a esta área.");
+      const error = new Error("Seu perfil não possui acesso a esta área.");
+      error.status = 403;
+      throw error;
     }
-    renderSidebar();
+    state.route = route.key;
+    state.query = query;
+    if (route.key === "restaurants" && query.get("key")) state.selectedRestaurantKey = query.get("key");
+    shell.mount({ session: state.session, activeKey: route.key, logoutAttribute: "data-system-logout" });
     renderLoading(route.label);
     const payload = await requestJson(route.endpoint);
-    state.routeData = payload.data || {};
-    renderers[route.key](state.routeData);
+    state.data = payload.data || {};
+    renderers[route.key](state.data);
     document.title = `${route.label} | Painel System INOVAS`;
   };
 
   const clearAuthenticationState = () => {
     for (const storage of [window.localStorage, window.sessionStorage]) {
-      for (let index = storage.length - 1; index >= 0; index -= 1) {
-        const key = storage.key(index) || "";
-        if (/auth|session|token|support/i.test(key)) storage.removeItem(key);
+      try {
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index) || "";
+          if (/auth|session|token|support/i.test(key)) storage.removeItem(key);
+        }
+      } catch {
+        // armazenamento indisponível
       }
     }
   };
@@ -387,53 +839,67 @@
     window.location.replace("/system/login.html");
   };
 
-  const openSupportDialog = (restaurantKey) => {
-    const restaurant = (state.routeData?.restaurants || []).find((entry) => entry.restaurantKey === restaurantKey);
-    if (!restaurant || !dialog) return;
-    dialog.innerHTML = `<form method="dialog" data-support-form data-restaurant-key="${escapeHtml(restaurant.restaurantKey)}"><header class="users-dialog-head"><div><span class="users-eyebrow">Suporte controlado</span><h2>${escapeHtml(restaurant.name)}</h2></div><button class="users-icon-button" value="cancel" aria-label="Fechar">×</button></header><div class="users-dialog-body"><label class="users-field"><span>Modo de acesso</span><select class="users-input" name="mode"><option value="VIEW">Somente visualização</option>${hasPermission("system.support.admin") ? '<option value="ADMIN">Administrativo controlado</option>' : ""}</select></label><label class="users-field" style="margin-top:14px"><span>Motivo do suporte</span><textarea class="users-input" name="reason" minlength="10" maxlength="500" required placeholder="Descreva o chamado ou diagnóstico"></textarea></label><label class="system-confirm"><input type="checkbox" name="confirmed" required /><span>Confirmo o acesso temporário, com escopo e auditoria.</span></label><div class="users-alert" data-support-error hidden></div></div><footer class="users-dialog-actions"><button class="users-button users-button-secondary" value="cancel">Cancelar</button><button class="users-button users-button-primary" type="submit">Criar sessão de suporte</button></footer></form>`;
-    dialog.showModal();
-  };
-
-  const startSupport = async (form) => {
-    const data = new FormData(form);
-    const errorNode = form.querySelector("[data-support-error]");
-    try {
-      const payload = await requestJson("/api/support/start", {
-        method: "POST",
-        body: JSON.stringify({
-          restaurantKey: form.dataset.restaurantKey,
-          mode: data.get("mode"),
-          reason: String(data.get("reason") || "").trim(),
-          confirmed: data.get("confirmed") === "on",
-        }),
-      });
-      dialog.innerHTML = `<div class="users-dialog-body users-success-panel"><h2>Sessão de suporte criada</h2><p>O acesso é temporário, restrito ao restaurante selecionado e registrado na auditoria.</p><div class="users-dialog-actions"><button class="users-button users-button-secondary" type="button" data-dialog-close>Fechar</button><a class="users-button users-button-primary" href="${escapeHtml(payload.data?.redirectTo || "/admin")}">Abrir suporte</a></div></div>`;
-      notify("Sessão de suporte criada com sucesso.");
-    } catch (error) {
-      errorNode.textContent = error.message;
-      errorNode.hidden = false;
-    }
-  };
+  /* ---------- eventos ---------- */
 
   document.addEventListener("click", (event) => {
     if (event.target.closest("[data-system-logout]")) return void logout();
     if (event.target.closest("[data-system-retry]")) return void loadRoute().catch(renderError);
     if (event.target.closest("[data-dialog-close]")) return dialog?.close();
-    const supportButton = event.target.closest("[data-support-start]");
-    if (supportButton) return openSupportDialog(supportButton.dataset.supportStart);
-    const copyButton = event.target.closest("[data-copy-value]");
-    if (copyButton) {
-      navigator.clipboard?.writeText(copyButton.dataset.copyValue || "").then(() => notify("Slug copiado.")).catch(() => notify("Não foi possível copiar o slug."));
+    const revoke = event.target.closest("[data-support-revoke]");
+    if (revoke) return void revokeSupport();
+    const restaurantRow = event.target.closest("[data-restaurant-row]");
+    if (restaurantRow) {
+      state.selectedRestaurantKey = restaurantRow.dataset.restaurantRow;
+      renderRestaurantsList();
+      return;
+    }
+    const auditRow = event.target.closest("[data-audit-row]");
+    if (auditRow) {
+      state.selectedAuditId = auditRow.dataset.auditRow;
+      renderAuditRows();
     }
   });
 
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target.closest("[data-restaurant-row], [data-audit-row]");
+    if (!row) return;
+    event.preventDefault();
+    row.click();
+  });
+
   document.addEventListener("input", (event) => {
-    if (event.target.matches("[data-support-search]")) renderSupportSearchResults(event.target.value);
-    if (event.target.matches("[data-audit-search]")) {
-      const query = event.target.value.trim().toLowerCase();
-      const events = (state.routeData?.events || []).filter((item) => `${translateEvent(item.eventType)} ${item.actorName || ""} ${item.actorLogin || ""} ${item.reason || ""}`.toLowerCase().includes(query));
-      const root = document.querySelector("[data-audit-results]");
-      if (root) root.innerHTML = renderAuditRows(events);
+    const restaurantFilter = event.target.closest("[data-restaurant-filter]");
+    if (restaurantFilter) {
+      state.filters.restaurants[restaurantFilter.dataset.restaurantFilter] = restaurantFilter.value;
+      renderRestaurantsList();
+      return;
+    }
+    const auditFilter = event.target.closest("[data-audit-filter]");
+    if (auditFilter) {
+      state.filters.audit[auditFilter.dataset.auditFilter] = auditFilter.value;
+      renderAuditRows();
+      return;
+    }
+    const supportField = event.target.closest("[data-support-field]");
+    if (supportField) {
+      const field = supportField.dataset.supportField;
+      state.support[field] = field === "confirmed" ? supportField.checked : supportField.value;
+      syncSupportForm();
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    if (event.target.name === "mode" && event.target.closest("[data-support-form]")) {
+      state.support.mode = event.target.value === "ADMIN" && hasPermission("system.support.admin") ? "ADMIN" : "VIEW";
+      syncSupportForm();
+      return;
+    }
+    const supportField = event.target.closest("[data-support-field]");
+    if (supportField) {
+      const field = supportField.dataset.supportField;
+      state.support[field] = field === "confirmed" ? supportField.checked : supportField.value;
+      syncSupportForm();
     }
   });
 
@@ -457,6 +923,8 @@
   };
 
   window.addEventListener("hashchange", () => void loadRoute().catch(renderError));
-  window.addEventListener("pageshow", (event) => { if (event.persisted) void init(); });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) void init();
+  });
   void init();
 })();
