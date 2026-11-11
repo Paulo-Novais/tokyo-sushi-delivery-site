@@ -4749,6 +4749,18 @@ const renderDashboardModule = () => {
             <svg viewBox="0 0 ${escapeHtml(String(revenueTrend.chartWidth))} ${escapeHtml(
               String(revenueTrend.chartHeight)
             )}" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="gxRevenueArea" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#ff6a00" stop-opacity="0.38"></stop>
+                  <stop offset="60%" stop-color="#ffb020" stop-opacity="0.12"></stop>
+                  <stop offset="100%" stop-color="#ffb020" stop-opacity="0"></stop>
+                </linearGradient>
+                <linearGradient id="gxRevenueLine" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stop-color="#ffb020"></stop>
+                  <stop offset="55%" stop-color="#ff6a00"></stop>
+                  <stop offset="100%" stop-color="#e5341b"></stop>
+                </linearGradient>
+              </defs>
               <g class="admin-dashboard-chart-grid">
                 <line x1="0" y1="0" x2="${escapeHtml(String(revenueTrend.chartWidth))}" y2="0"></line>
                 <line x1="0" y1="36.4" x2="${escapeHtml(String(revenueTrend.chartWidth))}" y2="36.4"></line>
@@ -7084,6 +7096,74 @@ const renderReportsModule = () => {
         </div>
       </article>
     </section>
+    ${renderOrdersHeatmap(reports.visibleOrders)}
+  `;
+};
+
+/* Mapa de calor: pedidos por dia da semana x faixa de horário. */
+const HEATMAP_DAYS = Object.freeze(["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]);
+const HEATMAP_HOURS = Object.freeze([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]);
+
+const renderOrdersHeatmap = (orders = []) => {
+  const counts = HEATMAP_DAYS.map(() => HEATMAP_HOURS.map(() => 0));
+  let total = 0;
+  for (const order of orders) {
+    const date = new Date(order?.createdAt || 0);
+    if (Number.isNaN(date.getTime())) continue;
+    const hourIndex = HEATMAP_HOURS.indexOf(Math.min(23, Math.max(10, date.getHours())));
+    if (hourIndex === -1) continue;
+    counts[date.getDay()][hourIndex] += 1;
+    total += 1;
+  }
+  const max = Math.max(1, ...counts.flat());
+  const level = (value) => (value === 0 ? 0 : Math.min(5, Math.ceil((value / max) * 5)));
+  let peak = { day: 0, hour: 0, value: 0 };
+  counts.forEach((row, dayIndex) =>
+    row.forEach((value, hourIndex) => {
+      if (value > peak.value) peak = { day: dayIndex, hour: hourIndex, value };
+    })
+  );
+
+  return `
+    <article class="admin-module-card gx-heatmap-card">
+      <div class="admin-module-card-head">
+        <h3>Mapa de calor dos pedidos</h3>
+        <span>${
+          total
+            ? escapeHtml(`Pico: ${HEATMAP_DAYS[peak.day]} às ${HEATMAP_HOURS[peak.hour]}h (${peak.value} pedido(s))`)
+            : "Sem pedidos no recorte"
+        }</span>
+      </div>
+      <div class="gx-heatmap" role="table" aria-label="Pedidos por dia da semana e horário">
+        <div class="gx-heatmap-row is-head" role="row">
+          <span role="columnheader"></span>
+          ${HEATMAP_HOURS.map((hour) => `<span role="columnheader">${hour}h</span>`).join("")}
+        </div>
+        ${counts
+          .map(
+            (row, dayIndex) => `
+              <div class="gx-heatmap-row" role="row">
+                <span role="rowheader">${HEATMAP_DAYS[dayIndex]}</span>
+                ${row
+                  .map(
+                    (value, hourIndex) =>
+                      `<span role="cell" class="gx-heat is-l${level(value)}" title="${escapeHtml(
+                        `${HEATMAP_DAYS[dayIndex]} ${HEATMAP_HOURS[hourIndex]}h: ${value} pedido(s)`
+                      )}" aria-label="${escapeHtml(`${HEATMAP_DAYS[dayIndex]} ${HEATMAP_HOURS[hourIndex]}h: ${value} pedido(s)`)}">${
+                        value || ""
+                      }</span>`
+                  )
+                  .join("")}
+              </div>`
+          )
+          .join("")}
+      </div>
+      <div class="gx-heatmap-legend" aria-hidden="true">
+        <span>Menos</span>
+        ${[0, 1, 2, 3, 4, 5].map((step) => `<i class="gx-heat is-l${step}"></i>`).join("")}
+        <span>Mais</span>
+      </div>
+    </article>
   `;
 };
 

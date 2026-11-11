@@ -1109,3 +1109,186 @@ html body.admin-body[data-admin-page][data-admin-theme] .admin-nav :is(
 ) strong {
   font-size: 14px !important;
 }
+
+/* =====================================================================
+   Gráficos modernos: degradês da marca (âmbar -> laranja -> vermelho,
+   as cores da logo), trilhas suaves e mapa de calor.
+   ===================================================================== */
+html body.admin-body {
+  --gx-grad-brand: linear-gradient(90deg, #ffb020 0%, #ff6a00 55%, #e5341b 100%);
+  --gx-grad-ok: linear-gradient(90deg, #34d399 0%, #16a34a 100%);
+  --gx-grad-info: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+  --gx-grad-warn: linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%);
+  --gx-grad-crit: linear-gradient(90deg, #fb7185 0%, #dc2626 100%);
+  --gx-track: #eef0f3;
+  --gx-heat-0: #f1f3f5;
+  --gx-heat-1: #ffe8d1;
+  --gx-heat-2: #ffc995;
+  --gx-heat-3: #ff9a4d;
+  --gx-heat-4: #ff6a00;
+  --gx-heat-5: #d9360f;
+}
+
+html body.admin-body[data-admin-theme="dark"] {
+  --gx-track: #263042;
+  --gx-heat-0: #1f2838;
+  --gx-heat-1: #3a2a22;
+  --gx-heat-2: #6b3a1c;
+  --gx-heat-3: #a24c14;
+  --gx-heat-4: #e5650d;
+  --gx-heat-5: #ff8a3d;
+}
+
+/* Trilhas e preenchimentos de barras. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-dashboard-status-track,
+  .admin-finance-bar-track,
+  .admin-finance-row-track,
+  .admin-metrics-distribution-bar,
+  .admin-report-bar
+) {
+  overflow: hidden;
+  height: 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--gx-track) !important;
+  box-shadow: inset 0 1px 2px rgba(17, 24, 39, 0.06) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-dashboard-status-track,
+  .admin-finance-bar-track,
+  .admin-finance-row-track,
+  .admin-metrics-distribution-bar,
+  .admin-report-bar
+) > span {
+  display: block;
+  height: 100% !important;
+  border-radius: 999px !important;
+  background: var(--gx-grad-brand) !important;
+  box-shadow: 0 0 10px rgba(255, 106, 0, 0.35) !important;
+  transition: width 0.4s ease;
+}
+
+/* Distribuição por status: cada estado com seu degradê. */
+html body.admin-body[data-admin-theme] .admin-dashboard-status-row:is(.is-success, .is-delivered, .is-done, .is-ok) .admin-dashboard-status-track > span {
+  background: var(--gx-grad-ok) !important;
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.3) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-dashboard-status-row:is(.is-info, .is-route, .is-delivery) .admin-dashboard-status-track > span {
+  background: var(--gx-grad-info) !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-dashboard-status-row:is(.is-warning, .is-preparing, .is-pending) .admin-dashboard-status-track > span {
+  background: var(--gx-grad-warn) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-dashboard-status-row:is(.is-danger, .is-cancelled, .is-canceled) .admin-dashboard-status-track > span {
+  background: var(--gx-grad-crit) !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Faturamento: área em degradê e linha com brilho. */
+html body.admin-body[data-admin-theme] .admin-dashboard-chart-area {
+  fill: url(#gxRevenueArea) !important;
+  opacity: 1 !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-dashboard-chart-line {
+  fill: none !important;
+  stroke: url(#gxRevenueLine) !important;
+  stroke-width: 3 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 4px 8px rgba(255, 106, 0, 0.35));
+}
+
+html body.admin-body[data-admin-theme] .admin-dashboard-chart-grid line {
+  stroke: var(--gx-border) !important;
+  stroke-dasharray: 4 6;
+}
+
+html body.admin-body[data-admin-theme] .admin-metrics-chart-svg :is(path, polyline)[class*="current"] {
+  stroke: #ff6a00 !important;
+}
+
+/* ---------- Mapa de calor ---------- */
+.gx-heatmap-card {
+  margin-top: 16px;
+}
+
+.gx-heatmap {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.gx-heatmap-row {
+  display: grid;
+  grid-template-columns: 40px repeat(14, minmax(30px, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+
+.gx-heatmap-row.is-head span {
+  color: var(--gx-ink-3);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.gx-heatmap-row > span:first-child {
+  color: var(--gx-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gx-heat {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--gx-heat-0);
+  color: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.gx-heat:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(17, 24, 39, 0.18);
+}
+
+.gx-heat.is-l1 { background: var(--gx-heat-1); color: #7c2d12; }
+.gx-heat.is-l2 { background: var(--gx-heat-2); color: #7c2d12; }
+.gx-heat.is-l3 { background: var(--gx-heat-3); color: #111827; }
+.gx-heat.is-l4 { background: var(--gx-heat-4); color: #111827; }
+.gx-heat.is-l5 { background: var(--gx-heat-5); color: #ffffff; }
+
+html body.admin-body[data-admin-theme="dark"] .gx-heat:is(.is-l1, .is-l2, .is-l3) { color: #ffe7d2; }
+html body.admin-body[data-admin-theme="dark"] .gx-heat:is(.is-l4, .is-l5) { color: #111827; }
+
+.gx-heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+.gx-heatmap-legend .gx-heat {
+  width: 18px;
+  min-height: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.gx-heatmap-legend span {
+  margin: 0 4px;
+}
