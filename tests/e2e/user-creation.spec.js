@@ -76,29 +76,21 @@ test.describe("Criação profissional de usuário", () => {
         page.getByRole("heading", { name: "Criar novo usuário" })
       ).toBeVisible();
       expect(await page.locator('input[name="role"]').count()).toBeGreaterThanOrEqual(
-        10
+        9
       );
 
-      await page.locator('input[name="role"][value="CUSTOM"]').check();
-      await page
-        .locator('input[name="permission"][value="tenant.orders.edit"]')
-        .check();
+      // O Owner escolhe um perfil pronto; as permissões aparecem só para consulta
+      // (dar ou tirar permissões individuais é exclusivo do Master da INOVAS).
+      await expect(page.locator('input[name="role"][value="CUSTOM"]')).toHaveCount(0);
+      await page.locator('input[name="role"][value="OPERATOR"]').check();
       await expect(
-        page.locator(
-          'input[name="permission"][value="tenant.orders.view"]'
-        )
+        page.locator('input[name="permission"][value="tenant.orders.edit"]')
       ).toBeChecked();
-      page.once("dialog", async (dialog) => {
-        expect(dialog.message()).toContain("permissão(ões) dependente(s)");
-        await dialog.accept();
-      });
-      await page
-        .locator('input[name="permission"][value="tenant.orders.view"]')
-        .uncheck();
       await expect(
-        page.locator(
-          'input[name="permission"][value="tenant.orders.edit"]'
-        )
+        page.locator('input[name="permission"][value="tenant.orders.edit"]')
+      ).toBeDisabled();
+      await expect(
+        page.locator('input[name="permission"][value="tenant.catalog.edit"]')
       ).not.toBeChecked();
 
       await page.locator('input[name="name"]').fill("Ana da Silva");

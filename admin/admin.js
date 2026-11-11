@@ -8408,15 +8408,7 @@ const readRestaurantSettingsDraftFromDom = () => {
       image: String(getRestaurantSettingsField(root, "seoOpenGraph.image")?.value || "").trim(),
       type: String(getRestaurantSettingsField(root, "seoOpenGraph.type")?.value || "website").trim(),
     },
-    platformFooter: {
-      ...(currentDraft.platformFooter || RESTAURANT_SETTINGS_DEFAULT_DRAFT.platformFooter),
-      showPlatformBranding: true,
-      brandName: String(getRestaurantSettingsField(root, "platformFooter.brandName")?.value || "").trim(),
-      headline: String(getRestaurantSettingsField(root, "platformFooter.headline")?.value || "").trim(),
-      description: String(getRestaurantSettingsField(root, "platformFooter.description")?.value || "").trim(),
-      url: String(getRestaurantSettingsField(root, "platformFooter.url")?.value || "").trim(),
-      displayUrl: String(getRestaurantSettingsField(root, "platformFooter.displayUrl")?.value || "").trim(),
-    },
+    // Rodapé INOVAS é fixo e não editável pelo restaurante (o servidor também ignora).
     whatsapp: String(getRestaurantSettingsField(root, "whatsapp")?.value || "").trim(),
     addressFields: {
       ...(currentDraft.addressFields || {}),
@@ -9060,22 +9052,6 @@ const renderRestaurantSettingsModule = () => {
         </div>
       </article>
 
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Rodape INOVAS</span>
-            <h3>Marca institucional da plataforma</h3>
-            <p>A marca permanece sempre visível nesta etapa. A flag showPlatformBranding fica preparada para uso futuro.</p>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Nome da plataforma", field: "platformFooter.brandName", value: draft.platformFooter?.brandName || "", placeholder: "INOVAS Food", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Chamada do rodape", field: "platformFooter.headline", value: draft.platformFooter?.headline || "", placeholder: "Desenvolvido por INOVAS Food", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "URL", field: "platformFooter.url", value: draft.platformFooter?.url || "", placeholder: "https://inovasfood.com.br", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "URL exibida", field: "platformFooter.displayUrl", value: draft.platformFooter?.displayUrl || "", placeholder: "inovasfood.com.br", disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descrição institucional", field: "platformFooter.description", value: draft.platformFooter?.description || "", placeholder: "Plataforma profissional para restaurantes", disabled: isBusy })}
-        </div>
-      </article>
 
       <article class="admin-delivery-card is-wide">
         <header class="admin-delivery-card-head">

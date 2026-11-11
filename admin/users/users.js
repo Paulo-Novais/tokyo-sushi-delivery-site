@@ -1147,8 +1147,16 @@
     );
   };
 
+  // "Personalizado" depende de permissões individuais, que só o Master define.
   const renderRoleCards = () =>
     getRoles()
+      .filter(
+        (role) =>
+          isSystem ||
+          role.key !== "CUSTOM" ||
+          state.selectedRole === "CUSTOM" ||
+          String(state.session?.systemRole || "").toUpperCase() === "MASTER"
+      )
       .map(
         (role) => `
           <label class="users-role-card">
@@ -1194,8 +1202,16 @@
       `;
     }
     const groups = groupPermissions();
+    // Só o Master da INOVAS dá ou tira permissões individuais; aqui elas aparecem
+    // para consulta e mudam junto com o perfil escolhido.
+    const canEditOverrides = String(state.session?.systemRole || "").toUpperCase() === "MASTER";
     return `
-      <div class="users-permission-list">
+      ${
+        canEditOverrides
+          ? ""
+          : '<div class="users-security-note">As permissões seguem o perfil escolhido. Só o Master da INOVAS pode dar ou tirar permissões individuais.</div>'
+      }
+      <div class="users-permission-list${canEditOverrides ? "" : " is-readonly"}" style="margin-top:12px">
         ${Object.entries(groups)
           .map(
             ([module, permissions]) => `
@@ -1211,7 +1227,7 @@
                           state.selectedPermissions.has(permission.key)
                             ? "checked"
                             : ""
-                        } />
+                        } ${canEditOverrides ? "" : "disabled"} />
                         <span>
                           <strong>${escapeHtml(ACTION_LABELS[permission.action] || "Ação administrativa")}</strong>
                           <small>${escapeHtml(permission.description)}</small>
@@ -1633,8 +1649,10 @@
         credentialMode === "TEMPORARY_PASSWORD"
           ? form.elements.password?.value || ""
           : "",
-      grantOverrides,
-      denyOverrides,
+      // Sem ser o Master, não envia permissões individuais: o servidor mantém as atuais.
+      ...(isSystem || String(state.session?.systemRole || "").toUpperCase() === "MASTER"
+        ? { grantOverrides, denyOverrides }
+        : {}),
     };
   };
 

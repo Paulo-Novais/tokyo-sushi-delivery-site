@@ -7678,8 +7678,18 @@ const syncRestaurantSocialLinks = (settings) => {
   });
 };
 
-const getPublicPlatformFooter = (settings) =>
-  settings.platformFooter || settings.appearance?.platformFooter || RESTAURANT_SETTINGS_DEFAULTS.platformFooter;
+// Rodapé da INOVAS: fixo em todos os sites (não vem das configurações do restaurante).
+const PUBLIC_PLATFORM_FOOTER = Object.freeze({
+  showPlatformBranding: true,
+  brandName: "INOVAS Food",
+  logo: "./assets/inovas-food-logo-oficial.png",
+  headline: "Desenvolvido por INOVAS Food",
+  description: "Plataforma profissional para restaurantes",
+  url: "https://inovasfood.com.br",
+  displayUrl: "inovasfood.com.br",
+});
+
+const getPublicPlatformFooter = () => PUBLIC_PLATFORM_FOOTER;
 
 const syncPlatformFooter = (settings) => {
   const footer = getPublicPlatformFooter(settings);
@@ -10003,13 +10013,13 @@ const createSiteFooter = () => {
             <span>${escapeHtml(footerBottomAddress || "Rua General Osório, 2165 - Franca - SP.")}</span>
           </div>
           <div class="inovas-platform-footer" data-platform-branding>
-            <div class="inovas-platform-brand">
+            <a class="inovas-platform-brand" href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://inovasfood.com.br"))}" target="_blank" rel="noopener" aria-label="Conhecer a INOVAS Food" data-platform-branding-brand>
               <img src="${escapeHtml(platformFooter.logo || "./assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(platformFooter.brandName || "INOVAS Food")}" data-platform-branding-logo />
               <div>
                 <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INOVAS Food")}</strong>
                 <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
               </div>
-            </div>
+            </a>
             <a href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://inovasfood.com.br"))}" target="_blank" rel="noreferrer" data-platform-branding-link>
               ${escapeHtml(platformFooter.displayUrl || "inovasfood.com.br")}
             </a>

@@ -39,6 +39,20 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
       const customLogin = `orders-${tenant.key}@tenant.local`;
       const customPassword = "SenhaOrders19";
       const ownerForUserCreation = await loginTenantOwner(tenant);
+      // Permissões individuais são exclusivas do Master da INOVAS: o Owner recebe 403.
+      const overrideAttempt = await ownerForUserCreation.api.post("/api/tenant/users", {
+        data: {
+          email: `override-${tenant.key}@tenant.local`,
+          name: "Override negado",
+          password: customPassword,
+          role: "CUSTOM",
+          credentialMode: "TEMPORARY_PASSWORD",
+          grantOverrides: ["tenant.orders.view"],
+        },
+      });
+      expect(overrideAttempt.status()).toBe(403);
+      expect((await overrideAttempt.json()).error.code).toBe("platform_master_required");
+      // O Owner continua cadastrando com um perfil pronto (Operador: pedidos, sem cardápio e usuários).
       const customCreate = await ownerForUserCreation.api.post(
         "/api/tenant/users",
         {
@@ -46,9 +60,8 @@ test.describe("V1.9 RBAC and tenant isolation", () => {
             email: customLogin,
             name: "Orders Only",
             password: customPassword,
-            role: "CUSTOM",
+            role: "OPERATOR",
             credentialMode: "TEMPORARY_PASSWORD",
-            grantOverrides: ["tenant.orders.view"],
           },
         }
       );

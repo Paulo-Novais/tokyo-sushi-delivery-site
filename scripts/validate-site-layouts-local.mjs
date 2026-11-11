@@ -236,6 +236,14 @@ const validateStoreContracts = async (store) => {
       image: "/site-images/combinado-imperial.png",
       type: "website",
     },
+    // Tentativa de trocar o rodapé da plataforma: deve ser ignorada.
+    platformFooter: {
+      showPlatformBranding: false,
+      brandName: "Outra Marca",
+      headline: "Feito por outro",
+      url: "https://exemplo.invalid",
+      displayUrl: "exemplo.invalid",
+    },
   });
 
   assert.equal(saved.settings.restaurantKey, "default");
@@ -250,6 +258,9 @@ const validateStoreContracts = async (store) => {
   assert.equal(publicPayload.settings.siteTheme, "DARK");
   assert.equal(publicPayload.settings.seoTitle, "Tokyo Layout Test");
   assert.equal(publicPayload.settings.platformFooter.brandName, "INOVAS Food");
+  assert.equal(publicPayload.settings.platformFooter.showPlatformBranding, true, "Rodapé INOVAS não pode ser desligado.");
+  assert.equal(publicPayload.settings.platformFooter.url, "https://inovasfood.com.br", "Link do rodapé é sempre da INOVAS.");
+  assert.equal(publicPayload.settings.platformFooter.headline, "Desenvolvido por INOVAS Food");
 };
 
 const validateBrowserContracts = async ({ baseUrl, store }) => {

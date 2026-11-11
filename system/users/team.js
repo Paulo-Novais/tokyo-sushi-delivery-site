@@ -234,8 +234,11 @@
       </div>`;
   };
 
+  // Convidar = escolher o perfil da pessoa: exclusivo do usuário Master.
+  const isMaster = () => normalize(state.session?.role) === "MASTER";
+
   const renderInvite = () => {
-    if (!can("system.users.manage")) return "";
+    if (!can("system.users.manage") || !isMaster()) return "";
     const available = roles();
     if (!state.inviteRole || !roleOf(state.inviteRole)) {
       state.inviteRole = (available.find((role) => normalize(role.key) !== "MASTER") || available[0] || {}).key || "";
@@ -268,7 +271,7 @@
   /* ---------- página ---------- */
 
   const render = () => {
-    const manage = can("system.users.manage");
+    const manage = can("system.users.manage") && isMaster();
     app.innerHTML = `
       <header class="sys-page-head">
         <div>

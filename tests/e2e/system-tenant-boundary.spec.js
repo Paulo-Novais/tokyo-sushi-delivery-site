@@ -156,9 +156,10 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
           grantOverrides: ["tenant.orders.edit"],
         },
       });
-      expect(invalidDependency.status()).toBe(422);
+      // O Owner não pode dar permissões individuais: só o Master da INOVAS.
+      expect(invalidDependency.status()).toBe(403);
       expect((await invalidDependency.json()).error.code).toBe(
-        "permission_dependency_missing"
+        "platform_master_required"
       );
     } finally {
       await ownerA.api.dispose();
@@ -596,17 +597,18 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       restaurantPage.getByRole("heading", { name: "Usuários", exact: true })
     ).toBeVisible();
     await restaurantPage.goto("/admin/users/new");
-    await restaurantPage
-      .locator('input[name="role"][value="CUSTOM"]')
-      .check();
-    await restaurantPage
-      .locator('input[name="permission"][value="tenant.orders.edit"]')
-      .check();
+    // Permissões individuais são do Master da INOVAS: o Owner só escolhe perfis prontos.
+    await expect(restaurantPage.locator('input[name="role"][value="CUSTOM"]')).toHaveCount(0);
+    await restaurantPage.locator('input[name="role"][value="OPERATOR"]').check();
     await expect(
-      restaurantPage.locator(
-        'input[name="permission"][value="tenant.orders.view"]'
-      )
+      restaurantPage.locator('input[name="permission"][value="tenant.orders.view"]')
     ).toBeChecked();
+    await expect(
+      restaurantPage.locator('input[name="permission"][value="tenant.orders.view"]')
+    ).toBeDisabled();
+    await expect(restaurantPage.locator("body")).toContainText(
+      "Só o Master da INOVAS pode dar ou tirar permissões individuais."
+    );
     await restaurantPage.setViewportSize({ width: 390, height: 844 });
     await expectNoHorizontalOverflow(restaurantPage);
     await restaurantContext.close();

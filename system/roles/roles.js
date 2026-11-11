@@ -113,6 +113,9 @@
     CRITICAL: ["Crítico", "crit"],
   });
 
+  const crossIcon = () =>
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"></path></svg>';
+
   const checkIcon = () =>
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>';
 
@@ -196,13 +199,13 @@
     const activeKey = state.selectedKey;
     const colClass = (role) => (role.key === activeKey ? "is-col-active" : "");
     const cell = (role, granted) =>
-      `<td class="${colClass(role)}">${granted ? `<span class="sys-yes" title="Pode">${checkIcon()}<span class="sr-only">Pode</span></span>` : '<span class="sys-no" title="Não pode" aria-label="Não pode">—</span>'}</td>`;
+      `<td class="${colClass(role)}">${granted ? `<span class="sys-yes" title="Pode">${checkIcon()}<span class="sr-only">Pode</span></span>` : `<span class="sys-no" title="Não pode">${crossIcon()}<span class="sr-only">Não pode</span></span>`}</td>`;
 
     return `
       <section class="sys-card sys-perm-card" aria-labelledby="matriz-permissoes">
         <div class="sys-perm-head">
           <h2 id="matriz-permissoes">Matriz de permissões</h2>
-          <div class="sys-perm-legend"><span><span class="sys-yes">${checkIcon()}</span>Pode</span><span><span class="sys-no">—</span>Não pode</span></div>
+          <div class="sys-perm-legend"><span><span class="sys-yes">${checkIcon()}</span>Pode</span><span><span class="sys-no">${crossIcon()}</span>Não pode</span></div>
         </div>
         <div class="sys-perm-wrap">
           <table class="sys-perm-table">
@@ -228,7 +231,7 @@
           </table>
         </div>
       </section>
-      <p class="sys-rules">${lockIcon()}<span><strong>Regras fixas, nenhum perfil muda:</strong> ninguém da INOVAS vê pedidos, clientes finais ou financeiro de um restaurante fora de uma sessão de suporte; toda sessão tem motivo e prazo e fica na auditoria; mudanças de perfil exigem permissão de administrar perfis e também vão para a auditoria.</span></p>`;
+      <p class="sys-rules">${lockIcon()}<span><strong>Regras fixas, nenhum perfil muda:</strong> ninguém da INOVAS vê pedidos, clientes finais ou financeiro de um restaurante fora de uma sessão de suporte; toda sessão tem motivo e prazo e fica na auditoria; só o usuário Master altera perfis e permissões, e toda mudança vai para a auditoria.</span></p>`;
   };
 
   const escapeHtml = (value) =>
@@ -268,8 +271,10 @@
     }, 3600);
   };
 
+  // Alterar perfis é exclusivo do usuário Master (o servidor também barra).
   const hasPermission = (permission) =>
-    new Set(state.session?.effectivePermissions || []).has(permission);
+    new Set(state.session?.effectivePermissions || []).has(permission) &&
+    (permission !== "system.roles.manage" || String(state.session?.role || "").toUpperCase() === "MASTER");
 
   const renderSidebar = () => {
     if (window.InovasSystemShell) {

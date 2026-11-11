@@ -2980,3 +2980,55 @@ body.sys-body .sys-live-end:hover {
     stroke: #fff;
   }
 }
+
+/* Matriz de permissões: selos redondos, check verde e X discreto. */
+.sys-perm-table .sys-yes,
+.sys-perm-table .sys-no,
+.sys-perm-legend .sys-yes,
+.sys-perm-legend .sys-no {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.sys-perm-table .sys-yes,
+.sys-perm-legend .sys-yes {
+  background: linear-gradient(145deg, #34d399, #16a34a);
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.sys-perm-table .sys-yes svg,
+.sys-perm-legend .sys-yes svg {
+  width: 14px;
+  height: 14px;
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+.sys-perm-table .sys-no,
+.sys-perm-legend .sys-no {
+  background: #fff1f2;
+  box-shadow: inset 0 0 0 1px #fecdd3;
+  color: #be123c;
+}
+
+.sys-perm-table .sys-no svg,
+.sys-perm-legend .sys-no svg {
+  stroke: #be123c;
+}
+
+.sys-perm-table td.is-col-active .sys-no {
+  background: #ffffff;
+}
+
+.sys-perm-table tbody tr:not(.sys-perm-section):hover td {
+  background: #fafaf9;
+}
+
+.sys-perm-table tbody tr:not(.sys-perm-section):hover td.is-col-active {
+  background: #ffedd5;
+}
