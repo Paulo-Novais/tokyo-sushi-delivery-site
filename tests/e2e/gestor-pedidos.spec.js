@@ -90,9 +90,13 @@ test("Pedidos: grade, filtros, detalhes e ações como no esboço", async ({ pag
   await expect(detail).toBeInViewport();
   await expect(detail.locator(".gx-od-head h2")).not.toBeEmpty();
   await expect(detail.locator(".gx-od-items li")).not.toHaveCount(0);
-  await expect(detail.locator(".gx-od-boxes")).toContainText("Valor do pedido");
-  await expect(detail.locator(".gx-od-stage")).toContainText("Etapa atual");
-  // Tudo aparece completo, sem precisar abrir.
+  await expect(detail.locator(".gx-od-totalbox")).toContainText("Total");
+  await expect(detail.locator(".gx-od-sums")).toContainText("Subtotal");
+  await expect(detail.locator(".gx-od-steplabel")).toContainText(/Etapa: .+[1-5] de 5/);
+  await expect(detail.locator(".gx-od-pills")).toContainText("Feito às");
+  // Dados do cliente recolhidos em "Ver dados", como no esboço.
+  await expect(detail.locator(".gx-od-data dl")).toBeHidden();
+  await detail.locator(".gx-od-data summary").click();
   await expect(detail.locator(".gx-od-data dl")).toBeVisible();
   // Foto do produto vinda do cardápio do restaurante.
   const withPhoto = page.locator(".gx-ticket").filter({ hasText: "Wagner Silva" }).first();

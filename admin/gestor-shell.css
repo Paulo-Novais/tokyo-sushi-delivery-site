@@ -3476,3 +3476,436 @@ html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar .gx-s
   background: #fee2e2 !important;
   color: #7f1d1d !important;
 }
+
+/* =====================================================================
+   Pedidos v3 — esboço "INOVAS · Tela de Pedidos" (11/11): cartão em 3 linhas
+   e painel de detalhes com progresso, itens em lista e bloco de total.
+   ===================================================================== */
+html body.admin-body .gx-ticket-body {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+html body.admin-body .gx-ticket-top,
+html body.admin-body .gx-ticket-meta {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+html body.admin-body .gx-ticket-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html body.admin-body .gx-ticket-top .gx-ticket-timer {
+  flex: none;
+  margin-left: auto;
+}
+
+html body.admin-body .gx-ticket-meta .gx-ticket-time {
+  flex: none;
+  color: var(--gx-ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+html body.admin-body .gx-ticket-meta .gx-ticket-total {
+  flex: none;
+  margin-left: auto;
+  overflow: visible;
+  color: var(--gx-ink);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Etapa como texto discreto (sem etiqueta). */
+html body.admin-body.admin-body .gx-ticket .gx-ticket-status {
+  justify-self: start;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--gx-ink-3);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* Cartão estreito: o valor desce para a direita em vez de vazar. */
+
+html body.admin-body .gx-ticket-meta {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+/* ---------- Detalhe ---------- */
+html body.admin-body .gx-od {
+  gap: 14px;
+}
+
+.gx-od-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gx-od-who {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.gx-od-initials {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--gx-brand);
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+html body.admin-body .gx-od-head {
+  gap: 2px;
+}
+
+html body.admin-body .gx-od-head h2 {
+  font-size: 22px;
+}
+
+html body.admin-body .gx-od-data summary {
+  list-style: none;
+}
+
+html body.admin-body .gx-od-data summary::-webkit-details-marker {
+  display: none;
+}
+
+html body.admin-body .gx-od-data summary::after {
+  content: " ⌄";
+}
+
+html body.admin-body .gx-od-data[open] summary::after {
+  content: " ⌃";
+}
+
+.gx-od-pills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gx-od-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gx-od-pill.is-delivery { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+.gx-od-pill.is-pickup { background: rgba(168, 85, 247, 0.14); color: #7e22ce; }
+html body.admin-body[data-admin-theme="dark"] .gx-od-pill.is-delivery { color: #93c5fd; }
+html body.admin-body[data-admin-theme="dark"] .gx-od-pill.is-pickup { color: #d8b4fe; }
+
+html body.admin-body .gx-od-note {
+  margin: 0;
+}
+
+.gx-od-progress {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gx-border);
+}
+
+.gx-od-steps {
+  display: flex;
+  gap: 5px;
+}
+
+.gx-od-steps span {
+  flex: 1 1 0;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--gx-border);
+}
+
+.gx-od-steps span.is-done { background: var(--gx-brand); }
+.gx-od-steps span.is-current { background: #fdba74; }
+
+.gx-od-steplabel {
+  display: flex;
+  justify-content: space-between;
+  color: var(--gx-ink-3);
+  font-size: 13px;
+}
+
+.gx-od-steplabel b {
+  color: var(--gx-ink);
+}
+
+html body.admin-body .gx-od-title {
+  margin: 2px 0 0;
+}
+
+/* Itens em lista (linhas separadas, sem caixas). */
+html body.admin-body .gx-od-items {
+  gap: 0;
+}
+
+html body.admin-body .gx-od-items li,
+html body.admin-body .gx-od-items li.is-addon {
+  grid-template-columns: 46px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--gx-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+html body.admin-body .gx-od-photo,
+html body.admin-body .gx-od-items .gx-od-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+}
+
+html body.admin-body .gx-od-item strong {
+  font-size: 14.5px;
+  line-height: 1.25;
+}
+
+.gx-od-qty {
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+html body.admin-body .gx-od-price {
+  font-size: 15px;
+}
+
+.gx-od-sums {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.gx-od-sums div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--gx-ink-3);
+  font-size: 14px;
+}
+
+.gx-od-sums dt,
+.gx-od-sums dd {
+  margin: 0;
+}
+
+.gx-od-sums dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-od-totalbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--gx-border);
+  border-radius: 14px;
+}
+
+.gx-od-total {
+  display: grid;
+  gap: 2px;
+}
+
+.gx-od-total span {
+  color: var(--gx-ink-3);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gx-od-total strong {
+  color: var(--gx-ink);
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.gx-od-paychip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--gx-brand-soft);
+  color: var(--gx-brand-ink);
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.gx-od-paychip > span {
+  display: grid;
+}
+
+.gx-od-paychip small {
+  color: var(--gx-ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+html body.admin-body .gx-od-primary {
+  min-height: 54px;
+  font-size: 16px;
+}
+
+html body.admin-body .gx-od-cancel {
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+html body.admin-body .gx-od-cancel:hover {
+  text-decoration: underline;
+}
+
+html body.admin-body .gx-od-closed.is-cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-od-closed.is-cancelled {
+  color: #fca5a5;
+}
+
+/* Tema escuro: a área principal já tem margem; em Pedidos não duplica (cartões mais largos). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-theme="dark"][data-admin-section="orders"] .admin-workspace {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* "Ver dados" aberto: as iniciais ficam ao lado do nome. */
+html body.admin-body .gx-od-who {
+  align-items: start;
+}
+
+/* Cartão: tamanhos finos para nome, tipo, hora e valor caberem em ~170 px. */
+html body.admin-body .gx-ticket-name { font-size: 14px; }
+html body.admin-body.admin-body .gx-ticket .gx-ticket-timer { gap: 3px; padding: 1px 6px; font-size: 11px; }
+html body.admin-body.admin-body .gx-ticket .gx-ticket-timer svg { width: 10px; height: 10px; }
+html body.admin-body.admin-body .gx-ticket .gx-tag { padding: 1px 5px; font-size: 10.5px; }
+html body.admin-body .gx-ticket-meta { gap: 5px; }
+html body.admin-body .gx-ticket-meta .gx-ticket-time { font-size: 11.5px; }
+html body.admin-body .gx-ticket-meta .gx-ticket-total { font-size: 13px; }
+html body.admin-body .gx-ticket-body { padding: 9px 10px; }
+
+html body.admin-body[data-admin-theme="dark"] .gx-od-pill:not(.is-delivery):not(.is-pickup) {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* =====================================================================
+   Cores vivas por tempo: neutro (até 10) · amarelo (10–20) · laranja (20–30)
+   · vermelho aceso pulsando (+30).
+   ===================================================================== */
+html body.admin-body.admin-body {
+  --gx-age-mid-bg: #fde047;
+  --gx-age-mid-line: #eab308;
+  --gx-age-warn-bg: #fdba74;
+  --gx-age-warn-line: #f97316;
+  --gx-age-late-bg: #fca5a5;
+  --gx-age-late-line: #ef4444;
+}
+
+html body.admin-body.admin-body[data-admin-theme="dark"] {
+  --gx-age-mid-bg: #5c4a00;
+  --gx-age-mid-line: #facc15;
+  --gx-age-warn-bg: #6b2e05;
+  --gx-age-warn-line: #fb923c;
+  --gx-age-late-bg: #6f1016;
+  --gx-age-late-line: #f87171;
+}
+
+/* Texto dentro dos cartões coloridos: tons escuros para leitura no claro. */
+html body.admin-body:not([data-admin-theme="dark"]) .gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) {
+  --gx-ink-2: #292524;
+  --gx-ink-3: #3f3a36;
+  --gx-ticket-inset: rgba(0, 0, 0, 0.08);
+}
+
+html body.admin-body:not([data-admin-theme="dark"]) .gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) .gx-tag {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) {
+  --gx-ink-3: #e7e5e4;
+}
+
+/* Bordas mais fortes nos coloridos. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) {
+  border-width: 2px !important;
+}
+
+/* Atrasado: vermelho "aceso", com brilho pulsando. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-late::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -2px !important;
+  z-index: 0 !important;
+  display: block !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 13px !important;
+  box-shadow: 0 0 14px 3px rgba(239, 68, 68, 0.75), inset 0 0 10px rgba(239, 68, 68, 0.35) !important;
+  background: none !important;
+  pointer-events: none !important;
+  animation: gx-late-glow 1.3s ease-in-out infinite;
+}
+
+@keyframes gx-late-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-late::after {
+    animation: none;
+  }
+}
+
+/* Legenda com as mesmas cores. */
+html body.admin-body .gx-age-key.is-mid i { background: #facc15; }
+html body.admin-body .gx-age-key.is-warn i { background: #f97316; }
+html body.admin-body .gx-age-key.is-late i { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.8); }

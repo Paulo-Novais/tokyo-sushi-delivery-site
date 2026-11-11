@@ -10267,7 +10267,7 @@ const ORDER_STATUS_BADGES = Object.freeze({
   Aceito: "Aceito",
   "Em preparo": "Em preparo",
   Pronto: "Pronto",
-  "Saiu para entrega": "Em rota",
+  "Saiu para entrega": "Saiu p/ entrega",
   Entregue: "Entregue",
   "Retirada concluida": "Retirado",
   Cancelado: "Cancelado",
@@ -10393,9 +10393,9 @@ const renderOrderCard = (order) => {
   const isPickup = order.fulfillmentMode === "pickup";
   const sla = getOrderSla(order);
   const statusKey = normalizeStatusKey(order.status);
-  const itemCount = getOrderProductLines(order).reduce((sum, item) => sum + Math.max(Number(item.quantity || 1), 1), 0);
-  const itemCountLabel = itemCount > 0 ? `${itemCount} ${itemCount === 1 ? "item" : "itens"}` : "";
+  const statusLabel = ORDER_STATUS_BADGES[order.status] || order.status;
 
+  // Esboço: nome + tempo · tipo + hora + valor · etapa.
   return `
     <article
       class="admin-order-card gx-ticket is-age-${escapeHtml(sla.tone)}${isSelected ? " is-selected" : ""}${order.status === "Recebido" ? " is-new" : ""}"
@@ -10406,21 +10406,20 @@ const renderOrderCard = (order) => {
         type="button"
         data-order-select="${escapeHtml(order.id)}"
         aria-pressed="${isSelected}"
-        aria-label="${escapeHtml(`Pedido de ${order.customerName}, ${ORDER_STATUS_BADGES[order.status] || order.status}, ${sla.label}`)}"
+        aria-label="${escapeHtml(`Pedido de ${order.customerName}, ${statusLabel}, ${sla.label}`)}"
       ></button>
       <div class="gx-ticket-body">
         <div class="gx-ticket-top">
           <strong class="gx-ticket-name" title="${escapeHtml(order.customerName || "Cliente")}">${escapeHtml(order.customerName || "Cliente")}</strong>
+          <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
         </div>
         <div class="gx-ticket-meta">
           <span class="gx-tag is-${isPickup ? "pickup" : "delivery"}">${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
           ${isScheduled ? `<span class="gx-tag is-scheduled">Agendado</span>` : ""}
-          <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}" title="Feito às ${escapeHtml(formatTime(order.createdAt))}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
+          <span class="gx-ticket-time" title="Feito às ${escapeHtml(formatTime(order.createdAt))}">${escapeHtml(formatTime(order.createdAt))}</span>
+          <strong class="gx-ticket-total">${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>
         </div>
-        <div class="gx-ticket-foot">
-          <span class="gx-ticket-total" title="${escapeHtml(itemCountLabel)}"><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong></span>
-          <span class="gx-ticket-status is-${escapeHtml(statusKey.replace(/\s+/g, "-"))}">${escapeHtml(ORDER_STATUS_BADGES[order.status] || order.status)}</span>
-        </div>
+        <span class="gx-ticket-status is-${escapeHtml(statusKey.replace(/\s+/g, "-"))}">${escapeHtml(statusLabel)}</span>
       </div>
     </article>
   `;
@@ -10476,6 +10475,12 @@ const renderOrdersStageBar = (statsRoot) => {
 
 // Detalhes do pedido no lado direito (no celular, painel deslizante).
 const ORDER_AVATAR_TONES = ["is-a", "is-b", "is-c", "is-d", "is-e"];
+const ORDER_BIKE_ICON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><circle cx="6" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M6 17l4-7h5l3 7M14 6h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ORDER_BAG_ICON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const ORDER_CARD_ICON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.8"/></svg>';
 
 const getItemInitials = (name = "") =>
   String(name)
@@ -10548,30 +10553,52 @@ const renderOrdersDetailPanel = (detailRoot) => {
     order.paymentMethod === "cash" && Number(order.changeAmount || order.cashAmount || 0) > 0
       ? `Troco para ${formatMoney(order.cashAmount || 0)}`
       : "";
+  const deliveryFee = Number(order.deliveryFee || 0);
+  const discount = Number(order.discountAmount || 0);
+  const itemsSum = items.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+  const subtotal = Number(order.subtotal || order.productRevenue || 0) || itemsSum;
+  const steps = ["Recebido", "Aceito", "Em preparo", "Pronto", isPickup ? "Retirada concluida" : "Saiu para entrega"];
+  const canonical = resolveCanonicalOrderStatus(order.status, order.fulfillmentMode) || order.status;
+  const stepIndex = canonical === "Entregue" ? steps.length - 1 : steps.indexOf(canonical);
+  const stepLabel = ORDER_STATUS_BADGES[order.status] || order.status;
 
   detailRoot.innerHTML = `
     <div class="gx-od">
-      <span class="gx-od-eyebrow">Detalhes do pedido</span>
-      <div class="gx-od-head">
-        <h2>${escapeHtml(order.customerName || "Cliente")}</h2>
-        <details class="gx-od-data" open>
-          <summary>Dados do cliente</summary>
-          <dl>
-            <div><dt>Pedido</dt><dd>#${escapeHtml(getOrderShortId(order))}</dd></div>
-            ${order.customerPhone ? `<div><dt>Telefone</dt><dd>${phoneDigits ? `<a href="https://wa.me/55${escapeHtml(phoneDigits.replace(/^55/, ""))}" target="_blank" rel="noopener">${escapeHtml(order.customerPhone)}</a>` : escapeHtml(order.customerPhone)}</dd></div>` : ""}
-            ${!isPickup && address ? `<div><dt>Endereço</dt><dd>${escapeHtml(address)}</dd></div>` : ""}
-            ${order.timingMode === "scheduled" && order.scheduledFor ? `<div><dt>Agendado</dt><dd>${escapeHtml(formatDateTime(order.scheduledFor))}</dd></div>` : ""}
-            ${order.customerNotes ? `<div><dt>Observação</dt><dd>${escapeHtml(order.customerNotes)}</dd></div>` : ""}
-          </dl>
-        </details>
+      <div class="gx-od-top">
+        <span class="gx-od-eyebrow">Detalhes do pedido</span>
+        ${isFinalOrder(order) ? "" : `<span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>`}
       </div>
-      <div class="gx-od-meta">
-        <span class="gx-tag is-${isPickup ? "pickup" : "delivery"}">${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
-        <span>Feito às <b>${escapeHtml(formatTime(order.createdAt))}</b></span>
-        <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
+      <div class="gx-od-who">
+        <span class="gx-od-initials" aria-hidden="true">${escapeHtml(getItemInitials(order.customerName || "Cliente"))}</span>
+        <div class="gx-od-head">
+          <h2>${escapeHtml(order.customerName || "Cliente")}</h2>
+          <details class="gx-od-data">
+            <summary>Ver dados</summary>
+            <dl>
+              <div><dt>Pedido</dt><dd>#${escapeHtml(getOrderShortId(order))}</dd></div>
+              ${order.customerPhone ? `<div><dt>Telefone</dt><dd>${phoneDigits ? `<a href="https://wa.me/55${escapeHtml(phoneDigits.replace(/^55/, ""))}" target="_blank" rel="noopener">${escapeHtml(order.customerPhone)}</a>` : escapeHtml(order.customerPhone)}</dd></div>` : ""}
+              ${!isPickup && address ? `<div><dt>Endereço</dt><dd>${escapeHtml(address)}</dd></div>` : ""}
+              ${order.timingMode === "scheduled" && order.scheduledFor ? `<div><dt>Agendado</dt><dd>${escapeHtml(formatDateTime(order.scheduledFor))}</dd></div>` : ""}
+            </dl>
+          </details>
+        </div>
       </div>
-      ${order.customerNotes ? `<p class="gx-od-note">${escapeHtml(order.customerNotes)}</p>` : ""}
-      <h3 class="gx-od-title">Itens (${escapeHtml(String(items.length))})</h3>
+      <div class="gx-od-pills">
+        <span class="gx-od-pill is-${isPickup ? "pickup" : "delivery"}">${isPickup ? ORDER_BAG_ICON : ORDER_BIKE_ICON}${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
+        <span class="gx-od-pill">${ORDER_CLOCK_ICON}Feito às ${escapeHtml(formatTime(order.createdAt))}</span>
+      </div>
+      ${order.customerNotes ? `<p class="gx-od-note"><b>Observação:</b> ${escapeHtml(order.customerNotes)}</p>` : ""}
+      ${
+        order.status === "Cancelado"
+          ? `<p class="gx-od-closed is-cancelled">Pedido cancelado.</p>`
+          : `<div class="gx-od-progress" aria-label="${escapeHtml(`Etapa ${stepIndex + 1} de ${steps.length}: ${stepLabel}`)}">
+              <div class="gx-od-steps">${steps
+                .map((_, index) => `<span class="${index < stepIndex ? "is-done" : index === stepIndex ? "is-current" : ""}"></span>`)
+                .join("")}</div>
+              <div class="gx-od-steplabel"><span>Etapa: <b>${escapeHtml(stepLabel)}</b></span><span>${escapeHtml(String(Math.max(stepIndex + 1, 1)))} de ${steps.length}</span></div>
+            </div>`
+      }
+      <h3 class="gx-od-title">Itens · ${escapeHtml(String(items.length))}</h3>
       <ul class="gx-od-items">
         ${items
           .map(
@@ -10583,27 +10610,28 @@ const renderOrdersDetailPanel = (detailRoot) => {
                     ? `<img class="gx-od-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" decoding="async" />`
                     : `<span class="gx-od-avatar ${ORDER_AVATAR_TONES[index % ORDER_AVATAR_TONES.length]}" aria-hidden="true">${escapeHtml(getItemInitials(item.name))}</span>`;
                 })()}
-                <span class="gx-od-item"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(`${Number(item.quantity || 1)}x · ${formatMoney(item.unitPrice || 0)}`)}</small>${
+                <span class="gx-od-item"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(`${formatMoney(item.unitPrice || 0)} cada`)}</small>${
                   item.notes || item.observation ? `<em>${escapeHtml(item.notes || item.observation)}</em>` : ""
                 }</span>
+                <span class="gx-od-qty">${escapeHtml(String(Number(item.quantity || 1)))}x</span>
                 <span class="gx-od-price">${escapeHtml(formatMoney(item.totalPrice || 0))}</span>
               </li>`
           )
           .join("")}
       </ul>
-      <div class="gx-od-boxes">
-        <div><span>Valor do pedido</span><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>${
-          Number(order.deliveryFee || 0) > 0 ? `<small>inclui entrega de ${escapeHtml(formatMoney(order.deliveryFee))}</small>` : ""
-        }</div>
-        <div><span>Pagamento</span><strong class="is-payment">${escapeHtml(getPaymentLabel(order.paymentMethod))}</strong>${
-          changeInfo ? `<small>${escapeHtml(changeInfo)}</small>` : ""
-        }</div>
+      <dl class="gx-od-sums">
+        <div><dt>Subtotal</dt><dd>${escapeHtml(formatMoney(subtotal))}</dd></div>
+        ${!isPickup || deliveryFee > 0 ? `<div><dt>Taxa de entrega</dt><dd>${escapeHtml(formatMoney(deliveryFee))}</dd></div>` : ""}
+        ${discount > 0 ? `<div><dt>Desconto</dt><dd>- ${escapeHtml(formatMoney(discount))}</dd></div>` : ""}
+      </dl>
+      <div class="gx-od-totalbox">
+        <div class="gx-od-total"><span>Total</span><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong></div>
+        <span class="gx-od-paychip">${ORDER_CARD_ICON}<span>${escapeHtml(getPaymentLabel(order.paymentMethod))}${changeInfo ? `<small>${escapeHtml(changeInfo)}</small>` : ""}</span></span>
       </div>
-      <p class="gx-od-stage">Etapa atual: <b>${escapeHtml(ORDER_STATUS_BADGES[order.status] || order.status)}</b></p>
       ${
         primaryAction
           ? `<button class="gx-od-primary" type="button" data-order-action="${escapeHtml(order.id)}" data-next-status="${escapeHtml(primaryAction.status)}" data-action-note="${escapeHtml(primaryAction.note)}" ${adminState.isUpdatingStatus ? "disabled" : ""}>${escapeHtml(primaryAction.label)}</button>`
-          : `<p class="gx-od-closed">${escapeHtml(order.status === "Cancelado" ? "Pedido cancelado." : "Pedido concluído.")}</p>`
+          : order.status === "Cancelado" ? "" : `<p class="gx-od-closed">Pedido concluído.</p>`
       }
       ${
         isFinalOrder(order)
