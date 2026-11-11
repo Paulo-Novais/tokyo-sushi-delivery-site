@@ -151,15 +151,39 @@ test.describe("Caixa e Salao", () => {
       await page.setViewportSize({ width: 1366, height: 768 });
 
       // Tela 5 · Pagamento: conferir conta, dividir igual e pagamento misto
+      // Impressão térmica: o cupom é montado no modelo de 80 mm (sem abrir o diálogo).
+      await page.evaluate(() => {
+        window.print = () => {
+          window.__printedTicket = document.getElementById("cx-print-ticket")?.innerText || "";
+        };
+      });
+      await root.getByRole("button", { name: "Imprimir comanda" }).click();
+      const ticket = await page.evaluate(() => window.__printedTicket);
+      expect(ticket).toMatch(/Mesa : 05/);
+      expect(ticket).toMatch(/QTD\s*DESCRIÇÃO\s*UNIT\s*TOTAL/);
+      expect(ticket).toMatch(/SUBTOTAL/);
+      expect(ticket).toMatch(/Obrigado pela preferência!/);
+      await page.evaluate(() => document.body.classList.add("cx-printing"));
+      await page.emulateMedia({ media: "print" });
+      await page.locator("#cx-print-ticket").screenshot({ path: path.join(shots, "cupom-80mm.png") });
+      await page.emulateMedia({ media: "screen" });
+      await page.evaluate(() => document.body.classList.remove("cx-printing"));
+
       await page.keyboard.press("F4");
-      await expect(root.getByRole("heading", { name: "Conferir a conta" })).toBeVisible();
+      await expect(root.locator(".cx-bill-head h2")).toHaveText("Mesa 05");
+      await expect(root.getByText("Conferir a conta")).toBeVisible();
+      await shot("5-conferir-conta-1366");
       await root.getByRole("button", { name: /Fechar conta e cobrar/ }).click();
       await expect(root.locator(".cx-share")).toHaveCount(3);
+      // Dividir entre menos pessoas que as da mesa, nunca mais.
+      await expect(root.locator('[data-cx-step-field="payment.splitCount"][data-cx-delta="1"]')).toBeDisabled();
+      await root.locator('[data-cx-set="payment.splitCount"][data-cx-value="2"]').click();
+      await expect(root.locator(".cx-share")).toHaveCount(2);
       await shot("5-pagamento-1366");
       await root.locator('[data-cx-set="payment.method"][data-cx-value="PIX"]').click();
       await root.locator('[data-cx-action="add-payment"]').click();
-      await root.locator('[data-cx-set="payment.method"][data-cx-value="CREDIT_CARD"]').click();
-      await root.locator('[data-cx-action="add-payment"]').click();
+      // Com pagamento lançado, a divisão fica travada.
+      await expect(root.locator('[data-cx-set="payment.splitCount"][data-cx-value="1"]')).toBeDisabled();
       await root.locator('[data-cx-set="payment.method"][data-cx-value="CASH"]').click();
       await root.locator('[data-cx-set="payment.entry"][data-cx-value="200"]').click();
       await expect(root.locator(".cx-change")).toContainText("Troco");

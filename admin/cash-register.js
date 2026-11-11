@@ -62,7 +62,7 @@
     opening: { tableCount: null, openingAmount: "", serviceChargeRate: "10" },
     pdv: { query: "", categoryId: "all", multiplier: 1, noteItemId: "" },
     bill: { discount: "", serviceEnabled: true },
-    payment: { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 },
+    payment: { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0, splitCount: null },
     closing: { counted: "", notes: "" },
     receiptTab: null,
     optimistic: [],
@@ -260,6 +260,7 @@
           restaurantName:
             payload.admin?.restaurantName || payload.admin?.restaurant || state.context.restaurantName || "",
           permissions: payload.admin?.permissions || state.context.permissions,
+          printProfile: payload.printProfile || state.context.printProfile || null,
         };
       } catch (error) {
         if (error.status === 401) {
@@ -808,6 +809,7 @@
         </div>
         <div class="cx-topbar-actions">
           <button class="cx-btn" type="button" data-cx-action="back-salao">← Salão <span class="cx-kbd">Esc</span></button>
+          <button class="cx-btn" type="button" data-cx-action="print-tab">Imprimir comanda</button>
           ${
             hasPermission("cash_register_open_tab")
               ? '<button class="cx-btn" type="button" data-cx-action="edit-people">Trocar pessoas</button>'
@@ -897,11 +899,18 @@
 
   /* ---------- Tela 5 · Pagamento ---------- */
 
+  /* Em quantas partes dividir: de 1 até as pessoas da mesa (nunca mais). */
+  const splitCountOf = (tab) => {
+    const guests = Math.max(1, Number(tab.guestCount || 1));
+    const chosen = Number(state.payment.splitCount);
+    return Number.isInteger(chosen) && chosen >= 1 ? Math.min(chosen, guests) : guests;
+  };
+
   const paymentState = (tab) => {
     const total = cents(tab.totalAmount);
     const paid = state.payment.draft.reduce((sum, entry) => sum + cents(entry.amount), 0);
     const missing = Math.max(0, total - paid);
-    const shares = ui.splitEqually(reais(total), Math.max(1, Number(tab.guestCount || 1))).map(cents);
+    const shares = ui.splitEqually(reais(total), splitCountOf(tab)).map(cents);
     return { total, paid, missing, shares };
   };
 
@@ -914,43 +923,92 @@
     return Math.min(typed > 0 ? typed : info.missing, info.missing);
   };
 
-  const renderBillStep = (tab) => {
+  /* Valores da conta antes do pagamento (desconto e serviço da tela). */
+  const billValues = (tab) => {
     const totals = tabTotals(tab);
-    const discount = cents(state.bill.discount);
+    const discount = Math.min(cents(state.bill.discount), totals.subtotal);
     const service = state.bill.serviceEnabled ? Math.round((totals.subtotal * totals.serviceRate) / 100) : 0;
-    const total = Math.max(0, totals.subtotal - Math.min(discount, totals.subtotal) + service);
+    const total = Math.max(0, totals.subtotal - discount + service);
+    return { totals, discount, service, total };
+  };
+
+  const renderBillStep = (tab) => {
+    const table = getTableOf(tab);
+    const { totals, discount, service, total } = billValues(tab);
+    const canDiscount = hasPermission("cash_register_discount");
+    const canService = hasPermission("cash_register_remove_service");
+    const units = totals.sent.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     return `
-      <div class="cx-split">
-        <section class="cx-split-main cx-card">
-          <h2>Conferir a conta</h2>
+      <div class="cx-split cx-bill">
+        <section class="cx-split-main cx-card cx-bill-card">
+          <div class="cx-bill-head">
+            <div>
+              <span class="cx-eyebrow">Conferir a conta</span>
+              <h2>Mesa ${escapeHtml(tableNumber(table))}</h2>
+            </div>
+            <button class="cx-btn" type="button" data-cx-action="print-bill">Imprimir conta</button>
+          </div>
+          <div class="cx-bill-facts">
+            <span><small>Pessoas</small><strong>${escapeHtml(tab.guestCount)}</strong></span>
+            <span><small>Aberta há</small><strong>${escapeHtml(elapsed(tab.openedAt))}</strong></span>
+            <span><small>Garçom</small><strong>${escapeHtml(tab.waiterName || "—")}</strong></span>
+            <span><small>Itens</small><strong>${escapeHtml(units)}</strong></span>
+          </div>
           ${
             totals.pending.length
               ? `<p class="cx-warn" role="note">Há ${escapeHtml(totals.pending.length)} item(ns) ainda não enviado(s) para a cozinha. Envie ou remova antes de fechar a conta.</p>`
               : ""
           }
-          <div class="cx-list">${totals.sent
-            .map(
-              (item) =>
-                `<div class="cx-list-row"><span>${escapeHtml(item.quantity)}× ${escapeHtml(item.productName)}</span><strong class="cx-num">${escapeHtml(
-                  money(item.totalPrice)
-                )}</strong></div>`
-            )
-            .join("")}</div>
+          <div class="cx-bill-table" role="table" aria-label="Itens da conta">
+            <div class="cx-bill-row is-head" role="row"><span role="columnheader">Qtd</span><span role="columnheader">Item</span><span role="columnheader">Unit.</span><span role="columnheader">Total</span></div>
+            ${totals.sent
+              .map(
+                (item) => `<div class="cx-bill-row" role="row">
+                  <span role="cell" class="cx-num cx-bill-qty">${escapeHtml(item.quantity)}×</span>
+                  <span role="cell"><strong>${escapeHtml(item.productName)}</strong>${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}</span>
+                  <span role="cell" class="cx-num">${escapeHtml(money(item.unitPrice))}</span>
+                  <span role="cell" class="cx-num"><strong>${escapeHtml(money(item.totalPrice))}</strong></span>
+                </div>`
+              )
+              .join("")}
+          </div>
         </section>
-        <aside class="cx-split-side cx-card">
-          <dl class="cx-totals">
-            <div><dt>Subtotal</dt><dd class="cx-num">${escapeHtml(money(reais(totals.subtotal)))}</dd></div>
-          </dl>
-          <label class="cx-check"><input type="checkbox" data-cx-toggle="bill.serviceEnabled" ${state.bill.serviceEnabled ? "checked" : ""} ${
-      hasPermission("cash_register_remove_service") ? "" : "disabled"
-    } /><span>Taxa de serviço ${escapeHtml(totals.serviceRate)}% · <strong class="cx-num">${escapeHtml(money(reais(service)))}</strong></span></label>
-          <label class="cx-field"><span>Desconto (R$)</span><input class="cx-input cx-num" data-cx-field="bill.discount" inputmode="decimal" placeholder="0,00" value="${escapeHtml(
-            state.bill.discount
-          )}" ${hasPermission("cash_register_discount") ? "" : "disabled title=\"Seu cargo não pode dar desconto\""} /></label>
-          <dl class="cx-totals"><div class="is-total"><dt>Total a cobrar</dt><dd class="cx-num">${escapeHtml(money(reais(total)))}</dd></div>
-          <div><dt>Por pessoa (${escapeHtml(tab.guestCount)})</dt><dd class="cx-num">${escapeHtml(
-      money(reais(Math.round(total / Math.max(1, tab.guestCount))))
-    )}</dd></div></dl>
+        <aside class="cx-split-side cx-card cx-bill-summary">
+          <h2>Resumo</h2>
+          <div class="cx-bill-line"><span>Subtotal</span><strong class="cx-num">${escapeHtml(money(reais(totals.subtotal)))}</strong></div>
+          <label class="cx-switch-row ${canService ? "" : "is-disabled"}">
+            <span><strong>Taxa de serviço ${escapeHtml(totals.serviceRate)}%</strong><small>${
+              state.bill.serviceEnabled ? "Incluída na conta" : "Removida desta conta"
+            }</small></span>
+            <span class="cx-row-wrap"><strong class="cx-num">${escapeHtml(money(reais(service)))}</strong>
+            <input type="checkbox" role="switch" class="cx-switch" data-cx-toggle="bill.serviceEnabled" aria-label="Cobrar taxa de serviço" ${
+              state.bill.serviceEnabled ? "checked" : ""
+            } ${canService ? "" : "disabled"} /></span>
+          </label>
+          <div class="cx-field">
+            <span>Desconto</span>
+            <div class="cx-money-input"><span aria-hidden="true">R$</span><input class="cx-input cx-num" data-cx-field="bill.discount" inputmode="decimal" placeholder="0,00" aria-label="Desconto em reais" value="${escapeHtml(
+              state.bill.discount
+            )}" ${canDiscount ? "" : 'disabled title="Seu cargo não pode dar desconto"'} /></div>
+            ${
+              canDiscount
+                ? `<div class="cx-chips">${[5, 10, 15]
+                    .map(
+                      (percent) =>
+                        `<button type="button" class="cx-chip" data-cx-set="bill.discount" data-cx-value="${escapeHtml(
+                          String(reais(Math.round((totals.subtotal * percent) / 100))).replace(".", ",")
+                        )}">${percent}%</button>`
+                    )
+                    .join("")}<button type="button" class="cx-chip" data-cx-set="bill.discount" data-cx-value="">Sem desconto</button></div>`
+                : ""
+            }
+          </div>
+          ${discount ? `<div class="cx-bill-line is-discount"><span>Desconto</span><strong class="cx-num">− ${escapeHtml(money(reais(discount)))}</strong></div>` : ""}
+          <div class="cx-bill-total">
+            <span>Total a cobrar</span>
+            <strong class="cx-num">${escapeHtml(money(reais(total)))}</strong>
+            <small>${escapeHtml(money(reais(Math.round(total / Math.max(1, tab.guestCount)))))} por pessoa (${escapeHtml(tab.guestCount)})</small>
+          </div>
           <button class="cx-btn cx-btn-primary cx-btn-lg cx-btn-block" type="button" data-cx-action="begin-closing" ${
             totals.pending.length || !totals.sent.length || state.busy ? "disabled" : ""
           }>Fechar conta e cobrar <span class="cx-kbd">F4</span></button>
@@ -987,16 +1045,56 @@
     return `${header}
       <div class="cx-split">
         <section class="cx-split-main">
-          <div class="cx-card cx-row-between"><span class="cx-muted">Total da mesa</span><strong class="cx-big">${escapeHtml(
-            money(reais(info.total))
-          )}</strong></div>
+          <div class="cx-card cx-pay-total">
+            <div>
+              <span class="cx-muted">Total da mesa</span>
+              <strong class="cx-big">${escapeHtml(money(reais(info.total)))}</strong>
+            </div>
+            <dl>
+              <div><dt>Itens</dt><dd class="cx-num">${escapeHtml(money(tab.subtotal))}</dd></div>
+              <div><dt>Serviço</dt><dd class="cx-num">${escapeHtml(money(tab.serviceChargeAmount || 0))}</dd></div>
+              ${Number(tab.discountAmount) ? `<div><dt>Desconto</dt><dd class="cx-num">− ${escapeHtml(money(tab.discountAmount))}</dd></div>` : ""}
+              <div><dt>Recebido</dt><dd class="cx-num">${escapeHtml(money(reais(info.paid)))}</dd></div>
+            </dl>
+            <div class="cx-pay-progress" role="progressbar" aria-label="Quanto já foi recebido" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${
+              info.total ? Math.round((info.paid / info.total) * 100) : 0
+            }"><span style="width:${info.total ? Math.min(100, Math.round((info.paid / info.total) * 100)) : 0}%"></span></div>
+          </div>
           <div class="cx-segmented" role="group" aria-label="Forma de divisão">
             <button type="button" data-cx-set="payment.mode" data-cx-value="equal" aria-pressed="${state.payment.mode === "equal"}">Dividir igual</button>
             <button type="button" data-cx-set="payment.mode" data-cx-value="free" aria-pressed="${state.payment.mode === "free"}">Valor livre</button>
           </div>
+          ${
+            state.payment.mode === "equal"
+              ? (() => {
+                  const guests = Math.max(1, Number(tab.guestCount || 1));
+                  const parts = splitCountOf(tab);
+                  const locked = state.payment.draft.length > 0;
+                  const quick = [...new Set([1, 2, 3, 4, 5, 6, guests])].filter((value) => value <= guests).sort((a, b) => a - b);
+                  return `<div class="cx-split-picker">
+                    <span><strong>Dividir entre</strong><small>${locked ? "Remova os pagamentos lançados para mudar a divisão." : `Até ${escapeHtml(peopleLabel(guests))} da mesa.`}</small></span>
+                    <div class="cx-row-wrap">
+                      <div class="cx-stepper cx-stepper-sm">
+                        <button type="button" data-cx-step-field="payment.splitCount" data-cx-delta="-1" aria-label="Menos uma parte" ${locked || parts <= 1 ? "disabled" : ""}>−</button>
+                        <output aria-live="polite" aria-label="Partes">${escapeHtml(parts)}</output>
+                        <button type="button" data-cx-step-field="payment.splitCount" data-cx-delta="1" aria-label="Mais uma parte" ${locked || parts >= guests ? "disabled" : ""}>+</button>
+                      </div>
+                      <div class="cx-chips">${quick
+                        .map(
+                          (value) =>
+                            `<button type="button" class="cx-chip" data-cx-set="payment.splitCount" data-cx-value="${value}" aria-pressed="${value === parts}" ${
+                              locked ? "disabled" : ""
+                            }>${value === guests ? `Todos (${value})` : value}</button>`
+                        )
+                        .join("")}</div>
+                    </div>
+                  </div>`;
+                })()
+              : ""
+          }
           <p class="cx-muted">${
             state.payment.mode === "equal"
-              ? `Total dividido igualmente entre ${escapeHtml(peopleLabel(tab.guestCount))}. O centavo que sobra vai para a última.`
+              ? `Total dividido igualmente em ${escapeHtml(splitCountOf(tab))} ${splitCountOf(tab) === 1 ? "parte" : "partes"}. O centavo que sobra vai para a última.`
               : "Digite qualquer valor; o sistema mostra quanto ainda falta."
           }</p>
           ${
@@ -1225,11 +1323,123 @@
             <p class="cx-hint">Documento sem valor fiscal · emitido pelo INOVAS Food</p>
           </div>
           <div class="cx-modal-actions cx-no-print">
-            <button class="cx-btn" type="button" data-cx-action="print">Imprimir comprovante</button>
+            <button class="cx-btn" type="button" data-cx-action="print-receipt">Imprimir comprovante</button>
             <button class="cx-btn cx-btn-primary" type="button" data-cx-action="close-modal" data-cx-confirm>Voltar ao Salão <span class="cx-kbd">Enter</span></button>
           </div>
         </div>
       </div>`;
+  };
+
+  /* ---------- impressão térmica 80 mm (preto e branco) ---------- */
+
+  const ticketMoney = (centsValue) => ui.formatMoney(reais(centsValue)).replace("R$ ", "");
+
+  const ticketDate = (value) => {
+    const date = new Date(value || Date.now());
+    if (Number.isNaN(date.getTime())) return "--";
+    const pad = (number) => String(number).padStart(2, "0");
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  /* Valores do cupom: conta aberta usa a tela; conta fechada usa o servidor. */
+  const ticketValues = (tab, { closed = false } = {}) => {
+    const items = (closed ? tab.items || [] : displayItems(tab)).filter((item) => item.status !== "CANCELLED");
+    const subtotal = items.reduce((sum, item) => sum + cents(item.totalPrice), 0);
+    if (closed || tab.status !== "OPEN") {
+      return {
+        items,
+        subtotal,
+        service: cents(tab.serviceChargeAmount),
+        discount: cents(tab.discountAmount),
+        total: cents(tab.totalAmount) || subtotal,
+        rate: Number(tab.serviceChargeRate || 0),
+      };
+    }
+    const bill = billValues(tab);
+    return {
+      items,
+      subtotal,
+      service: bill.service,
+      discount: bill.discount,
+      total: Math.max(0, subtotal - bill.discount + bill.service),
+      rate: bill.totals.serviceRate,
+    };
+  };
+
+  const buildTicketHtml = (tab, { title = "CONTA", closed = false } = {}) => {
+    const profile = state.context.printProfile || {};
+    const table = getTableOf(tab) || tab.table;
+    const values = ticketValues(tab, { closed });
+    const name = profile.restaurantName || state.context.restaurantName || "Restaurante";
+    const cityLine = [profile.cityLine, profile.phone].filter(Boolean).join(" - ");
+    return `
+      <div class="tk-head">
+        <div class="tk-name">${escapeHtml(name)}</div>
+        ${profile.addressLine ? `<div>${escapeHtml(profile.addressLine)}</div>` : ""}
+        ${cityLine ? `<div>${escapeHtml(cityLine)}</div>` : ""}
+      </div>
+      <div class="tk-rule"></div>
+      <div class="tk-table">Mesa : ${escapeHtml(table?.number ? two(table.number) : table?.label || "--")}</div>
+      <div class="tk-center">Abertura ${escapeHtml(ticketDate(tab.openedAt))}</div>
+      <div class="tk-center tk-small">${escapeHtml(title)}${tab.publicId ? ` · ${escapeHtml(tab.publicId)}` : ""} · ${escapeHtml(peopleLabel(tab.guestCount || 1))}</div>
+      <div class="tk-rule"></div>
+      <div class="tk-row tk-cols"><span>QTD</span><span>DESCRIÇÃO</span><span>UNIT</span><span>TOTAL</span></div>
+      <div class="tk-rule"></div>
+      ${values.items
+        .map(
+          (item) => `<div class="tk-row tk-item"><span>${escapeHtml(item.quantity)}</span><span>${escapeHtml(item.productName)}${
+            item.notes ? `<em>${escapeHtml(item.notes)}</em>` : ""
+          }</span><span>${escapeHtml(ticketMoney(cents(item.unitPrice)))}</span><span>${escapeHtml(ticketMoney(cents(item.totalPrice)))}</span></div>`
+        )
+        .join("")}
+      <div class="tk-rule"></div>
+      <div class="tk-line"><span>SUBTOTAL</span><span>${escapeHtml(ticketMoney(values.subtotal))}</span></div>
+      ${values.discount ? `<div class="tk-line"><span>DESCONTO</span><span>- ${escapeHtml(ticketMoney(values.discount))}</span></div>` : ""}
+      <div class="tk-line tk-total"><span>TOTAL</span><span>R$ ${escapeHtml(ticketMoney(values.total))}</span></div>
+      ${
+        values.service
+          ? `<div class="tk-line"><span>TAXA DE SERVIÇO (${escapeHtml(values.rate)}%)</span><span>R$ ${escapeHtml(ticketMoney(values.service))}</span></div>`
+          : ""
+      }
+      ${
+        closed && (tab.payments || []).length
+          ? `<div class="tk-rule"></div>${(tab.payments || [])
+              .map(
+                (payment) =>
+                  `<div class="tk-line"><span>${escapeHtml((PAYMENT_LABELS[payment.method] || payment.method).toUpperCase())}</span><span>${escapeHtml(
+                    ticketMoney(cents(payment.amount))
+                  )}</span></div>${
+                    Number(payment.changeAmount || 0) > 0
+                      ? `<div class="tk-line"><span>TROCO</span><span>${escapeHtml(ticketMoney(cents(payment.changeAmount)))}</span></div>`
+                      : ""
+                  }`
+              )
+              .join("")}`
+          : ""
+      }
+      <div class="tk-rule"></div>
+      <div class="tk-center">Obrigado pela preferência!</div>
+      <svg class="tk-icon" viewBox="0 0 48 64" aria-hidden="true"><path d="M8 4v18a6 6 0 006 6v32M14 4v18M20 4v18a6 6 0 01-6 6M38 4c-6 4-8 14-8 24h8v32" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="tk-center tk-small">Documento sem valor fiscal</div>`;
+  };
+
+  const printTicket = (tab, options = {}) => {
+    let sheet = document.getElementById("cx-print-ticket");
+    if (!sheet) {
+      sheet = document.createElement("div");
+      sheet.id = "cx-print-ticket";
+      sheet.setAttribute("aria-hidden", "true");
+      document.body.appendChild(sheet);
+    }
+    sheet.innerHTML = buildTicketHtml(tab, options);
+    document.body.classList.add("cx-printing");
+    const cleanup = () => {
+      document.body.classList.remove("cx-printing");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+    window.setTimeout(cleanup, 1500);
   };
 
   /* ---------- render ---------- */
@@ -1343,7 +1553,7 @@
   };
 
   const resetPayment = (tab) => {
-    state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 };
+    state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0, splitCount: null };
     state.bill = {
       discount: tab && Number(tab.discountAmount) ? String(tab.discountAmount).replace(".", ",") : "",
       serviceEnabled: tab ? tab.serviceChargeEnabled !== false : true,
@@ -1605,7 +1815,7 @@
         "begin-closing"
       );
       if (result) {
-        state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 };
+        state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0, splitCount: null };
         render();
       }
     } else if (action === "reopen-tab") {
@@ -1625,6 +1835,11 @@
       setView("floor");
     } else if (action === "print") {
       window.print();
+    } else if (action === "print-tab" || action === "print-bill") {
+      const tab = getTab();
+      if (tab) printTicket(tab, { title: action === "print-bill" ? "CONTA" : "COMANDA" });
+    } else if (action === "print-receipt") {
+      if (state.receiptTab) printTicket(state.receiptTab, { title: "COMPROVANTE", closed: true });
     } else if (action === "refresh") {
       await load({ force: true });
     }
@@ -1646,13 +1861,21 @@
     const stepButton = target.closest("[data-cx-step-field]");
     if (stepButton && !stepButton.disabled) {
       const field = stepButton.dataset.cxStepField;
+      const tabGuests = Math.max(1, Number(getTab()?.guestCount || 1));
       const limits =
         field === "opening.tableCount"
           ? { min: 1, max: MAX_TABLES }
           : field === "openTab.guests"
             ? { min: 0, max: MAX_GUESTS }
-            : { min: 1, max: MAX_GUESTS };
-      setPath(field, ui.clampInteger(Number(getPath(field)) + Number(stepButton.dataset.cxDelta), limits));
+            : field === "payment.splitCount"
+              ? { min: 1, max: tabGuests }
+              : { min: 1, max: MAX_GUESTS };
+      const current = field === "payment.splitCount" && getTab() ? splitCountOf(getTab()) : Number(getPath(field));
+      setPath(field, ui.clampInteger(current + Number(stepButton.dataset.cxDelta), limits));
+      if (field === "payment.splitCount") {
+        state.payment.shareIndex = 0;
+        state.payment.entry = "";
+      }
       render();
       return;
     }
@@ -1660,9 +1883,10 @@
     if (setButton && !setButton.disabled) {
       const path = setButton.dataset.cxSet;
       const raw = setButton.dataset.cxValue;
-      const numeric = ["opening.tableCount", "openTab.guests", "pdv.multiplier", "payment.shareIndex"].includes(path);
+      const numeric = ["opening.tableCount", "openTab.guests", "pdv.multiplier", "payment.shareIndex", "payment.splitCount"].includes(path);
       setPath(path, numeric ? Number(raw) : raw);
-      if (path === "payment.method" || path === "payment.mode" || path === "payment.shareIndex") state.payment.entry = "";
+      if (path === "payment.splitCount") state.payment.shareIndex = 0;
+      if (path === "payment.method" || path === "payment.mode" || path === "payment.shareIndex" || path === "payment.splitCount") state.payment.entry = "";
       if (path === "pdv.categoryId") state.pdv.query = "";
       render();
       return;

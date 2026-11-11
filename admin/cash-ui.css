@@ -1247,3 +1247,439 @@ textarea.cx-input {
 .cx-product-info strong {
   overflow-wrap: anywhere;
 }
+
+/* ---------- PDV: linha do pedido (nome em cima, controles embaixo) ---------- */
+.cash-v3 .cx-order-line {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main main"
+    "qty total";
+  row-gap: 8px;
+  align-items: center;
+}
+
+.cash-v3 .cx-order-line > .cx-order-main {
+  grid-area: main;
+}
+
+.cash-v3 .cx-order-line > .cx-stepper,
+.cash-v3 .cx-order-line > .cx-qty {
+  grid-area: qty;
+  justify-self: start;
+}
+
+.cash-v3 .cx-order-line > .cx-line-total {
+  grid-area: total;
+  min-width: 0;
+}
+
+/* Itens já enviados: uma linha só, quantidade à direita do nome. */
+.cash-v3 .cx-order-line:not(.is-pending) {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "main qty total";
+}
+
+.cash-v3 .cx-order-main strong {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Conferir a conta ---------- */
+.cx-bill-card {
+  gap: 16px;
+}
+
+.cx-bill-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cx-bill-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.cx-bill-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.cx-bill-facts > span {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--cx-radius);
+  background: #f4f5f7;
+}
+
+.cx-bill-facts small {
+  color: var(--cx-ink-2);
+  font-size: 13px;
+}
+
+.cx-bill-facts strong {
+  font-size: 17px;
+}
+
+.cx-bill-table {
+  display: grid;
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  overflow: hidden;
+}
+
+.cx-bill-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 96px 104px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid #eef0f2;
+}
+
+.cx-bill-row:nth-child(odd):not(.is-head) {
+  background: #fafbfc;
+}
+
+.cx-bill-row.is-head {
+  border-top: 0;
+  background: #f4f5f7;
+  color: var(--cx-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cx-bill-row > span:nth-child(n + 3) {
+  text-align: right;
+}
+
+.cx-bill-row small {
+  display: block;
+  color: var(--cx-ink-2);
+  font-size: 13px;
+}
+
+.cx-bill-qty {
+  font-weight: 700;
+}
+
+.cx-bill-summary {
+  gap: 12px;
+}
+
+.cx-bill-summary h2 {
+  margin: 0;
+}
+
+.cx-bill-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.cx-bill-line.is-discount {
+  color: #166534;
+}
+
+.cx-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  cursor: pointer;
+}
+
+.cx-switch-row > span:first-child {
+  display: grid;
+}
+
+.cx-switch-row small {
+  color: var(--cx-ink-2);
+}
+
+.cx-switch-row.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cx-switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border-radius: 999px;
+  background: #c4c9d0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cx-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(18, 21, 26, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.cx-switch:checked {
+  background: var(--cx-accent);
+}
+
+.cx-switch:checked::after {
+  transform: translateX(20px);
+}
+
+.cx-money-input {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #8a93a0;
+  border-radius: var(--cx-radius);
+  overflow: hidden;
+}
+
+.cx-money-input > span {
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  background: #f4f5f7;
+  color: var(--cx-ink-2);
+  font-weight: 700;
+}
+
+.cx-money-input .cx-input {
+  border: 0;
+  border-radius: 0;
+}
+
+.cx-bill-total {
+  display: grid;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--cx-ink);
+  color: #ffffff;
+}
+
+.cx-bill-total span {
+  color: #d1d5db;
+}
+
+.cx-bill-total strong {
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.1;
+}
+
+.cx-bill-total small {
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+/* ---------- Pagamento: total com detalhamento e progresso ---------- */
+.cx-pay-total {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cx-pay-total > div:first-child {
+  display: grid;
+}
+
+.cx-pay-total dl {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px 18px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.cx-pay-total dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cx-pay-total dt {
+  color: var(--cx-ink-2);
+}
+
+.cx-pay-total dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cx-pay-progress {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.cx-pay-progress > span {
+  display: block;
+  height: 100%;
+  background: #16a34a;
+}
+
+.cx-split-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  background: var(--cx-surface);
+}
+
+.cx-split-picker > span:first-child {
+  display: grid;
+}
+
+.cx-split-picker small {
+  color: var(--cx-ink-2);
+}
+
+/* ---------- Cupom térmico 80 mm (só aparece na impressão) ---------- */
+#cx-print-ticket {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body.cx-printing * {
+    visibility: hidden !important;
+  }
+
+  body.cx-printing #cx-print-ticket,
+  body.cx-printing #cx-print-ticket * {
+    visibility: visible !important;
+  }
+
+  body.cx-printing #cx-print-ticket {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    width: 80mm;
+    padding: 4mm 4mm 6mm;
+    background: #ffffff;
+    color: #000000;
+    font: 400 11.5px/1.45 "Courier New", Consolas, ui-monospace, monospace;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+#cx-print-ticket .tk-head,
+#cx-print-ticket .tk-center {
+  text-align: center;
+}
+
+#cx-print-ticket .tk-name {
+  margin-bottom: 2px;
+  font-size: 17px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+#cx-print-ticket .tk-rule {
+  margin: 6px 0;
+  border-top: 1px dashed #000;
+}
+
+#cx-print-ticket .tk-table {
+  margin: 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+#cx-print-ticket .tk-small {
+  font-size: 10px;
+}
+
+#cx-print-ticket .tk-row {
+  display: grid;
+  grid-template-columns: 7mm minmax(0, 1fr) 15mm 16mm;
+  gap: 1.5mm;
+}
+
+#cx-print-ticket .tk-row > span:nth-child(1) {
+  text-align: center;
+}
+
+#cx-print-ticket .tk-row > span:nth-child(n + 3) {
+  text-align: right;
+}
+
+#cx-print-ticket .tk-item {
+  padding: 1px 0;
+}
+
+#cx-print-ticket .tk-item > span:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+
+#cx-print-ticket .tk-item em {
+  display: block;
+  font-size: 10px;
+  font-style: normal;
+}
+
+#cx-print-ticket .tk-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+#cx-print-ticket .tk-total {
+  margin: 3px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+#cx-print-ticket .tk-icon {
+  display: block;
+  width: 12mm;
+  height: 16mm;
+  margin: 4px auto 2px;
+}
+
+.cash-v3 .cx-product {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+.cash-v3 .cx-product-thumb {
+  width: 56px;
+  height: 56px;
+}
+
+.cx-product-info strong {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
