@@ -5134,8 +5134,42 @@ const renderMenuItemCard = (item, section, options = {}) => {
       : `Você pode destacar até ${MENU_HOME_HIGHLIGHT_LIMIT} pratos para rotacionar na home.`;
   const imageValue = isNew ? "" : item.image || "";
   const imageTextValue = imageValue.startsWith("data:") ? "" : imageValue;
+  const openKey = isNew ? `new:${section.id}` : `item:${itemId}`;
+  const isOpen = adminState.menuOpenKeys instanceof Set && adminState.menuOpenKeys.has(openKey);
+  const thumbUrl = isNew ? "" : resolveAdminAssetUrl(item.image || "");
+  const searchText = isNew
+    ? ""
+    : [item.name, item.category, item.detail, item.description, section.title].filter(Boolean).join(" ").toLowerCase();
+  const stateTone = isNew ? "" : availabilityState === "active" ? "is-ok" : availabilityState === "paused" ? "is-warn" : "is-off";
+
+  // Linha compacta por prato: o formulário completo só abre ao clicar.
+  const summary = isNew
+    ? `
+      <summary class="admin-menu-row-summary is-new">
+        <span class="admin-menu-row-plus" aria-hidden="true">+</span>
+        <span class="admin-menu-row-name"><strong>Adicionar prato</strong><small>${escapeHtml(`em ${section.title}`)}</small></span>
+      </summary>`
+    : `
+      <summary class="admin-menu-row-summary">
+        <span class="admin-menu-row-thumb">${
+          thumbUrl
+            ? `<img src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" decoding="async" />`
+            : '<span aria-hidden="true">Sem foto</span>'
+        }</span>
+        <span class="admin-menu-row-name"><strong>${escapeHtml(itemName || "Prato sem nome")}</strong><small>${escapeHtml(
+          [itemCategory, itemDetail].filter(Boolean).join(" · ") || section.title
+        )}</small></span>
+        <span class="admin-menu-row-price">${escapeHtml(getMenuItemPriceLabel(item.price))}</span>
+        <span class="admin-menu-row-chips">
+          <span class="admin-menu-row-state ${stateTone}">${escapeHtml(getMenuItemStateCopy(item))}</span>
+          ${isHighlighted ? `<span class="admin-menu-row-state is-star">Destaque ${escapeHtml(String(highlightPosition + 1))}</span>` : ""}
+        </span>
+        <span class="admin-menu-row-edit" aria-hidden="true">Editar</span>
+      </summary>`;
 
   return `
+    <details class="admin-menu-line${isNew ? " is-new" : ""}" data-menu-open-key="${escapeHtml(openKey)}" data-menu-search-text="${escapeHtml(searchText)}" ${isOpen ? "open" : ""}>
+    ${summary}
     <form class="admin-menu-item-card${isNew ? " is-new" : ""}" data-menu-item-form="${escapeHtml(itemId || `new-${section.id}`)}">
       <input type="hidden" name="sectionId" value="${escapeHtml(section.id)}" />
       <input type="hidden" name="itemId" value="${escapeHtml(itemId)}" />
@@ -5165,7 +5199,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
               }
               ${
                 !isNew && typeof item.price !== "number"
-                  ? '<span class="admin-inline-chip is-warning">Sem preco</span>'
+                  ? '<span class="admin-inline-chip is-warning">Sem preço</span>'
                   : ""
               }
             </div>
@@ -5194,7 +5228,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
 
             <label class="admin-field">
               <span>Detalhe curto</span>
-              <input class="admin-input" type="text" name="detail" value="${escapeHtml(itemDetail)}" placeholder="Ex.: 20 pecas" ${isBusy ? "disabled" : ""} />
+              <input class="admin-input" type="text" name="detail" value="${escapeHtml(itemDetail)}" placeholder="Ex.: 20 peças" ${isBusy ? "disabled" : ""} />
             </label>
 
             <label class="admin-field">
@@ -5261,6 +5295,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
         </div>
       </div>
     </form>
+    </details>
   `;
 };
 
@@ -5268,19 +5303,23 @@ const renderMenuSectionCard = (section) => {
   const busyKey = getMenuBusyKey("section", section.id);
   const isBusy = adminState.menuBusyKey === busyKey;
   const categories = [...new Set((section.items || []).map((item) => item.category).filter(Boolean))];
+  const editKey = `section:${section.id}`;
+  const editOpen = adminState.menuOpenKeys instanceof Set && adminState.menuOpenKeys.has(editKey);
+  const count = section.items.length;
 
   return `
-    <article class="admin-module-card admin-menu-section-card">
+    <article class="admin-module-card admin-menu-section-card" data-menu-section-card>
+      <div class="admin-menu-section-head">
+        <div>
+          <h3>${escapeHtml(section.title)}</h3>
+          <p>${escapeHtml(section.description || "Categoria do site e do cardápio público.")}</p>
+        </div>
+        <span class="admin-menu-section-count">${escapeHtml(`${count} ${count === 1 ? "prato" : "pratos"}`)}</span>
+      </div>
+      <details class="admin-menu-section-edit" data-menu-open-key="${escapeHtml(editKey)}" ${editOpen ? "open" : ""}>
+      <summary>Editar categoria</summary>
       <form class="admin-menu-section-editor" data-menu-section-form="${escapeHtml(section.id)}">
         <input type="hidden" name="sectionId" value="${escapeHtml(section.id)}" />
-
-        <div class="admin-module-card-head">
-          <div>
-            <h3>${escapeHtml(section.title)}</h3>
-            <p>${escapeHtml(section.description || "Categoria operacional do site e do cardápio público.")}</p>
-          </div>
-          <span>${escapeHtml(`${section.items.length} item(ns)`)}</span>
-        </div>
 
         <div class="admin-menu-section-form-grid">
           <label class="admin-field">
@@ -5312,6 +5351,7 @@ const renderMenuSectionCard = (section) => {
           </div>
         </div>
       </form>
+      </details>
 
       <div class="admin-menu-item-list">
         ${(section.items || []).map((item) => renderMenuItemCard(item, section)).join("")}
@@ -5390,6 +5430,11 @@ const renderMenuModule = () => {
 
     <section class="admin-module-card admin-menu-toolbar-card">
       <div class="admin-menu-toolbar">
+        <label class="admin-field admin-menu-quick-search">
+          <span>Buscar prato</span>
+          <input class="admin-input" type="search" data-menu-quick-search value="${escapeHtml(adminState.menuQuickSearch || "")}" placeholder="Nome, categoria ou descrição" autocomplete="off" />
+        </label>
+
         <label class="admin-field">
           <span>Categoria</span>
           <select class="admin-input" data-menu-filter="sectionId">
@@ -5419,19 +5464,15 @@ const renderMenuModule = () => {
 
       <div class="admin-menu-toolbar-copy">
         <strong>${escapeHtml(featuredSelectionCopy)}</strong>
-        <p>Itens pausados somem do site do cliente, mas continuam aqui para reativacao posterior. O card principal sempre mostra apenas Consulte e pode alternar entre até 3 destaques.</p>
+        <p>Itens pausados somem do site do cliente, mas continuam aqui para reativação posterior. Clique em um prato para editar.</p>
       </div>
     </section>
 
-    <section class="admin-module-card admin-menu-create-section">
+    <details class="admin-module-card admin-menu-create-section" data-menu-open-key="new-section" ${
+      adminState.menuOpenKeys instanceof Set && adminState.menuOpenKeys.has("new-section") ? "open" : ""
+    }>
+      <summary class="admin-menu-create-summary"><span aria-hidden="true">+</span>Nova categoria<small>Crie um novo setor do cardápio sem editar o código do site.</small></summary>
       <form class="admin-menu-section-editor is-new" data-menu-section-form="new">
-        <div class="admin-module-card-head">
-          <div>
-            <h3>Nova categoria</h3>
-            <p>Crie um novo setor do cardápio sem editar o código do site.</p>
-          </div>
-          <span>Nova</span>
-        </div>
 
         <div class="admin-menu-section-form-grid">
           <label class="admin-field">
@@ -5456,7 +5497,7 @@ const renderMenuModule = () => {
           </button>
         </div>
       </form>
-    </section>
+    </details>
 
     <section class="admin-menu-grid">
       ${
@@ -5470,8 +5511,63 @@ const renderMenuModule = () => {
           `
       }
     </section>
+    <p class="admin-menu-search-empty" data-menu-search-empty hidden>Nenhum prato encontrado para essa busca.</p>
   `;
+  applyMenuQuickSearch();
+  if (adminState.menuScrollToKey && !adminState.menuBusyKey) {
+    // A tela pode ser redesenhada de novo logo em seguida; por isso o prato é
+    // procurado no momento de rolar, e não guardado agora.
+    const selector = `[data-menu-open-key="${CSS.escape(adminState.menuScrollToKey)}"]`;
+    adminState.menuScrollToKey = "";
+    requestAnimationFrame(() => {
+      document.querySelector(selector)?.scrollIntoView({ block: "start" });
+    });
+  }
 };
+
+// Busca rápida do Cardápio: filtra as linhas já desenhadas, sem redesenhar a
+// tela (assim o campo não perde o foco enquanto a pessoa digita).
+const applyMenuQuickSearch = () => {
+  const query = String(adminState.menuQuickSearch || "").trim().toLowerCase();
+  const root = document.querySelector("[data-admin-module-content]");
+  if (!root) return;
+  let anyVisible = false;
+  root.querySelectorAll("[data-menu-section-card]").forEach((card) => {
+    let visibleInCard = 0;
+    card.querySelectorAll(".admin-menu-line:not(.is-new)").forEach((row) => {
+      const match = !query || String(row.dataset.menuSearchText || "").includes(query);
+      row.hidden = !match;
+      if (match) visibleInCard += 1;
+    });
+    const newRow = card.querySelector(".admin-menu-line.is-new");
+    if (newRow) newRow.hidden = Boolean(query);
+    card.hidden = Boolean(query) && visibleInCard === 0;
+    if (!card.hidden) anyVisible = true;
+  });
+  const empty = root.querySelector("[data-menu-search-empty]");
+  if (empty) empty.hidden = !query || anyVisible;
+};
+
+document.addEventListener("input", (event) => {
+  const field = event.target.closest?.("[data-menu-quick-search]");
+  if (!field) return;
+  adminState.menuQuickSearch = field.value;
+  applyMenuQuickSearch();
+});
+
+// Lembra quais pratos/categorias estavam abertos para manter depois de salvar.
+document.addEventListener(
+  "toggle",
+  (event) => {
+    const details = event.target;
+    if (!(details instanceof HTMLElement) || !details.matches("details[data-menu-open-key]")) return;
+    if (!(adminState.menuOpenKeys instanceof Set)) adminState.menuOpenKeys = new Set();
+    const key = details.dataset.menuOpenKey;
+    if (details.open) adminState.menuOpenKeys.add(key);
+    else adminState.menuOpenKeys.delete(key);
+  },
+  true
+);
 
 const syncPromotionFormVisibility = (form) => {
   if (!form) {
@@ -15323,6 +15419,9 @@ const initDashboardPage = () => {
         return;
       }
 
+      // Depois de salvar, a lista é redesenhada e o prato pode mudar de lugar:
+      // a tela volta até ele.
+      adminState.menuScrollToKey = itemId ? `item:${itemId}` : "";
       void runCatalogMutation({
         action: "save-item",
         payload: {
