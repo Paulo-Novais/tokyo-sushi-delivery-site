@@ -1741,17 +1741,28 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
   background: rgba(5, 8, 13, 0.7);
 }
 
-/* ---------- Cupom térmico 80 mm (só aparece na impressão) ---------- */
+/* ---------- Cupom térmico 58 mm ou 80 mm (só aparece na impressão) ----------
+   O tamanho da página (@page) é definido na hora de imprimir, conforme a
+   impressora configurada neste computador. Largura útil: 48 mm no papel de
+   58 mm e 72 mm no de 80 mm. */
 #cx-print-ticket {
   display: none;
+  --tk-width: 72mm;
+  --tk-font: 11.5px;
+  --tk-name: 17px;
+  --tk-big: 20px;
+  --tk-total: 18px;
+}
+
+#cx-print-ticket[data-paper="58"] {
+  --tk-width: 48mm;
+  --tk-font: 10px;
+  --tk-name: 14px;
+  --tk-big: 17px;
+  --tk-total: 15px;
 }
 
 @media print {
-  @page {
-    size: 80mm auto;
-    margin: 0;
-  }
-
   body.cx-printing * {
     visibility: hidden !important;
   }
@@ -1765,13 +1776,15 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
     display: block;
     position: absolute;
     top: 0;
+    right: 0;
     left: 0;
     box-sizing: border-box;
-    width: 80mm;
-    padding: 4mm 4mm 6mm;
+    width: var(--tk-width);
+    margin: 0 auto;
+    padding: 3mm 0 6mm;
     background: #ffffff;
     color: #000000;
-    font: 400 11.5px/1.45 "Courier New", Consolas, ui-monospace, monospace;
+    font: 400 var(--tk-font) / 1.45 "Courier New", Consolas, ui-monospace, monospace;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -1784,7 +1797,7 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
 
 #cx-print-ticket .tk-name {
   margin-bottom: 2px;
-  font-size: 17px;
+  font-size: var(--tk-name);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1796,7 +1809,7 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
 
 #cx-print-ticket .tk-table {
   margin: 4px 0;
-  font-size: 20px;
+  font-size: var(--tk-big);
   font-weight: 700;
   text-align: center;
 }
@@ -1841,7 +1854,7 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
 
 #cx-print-ticket .tk-total {
   margin: 3px 0;
-  font-size: 18px;
+  font-size: var(--tk-total);
   font-weight: 700;
 }
 
@@ -1868,4 +1881,78 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
 
 .cash-v3 h1 {
   font-size: clamp(20px, 1.7vw, 24px);
+}
+
+/* Papel de 58 mm: cada item em duas linhas (nome inteiro em cima, quantidade,
+   unitário e total embaixo), para caber nos 48 mm úteis sem cortar o nome. */
+#cx-print-ticket[data-paper="58"] .tk-row {
+  grid-template-columns: 6mm minmax(0, 1fr) auto;
+  grid-template-areas:
+    "qty desc desc"
+    ". unit total";
+  column-gap: 2mm;
+  row-gap: 0;
+}
+
+#cx-print-ticket[data-paper="58"] .tk-row > span:nth-child(1) {
+  grid-area: qty;
+}
+
+#cx-print-ticket[data-paper="58"] .tk-row > span:nth-child(2) {
+  grid-area: desc;
+}
+
+#cx-print-ticket[data-paper="58"] .tk-row > span:nth-child(3) {
+  grid-area: unit;
+}
+
+#cx-print-ticket[data-paper="58"] .tk-row > span:nth-child(4) {
+  grid-area: total;
+  min-width: 14mm;
+  font-weight: 700;
+}
+
+#cx-print-ticket[data-paper="58"] .tk-icon {
+  width: 9mm;
+  height: 12mm;
+}
+
+#cx-print-ticket .tk-ruler {
+  overflow: hidden;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* Modal da impressora */
+.cx-printer-dialog {
+  max-width: 520px;
+}
+
+.cx-printer-detect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.cx-printer-found {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--cx-ok-bg);
+  color: var(--cx-ok-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cx-printer-message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cx-fill-2);
+  color: var(--cx-ink, #111827);
+  font-size: 13.5px;
+}
+
+.cx-printer-tip {
+  font-size: 13px;
 }

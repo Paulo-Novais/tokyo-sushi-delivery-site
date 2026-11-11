@@ -64,6 +64,9 @@
     bill: { discount: "", serviceEnabled: true },
     payment: { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0, splitCount: null },
     closing: { counted: "", notes: "" },
+    // Impressora deste computador (salva no navegador) e rascunho do modal.
+    printerDraft: { paper: "58", label: "", detected: "", message: "", detecting: false },
+    pendingPrint: null,
     receiptTab: null,
     optimistic: [],
     qtyDelta: {},
@@ -456,6 +459,9 @@
               ? '<button class="cx-btn" type="button" data-cx-action="open-movement">Sangria / Suprimento</button>'
               : ""
           }
+          <button class="cx-btn" type="button" data-cx-action="open-printer" title="Configurar a impressora deste computador">${escapeHtml(
+            loadPrinter() ? `Impressora · ${PAPER_SIZES[loadPrinter().paper].label}` : "Configurar impressora"
+          )}</button>
           ${
             hasPermission("cash_register_close")
               ? '<button class="cx-btn cx-btn-dark" type="button" data-cx-view="closing">Fechar caixa</button>'
@@ -1398,7 +1404,7 @@
       <div class="tk-line tk-total"><span>TOTAL</span><span>R$ ${escapeHtml(ticketMoney(values.total))}</span></div>
       ${
         values.service
-          ? `<div class="tk-line"><span>TAXA DE SERVIÇO (${escapeHtml(values.rate)}%)</span><span>R$ ${escapeHtml(ticketMoney(values.service))}</span></div>`
+          ? `<div class="tk-line"><span>${loadPrinter()?.paper === "80" ? "TAXA DE SERVIÇO" : "SERVIÇO"} (${escapeHtml(values.rate)}%)</span><span>R$ ${escapeHtml(ticketMoney(values.service))}</span></div>`
           : ""
       }
       ${
@@ -1423,7 +1429,186 @@
       <div class="tk-center tk-small">Documento sem valor fiscal</div>`;
   };
 
-  const printTicket = (tab, options = {}) => {
+  /* ---------- impressora deste computador ----------
+     O navegador não deixa um site listar as impressoras do Windows. Por isso:
+     (1) a largura do papel fica salva neste computador (a térmica é ligada a
+     ele); (2) quando o navegador permite, "Reconhecer impressora" lê o nome da
+     impressora USB e sugere o papel; (3) a impressão sai já formatada e a janela
+     do Windows abre com o tamanho do papel certo. */
+  const PRINTER_KEY = "inovas_cx_printer_v1";
+  const PAPER_SIZES = Object.freeze({
+    58: { page: 58, width: 48, label: "58 mm" },
+    80: { page: 80, width: 72, label: "80 mm" },
+  });
+
+  let printerInMemory = null;
+
+  const loadPrinter = () => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(PRINTER_KEY) || "null");
+      if (saved && PAPER_SIZES[saved.paper]) return saved;
+    } catch {}
+    return printerInMemory;
+  };
+
+  const savePrinter = (config) => {
+    printerInMemory = config;
+    try {
+      window.localStorage.setItem(PRINTER_KEY, JSON.stringify(config));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const guessPaper = (name = "") => {
+    const text = String(name).toLowerCase();
+    if (/\b58\b|58mm|mini|pt-?210|mtp|goojprt|i9 ?58|zj-?58|pos-?58/.test(text)) return "58";
+    if (/\b80\b|80mm|tm-?t20|tm-?t88|mp-?4200|i7|i9|pos-?80|zj-?80|bematech/.test(text)) return "80";
+    return "";
+  };
+
+  // O site precisa estar autorizado a usar USB (cabeçalho Permissions-Policy).
+  const usbAllowed = () => {
+    if (!navigator.usb) return false;
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    try {
+      return policy?.allowsFeature ? policy.allowsFeature("usb") : true;
+    } catch {
+      return false;
+    }
+  };
+
+  const usbName = (device) =>
+    [device?.manufacturerName, device?.productName].filter(Boolean).join(" ").trim() || "Impressora USB";
+
+  const applyDetected = (device) => {
+    const name = usbName(device);
+    const paper = guessPaper(name);
+    state.printerDraft.detected = name;
+    if (paper) state.printerDraft.paper = paper;
+    if (!state.printerDraft.label) state.printerDraft.label = name;
+    state.printerDraft.message = paper
+      ? `Reconhecida: ${name}. Papel sugerido: ${PAPER_SIZES[paper].label}.`
+      : `Reconhecida: ${name}. Confira a largura do papel abaixo.`;
+  };
+
+  // Ao abrir o modal: se a impressora já foi autorizada antes, reconhece sem perguntar.
+  const recognizeKnownPrinter = async () => {
+    if (!usbAllowed() || !navigator.usb?.getDevices) return;
+    try {
+      const devices = await navigator.usb.getDevices();
+      if (devices.length && !state.printerDraft.detected) {
+        applyDetected(devices[0]);
+        render();
+      }
+    } catch {}
+  };
+
+  const detectPrinter = async () => {
+    if (!usbAllowed() || !navigator.usb?.requestDevice) {
+      state.printerDraft.message =
+        "Este navegador não permite reconhecer a impressora pelo USB. Escolha o papel abaixo; a impressora é escolhida na janela de impressão.";
+      render();
+      return;
+    }
+    state.printerDraft.detecting = true;
+    state.printerDraft.message = "Escolha a impressora na janela que abriu.";
+    render();
+    try {
+      let device;
+      try {
+        device = await navigator.usb.requestDevice({ filters: [{ classCode: 7 }] });
+      } catch (error) {
+        if (error?.name !== "NotFoundError") throw error;
+        device = await navigator.usb.requestDevice({ filters: [] });
+      }
+      applyDetected(device);
+    } catch (error) {
+      state.printerDraft.message =
+        error?.name === "NotFoundError"
+          ? "Nenhuma impressora USB escolhida. Se ela for de rede ou Bluetooth, só escolha o papel abaixo."
+          : error?.name === "SecurityError"
+            ? "O navegador bloqueou o acesso ao USB. Escolha o papel abaixo."
+            : "Não foi possível reconhecer a impressora. Escolha o papel abaixo.";
+    } finally {
+      state.printerDraft.detecting = false;
+      render();
+    }
+  };
+
+  const openPrinterModal = (pending = null) => {
+    const current = loadPrinter();
+    state.pendingPrint = pending;
+    state.printerDraft = {
+      paper: current?.paper || "58",
+      label: current?.label || "",
+      detected: current?.detected || "",
+      message: current ? "" : "Primeira impressão neste computador: configure a impressora uma vez.",
+      detecting: false,
+    };
+    state.modal = "printer";
+    render();
+    void recognizeKnownPrinter();
+  };
+
+  const renderPrinterModal = () => {
+    const draft = state.printerDraft;
+    const canDetect = usbAllowed() && Boolean(navigator.usb?.requestDevice);
+    return `
+      <div class="cx-overlay" data-cx-overlay>
+        <form class="cx-dialog cx-printer-dialog" role="dialog" aria-modal="true" aria-labelledby="cx-printer-title" data-cx-form="printer" novalidate>
+          <div class="cx-modal-head"><h2 id="cx-printer-title">Impressora da comanda</h2><button class="cx-btn cx-btn-ghost" type="button" data-cx-action="close-modal">Esc</button></div>
+          <div class="cx-modal-body">
+            <p class="cx-muted">Configuração deste computador. A comanda, a conta e o comprovante saem no tamanho do papel escolhido.</p>
+            <div class="cx-printer-detect">
+              <button class="cx-btn" type="button" data-cx-action="printer-detect" ${!canDetect || draft.detecting ? "disabled" : ""}>${
+                draft.detecting ? "Reconhecendo…" : "Reconhecer impressora USB"
+              }</button>
+              ${draft.detected ? `<span class="cx-printer-found">${escapeHtml(draft.detected)}</span>` : ""}
+            </div>
+            ${draft.message ? `<p class="cx-printer-message" role="status">${escapeHtml(draft.message)}</p>` : ""}
+            <div class="cx-field"><span>Largura do papel</span>
+              <div class="cx-segmented" role="group" aria-label="Largura do papel">
+                <button type="button" data-cx-set="printerDraft.paper" data-cx-value="58" aria-pressed="${draft.paper === "58"}">58 mm · mais comum</button>
+                <button type="button" data-cx-set="printerDraft.paper" data-cx-value="80" aria-pressed="${draft.paper === "80"}">80 mm</button>
+              </div>
+            </div>
+            <label class="cx-field"><span>Nome para lembrar (opcional)</span><input class="cx-input" data-cx-field="printerDraft.label" maxlength="60" placeholder="Ex.: Térmica do caixa" value="${escapeHtml(
+              draft.label
+            )}" /></label>
+            <p class="cx-muted cx-printer-tip">Dica: deixe a térmica como impressora padrão do Windows. Assim a janela de impressão já abre nela e no tamanho de ${escapeHtml(
+              PAPER_SIZES[draft.paper].label
+            )}.</p>
+          </div>
+          <div class="cx-modal-actions">
+            <button class="cx-btn" type="button" data-cx-action="printer-test">Imprimir teste</button>
+            <button class="cx-btn cx-btn-primary" type="submit" data-cx-confirm>${state.pendingPrint ? "Salvar e imprimir" : "Salvar"}</button>
+          </div>
+        </form>
+      </div>`;
+  };
+
+  const buildTestTicketHtml = (paper) => {
+    const size = PAPER_SIZES[paper];
+    const chars = paper === "58" ? 32 : 48;
+    const ruler = "1234567890".repeat(5).slice(0, chars);
+    const name = state.context.printProfile?.restaurantName || state.context.restaurantName || "Restaurante";
+    return `
+      <div class="tk-head"><div class="tk-name">${escapeHtml(name)}</div></div>
+      <div class="tk-rule"></div>
+      <div class="tk-table">TESTE</div>
+      <div class="tk-center">Papel de ${escapeHtml(size.label)}</div>
+      <div class="tk-rule"></div>
+      <div class="tk-center tk-ruler">${escapeHtml(ruler)}</div>
+      <div class="tk-line"><span>ESQUERDA</span><span>DIREITA</span></div>
+      <div class="tk-line tk-total"><span>TOTAL</span><span>R$ 0,00</span></div>
+      <div class="tk-rule"></div>
+      <div class="tk-center tk-small">Se a régua e as palavras ESQUERDA e DIREITA saíram inteiras, o papel está certo.</div>`;
+  };
+
+  const printHtml = (html, paper) => {
+    const size = PAPER_SIZES[paper] || PAPER_SIZES[58];
     let sheet = document.getElementById("cx-print-ticket");
     if (!sheet) {
       sheet = document.createElement("div");
@@ -1431,7 +1616,16 @@
       sheet.setAttribute("aria-hidden", "true");
       document.body.appendChild(sheet);
     }
-    sheet.innerHTML = buildTicketHtml(tab, options);
+    sheet.dataset.paper = String(size.page);
+    sheet.innerHTML = html;
+    // O tamanho da página vai junto, para a janela do Windows abrir no papel certo.
+    let pageStyle = document.getElementById("cx-print-page");
+    if (!pageStyle) {
+      pageStyle = document.createElement("style");
+      pageStyle.id = "cx-print-page";
+      document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = `@media print { @page { size: ${size.page}mm auto; margin: 0; } }`;
     document.body.classList.add("cx-printing");
     const cleanup = () => {
       document.body.classList.remove("cx-printing");
@@ -1440,6 +1634,16 @@
     window.addEventListener("afterprint", cleanup);
     window.print();
     window.setTimeout(cleanup, 1500);
+  };
+
+  const printTicket = (tab, options = {}) => {
+    const printer = loadPrinter();
+    if (!printer) {
+      // Reconhece/configura a impressora antes da primeira impressão neste computador.
+      openPrinterModal({ tab, options });
+      return;
+    }
+    printHtml(buildTicketHtml(tab, options), printer.paper);
   };
 
   /* ---------- render ---------- */
@@ -1501,7 +1705,9 @@
             ? renderMovementModal()
             : state.modal === "receipt"
               ? renderReceiptModal()
-              : "";
+              : state.modal === "printer"
+                ? renderPrinterModal()
+                : "";
     const showTopFeedback =
       state.view === "opening" || (!snapshot.register && state.view === "floor");
     state.root.innerHTML = `<div class="cx-root cash-v3" data-cx-screen="${escapeHtml(
@@ -1763,6 +1969,12 @@
       state.movement = { type: "WITHDRAWAL", amount: "", reason: "" };
       state.modal = "movement";
       render();
+    } else if (action === "open-printer") {
+      openPrinterModal(null);
+    } else if (action === "printer-detect") {
+      await detectPrinter();
+    } else if (action === "printer-test") {
+      printHtml(buildTestTicketHtml(state.printerDraft.paper), state.printerDraft.paper);
     } else if (action === "add-table") {
       await postAction("add-table", {}, "add-table");
     } else if (action === "back-salao") {
@@ -2018,6 +2230,26 @@
       if (result) {
         state.modal = "";
         render();
+      }
+    } else if (type === "printer") {
+      const draft = state.printerDraft;
+      const saved = savePrinter({
+        paper: draft.paper,
+        label: draft.label.trim(),
+        detected: draft.detected,
+        savedAt: new Date().toISOString(),
+      });
+      const pending = state.pendingPrint;
+      state.pendingPrint = null;
+      state.modal = "";
+      if (saved) {
+        setMessage(`Impressora configurada: papel de ${PAPER_SIZES[draft.paper].label}.`, "success");
+      } else {
+        setMessage("Não foi possível salvar neste navegador; a configuração vale só até fechar a página.", "error");
+      }
+      render();
+      if (pending) {
+        printHtml(buildTicketHtml(pending.tab, pending.options), draft.paper);
       }
     } else if (type === "movement") {
       const result = await postAction(

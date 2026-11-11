@@ -151,23 +151,59 @@ test.describe("Caixa e Salao", () => {
       await page.setViewportSize({ width: 1366, height: 768 });
 
       // Tela 5 · Pagamento: conferir conta, dividir igual e pagamento misto
-      // Impressão térmica: o cupom é montado no modelo de 80 mm (sem abrir o diálogo).
+      // Impressão térmica: na primeira vez neste computador, o Caixa pede para
+      // configurar a impressora (58 mm é o padrão) e só então imprime.
       await page.evaluate(() => {
+        window.localStorage.removeItem("inovas_cx_printer_v1");
         window.print = () => {
-          window.__printedTicket = document.getElementById("cx-print-ticket")?.innerText || "";
+          const sheet = document.getElementById("cx-print-ticket");
+          window.__printedTicket = sheet?.innerText || "";
+          window.__printedPaper = sheet?.dataset.paper || "";
+          window.__printedPage = document.getElementById("cx-print-page")?.textContent || "";
         };
       });
       await root.getByRole("button", { name: "Imprimir comanda" }).click();
+      const printerDialog = page.getByRole("dialog", { name: "Impressora da comanda" });
+      await expect(printerDialog).toBeVisible();
+      await expect(printerDialog.getByRole("button", { name: /58 mm/ })).toHaveAttribute("aria-pressed", "true");
+      await shot("impressora-configurar");
+      // Folha de teste antes de salvar.
+      await printerDialog.getByRole("button", { name: "Imprimir teste" }).click();
+      expect(await page.evaluate(() => window.__printedTicket)).toMatch(/Papel de 58 mm/);
+      await printerDialog.getByRole("button", { name: "Salvar e imprimir" }).click();
+      await expect(printerDialog).toHaveCount(0);
       const ticket = await page.evaluate(() => window.__printedTicket);
+      expect(await page.evaluate(() => window.__printedPaper)).toBe("58");
+      expect(await page.evaluate(() => window.__printedPage)).toContain("size: 58mm auto");
       expect(ticket).toMatch(/Mesa : 05/);
       expect(ticket).toMatch(/QTD\s*DESCRIÇÃO\s*UNIT\s*TOTAL/);
       expect(ticket).toMatch(/SUBTOTAL/);
       expect(ticket).toMatch(/Obrigado pela preferência!/);
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem("inovas_cx_printer_v1")).paper)).toBe("58");
       await page.evaluate(() => document.body.classList.add("cx-printing"));
       await page.emulateMedia({ media: "print" });
-      await page.locator("#cx-print-ticket").screenshot({ path: path.join(shots, "cupom-80mm.png") });
+      await page.locator("#cx-print-ticket").screenshot({ path: path.join(shots, "cupom-58mm.png") });
+      const ticketWidth = await page.locator("#cx-print-ticket").evaluate((node) => node.getBoundingClientRect().width);
+      // 48 mm úteis ≈ 181 px a 96 dpi.
+      expect(Math.round(ticketWidth)).toBeGreaterThanOrEqual(178);
+      expect(Math.round(ticketWidth)).toBeLessThanOrEqual(184);
       await page.emulateMedia({ media: "screen" });
       await page.evaluate(() => document.body.classList.remove("cx-printing"));
+
+      // Segunda impressão: já configurada, imprime direto. Depois troca para 80 mm.
+      await page.evaluate(() => { window.__printedTicket = ""; });
+      await root.getByRole("button", { name: "Imprimir comanda" }).click();
+      await expect(page.getByRole("dialog", { name: "Impressora da comanda" })).toHaveCount(0);
+      expect(await page.evaluate(() => window.__printedTicket)).toMatch(/Mesa : 05/);
+      await page.evaluate(() => {
+        window.localStorage.setItem("inovas_cx_printer_v1", JSON.stringify({ paper: "80", label: "Teste 80" }));
+      });
+      await root.getByRole("button", { name: "Imprimir comanda" }).click();
+      expect(await page.evaluate(() => window.__printedPaper)).toBe("80");
+      expect(await page.evaluate(() => window.__printedPage)).toContain("size: 80mm auto");
+      await page.evaluate(() => {
+        window.localStorage.setItem("inovas_cx_printer_v1", JSON.stringify({ paper: "58", label: "Teste 58" }));
+      });
 
       await page.keyboard.press("F4");
       await expect(root.locator(".cx-bill-head h2")).toHaveText("Mesa 05");
