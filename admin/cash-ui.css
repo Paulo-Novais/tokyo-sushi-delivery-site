@@ -1,0 +1,468 @@
+/* Novo Caixa INOVAS Food — componentes base (Fase 2).
+   Especificação: docs/novo-caixa/ESPEC-CAIXA.md, seção 5.
+   Escopo: tudo sob .cx-root, para não afetar o Caixa atual nem o Gestor.
+   Alvo mínimo 1024×768; nada de largura fixa; alvos de toque >= 44 px. */
+
+.cx-root {
+  --cx-ink: #12151a;
+  --cx-ink-2: #5a6270;
+  --cx-border: #dde1e6;
+  --cx-bg: #f4f5f7;
+  --cx-surface: #ffffff;
+  --cx-accent: #c2410c;
+  --cx-accent-hover: #9a3412;
+  --cx-accent-soft: #fff1e6;
+  --cx-focus: 0 0 0 3px rgba(194, 65, 12, 0.35);
+  --cx-radius: 10px;
+  --cx-pad: clamp(12px, 2vw, 24px);
+
+  /* Estados: tom e claridade diferentes, sempre acompanhados de texto. */
+  --cx-free-bg: #ffffff;
+  --cx-free-ink: #3f4652;
+  --cx-busy-bg: #fde7d9;
+  --cx-busy-ink: #7c2d12;
+  --cx-bill-bg: #1e3a8a;
+  --cx-bill-ink: #ffffff;
+  --cx-reserved-bg: #e5e7eb;
+  --cx-reserved-ink: #1f2937;
+  --cx-ok-bg: #dcfce7;
+  --cx-ok-ink: #14532d;
+  --cx-warn-bg: #fef3c7;
+  --cx-warn-ink: #78350f;
+  --cx-crit-bg: #fee2e2;
+  --cx-crit-ink: #7f1d1d;
+
+  box-sizing: border-box;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--cx-pad);
+  color: var(--cx-ink);
+  background: var(--cx-bg);
+  font: 400 16px/1.45 Inter, system-ui, "Segoe UI", Arial, sans-serif;
+}
+
+.cx-root *,
+.cx-root *::before,
+.cx-root *::after {
+  box-sizing: border-box;
+}
+
+.cx-root [hidden] {
+  display: none !important;
+}
+
+.cx-root :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus);
+}
+
+.cx-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-big {
+  font-size: clamp(26px, 2.6vw, 36px);
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-muted {
+  color: var(--cx-ink-2);
+}
+
+.cx-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Barra de topo (quebra linha em tela estreita) ---------- */
+
+.cx-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.cx-topbar-title {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.cx-topbar-title h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.cx-topbar-title p {
+  margin: 2px 0 0;
+  color: var(--cx-ink-2);
+  font-size: 15px;
+}
+
+.cx-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Botões ---------- */
+
+.cx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  background: var(--cx-surface);
+  color: var(--cx-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cx-btn:hover {
+  background: #f9fafb;
+}
+
+.cx-btn-primary {
+  min-height: 52px;
+  border-color: var(--cx-accent);
+  background: var(--cx-accent);
+  color: #ffffff;
+  font-size: 17px;
+}
+
+.cx-btn-primary:hover {
+  background: var(--cx-accent-hover);
+}
+
+.cx-btn-lg {
+  min-height: 56px;
+  font-size: 18px;
+}
+
+.cx-btn-block {
+  width: 100%;
+}
+
+.cx-btn[disabled],
+.cx-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cx-kbd {
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* ---------- Stepper − / + ---------- */
+
+.cx-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  background: var(--cx-surface);
+}
+
+.cx-stepper button {
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--cx-ink);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cx-stepper button[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cx-stepper output,
+.cx-stepper input {
+  display: grid;
+  min-width: 64px;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--cx-border);
+  border-right: 1px solid var(--cx-border);
+  background: transparent;
+  color: var(--cx-ink);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cx-chip {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--cx-border);
+  border-radius: 999px;
+  background: var(--cx-surface);
+  color: var(--cx-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cx-chip[aria-pressed="true"] {
+  border-color: var(--cx-accent);
+  background: var(--cx-accent-soft);
+  color: var(--cx-accent-hover);
+}
+
+/* ---------- Grades responsivas (auto-fill) ---------- */
+
+.cx-grid-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.cx-grid-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+}
+
+/* Duas colunas que quebram: cardápio + pedido; divisão + recebimento. */
+.cx-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cx-split-main {
+  flex: 999 1 520px;
+  min-width: 0;
+}
+
+.cx-split-side {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+
+/* Painel com rolagem interna (itens do pedido). */
+.cx-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--cx-pad));
+  border: 1px solid var(--cx-border);
+  border-radius: var(--cx-radius);
+  background: var(--cx-surface);
+}
+
+.cx-panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Categorias numa linha com rolagem horizontal, nunca espremidas. */
+.cx-scroll-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.cx-scroll-row > * {
+  flex: none;
+}
+
+/* ---------- Cartão de status (mesa) ---------- */
+
+.cx-status-card {
+  display: grid;
+  gap: 4px;
+  min-height: 120px;
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: var(--cx-radius);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cx-status-card .cx-card-number {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-status-card .cx-card-status {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cx-status-card .cx-card-meta {
+  font-size: 14px;
+}
+
+.cx-status-card.is-free {
+  border: 2px dashed #9ca3af;
+  background: var(--cx-free-bg);
+  color: var(--cx-free-ink);
+}
+
+.cx-status-card.is-busy {
+  border-color: #ea580c;
+  background: var(--cx-busy-bg);
+  color: var(--cx-busy-ink);
+}
+
+.cx-status-card.is-bill {
+  border-color: var(--cx-bill-bg);
+  background: var(--cx-bill-bg);
+  color: var(--cx-bill-ink);
+}
+
+.cx-status-card.is-reserved {
+  border-color: #6b7280;
+  background: var(--cx-reserved-bg);
+  color: var(--cx-reserved-ink);
+}
+
+.cx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cx-badge.is-ok {
+  background: var(--cx-ok-bg);
+  color: var(--cx-ok-ink);
+}
+
+.cx-badge.is-warn {
+  background: var(--cx-warn-bg);
+  color: var(--cx-warn-ink);
+}
+
+.cx-badge.is-crit {
+  background: var(--cx-crit-bg);
+  color: var(--cx-crit-ink);
+}
+
+/* ---------- Modal ---------- */
+
+dialog.cx-modal {
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  color: var(--cx-ink);
+  box-shadow: 0 24px 64px rgba(18, 21, 26, 0.3);
+  font: 400 16px/1.45 Inter, system-ui, "Segoe UI", Arial, sans-serif;
+}
+
+dialog.cx-modal::backdrop {
+  background: rgba(18, 21, 26, 0.55);
+}
+
+.cx-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 0;
+}
+
+.cx-modal-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.cx-modal-body {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+
+.cx-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+
+.cx-modal-actions .cx-btn-primary {
+  flex: 1 1 260px;
+}
+
+.cx-hint {
+  color: var(--cx-ink-2);
+  font-size: 14px;
+}
+
+.cx-hint.is-error {
+  color: var(--cx-crit-ink);
+  font-weight: 600;
+}
+
+/* ---------- Esqueleto de carregamento ---------- */
+
+.cx-skeleton {
+  min-height: 120px;
+  border-radius: var(--cx-radius);
+  background: linear-gradient(90deg, #eceef1 25%, #f6f7f9 50%, #eceef1 75%);
+  background-size: 200% 100%;
+  animation: cx-shimmer 1.2s linear infinite;
+}
+
+@keyframes cx-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-skeleton {
+    animation: none;
+  }
+}

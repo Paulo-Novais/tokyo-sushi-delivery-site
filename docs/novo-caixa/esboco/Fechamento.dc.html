@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caixa — Fechamento do caixa</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#C2410C}a:hover{color:#9A3412}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 880px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #12151A; background: #F4F5F7; padding: clamp(12px, 2.5vw, 32px)">
+  <div style="max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px">
+      <a href="Main.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; color: #12151A; font-weight: 700; font-size: 15px; text-decoration: none">← Salão</a>
+      <div style="margin-right: auto">
+        <div style="font-size: 14px; color: #5A6270; font-weight: 600">Terça, 10/11 · aberto por Paulo às 18:02</div>
+        <h1 style="margin: 4px 0 0; font-size: clamp(24px, 3vw, 32px); font-weight: 800">Fechar caixa</h1>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #FFF7ED; border: 1px solid #FDBA74">
+      <span style="font-size: 15px; color: #7C2D12; margin-right: auto"><b>8 mesas ainda estão abertas.</b> Feche ou transfira as comandas antes de fechar o caixa.</span>
+      <a href="Main.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #C2410C; background: #FFFFFF; color: #9A3412; font-size: 14px; font-weight: 700; text-decoration: none">Ver mesas abertas</a>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+
+      <section aria-label="Recebido por forma de pagamento" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 16px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; font-variant-numeric: tabular-nums">
+        <h2 style="margin: 0 0 4px; font-size: 18px; font-weight: 800">Recebido no turno</h2>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Dinheiro</span><span>R$ 1.120,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Pix</span><span>R$ 1.480,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Crédito</span><span>R$ 820,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Débito</span><span>R$ 390,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Vale-refeição</span><span>R$ 100,00</span></div>
+        <div style="height: 1px; background: #E5E8EC; margin: 4px 0"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 800"><span>Total</span><span>R$ 3.910,00</span></div>
+        <div style="font-size: 13px; color: #5A6270">42 pedidos · ticket médio R$ 93,10</div>
+      </section>
+
+      <section aria-label="Dinheiro na gaveta" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 16px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; font-variant-numeric: tabular-nums">
+        <h2 style="margin: 0 0 4px; font-size: 18px; font-weight: 800">Dinheiro na gaveta</h2>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Fundo de troco (abertura)</span><span>R$ 200,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Vendas em dinheiro</span><span>+ R$ 1.120,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Suprimento (19:10)</span><span>+ R$ 100,00</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 16px"><span>Sangria (20:40)</span><span style="color: #B91C1C">− R$ 500,00</span></div>
+        <div style="height: 1px; background: #E5E8EC; margin: 4px 0"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800"><span>Esperado</span><span>R$ 920,00</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px">
+          <label for="contado" style="font-size: 15px; font-weight: 700">Contado na gaveta (R$)</label>
+          <input id="contado" type="text" value="915,50" style="height: 52px; border-radius: 10px; border: 2px solid #12151A; padding: 0 14px; font-size: 22px; font-weight: 800">
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; border-radius: 12px; background: #FEF2F2; margin-top: 4px">
+          <span style="font-size: 16px; font-weight: 700">Diferença</span>
+          <span style="font-size: 26px; font-weight: 800; color: #B91C1C">− R$ 4,50</span>
+        </div>
+      </section>
+
+      <section aria-label="Concluir" style="flex: 1 1 300px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 16px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800">Concluir</h2>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label for="obs" style="font-size: 15px; font-weight: 700">Observação <span style="font-weight: 500; color: #5A6270">(obrigatória se houver diferença)</span></label>
+          <textarea id="obs" rows="4" placeholder="Ex.: troco errado na mesa 12" style="border-radius: 10px; border: 1px solid #C7CDD4; padding: 10px 14px; font-size: 15px; resize: vertical"></textarea>
+        </div>
+        <button type="button" style="height: 48px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 15px; font-weight: 700; color: #12151A">Imprimir relatório do turno</button>
+        <button type="button" disabled style="height: 56px; border-radius: 12px; border: 0; background: #E5E7EB; color: #4B5563; font-size: 17px; font-weight: 700; cursor: not-allowed">Fechar caixa (há mesas abertas)</button>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

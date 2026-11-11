@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caixa — Nova comanda</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#3A3F48}
+a{color:#C2410C}a:hover{color:#9A3412}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 880px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #12151A; background: #3A3F48; padding: clamp(8px, 3vw, 40px); display: flex; align-items: flex-start; justify-content: center">
+  <div role="dialog" aria-label="Nova comanda" style="width: 100%; max-width: 760px; background: #FFFFFF; border-radius: 18px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden">
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #E5E8EC">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 800; margin-right: auto">Nova comanda</h1>
+      <a href="Main.dc.html" aria-label="Fechar" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; border: 1px solid #DDE1E6; color: #12151A; text-decoration: none; font-size: 15px; font-weight: 700">Esc</a>
+    </div>
+
+    <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px">
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: #F1F2F4; padding: 4px; border-radius: 12px">
+        <sc-for list="{{tipos}}" as="tp" hint-placeholder-count="3">
+          <button type="button" onClick="{{tp.pick}}" style="height: 44px; border-radius: 9px; border: 0; font-size: 15px; font-weight: 700; background: {{tp.bg}}; color: {{tp.fg}}">{{tp.label}}</button>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px">
+          <div style="font-size: 15px; font-weight: 700; margin-right: auto">1. Escolha a mesa</div>
+          <div style="font-size: 13px; color: #5A6270">Só aparecem as livres</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px">
+          <sc-for list="{{mesas}}" as="m" hint-placeholder-count="10">
+            <button type="button" onClick="{{m.pick}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 68px; border-radius: 12px; border: 2px solid {{m.bd}}; background: {{m.bg}}; color: {{m.fg}}">
+              <span style="font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums">{{m.num}}</span>
+              <span style="font-size: 12px; font-weight: 600; color: {{m.fg2}}">0 pessoas</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 15px; font-weight: 700">2. Quantas pessoas sentaram? <span style="font-weight: 600; color: #9A3412">(obrigatório)</span></div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <button type="button" aria-label="Menos pessoas" onClick="{{dec}}" style="width: 56px; height: 56px; border-radius: 12px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 26px; font-weight: 700; color: #12151A">−</button>
+          <div style="min-width: 72px; text-align: center; font-size: 36px; font-weight: 800; font-variant-numeric: tabular-nums">{{pessoas}}</div>
+          <button type="button" aria-label="Mais pessoas" onClick="{{inc}}" style="width: 56px; height: 56px; border-radius: 12px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 26px; font-weight: 700; color: #12151A">+</button>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{quick}}" as="q" hint-placeholder-count="8">
+              <button type="button" onClick="{{q.pick}}" style="width: 44px; height: 44px; border-radius: 10px; font-size: 16px; font-weight: 700; border: 2px solid {{q.bd}}; background: {{q.bg}}; color: {{q.fg}}">{{q.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{semPessoas}}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 12px 14px; border-radius: 12px; background: #FFF7ED; border: 1px solid #FDBA74; font-size: 14px; color: #7C2D12">A mesa está com <b>0 pessoas</b>. Informe quantas sentaram para abrir a comanda.</div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 6px">
+          <label for="nome" style="font-size: 15px; font-weight: 700">3. Nome ou apelido <span style="font-weight: 500; color: #5A6270">(opcional)</span></label>
+          <input id="nome" type="text" placeholder="Ex.: Família Souza" style="height: 48px; border-radius: 10px; border: 1px solid #C7CDD4; padding: 0 14px; font-size: 16px">
+        </div>
+        <div style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 6px">
+          <div style="font-size: 15px; font-weight: 700">Garçom</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{garcons}}" as="g" hint-placeholder-count="3">
+              <button type="button" onClick="{{g.pick}}" style="height: 48px; padding: 0 16px; border-radius: 10px; font-size: 15px; font-weight: 600; border: 2px solid {{g.bd}}; background: {{g.bg}}; color: {{g.fg}}">{{g.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 16px 20px; border-top: 1px solid #E5E8EC; background: #FAFBFC">
+      <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; height: 56px; padding: 0 20px; border-radius: 12px; border: 1px solid #C7CDD4; background: #FFFFFF; color: #12151A; font-size: 16px; font-weight: 600; text-decoration: none">Cancelar</a>
+      <sc-if value="{{semPessoas}}" hint-placeholder-val="{{ true }}">
+        <button type="button" disabled style="flex: 1 1 260px; height: 56px; border-radius: 12px; border: 0; background: #E5E7EB; color: #4B5563; font-size: 17px; font-weight: 700; cursor: not-allowed">Informe as pessoas para abrir a mesa {{mesaNum}}</button>
+      </sc-if>
+      <sc-if value="{{temPessoas}}" hint-placeholder-val="{{ false }}">
+        <a href="PDV.dc.html" style="flex: 1 1 260px; display: flex; align-items: center; justify-content: center; gap: 10px; height: 56px; border-radius: 12px; background: #C2410C; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">Abrir mesa {{mesaNum}} · {{pessoas}} pessoas <span style="font-size: 13px; opacity: .85">Enter</span></a>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tipo: 'mesa', mesa: 7, pessoas: 0, garcom: 'João' };
+  }
+  renderVals() {
+    const s = this.state;
+    const livres = [[2,2],[4,4],[7,4],[8,4],[11,4],[13,4],[15,2],[16,2],[18,8],[19,4]];
+    const sel = livres.find((l) => l[0] === s.mesa) || livres[0];
+    const idx = livres.indexOf(sel);
+    const viz = livres[idx + 1] || livres[idx - 1];
+    const on = (v) => ({ bg: v ? '#12151A' : '#FFFFFF', fg: v ? '#FFFFFF' : '#12151A', bd: v ? '#12151A' : '#DDE1E6' });
+    const mesas = livres.map(([n, seats]) => {
+      const a = n === s.mesa;
+      return { num: String(n).padStart(2, '0'), seats, ...on(a), fg2: a ? '#E5E7EB' : '#5A6270', pick: () => this.setState({ mesa: n }) };
+    });
+    const quick = [1,2,3,4,5,6,7,8].map((n) => ({ label: String(n), ...on(n === s.pessoas), pick: () => this.setState({ pessoas: n }) }));
+    const tipos = [['mesa','Mesa'],['balcao','Balcão'],['viagem','Viagem / Retirada']].map(([id, label]) => ({
+      label, bg: id === s.tipo ? '#FFFFFF' : 'transparent', fg: id === s.tipo ? '#12151A' : '#3F4652', pick: () => this.setState({ tipo: id })
+    }));
+    const garcons = ['João', 'Marina', 'Sem garçom'].map((g) => ({ label: g, ...on(g === s.garcom), pick: () => this.setState({ garcom: g }) }));
+    return {
+      mesas, quick, tipos, garcons,
+      pessoas: s.pessoas,
+      mesaNum: String(sel[0]).padStart(2, '0'),
+      semPessoas: s.pessoas === 0,
+      temPessoas: s.pessoas > 0,
+      inc: () => this.setState({ pessoas: Math.min(40, s.pessoas + 1) }),
+      dec: () => this.setState({ pessoas: Math.max(0, s.pessoas - 1) })
+    };
+  }
+}
+</script>
+</body>
+</html>

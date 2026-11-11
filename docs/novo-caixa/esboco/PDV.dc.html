@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caixa — Lançar pedido (PDV)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#C2410C}a:hover{color:#9A3412}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+</style>
+</helmet>
+<div style="position: relative; min-height: 900px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #12151A; background: #F4F5F7; display: flex; flex-direction: column">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px clamp(10px, 2vw, 20px); background: #12151A; color: #FFFFFF">
+    <div style="display: flex; align-items: center; gap: 10px; margin-right: 8px">
+      <div style="width: 36px; height: 36px; border-radius: 9px; background: #C2410C; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px">IN</div>
+      <span style="font-weight: 700; font-size: 16px">Caixa</span>
+    </div>
+    <nav aria-label="Caixa" style="display: flex; flex-wrap: wrap; gap: 4px; margin-right: auto">
+      <a href="Main.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 9px; color: #E5E7EB; font-size: 15px; font-weight: 600; text-decoration: none">Salão</a>
+      <a href="PDV.dc.html" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 9px; background: #2B313B; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Lançar pedido</a>
+      <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 9px; color: #E5E7EB; font-size: 15px; font-weight: 600; text-decoration: none">Pedidos do dia</a>
+      <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 9px; color: #E5E7EB; font-size: 15px; font-weight: 600; text-decoration: none">Movimentos</a>
+    </nav>
+    <span style="font-size: 13px; color: #C9CED6">Paulo · caixa aberto 18:02</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 14px; padding: clamp(10px, 1.6vw, 18px); box-sizing: border-box; width: 100%; max-width: 1600px; margin: 0 auto; align-items: flex-start">
+
+    <section aria-label="Cardápio" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <span style="font-size: 14px; font-weight: 700; color: #3F4652">Lançar em</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; background: #E6E8EC; padding: 4px; border-radius: 12px">
+          <sc-for list="{{dests}}" as="d" hint-placeholder-count="4">
+            <button type="button" onClick="{{d.pick}}" style="height: 40px; padding: 0 14px; border-radius: 9px; border: 0; font-size: 15px; font-weight: 700; background: {{d.bg}}; color: {{d.fg}}">{{d.label}}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{isMesa}}" hint-placeholder-val="{{ true }}">
+          <a href="Main.dc.html" style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 10px; border: 2px solid #2F6FDB; background: #E8F0FE; color: #1D4FB8; font-size: 15px; font-weight: 700; text-decoration: none">Mesa 05 · 4 pessoas <span style="font-weight: 600; font-size: 13px">(trocar)</span></a>
+        </sc-if>
+        <sc-if value="{{isViagem}}" hint-placeholder-val="{{ false }}">
+          <label style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF">
+            <span style="font-size: 14px; color: #5A6270">Nome</span>
+            <input type="text" placeholder="Quem retira" style="width: 140px; border: 0; font-size: 15px; outline: none">
+          </label>
+        </sc-if>
+      </div>
+
+      <label style="display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 14px; border-radius: 12px; background: #FFFFFF; border: 2px solid #12151A">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F4652" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <span style="position: absolute; left: -9999px">Buscar produto por nome ou código</span>
+        <input type="text" placeholder="Código ou nome do item · ex.: 3*12 Enter = 3× item 12" style="flex: 1; min-width: 0; border: 0; font-size: 16px; outline: none; background: transparent">
+        <span style="font-size: 12px; color: #5A6270; border: 1px solid #C7CDD4; border-radius: 6px; padding: 2px 6px">digite direto</span>
+      </label>
+
+      <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px">
+        <sc-for list="{{cats}}" as="c" hint-placeholder-count="10">
+          <button type="button" onClick="{{c.pick}}" style="flex: 0 0 auto; height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; border: 2px solid {{c.bd}}; background: {{c.bg}}; color: {{c.fg}}">{{c.label}}</button>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+        <span style="font-size: 14px; font-weight: 600; color: #3F4652">Próximo item ×</span>
+        <sc-for list="{{mults}}" as="q" hint-placeholder-count="6">
+          <button type="button" onClick="{{q.pick}}" style="width: 44px; height: 40px; border-radius: 9px; font-size: 15px; font-weight: 700; border: 2px solid {{q.bd}}; background: {{q.bg}}; color: {{q.fg}}">{{q.label}}</button>
+        </sc-for>
+        <span style="font-size: 13px; color: #5A6270">Escolha antes de clicar no item</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px">
+        <sc-for list="{{prods}}" as="p" hint-placeholder-count="16">
+          <button type="button" onClick="{{p.add}}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 96px; padding: 10px 12px; border-radius: 12px; border: 1px solid #DDE1E6; background: #FFFFFF; text-align: left; color: #12151A">
+            <span style="display: flex; width: 100%; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 700; color: #5A6270"><span>#{{p.cod}}</span><span style="color: #1D4FB8">{{p.tag}}</span></span>
+            <span style="font-size: 15px; font-weight: 700; line-height: 1.25">{{p.nome}}</span>
+            <span style="margin-top: auto; font-size: 16px; font-weight: 700; color: #9A3412; font-variant-numeric: tabular-nums">{{p.precoTxt}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #5A6270">Itens, códigos e preços são exemplo. Na versão real, tudo vem do Cardápio do Gestor (categorias, opções e itens pausados).</div>
+    </section>
+
+    <aside aria-label="Pedido" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 16px; display: flex; flex-direction: column; box-sizing: border-box">
+      <div style="display: flex; align-items: baseline; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #E5E8EC">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800; margin-right: auto">{{titulo}}</h2>
+        <span style="font-size: 13px; color: #5A6270">{{qtdItens}} itens novos</span>
+      </div>
+
+      <sc-if value="{{isMesa}}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 8px 16px; background: #F7F8FA; border-bottom: 1px solid #E5E8EC">
+          <div style="font-size: 12px; font-weight: 700; color: #5A6270; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px">Já na cozinha</div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #3F4652; padding: 2px 0"><span>1× Combo 40 peças</span><span>R$ 129,90</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; color: #3F4652; padding: 2px 0"><span>3× Refrigerante lata · Coca-Cola</span><span>R$ 21,00</span></div>
+        </div>
+      </sc-if>
+
+      <div style="padding: 8px 16px 0; font-size: 12px; font-weight: 700; color: #9A3412; text-transform: uppercase; letter-spacing: .04em">Para enviar</div>
+      <div style="display: flex; flex-direction: column; max-height: 360px; overflow-y: auto">
+        <sc-if value="{{vazio}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 20px 16px; font-size: 14px; color: #5A6270">Clique num item ou digite o código para começar.</div>
+        </sc-if>
+        <sc-for list="{{cart}}" as="it" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid #F0F2F4">
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 600">{{it.nome}}</div>
+              <div style="font-size: 13px; color: #5A6270">{{it.desc}}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px">
+              <button type="button" aria-label="Diminuir" onClick="{{it.dec}}" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #DDE1E6; background: #FFFFFF; font-size: 18px; font-weight: 700; color: #12151A">−</button>
+              <span style="min-width: 22px; text-align: center; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums">{{it.qtd}}</span>
+              <button type="button" aria-label="Aumentar" onClick="{{it.inc}}" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #DDE1E6; background: #FFFFFF; font-size: 18px; font-weight: 700; color: #12151A">+</button>
+            </div>
+            <div style="width: 78px; text-align: right; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums">{{it.totalTxt}}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 5px; border-top: 1px solid #E5E8EC; margin-top: auto; font-variant-numeric: tabular-nums">
+        <div style="display: flex; justify-content: space-between; font-size: 15px; color: #3F4652"><span>Itens novos</span><span>{{subtotalTxt}}</span></div>
+        <sc-if value="{{isMesa}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; justify-content: space-between; font-size: 15px; color: #3F4652"><span>Já na mesa</span><span>R$ 150,90</span></div>
+        </sc-if>
+        <div style="display: flex; justify-content: space-between; font-size: 15px; color: #3F4652"><button type="button" style="height: 32px; padding: 0; border: 0; background: transparent; font-size: 15px; color: #1D4FB8; font-weight: 600">+ Desconto</button><span>R$ 0,00</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px"><span style="font-size: 17px; font-weight: 700">{{totalLabel}}</span><span style="font-size: 30px; font-weight: 800">{{totalTxt}}</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 16px 16px">
+        <button type="button" onClick="{{limpar}}" style="height: 48px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 15px; font-weight: 700; color: #12151A">Limpar</button>
+        <a href="{{secHref}}" style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 15px; font-weight: 700; color: #12151A; text-decoration: none">{{secundario}}</a>
+        <a href="{{primHref}}" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px; height: 56px; border-radius: 12px; background: #C2410C; color: #FFFFFF; font-size: 18px; font-weight: 700; text-decoration: none">{{primario}}</a>
+      </div>
+    </aside>
+  </div>
+
+  <sc-if value="{{modalOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(18, 21, 26, 0.55); display: flex; align-items: flex-start; justify-content: center; padding: clamp(8px, 4vw, 48px); box-sizing: border-box">
+      <div role="dialog" aria-label="Opções do item" style="width: 100%; max-width: 560px; background: #FFFFFF; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; align-items: baseline; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #E5E8EC">
+          <div style="margin-right: auto">
+            <div style="font-size: 12px; font-weight: 700; color: #5A6270">#{{m.cod}}</div>
+            <div style="font-size: 20px; font-weight: 800">{{m.nome}}</div>
+          </div>
+          <span style="font-size: 17px; font-weight: 700; color: #9A3412">{{m.precoTxt}}</span>
+        </div>
+        <div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 14px; max-height: 520px; overflow-y: auto">
+          <sc-for list="{{m.groups}}" as="g" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 700">{{g.nome}}</span><span style="font-size: 13px; color: #5A6270">{{g.regra}}</span></div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px">
+                <sc-for list="{{g.choices}}" as="ch" hint-placeholder-count="3">
+                  <button type="button" onClick="{{ch.pick}}" style="display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; border-radius: 10px; font-size: 15px; font-weight: 600; text-align: left; border: 2px solid {{ch.bd}}; background: {{ch.bg}}; color: {{ch.fg}}"><span>{{ch.label}}</span><span style="font-size: 13px">{{ch.extra}}</span></button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 15px; font-weight: 700">Observação para a cozinha</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{m.obs}}" as="o" hint-placeholder-count="4">
+                <button type="button" onClick="{{o.pick}}" style="height: 40px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600; border: 2px solid {{o.bd}}; background: {{o.bg}}; color: {{o.fg}}">{{o.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 18px; border-top: 1px solid #E5E8EC; background: #FAFBFC">
+          <div style="display: flex; align-items: center; gap: 6px">
+            <button type="button" aria-label="Menos" onClick="{{m.dec}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 20px; font-weight: 700; color: #12151A">−</button>
+            <span style="min-width: 28px; text-align: center; font-size: 20px; font-weight: 800">{{m.qtd}}</span>
+            <button type="button" aria-label="Mais" onClick="{{m.inc}}" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 20px; font-weight: 700; color: #12151A">+</button>
+          </div>
+          <button type="button" onClick="{{m.cancel}}" style="height: 52px; padding: 0 16px; border-radius: 12px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 15px; font-weight: 600; color: #12151A">Cancelar</button>
+          <button type="button" onClick="{{m.confirm}}" style="flex: 1 1 180px; height: 52px; border-radius: 12px; border: 0; background: #C2410C; color: #FFFFFF; font-size: 17px; font-weight: 700">Adicionar · {{m.totalTxt}}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      dest: 'mesa',
+      cat: 'Mais vendidos',
+      mult: 1,
+      cart: [
+        { key: 'a1', id: 'tem', qtd: 2, extra: 0, desc: 'Salmão · Cream cheese · Sem cebolinha' },
+        { key: 'a2', id: 'gui', qtd: 1, extra: 0, desc: ' ' }
+      ],
+      modal: null,
+      seq: 3
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    const brl = (v) => 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const G = {
+      temaki: [
+        { nome: 'Recheio', tipo: 'um', choices: [['Salmão', 0], ['Atum', 4], ['Skin', 0], ['Camarão', 6]] },
+        { nome: 'Adicionais', tipo: 'varios', choices: [['Cream cheese', 3], ['Cebolinha', 0], ['Gergelim', 0], ['Tarê', 0]] }
+      ],
+      refri: [
+        { nome: 'Sabor', tipo: 'um', choices: [['Coca-Cola', 0], ['Coca Zero', 0], ['Guaraná', 0], ['Sprite', 0]] },
+        { nome: 'Tamanho', tipo: 'um', choices: [['Lata 350 ml', 0], ['Garrafa 600 ml', 3]] }
+      ],
+      suco: [
+        { nome: 'Fruta', tipo: 'um', choices: [['Laranja', 0], ['Limão', 0], ['Maracujá', 0], ['Abacaxi c/ hortelã', 2]] },
+        { nome: 'Preparo', tipo: 'um', choices: [['Com açúcar', 0], ['Sem açúcar', 0], ['Com adoçante', 0]] }
+      ],
+      hot: [
+        { nome: 'Molho', tipo: 'um', choices: [['Tarê', 0], ['Sem molho', 0], ['Molho à parte', 0]] },
+        { nome: 'Adicionais', tipo: 'varios', choices: [['Cream cheese', 3], ['Couve crispy', 2]] }
+      ],
+      cerveja: [
+        { nome: 'Marca', tipo: 'um', choices: [['Heineken', 0], ['Stella', 0], ['Sapporo', 8]] }
+      ]
+    };
+    const cardapio = [
+      { id: 'gui', cod: 10, nome: 'Guioza 6 un', preco: 24.9, cat: 'Entradas', top: true },
+      { id: 'sun', cod: 11, nome: 'Sunomono', preco: 16.9, cat: 'Entradas' },
+      { id: 'edm', cod: 12, nome: 'Edamame', preco: 19.9, cat: 'Entradas' },
+      { id: 'ura', cod: 20, nome: 'Uramaki filadélfia 8 un', preco: 28.9, cat: 'Sushis', top: true },
+      { id: 'nig', cod: 21, nome: 'Niguiri salmão 2 un', preco: 14.9, cat: 'Sushis' },
+      { id: 'jo',  cod: 22, nome: 'Joe salmão 4 un', preco: 26.9, cat: 'Sushis' },
+      { id: 'sas', cod: 30, nome: 'Sashimi salmão 10 fatias', preco: 44.9, cat: 'Sashimis', top: true },
+      { id: 'sat', cod: 31, nome: 'Sashimi atum 10 fatias', preco: 52.9, cat: 'Sashimis' },
+      { id: 'hot', cod: 40, nome: 'Hot roll 10 un', preco: 32.9, cat: 'Hot rolls', g: 'hot', top: true },
+      { id: 'hph', cod: 41, nome: 'Hot filadélfia 10 un', preco: 34.9, cat: 'Hot rolls', g: 'hot' },
+      { id: 'tem', cod: 50, nome: 'Temaki', preco: 29.9, cat: 'Temakis', g: 'temaki', top: true },
+      { id: 'c20', cod: 60, nome: 'Combo 20 peças', preco: 69.9, cat: 'Combos' },
+      { id: 'c40', cod: 61, nome: 'Combo 40 peças', preco: 129.9, cat: 'Combos', top: true },
+      { id: 'yak', cod: 70, nome: 'Yakisoba', preco: 39.9, cat: 'Pratos quentes', top: true },
+      { id: 'tep', cod: 71, nome: 'Teppan de salmão', preco: 54.9, cat: 'Pratos quentes' },
+      { id: 'ref', cod: 80, nome: 'Refrigerante', preco: 7, cat: 'Bebidas', g: 'refri', top: true },
+      { id: 'suc', cod: 81, nome: 'Suco natural', preco: 12, cat: 'Bebidas', g: 'suco' },
+      { id: 'agu', cod: 82, nome: 'Água mineral', preco: 5, cat: 'Bebidas' },
+      { id: 'cer', cod: 83, nome: 'Cerveja long neck', preco: 12, cat: 'Bebidas', g: 'cerveja' },
+      { id: 'sak', cod: 84, nome: 'Saquê dose', preco: 14, cat: 'Bebidas' },
+      { id: 'sor', cod: 90, nome: 'Sorvete tempurá', preco: 22.9, cat: 'Sobremesas' },
+      { id: 'har', cod: 91, nome: 'Harumaki de chocolate', preco: 18.9, cat: 'Sobremesas' }
+    ];
+    const byId = (id) => cardapio.find((p) => p.id === id);
+    const onSt = (v) => ({ bg: v ? '#12151A' : '#FFFFFF', fg: v ? '#FFFFFF' : '#12151A', bd: v ? '#12151A' : '#DDE1E6' });
+
+    const addToCart = (id, qtd, extra, desc) => {
+      const cart = this.state.cart.map((x) => ({ ...x }));
+      const same = cart.find((x) => x.id === id && x.desc === desc);
+      if (same) same.qtd += qtd; else cart.push({ key: 'k' + this.state.seq, id, qtd, extra, desc });
+      this.setState({ cart, mult: 1, modal: null, seq: this.state.seq + 1 });
+    };
+
+    const catNames = ['Mais vendidos', 'Entradas', 'Sushis', 'Sashimis', 'Hot rolls', 'Temakis', 'Combos', 'Pratos quentes', 'Bebidas', 'Sobremesas'];
+    const cats = catNames.map((c) => ({ label: c, ...onSt(c === s.cat), pick: () => this.setState({ cat: c }) }));
+    const prods = cardapio
+      .filter((p) => s.cat === 'Mais vendidos' ? p.top : p.cat === s.cat)
+      .map((p) => ({
+        cod: p.cod, nome: p.nome, precoTxt: (p.g ? 'a partir de ' : '') + brl(p.preco), tag: p.g ? 'Opções' : ' ',
+        add: () => {
+          if (p.g) {
+            const sel = G[p.g].map((gr) => (gr.tipo === 'um' ? [0] : []));
+            this.setState({ modal: { id: p.id, sel, obs: [], qtd: this.state.mult } });
+          } else {
+            addToCart(p.id, this.state.mult, 0, ' ');
+          }
+        }
+      }));
+    const mults = [1, 2, 3, 4, 5, 6].map((n) => ({ label: n + '×', ...onSt(n === s.mult), pick: () => this.setState({ mult: n }) }));
+    const dests = [['mesa', 'Mesa'], ['balcao', 'Balcão'], ['viagem', 'Viagem / Retirada'], ['delivery', 'Delivery']].map(([id, label]) => ({
+      label, bg: id === s.dest ? '#FFFFFF' : 'transparent', fg: id === s.dest ? '#12151A' : '#3F4652', pick: () => this.setState({ dest: id })
+    }));
+
+    let subtotal = 0;
+    let qtdItens = 0;
+    const setQ = (key, d) => {
+      const cart = this.state.cart.map((x) => (x.key === key ? { ...x, qtd: x.qtd + d } : x)).filter((x) => x.qtd > 0);
+      this.setState({ cart });
+    };
+    const cart = s.cart.map((x) => {
+      const p = byId(x.id);
+      const unit = p.preco + (x.extra || 0);
+      subtotal += unit * x.qtd;
+      qtdItens += x.qtd;
+      return { nome: p.nome, desc: x.desc, qtd: x.qtd, totalTxt: brl(unit * x.qtd), inc: () => setQ(x.key, 1), dec: () => setQ(x.key, -1) };
+    });
+
+    let m = {};
+    if (s.modal) {
+      const p = byId(s.modal.id);
+      const groups = G[p.g];
+      let extra = 0;
+      const parts = [];
+      const mg = groups.map((gr, gi) => {
+        const chosen = s.modal.sel[gi];
+        chosen.forEach((ci) => { extra += gr.choices[ci][1]; parts.push(gr.choices[ci][0]); });
+        return {
+          nome: gr.nome,
+          regra: gr.tipo === 'um' ? 'Escolha 1 · obrigatório' : 'Opcional · pode marcar vários',
+          choices: gr.choices.map(([label, add], ci) => {
+            const on = chosen.indexOf(ci) >= 0;
+            return {
+              label, extra: add ? '+ ' + brl(add) : ' ',
+              bg: on ? '#FFF7ED' : '#FFFFFF', fg: '#12151A', bd: on ? '#C2410C' : '#DDE1E6',
+              pick: () => {
+                const sel = this.state.modal.sel.map((a) => a.slice());
+                if (gr.tipo === 'um') sel[gi] = [ci];
+                else sel[gi] = on ? sel[gi].filter((v) => v !== ci) : sel[gi].concat([ci]);
+                this.setState({ modal: { ...this.state.modal, sel } });
+              }
+            };
+          })
+        };
+      });
+      const obsList = ['Sem cebolinha', 'Pouco arroz', 'Bem gelado', 'Sem gelo', 'Prioridade'];
+      const obs = obsList.map((o) => {
+        const on = s.modal.obs.indexOf(o) >= 0;
+        return { label: o, ...onSt(on), pick: () => {
+          const cur = this.state.modal.obs;
+          this.setState({ modal: { ...this.state.modal, obs: on ? cur.filter((v) => v !== o) : cur.concat([o]) } });
+        } };
+      });
+      const desc = parts.concat(s.modal.obs).join(' · ') || ' ';
+      const qtd = s.modal.qtd;
+      m = {
+        cod: p.cod, nome: p.nome, precoTxt: brl(p.preco), groups: mg, obs, qtd,
+        totalTxt: brl((p.preco + extra) * qtd),
+        inc: () => this.setState({ modal: { ...this.state.modal, qtd: qtd + 1 } }),
+        dec: () => this.setState({ modal: { ...this.state.modal, qtd: Math.max(1, qtd - 1) } }),
+        cancel: () => this.setState({ modal: null, mult: 1 }),
+        confirm: () => addToCart(p.id, qtd, extra, desc)
+      };
+    }
+
+    const isMesa = s.dest === 'mesa';
+    const titulos = { mesa: 'Mesa 05', balcao: 'Venda no balcão', viagem: 'Pedido para viagem', delivery: 'Pedido delivery' };
+    const total = subtotal + (isMesa ? 150.9 : 0);
+    return {
+      dests, cats, prods, mults, cart, m, qtdItens,
+      isMesa, isViagem: s.dest === 'viagem' || s.dest === 'delivery',
+      vazio: s.cart.length === 0,
+      modalOpen: !!s.modal,
+      titulo: titulos[s.dest],
+      subtotalTxt: brl(subtotal),
+      totalTxt: brl(total),
+      totalLabel: isMesa ? 'Total da mesa' : 'Total',
+      primario: isMesa ? 'Enviar para a cozinha · F2' : 'Cobrar agora · F4',
+      primHref: isMesa ? 'Main.dc.html' : 'Pagamento.dc.html',
+      secundario: isMesa ? 'Fechar conta · F4' : 'Só enviar p/ cozinha · F2',
+      secHref: isMesa ? 'Pagamento.dc.html' : 'Main.dc.html',
+      limpar: () => this.setState({ cart: [] })
+    };
+  }
+}
+</script>
+</body>
+</html>

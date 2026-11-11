@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Caixa — Pagamento</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#C2410C}a:hover{color:#9A3412}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="min-height: 880px; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #12151A; background: #F4F5F7; display: flex; flex-direction: column">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px clamp(12px, 2vw, 24px); background: #12151A; color: #FFFFFF">
+    <a href="PDV.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #4B5260; color: #FFFFFF; font-weight: 700; font-size: 15px; text-decoration: none">← Voltar ao pedido</a>
+    <div style="margin-right: auto">
+      <div style="font-size: 20px; font-weight: 800">Fechar conta · Mesa 05</div>
+      <div style="font-size: 13px; color: #C9CED6">4 pessoas · total com 10% de serviço</div>
+    </div>
+    <div style="text-align: right">
+      <div style="font-size: 13px; color: #C9CED6">Total da mesa</div>
+      <div style="font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums">R$ 295,35</div>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 16px; padding: clamp(12px, 2vw, 20px); box-sizing: border-box; width: 100%; max-width: 1600px; margin: 0 auto; align-items: flex-start">
+
+    <section aria-label="Divisão da conta" style="flex: 999 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; background: #E6E8EC; padding: 4px; border-radius: 12px">
+        <sc-for list="{{modos}}" as="m" hint-placeholder-count="4">
+          <button type="button" onClick="{{m.pick}}" style="height: 44px; border-radius: 9px; border: 0; font-size: 15px; font-weight: 700; background: {{m.bg}}; color: {{m.fg}}">{{m.label}}</button>
+        </sc-for>
+      </div>
+      <div style="font-size: 14px; color: #3F4652">{{modoDica}}</div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px">
+        <sc-for list="{{pessoas}}" as="p" hint-placeholder-count="4">
+          <button type="button" onClick="{{p.pick}}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 104px; padding: 14px; border-radius: 14px; text-align: left; border: 2px solid {{p.bd}}; background: {{p.bg}}; color: #12151A">
+            <div style="display: flex; width: 100%; justify-content: space-between; align-items: center">
+              <span style="font-size: 16px; font-weight: 800">{{p.nome}}</span>
+              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: {{p.fg}}">{{p.status}}</span>
+            </div>
+            <span style="font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums">{{p.valor}}</span>
+            <span style="font-size: 13px; color: #5A6270">{{p.detalhe}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; font-variant-numeric: tabular-nums">
+        <div style="font-size: 15px; font-weight: 700">Pagamentos lançados</div>
+        <div style="display: flex; justify-content: space-between; font-size: 15px"><span>Pessoa 1 · Pix</span><span>R$ 73,84</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 15px"><span>Pessoa 2 · Crédito</span><span>R$ 73,84</span></div>
+        <div style="height: 1px; background: #E5E8EC"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 17px; font-weight: 800"><span>Falta receber</span><span style="color: #9A3412">R$ 147,67</span></div>
+      </div>
+    </section>
+
+    <aside aria-label="Receber" style="flex: 1 1 360px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE1E6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <div>
+        <div style="font-size: 14px; color: #5A6270; font-weight: 600">Recebendo agora · Pessoa 3</div>
+        <div style="font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums">R$ 73,84</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px">
+        <sc-for list="{{formas}}" as="f" hint-placeholder-count="5">
+          <button type="button" onClick="{{f.pick}}" style="height: 52px; border-radius: 10px; font-size: 15px; font-weight: 700; border: 2px solid {{f.bd}}; background: {{f.bg}}; color: {{f.fg}}">{{f.label}}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{isDinheiro}}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 14px; border-radius: 12px; background: #F4F5F7; font-variant-numeric: tabular-nums">
+            <span style="font-size: 15px; font-weight: 600">Valor recebido</span>
+            <span style="font-size: 26px; font-weight: 800">{{recebidoTxt}}</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{notas}}" as="n" hint-placeholder-count="4">
+              <button type="button" onClick="{{n.pick}}" style="flex: 1 1 70px; height: 44px; border-radius: 10px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 15px; font-weight: 700; color: #12151A">{{n.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+            <sc-for list="{{teclas}}" as="k" hint-placeholder-count="12">
+              <button type="button" onClick="{{k.press}}" aria-label="{{k.aria}}" style="height: 52px; border-radius: 10px; border: 1px solid #DDE1E6; background: #FAFBFC; font-size: 22px; font-weight: 700; color: #12151A; font-variant-numeric: tabular-nums">{{k.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; border-radius: 12px; background: {{trocoBg}}; font-variant-numeric: tabular-nums">
+            <span style="font-size: 16px; font-weight: 700">{{trocoLabel}}</span>
+            <span style="font-size: 28px; font-weight: 800; color: {{trocoFg}}">{{trocoTxt}}</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{naoDinheiro}}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 14px; border-radius: 12px; background: #F4F5F7; font-size: 15px; color: #3F4652">{{instrucao}}</div>
+      </sc-if>
+
+      <button type="button" style="height: 52px; border-radius: 12px; border: 1px solid #C7CDD4; background: #FFFFFF; font-size: 16px; font-weight: 700; color: #12151A">Confirmar pagamento da Pessoa 3 <span style="font-size: 13px; color: #5A6270">Enter</span></button>
+      <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 12px; background: #9AA3AF; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none">Finalizar e liberar mesa (falta R$ 147,67)</a>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { modo: 'igual', forma: 'Dinheiro', cents: 10000, sel: 3 };
+  }
+  renderVals() {
+    const s = this.state;
+    const brl = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const dica = {
+      igual: 'Total dividido igualmente entre as 4 pessoas. O centavo que sobra vai para a última.',
+      pessoa: 'Cada pessoa paga o que consumiu. Os itens "Mesa toda" são divididos entre todos.',
+      item: 'Marque os itens que esta pessoa vai pagar.',
+      livre: 'Digite qualquer valor; o sistema mostra quanto ainda falta.'
+    };
+    const modos = [['igual','Dividir igual'],['pessoa','Por pessoa'],['item','Por item'],['livre','Valor livre']].map(([id, label]) => ({
+      label, bg: id === s.modo ? '#FFFFFF' : 'transparent', fg: id === s.modo ? '#12151A' : '#3F4652', pick: () => this.setState({ modo: id })
+    }));
+    const base = [
+      { n: 1, valor: 'R$ 73,84', st: 'pago', det: 'Pix · 19:21' },
+      { n: 2, valor: 'R$ 73,84', st: 'pago', det: 'Crédito · 19:22' },
+      { n: 3, valor: 'R$ 73,84', st: 'aberto', det: 'Toque para receber' },
+      { n: 4, valor: 'R$ 73,83', st: 'aberto', det: 'Toque para receber' }
+    ];
+    const pessoas = base.map((p) => {
+      const ativo = p.n === s.sel && p.st !== 'pago';
+      const pago = p.st === 'pago';
+      return {
+        nome: 'Pessoa ' + p.n,
+        valor: p.valor,
+        detalhe: ativo ? 'Recebendo agora' : p.det,
+        status: pago ? 'Pago' : ativo ? 'Agora' : 'Pendente',
+        fg: pago ? '#166534' : ativo ? '#9A3412' : '#374151',
+        bg: pago ? '#F0FDF4' : ativo ? '#FFF7ED' : '#FFFFFF',
+        bd: pago ? '#86EFAC' : ativo ? '#C2410C' : '#DDE1E6',
+        pick: () => { if (!pago) this.setState({ sel: p.n }); }
+      };
+    });
+    const formas = ['Dinheiro','Pix','Crédito','Débito','Vale-refeição'].map((f) => {
+      const on = f === s.forma;
+      return { label: f, bg: on ? '#12151A' : '#FFFFFF', fg: on ? '#FFFFFF' : '#12151A', bd: on ? '#12151A' : '#DDE1E6', pick: () => this.setState({ forma: f }) };
+    });
+    const devido = 7384;
+    const notas = [['Exato', devido], ['R$ 80', 8000], ['R$ 100', 10000], ['R$ 200', 20000]].map(([label, c]) => ({ label, pick: () => this.setState({ cents: c }) }));
+    const keys = ['1','2','3','4','5','6','7','8','9','00','0','⌫'];
+    const teclas = keys.map((k) => ({
+      label: k,
+      aria: k === '⌫' ? 'Apagar' : k,
+      press: () => {
+        let c = this.state.cents;
+        if (k === '⌫') c = Math.floor(c / 10);
+        else if (k === '00') c = c * 100;
+        else c = c * 10 + Number(k);
+        this.setState({ cents: Math.min(c, 9999999) });
+      }
+    }));
+    const diff = s.cents - devido;
+    const instr = {
+      'Pix': 'Mostre o QR Code ao cliente. O pagamento é confirmado aqui assim que cair.',
+      'Crédito': 'Passe R$ 73,84 na maquininha e confirme quando aprovar.',
+      'Débito': 'Passe R$ 73,84 na maquininha e confirme quando aprovar.',
+      'Vale-refeição': 'Passe R$ 73,84 na maquininha do vale e confirme quando aprovar.'
+    };
+    return {
+      modos, modoDica: dica[s.modo], pessoas, formas, notas, teclas,
+      isDinheiro: s.forma === 'Dinheiro',
+      naoDinheiro: s.forma !== 'Dinheiro',
+      instrucao: instr[s.forma] || '',
+      recebidoTxt: brl(s.cents),
+      trocoLabel: diff >= 0 ? 'Troco' : 'Falta',
+      trocoTxt: brl(Math.abs(diff)),
+      trocoBg: diff >= 0 ? '#F0FDF4' : '#FEF2F2',
+      trocoFg: diff >= 0 ? '#166534' : '#B91C1C'
+    };
+  }
+}
+</script>
+</body>
+</html>
