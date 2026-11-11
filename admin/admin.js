@@ -15602,7 +15602,7 @@ const syncAdminStaticBranding = () => {
 
     if (logo) {
       logo.src = resolveAdminAssetUrl(
-        ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-oficial.png"
+        ADMIN_ASSETS.adminSidebarLogo || "../assets/inovas-food-logo-menu.png"
       );
       logo.alt = ADMIN_BRANDING.sidebarTitle || "INOVAS Food";
     }

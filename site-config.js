@@ -23,7 +23,7 @@
     "socialImage": "/site-images/combinado-imperial.png",
     "supportAvatar": "./site-images/support-avatar-duo.webp",
     "loginCover": "./site-images/login-cover-floating.png",
-    "adminSidebarLogo": "../assets/inovas-food-logo-oficial.png"
+    "adminSidebarLogo": "../assets/inovas-food-logo-menu.png"
   },
   "appBranding": {
     "appName": "Tokyo Sushi Delivery",

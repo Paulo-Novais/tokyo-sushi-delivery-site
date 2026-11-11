@@ -138,14 +138,14 @@
 }
 
 .cx-btn:hover {
-  background: #f9fafb;
+  background: var(--cx-fill-2);
 }
 
 .cx-btn-primary {
   min-height: 52px;
   border-color: var(--cx-accent);
   background: var(--cx-accent);
-  color: #ffffff;
+  color: var(--cx-surface);
   font-size: 17px;
 }
 
@@ -338,13 +338,13 @@
 }
 
 .cx-status-card.is-free {
-  border: 2px dashed #9ca3af;
+  border: 2px dashed var(--cx-ink-3);
   background: var(--cx-free-bg);
   color: var(--cx-free-ink);
 }
 
 .cx-status-card.is-busy {
-  border-color: #ea580c;
+  border-color: var(--cx-accent-2);
   background: var(--cx-busy-bg);
   color: var(--cx-busy-ink);
 }
@@ -356,7 +356,7 @@
 }
 
 .cx-status-card.is-reserved {
-  border-color: #6b7280;
+  border-color: var(--cx-ink-3);
   background: var(--cx-reserved-bg);
   color: var(--cx-reserved-ink);
 }
@@ -450,7 +450,7 @@ dialog.cx-modal::backdrop {
 .cx-skeleton {
   min-height: 120px;
   border-radius: var(--cx-radius);
-  background: linear-gradient(90deg, #eceef1 25%, #f6f7f9 50%, #eceef1 75%);
+  background: linear-gradient(90deg, var(--cx-fill) 25%, var(--cx-fill) 50%, var(--cx-fill) 75%);
   background-size: 200% 100%;
   animation: cx-shimmer 1.2s linear infinite;
 }
@@ -598,7 +598,7 @@ dialog.cx-modal::backdrop {
   width: 100%;
   min-height: 46px;
   padding: 0 12px;
-  border: 1px solid #8a93a0;
+  border: 1px solid var(--cx-line-strong);
   border-radius: var(--cx-radius);
   background: var(--cx-surface);
   color: var(--cx-ink);
@@ -616,7 +616,7 @@ textarea.cx-input {
 }
 
 .cx-input[disabled] {
-  background: #f1f2f4;
+  background: var(--cx-fill);
   color: var(--cx-ink-2);
 }
 
@@ -644,11 +644,11 @@ textarea.cx-input {
 .cx-btn-dark {
   border-color: var(--cx-ink);
   background: var(--cx-ink);
-  color: #ffffff;
+  color: var(--cx-surface);
 }
 
 .cx-btn-dark:hover {
-  background: #2a2f38;
+  background: var(--cx-ink-hover);
 }
 
 .cx-btn-ghost {
@@ -660,17 +660,17 @@ textarea.cx-input {
   margin: 0;
   padding: 12px 14px;
   border-radius: var(--cx-radius);
-  background: #f1f3f5;
+  background: var(--cx-fill);
   color: var(--cx-ink-2);
 }
 
 .cx-warn {
   margin: 0 0 14px;
   padding: 12px 14px;
-  border: 1px solid #f5c48b;
+  border: 1px solid var(--cx-warn-border);
   border-radius: var(--cx-radius);
-  background: #fff7ed;
-  color: #7c2d12;
+  background: var(--cx-warn-bg);
+  color: var(--cx-warn-ink);
 }
 
 .cx-feedback {
@@ -681,15 +681,15 @@ textarea.cx-input {
 }
 
 .cx-feedback.is-success {
-  border: 1px solid #86efac;
-  background: #f0fdf4;
-  color: #14532d;
+  border: 1px solid var(--cx-ok-border);
+  background: var(--cx-ok-bg);
+  color: var(--cx-ok-ink);
 }
 
 .cx-feedback.is-error {
-  border: 1px solid #fca5a5;
-  background: #fef2f2;
-  color: #7f1d1d;
+  border: 1px solid var(--cx-crit-border);
+  background: var(--cx-crit-bg);
+  color: var(--cx-crit-ink);
 }
 
 .cx-empty {
@@ -751,7 +751,7 @@ textarea.cx-input {
   display: grid;
   gap: 2px;
   padding: 8px;
-  border: 1.5px dashed #9aa3af;
+  border: 1.5px dashed var(--cx-ink-3);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -826,11 +826,11 @@ textarea.cx-input {
 .cx-pick[aria-pressed="true"] {
   border-color: var(--cx-ink);
   background: var(--cx-ink);
-  color: #ffffff;
+  color: var(--cx-surface);
 }
 
 .cx-pick[aria-pressed="true"] small {
-  color: #e5e7eb;
+  color: var(--cx-border);
 }
 
 .cx-segmented {
@@ -839,7 +839,7 @@ textarea.cx-input {
   gap: 4px;
   padding: 4px;
   border-radius: 12px;
-  background: #e9ecef;
+  background: var(--cx-fill);
 }
 
 .cx-segmented button {
@@ -848,7 +848,7 @@ textarea.cx-input {
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #3f4652;
+  color: var(--cx-ink-2);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -863,7 +863,7 @@ textarea.cx-input {
 .cx-chip[aria-pressed="true"] {
   border-color: var(--cx-ink);
   background: var(--cx-ink);
-  color: #ffffff;
+  color: var(--cx-surface);
 }
 
 .cx-search {
@@ -945,7 +945,7 @@ textarea.cx-input {
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  border-top: 1px solid #eef0f2;
+  border-top: 1px solid var(--cx-border-soft);
 }
 
 .cx-order-line.is-pending {
@@ -1070,22 +1070,22 @@ textarea.cx-input {
 
 .cx-share.is-active {
   border: 2px solid var(--cx-accent);
-  background: #fff7ed;
+  background: var(--cx-warn-bg);
 }
 
 .cx-share.is-active small {
-  color: #9a3412;
+  color: var(--cx-warn-ink);
   font-weight: 700;
 }
 
 .cx-share.is-paid {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: var(--cx-ok-border);
+  background: var(--cx-ok-bg);
   cursor: default;
 }
 
 .cx-share.is-paid small {
-  color: #166534;
+  color: var(--cx-ok-ink);
   font-weight: 700;
 }
 
@@ -1100,7 +1100,7 @@ textarea.cx-input {
   justify-content: space-between;
   gap: 4px 12px;
   padding: 8px 0;
-  border-top: 1px solid #eef0f2;
+  border-top: 1px solid var(--cx-border-soft);
 }
 
 .cx-list-row.is-strong {
@@ -1114,8 +1114,8 @@ textarea.cx-input {
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: var(--cx-radius);
-  background: #f0fdf4;
-  color: #14532d;
+  background: var(--cx-ok-bg);
+  color: var(--cx-ok-ink);
   font-weight: 700;
 }
 
@@ -1124,8 +1124,8 @@ textarea.cx-input {
 }
 
 .cx-change.is-missing {
-  background: #fef2f2;
-  color: #7f1d1d;
+  background: var(--cx-crit-bg);
+  color: var(--cx-crit-ink);
 }
 
 .cx-check {
@@ -1219,7 +1219,7 @@ textarea.cx-input {
   height: 64px;
   border-radius: 8px;
   object-fit: cover;
-  background: #f1f3f5;
+  background: var(--cx-fill);
 }
 
 .cx-product-thumb.is-empty {
@@ -1312,7 +1312,7 @@ textarea.cx-input {
   gap: 2px;
   padding: 10px 12px;
   border-radius: var(--cx-radius);
-  background: #f4f5f7;
+  background: var(--cx-fill);
 }
 
 .cx-bill-facts small {
@@ -1337,16 +1337,16 @@ textarea.cx-input {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-top: 1px solid #eef0f2;
+  border-top: 1px solid var(--cx-border-soft);
 }
 
 .cx-bill-row:nth-child(odd):not(.is-head) {
-  background: #fafbfc;
+  background: var(--cx-fill-2);
 }
 
 .cx-bill-row.is-head {
   border-top: 0;
-  background: #f4f5f7;
+  background: var(--cx-fill);
   color: var(--cx-ink-2);
   font-size: 13px;
   font-weight: 700;
@@ -1384,7 +1384,7 @@ textarea.cx-input {
 }
 
 .cx-bill-line.is-discount {
-  color: #166534;
+  color: var(--cx-ok-ink);
 }
 
 .cx-switch-row {
@@ -1419,7 +1419,7 @@ textarea.cx-input {
   height: 28px;
   margin: 0;
   border-radius: 999px;
-  background: #c4c9d0;
+  background: var(--cx-line-strong);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1432,7 +1432,7 @@ textarea.cx-input {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--cx-surface);
   box-shadow: 0 1px 3px rgba(18, 21, 26, 0.3);
   transition: transform 0.15s ease;
 }
@@ -1448,7 +1448,7 @@ textarea.cx-input {
 .cx-money-input {
   display: flex;
   align-items: stretch;
-  border: 1px solid #8a93a0;
+  border: 1px solid var(--cx-line-strong);
   border-radius: var(--cx-radius);
   overflow: hidden;
 }
@@ -1457,7 +1457,7 @@ textarea.cx-input {
   display: grid;
   place-items: center;
   padding: 0 12px;
-  background: #f4f5f7;
+  background: var(--cx-fill);
   color: var(--cx-ink-2);
   font-weight: 700;
 }
@@ -1473,11 +1473,11 @@ textarea.cx-input {
   padding: 16px;
   border-radius: 12px;
   background: var(--cx-ink);
-  color: #ffffff;
+  color: var(--cx-surface);
 }
 
 .cx-bill-total span {
-  color: #d1d5db;
+  color: var(--cx-line-strong);
 }
 
 .cx-bill-total strong {
@@ -1486,7 +1486,7 @@ textarea.cx-input {
 }
 
 .cx-bill-total small {
-  color: #e5e7eb;
+  color: var(--cx-border);
   font-size: 14px;
 }
 
@@ -1528,14 +1528,14 @@ textarea.cx-input {
   grid-column: 1 / -1;
   height: 8px;
   border-radius: 999px;
-  background: #e5e7eb;
+  background: var(--cx-border);
   overflow: hidden;
 }
 
 .cx-pay-progress > span {
   display: block;
   height: 100%;
-  background: #16a34a;
+  background: var(--cx-ok-bar);
 }
 
 .cx-split-picker {
@@ -1557,6 +1557,188 @@ textarea.cx-input {
 
 .cx-split-picker small {
   color: var(--cx-ink-2);
+}
+
+
+/* =====================================================================
+   Caixa: tokens dos temas claro e escuro (segue o tema do Gestor).
+   ===================================================================== */
+.cx-root {
+  --cx-bg: #f4f5f7;
+  --cx-surface: #ffffff;
+  --cx-fill: #f1f3f5;
+  --cx-fill-2: #fafbfc;
+  --cx-border: #dde1e6;
+  --cx-border-soft: #eef0f2;
+  --cx-ink: #12151a;
+  --cx-ink-hover: #2a2f38;
+  --cx-ink-2: #4b5260;
+  --cx-ink-3: #6b7280;
+  --cx-line-strong: #8a93a0;
+  --cx-accent: #c2410c;
+  --cx-accent-hover: #9a3412;
+  --cx-accent-soft: #fff1e6;
+  --cx-accent-2: #ea580c;
+  --cx-brand: #ff6a00;
+  --cx-on-accent: #ffffff;
+  --cx-ok-bg: #f0fdf4;
+  --cx-ok-ink: #166534;
+  --cx-ok-border: #86efac;
+  --cx-ok-bar: #16a34a;
+  --cx-crit-bg: #fef2f2;
+  --cx-crit-ink: #7f1d1d;
+  --cx-crit-border: #fca5a5;
+  --cx-warn-bg: #fff7ed;
+  --cx-warn-ink: #9a3412;
+  --cx-warn-border: #f5c48b;
+  --cx-busy-bg: #e8f0fe;
+  --cx-busy-border: #2f6fdb;
+  --cx-busy-ink: #1d4fb8;
+  --cx-free-ink: #166534;
+  --cx-hero-bg: #12151a;
+  --cx-hero-ink: #ffffff;
+  --cx-hero-muted: #d1d5db;
+  --cx-shadow: 0 1px 2px rgba(18, 21, 26, 0.05), 0 6px 16px rgba(18, 21, 26, 0.06);
+  --cx-focus: 0 0 0 3px rgba(255, 106, 0, 0.35);
+}
+
+body[data-admin-theme="dark"] .cx-root {
+  --cx-bg: #121824;
+  --cx-surface: #1a2231;
+  --cx-fill: #232c3b;
+  --cx-fill-2: #1f2838;
+  --cx-border: #2f3a4d;
+  --cx-border-soft: #273142;
+  --cx-ink: #e8ecf3;
+  --cx-ink-hover: #cfd6e2;
+  --cx-ink-2: #b4bdcc;
+  --cx-ink-3: #8b96a9;
+  --cx-line-strong: #4a566b;
+  --cx-accent: #ff7a1a;
+  --cx-accent-hover: #ff9447;
+  --cx-accent-soft: rgba(255, 122, 26, 0.14);
+  --cx-accent-2: #ff8a3d;
+  --cx-brand: #ff7a1a;
+  --cx-on-accent: #111827;
+  --cx-ok-bg: rgba(34, 197, 94, 0.14);
+  --cx-ok-ink: #86efac;
+  --cx-ok-border: rgba(134, 239, 172, 0.35);
+  --cx-ok-bar: #22c55e;
+  --cx-crit-bg: rgba(239, 68, 68, 0.15);
+  --cx-crit-ink: #fca5a5;
+  --cx-crit-border: rgba(252, 165, 165, 0.35);
+  --cx-warn-bg: rgba(251, 146, 60, 0.14);
+  --cx-warn-ink: #fdba74;
+  --cx-warn-border: rgba(253, 186, 116, 0.35);
+  --cx-busy-bg: rgba(59, 130, 246, 0.16);
+  --cx-busy-border: #3b82f6;
+  --cx-busy-ink: #93c5fd;
+  --cx-free-ink: #86efac;
+  --cx-hero-bg: #0f141d;
+  --cx-hero-ink: #ffffff;
+  --cx-hero-muted: #b4bdcc;
+  --cx-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.28);
+  --cx-focus: 0 0 0 3px rgba(255, 148, 71, 0.45);
+  color-scheme: dark;
+}
+
+/* Cartões com sombra leve e detalhes laranja. */
+.cash-v3 :is(.cx-card, .cx-kpi, .cx-panel, .cx-split-picker) {
+  box-shadow: var(--cx-shadow);
+}
+
+.cash-v3 .cx-kpi {
+  position: relative;
+  overflow: hidden;
+}
+
+.cash-v3 .cx-kpi::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cx-brand), #ffb020);
+}
+
+.cash-v3 .cx-status-card {
+  box-shadow: 0 1px 2px rgba(18, 21, 26, 0.04);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.cash-v3 .cx-status-card:hover {
+  transform: translateY(-1px);
+}
+
+.cash-v3 .cx-product:hover {
+  border-color: var(--cx-brand);
+  box-shadow: 0 6px 16px rgba(255, 106, 0, 0.14);
+}
+
+.cash-v3 .cx-btn-primary {
+  color: var(--cx-on-accent);
+  box-shadow: 0 6px 16px rgba(194, 65, 12, 0.22);
+}
+
+.cash-v3 .cx-btn-primary:hover {
+  background: var(--cx-accent-hover);
+}
+
+.cash-v3 .cx-btn-dark {
+  border-color: var(--cx-hero-bg);
+  background: var(--cx-hero-bg);
+  color: var(--cx-hero-ink);
+}
+
+body[data-admin-theme="dark"] .cash-v3 .cx-btn-dark {
+  border-color: var(--cx-border);
+}
+
+.cash-v3 .cx-chip[aria-pressed="true"],
+.cash-v3 .cx-pick[aria-pressed="true"] {
+  border-color: var(--cx-accent);
+  background: var(--cx-accent);
+  color: var(--cx-on-accent);
+}
+
+.cash-v3 .cx-pick[aria-pressed="true"] small {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* Bloco do total: escuro nos dois temas, com detalhe laranja. */
+.cash-v3 .cx-bill-total {
+  border-left: 4px solid var(--cx-brand);
+  background: var(--cx-hero-bg);
+  color: var(--cx-hero-ink);
+}
+
+.cash-v3 .cx-bill-total span,
+.cash-v3 .cx-bill-total small {
+  color: var(--cx-hero-muted);
+}
+
+.cash-v3 .cx-bill-total strong {
+  color: var(--cx-hero-ink);
+}
+
+.cash-v3 .cx-status-card.is-free {
+  border-color: var(--cx-line-strong);
+}
+
+body[data-admin-theme="dark"] .cash-v3 .cx-product-thumb {
+  background: var(--cx-fill);
+}
+
+body[data-admin-theme="dark"] .cash-v3 .cx-switch {
+  background: var(--cx-line-strong);
+}
+
+body[data-admin-theme="dark"] .cash-v3 .cx-switch:checked {
+  background: var(--cx-accent);
+}
+
+body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
+  background: rgba(5, 8, 13, 0.7);
 }
 
 /* ---------- Cupom térmico 80 mm (só aparece na impressão) ---------- */
@@ -1682,4 +1864,8 @@ textarea.cx-input {
 .cx-product-info strong {
   overflow-wrap: break-word;
   hyphens: auto;
+}
+
+.cash-v3 h1 {
+  font-size: clamp(20px, 1.7vw, 24px);
 }

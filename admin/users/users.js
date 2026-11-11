@@ -313,6 +313,85 @@
     }, 4200);
   };
 
+  /* Menu do restaurante idêntico ao do Gestor (mesmos itens, ícones,
+     ordem, logo e medidas), com links para as abas do Gestor. */
+  const GESTOR_NAV_ICONS = Object.freeze({
+    dashboard: '<path d="M4 5h7v6H4zM13 5h7v10h-7zM4 13h7v6H4zM13 17h7v2h-7z"/>',
+    "cash-register": '<path d="M5 7h14v13H5zM7 4h10v3H7zM8 11h3v3H8zM14 11h2M14 14h2M8 17h8"/>',
+    orders: '<path d="M7 4h10l3 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8l2-4zm0 0v4h10V4M8 12h8M8 16h5"/>',
+    menu: '<path d="M7 4v8M11 4v8M7 8h4M16 4c1.7 0 3 1.3 3 3 0 1.2-.7 2.3-1.8 2.8L17 20M5 20h14"/>',
+    customers: '<path d="M15 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 3a3 3 0 1 0 0-6m4 12v-1a4 4 0 0 0-3-3.87"/>',
+    metrics: '<path d="M4 19h16M7 15l3-3 3 2 4-5"/>',
+    settings: '<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm7.4 3-1.3-.7.1-1.5-1.5-.9-1 .9-1.4-.6-.4-1.4h-1.8l-.4 1.4-1.4.6-1-.9-1.5.9.1 1.5-1.3.7v1.8l1.3.7-.1 1.5 1.5.9 1-.9 1.4.6.4 1.4h1.8l.4-1.4 1.4-.6 1 .9 1.5-.9-.1-1.5 1.3-.7v-1.8z"/>',
+  });
+  // [chave do Gestor, rótulo, permissão de menu, permissão funcional, é subitem]
+  const GESTOR_NAV = Object.freeze([
+    ["dashboard", "Painel", "dashboard", "tenant.dashboard.view", false],
+    ["cash-register", "Caixa", "cash_register", "tenant.cash_register.view", false],
+    ["orders", "Pedidos", "orders", "tenant.orders.view", false],
+    ["scheduled", "Agendamentos", "scheduled", "tenant.orders.view", true],
+    ["deliveries", "Entregas", "delivery", "tenant.delivery.view", true],
+    ["menu", "Cardápio", "catalog", "tenant.catalog.view", false],
+    ["inventory", "Estoque", "inventory", "tenant.inventory.view", true],
+    ["customers", "Clientes", "customers", "tenant.customers.view", false],
+    ["promotions", "Promoções", "promotions", "tenant.promotions.view", true],
+    ["reviews", "Avaliações", "reviews", "tenant.reviews.view", true],
+    ["metrics", "Resultados", "metrics", "tenant.reports.view", false],
+    ["finance", "Financeiro", "financial", "tenant.financial.view", true],
+    ["reports", "Relatórios", "reports", "tenant.reports.view", true],
+    ["settings", "Configurações", "settings", "tenant.settings.view", false],
+    ["users", "Usuários", "users", "tenant.users.view", true],
+  ]);
+
+  const renderRestaurantSidebar = () => {
+    const effective = new Set(state.session?.effectivePermissions || []);
+    const navigationIsEnforced = [...effective].some((permission) => permission.startsWith("tenant.navigation."));
+    const visible = GESTOR_NAV.filter(([, , navKey, functional]) =>
+      navigationIsEnforced
+        ? effective.has(`tenant.navigation.${navKey}`)
+        : !effective.size || effective.has(functional)
+    );
+    const name = state.session?.displayName || state.session?.login || "Conta autenticada";
+    sidebar.innerHTML = `
+      <a class="users-brand gx-brand" href="/admin/">
+        <img src="/assets/inovas-food-logo-menu.png" alt="INOVAS Food" />
+      </a>
+      <div class="gx-brand-copy"><small>INOVAS Food</small><strong>Painel Operacional</strong></div>
+      <nav class="users-nav gx-nav" aria-label="Navegação principal">
+        ${visible
+          .map(([key, label, , , isSub]) => {
+            const href = key === "dashboard" ? "/admin/" : `/admin/?section=${encodeURIComponent(key)}`;
+            const active = key === "users";
+            return `<a class="gx-nav-item${isSub ? " is-sub" : ""}${active ? " is-active" : ""}" href="${href}" ${active ? 'aria-current="page"' : ""}>
+              ${
+                isSub
+                  ? ""
+                  : `<span class="gx-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${
+                      GESTOR_NAV_ICONS[key] || GESTOR_NAV_ICONS.dashboard
+                    }</svg></span>`
+              }
+              <strong>${escapeHtml(label)}</strong>
+            </a>`;
+          })
+          .join("")}
+      </nav>
+      <div class="users-sidebar-foot gx-account">
+        <div class="users-sidebar-account">
+          <strong>${escapeHtml(name)}</strong>
+          <span>${escapeHtml(translateRole(state.session?.role))}</span>
+        </div>
+        <button class="users-logout" type="button" data-users-logout><span>Sair do gestor</span></button>
+      </div>`;
+  };
+
+  /* Tema do Gestor (claro/escuro) também nas páginas de Usuários. */
+  try {
+    const storedTheme = window.localStorage.getItem("tokyo_admin_theme");
+    if (!isSystem) document.body.dataset.adminTheme = storedTheme === "dark" ? "dark" : "light";
+  } catch {
+    if (!isSystem) document.body.dataset.adminTheme = "light";
+  }
+
   const renderSidebar = () => {
     if (!sidebar) return;
     if (isSystem && window.InovasSystemShell) {
@@ -323,6 +402,10 @@
         activeKey: "users",
         logoutAttribute: "data-users-logout",
       });
+      return;
+    }
+    if (!isSystem) {
+      renderRestaurantSidebar();
       return;
     }
     const systemLinks = [

@@ -5,15 +5,12 @@
  */
 
 html body.admin-body .admin-sidebar {
-  background: #ffffff !important;
-  border-right: 1px solid #e5e7eb !important;
+  background: var(--gx-surface) !important;
+  border-right: 1px solid var(--gx-border) !important;
   box-shadow: none !important;
 }
 
-/* O Gestor usa só o tema claro. */
-html body.admin-body .admin-theme-toggle {
-  display: none !important;
-}
+/* O botão de tema volta: claro e escuro. */
 
 /* Blocos informativos que o novo desenho tirou do menu. */
 html body.admin-body .admin-sidebar > .admin-sidebar-card {
@@ -23,7 +20,7 @@ html body.admin-body .admin-sidebar > .admin-sidebar-card {
 html body.admin-body .admin-sidebar .admin-brand-copy {
   padding: 12px !important;
   border-radius: 8px !important;
-  background: #f3f4f6 !important;
+  background: var(--gx-bg-2) !important;
 }
 
 html body.admin-body .admin-sidebar .admin-brand-copy .admin-eyebrow {
@@ -31,12 +28,12 @@ html body.admin-body .admin-sidebar .admin-brand-copy .admin-eyebrow {
   font-weight: 400 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
-  color: #4b5563 !important;
+  color: var(--gx-ink-2) !important;
 }
 
 html body.admin-body .admin-sidebar .admin-brand-copy strong {
   font-size: 16px !important;
-  color: #111827 !important;
+  color: var(--gx-ink) !important;
 }
 
 html body.admin-body .admin-sidebar .admin-brand-copy small {
@@ -58,17 +55,17 @@ html body.admin-body .admin-nav .admin-nav-item {
   border-radius: 8px !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #374151 !important;
+  color: var(--gx-ink-4) !important;
   cursor: pointer !important;
   transform: none !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item:hover {
-  background: #f9fafb !important;
+  background: var(--gx-hover) !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item:focus-visible {
-  outline: 3px solid #1d4ed8 !important;
+  outline: 3px solid var(--gx-focus) !important;
   outline-offset: 2px !important;
 }
 
@@ -76,7 +73,7 @@ html body.admin-body .admin-nav .admin-nav-item strong {
   font-size: 14px !important;
   font-weight: 500 !important;
   line-height: 1.5 !important;
-  color: #374151 !important;
+  color: var(--gx-ink-4) !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item small {
@@ -89,7 +86,7 @@ html body.admin-body .admin-nav .admin-nav-icon {
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #6b7280 !important;
+  color: var(--gx-ink-3) !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-icon svg {
@@ -98,16 +95,16 @@ html body.admin-body .admin-nav .admin-nav-icon svg {
 }
 
 html body.admin-body .admin-nav .admin-nav-item.is-active {
-  background: #fff1e6 !important;
+  background: var(--gx-brand-soft) !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item.is-active strong {
   font-weight: 600 !important;
-  color: #111827 !important;
+  color: var(--gx-ink) !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item.is-active .admin-nav-icon {
-  color: #c2410c !important;
+  color: var(--gx-brand-ink) !important;
 }
 
 /* Contadores discretos: número não é alerta. */
@@ -116,16 +113,16 @@ html body.admin-body .admin-nav .admin-nav-badge {
   padding: 2px 8px !important;
   border: 0 !important;
   border-radius: 999px !important;
-  background: #f3f4f6 !important;
+  background: var(--gx-bg-2) !important;
   box-shadow: none !important;
-  color: #374151 !important;
+  color: var(--gx-ink-4) !important;
   font-size: 12px !important;
   font-weight: 600 !important;
 }
 
 html body.admin-body .admin-nav .admin-nav-item.is-active .admin-nav-badge {
-  background: #ffffff !important;
-  color: #374151 !important;
+  background: var(--gx-surface) !important;
+  color: var(--gx-ink-4) !important;
 }
 
 /* ---------- Ordem e agrupamento do novo desenho ----------
@@ -208,9 +205,9 @@ html body.admin-body .admin-nav :is(
 /* ---------- Rodapé: usuário e sair ---------- */
 html body.admin-body .admin-sidebar .admin-sidebar-operator {
   padding: 12px !important;
-  border: 1px solid #e5e7eb !important;
+  border: 1px solid var(--gx-border) !important;
   border-radius: 8px !important;
-  background: #ffffff !important;
+  background: var(--gx-surface) !important;
   box-shadow: none !important;
 }
 
@@ -218,19 +215,19 @@ html body.admin-body .admin-sidebar .admin-sidebar-operator-avatar {
   width: 36px !important;
   height: 36px !important;
   border-radius: 8px !important;
-  background: #111827 !important;
-  color: #ffffff !important;
+  background: var(--gx-ink) !important;
+  color: var(--gx-surface) !important;
   font-size: 13px !important;
   font-weight: 600 !important;
 }
 
 html body.admin-body .admin-sidebar [data-admin-logout] {
   min-height: 44px !important;
-  border: 1px solid #e5e7eb !important;
+  border: 1px solid var(--gx-border) !important;
   border-radius: 8px !important;
-  background: #ffffff !important;
+  background: var(--gx-surface) !important;
   box-shadow: none !important;
-  color: #111827 !important;
+  color: var(--gx-ink) !important;
   font-weight: 600 !important;
 }
 
@@ -449,12 +446,12 @@ html body.admin-body .admin-button.is-primary {
 
 html body.admin-body .admin-button-primary:hover,
 html body.admin-body .admin-button.is-primary:hover {
-  background: #f04f0c !important;
+  background: var(--gx-brand-hover) !important;
 }
 
 html body.admin-body :is(.admin-input, input.admin-input, select.admin-input, textarea.admin-input) {
   min-height: 44px;
-  border-color: #c7ccd4 !important;
+  border-color: var(--gx-input-border) !important;
   border-radius: 8px !important;
 }
 
@@ -472,10 +469,10 @@ html body.admin-body .admin-nav .admin-nav-badge:is([data-zero], :empty) {
 
 /* Título da página: escuro e do mesmo tamanho em todas as áreas. */
 html body.admin-body[data-admin-page][data-admin-section][data-admin-theme] .admin-main-shell .admin-main-intro h1 {
-  color: #111827 !important;
+  color: var(--gx-ink) !important;
   font-size: clamp(22px, 2vw, 28px) !important;
   font-weight: 700 !important;
-  -webkit-text-fill-color: #111827 !important;
+  -webkit-text-fill-color: var(--gx-ink) !important;
 }
 
 /* Pedidos: os 6 indicadores cabem numa linha em 1366 px. */
@@ -510,4 +507,605 @@ html body.admin-body .cash-v3 .cx-split-main {
 
 html body.admin-body .cash-v3 .cx-split-side {
   flex-basis: 290px;
+}
+
+/* =====================================================================
+   Temas do Gestor INOVAS — paleta a partir da logo (preto, laranja,
+   vermelho e amarelo) e do site.
+   Claro: fundo cinza-claro, cartões brancos, detalhes em laranja e
+   sombras leves. Escuro: azul-ardósia profundo (não preto), cartões
+   em camadas e laranja mais vivo para manter contraste.
+   ===================================================================== */
+
+html body.admin-body {
+  --gx-bg: #f4f5f7;
+  --gx-bg-2: #eef0f3;
+  --gx-surface: #ffffff;
+  --gx-surface-2: #fbfbfc;
+  --gx-border: #e3e6ea;
+  --gx-ink: #111827;
+  --gx-ink-2: #4b5563;
+  --gx-ink-3: #6b7280;
+  --gx-ink-4: #374151;
+  --gx-brand: #ff6a00;
+  --gx-brand-hover: #f04f0c;
+  --gx-brand-ink: #c2410c;
+  --gx-brand-soft: #fff1e6;
+  --gx-brand-line: #ffd2b0;
+  --gx-on-brand: #111827;
+  --gx-hover: #f7f8fa;
+  --gx-input-border: #c7ccd4;
+  --gx-focus: #ff6a00;
+  --gx-radius: 12px;
+  --gx-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), 0 6px 18px rgba(17, 24, 39, 0.06);
+  --gx-shadow-hover: 0 2px 4px rgba(17, 24, 39, 0.06), 0 12px 28px rgba(17, 24, 39, 0.1);
+  --gx-shadow-brand: 0 6px 16px rgba(255, 106, 0, 0.25);
+}
+
+html body.admin-body[data-admin-theme="dark"] {
+  color-scheme: dark;
+  --gx-bg: #121824;
+  --gx-bg-2: #19212f;
+  --gx-surface: #1a2231;
+  --gx-surface-2: #1f2838;
+  --gx-border: #2b3649;
+  --gx-ink: #e8ecf3;
+  --gx-ink-2: #b4bdcc;
+  --gx-ink-3: #8b96a9;
+  --gx-ink-4: #cdd4df;
+  --gx-brand: #ff7a1a;
+  --gx-brand-hover: #ff9447;
+  --gx-brand-ink: #ffa463;
+  --gx-brand-soft: rgba(255, 122, 26, 0.14);
+  --gx-brand-line: rgba(255, 122, 26, 0.45);
+  --gx-on-brand: #111827;
+  --gx-hover: #222c3d;
+  --gx-input-border: #3c4960;
+  --gx-focus: #ff9447;
+  --gx-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 26px rgba(0, 0, 0, 0.28);
+  --gx-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 34px rgba(0, 0, 0, 0.34);
+  --gx-shadow-brand: 0 6px 18px rgba(255, 122, 26, 0.3);
+}
+
+/* Variáveis do sistema antigo seguem o tema, para os componentes internos. */
+html body.admin-body[data-admin-theme] {
+  --admin-bg: var(--gx-bg);
+  --admin-bg-soft: var(--gx-bg-2);
+  --admin-surface: var(--gx-surface);
+  --admin-surface-soft: var(--gx-surface-2);
+  --admin-surface-strong: var(--gx-surface);
+  --admin-surface-elevated: var(--gx-surface);
+  --admin-border: var(--gx-border);
+  --admin-border-strong: var(--gx-input-border);
+  --admin-text: var(--gx-ink);
+  --admin-text-muted: var(--gx-ink-3);
+  --admin-text-soft: var(--gx-ink-2);
+  --admin-accent: var(--gx-brand);
+  --admin-accent-strong: var(--gx-brand-hover);
+  --inovas-bg: var(--gx-bg);
+  --inovas-surface: var(--gx-surface);
+  --inovas-surface-soft: var(--gx-surface-2);
+  --inovas-border: var(--gx-border);
+  --inovas-text: var(--gx-ink);
+  --inovas-muted: var(--gx-ink-3);
+  --inovas-orange: var(--gx-brand);
+  --inovas-orange-hover: var(--gx-brand-hover);
+  background: var(--gx-bg) !important;
+  color: var(--gx-ink) !important;
+}
+
+/* Texto padrão dos blocos internos segue o tema. */
+html body.admin-body[data-admin-theme="dark"] :is(.admin-main-shell, .admin-sidebar) :is(h1, h2, h3, h4, strong, label, p, td, th, dt, dd) {
+  color: inherit;
+}
+
+html body.admin-body[data-admin-theme="dark"] .admin-main-shell {
+  color: var(--gx-ink) !important;
+}
+
+html body.admin-body[data-admin-theme="dark"] :is(.admin-main-shell, .admin-sidebar) :is(small, .admin-muted, .admin-helper) {
+  color: var(--gx-ink-3) !important;
+}
+
+/* Campos no tema escuro. */
+html body.admin-body[data-admin-theme="dark"] :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  border-color: var(--gx-input-border) !important;
+  background: var(--gx-bg-2) !important;
+  color: var(--gx-ink) !important;
+}
+
+html body.admin-body[data-admin-theme="dark"] :is(input, textarea)::placeholder {
+  color: var(--gx-ink-3) !important;
+}
+
+/* Blocos internos claros do sistema antigo ganham a superfície do tema. */
+html body.admin-body[data-admin-theme="dark"] :is(
+  .admin-dashboard-summary-card,
+  .admin-dashboard-revenue-card,
+  .admin-dashboard-flow-row,
+  .admin-dashboard-note-card,
+  .admin-module-section,
+  .admin-order-card,
+  .admin-kanban-column,
+  .admin-board-column,
+  .admin-empty-state,
+  .admin-closed-panel,
+  .admin-detail-card,
+  .admin-turn-panel-card,
+  .admin-stat-card
+) {
+  border-color: var(--gx-border) !important;
+  background: var(--gx-surface-2) !important;
+  color: var(--gx-ink) !important;
+}
+
+/* ---------- Detalhes em laranja e sombras leves ---------- */
+
+/* Item ativo do menu: barra laranja à esquerda. */
+html body.admin-body .admin-nav .admin-nav-item.is-active {
+  box-shadow: inset 3px 0 0 var(--gx-brand) !important;
+}
+
+html body.admin-body .admin-nav .admin-nav-item:hover .admin-nav-icon {
+  color: var(--gx-brand-ink) !important;
+}
+
+/* Indicadores: linha laranja no topo e sombra que cresce ao passar o mouse. */
+html body.admin-body .admin-stat-card {
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+html body.admin-body .admin-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gx-brand), #ffb020);
+}
+
+html body.admin-body .admin-stat-card:hover {
+  box-shadow: var(--gx-shadow-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* Cartões principais: sombra suave e borda que esquenta no foco. */
+html body.admin-body :is(.admin-board-panel, .admin-dashboard-block, .admin-module-card) {
+  box-shadow: var(--gx-shadow) !important;
+}
+
+html body.admin-body :is(.admin-dashboard-block, .admin-module-card):focus-within {
+  border-color: var(--gx-brand-line) !important;
+}
+
+/* Títulos de bloco com um traço laranja. */
+html body.admin-body .admin-dashboard-block-head h3::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 0.95em;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: var(--gx-brand);
+  vertical-align: -0.1em;
+}
+
+/* Botão principal com leve brilho laranja. */
+html body.admin-body .admin-button-primary,
+html body.admin-body .admin-button.is-primary {
+  color: var(--gx-on-brand) !important;
+  box-shadow: var(--gx-shadow-brand) !important;
+}
+
+/* Foco visível no laranja da marca. */
+html body.admin-body :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--gx-focus) !important;
+  outline-offset: 2px !important;
+}
+
+/* Selos e eyebrows laranja. */
+html body.admin-body :is(.admin-eyebrow, .admin-chip) {
+  color: var(--gx-brand-ink) !important;
+}
+
+html body.admin-body .admin-chip {
+  border-color: var(--gx-brand-line) !important;
+  background: var(--gx-brand-soft) !important;
+}
+
+/* ---------- Botão de tema ---------- */
+html body.admin-body .admin-theme-toggle {
+  display: inline-grid !important;
+  place-items: center;
+  width: 44px !important;
+  height: 44px !important;
+  border: 1px solid var(--gx-border) !important;
+  border-radius: 10px !important;
+  background: var(--gx-surface) !important;
+  color: var(--gx-ink-2) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+html body.admin-body .admin-theme-toggle:hover {
+  border-color: var(--gx-brand-line) !important;
+  color: var(--gx-brand-ink) !important;
+}
+
+/* Logo legível no escuro: a logo tem contorno preto, então ganha um fundo claro discreto. */
+html body.admin-body[data-admin-theme="dark"] .admin-brand-logo {
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: #f4f1ea;
+}
+
+/* =====================================================================
+   Legibilidade e identidade das abas (achados da auditoria automática
+   tests/e2e/gestor-contrast.spec.js). Contraste mínimo 4,5:1.
+   ===================================================================== */
+
+html body.admin-body {
+  --gx-ink-3: #5d6470;
+  --gx-ok-ink: #15803d;
+  --gx-ok-bg: #ecfdf3;
+  --gx-crit-ink: #b42318;
+  --gx-warn-ink: #b54708;
+  --if-color-gray: var(--gx-ink-3);
+}
+
+html body.admin-body[data-admin-theme="dark"] {
+  --gx-ink-3: #97a2b5;
+  --gx-ok-ink: #86efac;
+  --gx-ok-bg: rgba(34, 197, 94, 0.14);
+  --gx-crit-ink: #fca5a5;
+  --gx-warn-ink: #fdba74;
+}
+
+/* Textos de apoio (rótulos de campo, descrições, legendas). */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-delivery-field > span,
+  .admin-delivery-card-head p,
+  .admin-finance-kpi > span,
+  .admin-module-head p,
+  .admin-module-head small,
+  .admin-module-head-meta span,
+  .admin-inventory-item small,
+  .admin-inventory-item-footer span,
+  .admin-inventory-seed-note span,
+  .admin-inventory-seed-note small,
+  .admin-settings-schedule-row span,
+  .admin-customer-toolbar label span,
+  .admin-settings-layout-help span,
+  .admin-settings-media-preview span,
+  .admin-settings-color-preview strong,
+  .admin-empty-state span,
+  .admin-empty-state p,
+  .admin-dashboard-chart-y-axis span,
+  .admin-dashboard-chart-x-axis span,
+  .admin-dashboard-chart-total span
+) {
+  color: var(--gx-ink-2) !important;
+  opacity: 1 !important;
+}
+
+/* Valores em destaque (Financeiro e gráfico): sempre na cor do texto. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-finance-kpi strong,
+  .admin-dashboard-chart-total strong
+) {
+  color: var(--gx-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-finance-kpi {
+  border-color: var(--gx-border) !important;
+  background: var(--gx-surface) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-dashboard-chart-total {
+  border-color: var(--gx-border) !important;
+  background: var(--gx-surface-2) !important;
+}
+
+/* Positivo / negativo legíveis nos dois temas. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.is-positive, .admin-inventory-status.is-ok, .admin-inventory-validity.is-neutral) {
+  color: var(--gx-ok-ink) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .is-negative {
+  color: var(--gx-crit-ink) !important;
+}
+
+/* Selos (chips) com texto laranja escuro sobre fundo laranja suave. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.admin-chip, .admin-inline-chip),
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.admin-chip, .admin-inline-chip) * {
+  color: var(--gx-brand-ink) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-inline-chip {
+  border-color: var(--gx-brand-line) !important;
+  background: var(--gx-brand-soft) !important;
+}
+
+/* Botões laranja: texto escuro (contraste 6:1 no laranja da marca). */
+html body.admin-body[data-admin-theme][data-admin-page] .admin-main-shell :is(
+  .admin-button-primary,
+  .admin-button.is-primary,
+  .admin-action-button.is-primary
+),
+html body.admin-body[data-admin-theme][data-admin-page] .admin-main-shell :is(
+  .admin-button-primary,
+  .admin-button.is-primary,
+  .admin-action-button.is-primary
+) * {
+  color: var(--gx-on-brand) !important;
+}
+
+html body.admin-body[data-admin-theme][data-admin-page] .admin-main-shell :is(.admin-action-button.is-primary) {
+  border-color: var(--gx-brand) !important;
+  background: var(--gx-brand) !important;
+}
+
+/* Período ativo do Financeiro. */
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-finance-period-button.is-active {
+  border-color: var(--gx-brand) !important;
+  background: var(--gx-brand) !important;
+  color: var(--gx-on-brand) !important;
+}
+
+/* Contador do sino. */
+html body.admin-body[data-admin-theme] .admin-top-alert-badge {
+  background: #c2410c !important;
+  color: #ffffff !important;
+}
+
+/* ---------- Abas mais compactas, com identidade ---------- */
+
+/* Título da página discreto: o cabeçalho do módulo é quem identifica a aba. */
+html body.admin-body[data-admin-page][data-admin-section][data-admin-theme] .admin-main-shell .admin-main-intro h1 {
+  font-size: 20px !important;
+  color: var(--gx-ink-2) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* Cabeçalho de cada aba: faixa da marca (barra laranja + fundo suave). */
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-module-head {
+  position: relative;
+  gap: 6px 16px !important;
+  margin-bottom: 4px !important;
+  padding: 14px 18px 14px 22px !important;
+  border: 1px solid var(--gx-border) !important;
+  border-radius: 14px !important;
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--gx-brand-soft) 0%, transparent 55%),
+    var(--gx-surface) !important;
+  box-shadow: var(--gx-shadow) !important;
+  overflow: hidden;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-module-head::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--gx-brand), #ffb020);
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-module-head :is(h2, h3) {
+  margin: 2px 0 2px !important;
+  color: var(--gx-ink) !important;
+  font-size: 20px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-module-head p {
+  margin: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell .admin-module-head .admin-chip {
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+}
+
+/* Indicadores dos módulos: números menores, cartões mais baixos. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-finance-kpi,
+  [class*="summary-card"],
+  [class*="-stat-card"],
+  [class*="metric-card"]
+) {
+  min-height: 0 !important;
+  padding: 12px 14px !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-finance-kpi strong,
+  [class*="summary-card"] strong,
+  [class*="-stat-card"] strong,
+  [class*="metric-card"] strong
+) {
+  font-size: clamp(18px, 1.6vw, 22px) !important;
+  line-height: 1.2 !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell :is(
+  .admin-finance-kpi > span,
+  [class*="summary-card"] > span,
+  [class*="-stat-card"] > span
+) {
+  font-size: 11.5px !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Cartões e seções com cantos e espaçamento padronizados. */
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.admin-module-card, .admin-delivery-card, .admin-inventory-item, .admin-finance-kpi) {
+  border-radius: 12px !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.admin-delivery-card, .admin-module-card) {
+  padding: clamp(14px, 1.4vw, 20px) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-main-shell :is(.admin-delivery-card, .admin-module-card) :is(h2, h3) {
+  font-size: 17px !important;
+  letter-spacing: 0 !important;
+}
+
+html body.admin-body[data-admin-theme="light"] {
+  --gx-ok-ink: #166534;
+}
+
+html body.admin-body[data-admin-theme="dark"] .admin-main-shell .admin-board-column-head strong {
+  color: var(--gx-ink) !important;
+}
+
+/* Abas com cabeçalho próprio (módulo) não repetem o título no topo. */
+html body.admin-body[data-admin-section]:not([data-admin-section="dashboard"]):not([data-admin-section="orders"]):not([data-admin-section="cash-register"]) .admin-main-topbar {
+  display: none !important;
+}
+
+/* Topo igual nos dois temas (o escuro antigo mostrava busca e sino extras). */
+html body.admin-body[data-admin-theme="dark"] .admin-main-topbar .admin-search-card {
+  display: none !important;
+}
+
+html body.admin-body[data-admin-theme="dark"] .admin-main-topbar,
+html body.admin-body[data-admin-theme="dark"] .admin-main-intro {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body[data-admin-theme="dark"] .admin-main-intro :is(.admin-chip, p) {
+  display: none !important;
+}
+
+/* Marca no menu sem a caixinha de campo no tema escuro. */
+html body.admin-body[data-admin-theme] .admin-sidebar .admin-brand-copy .admin-eyebrow {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--gx-ink-3) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-sidebar .admin-brand-copy {
+  background: var(--gx-bg-2) !important;
+}
+
+/* Submenu do Caixa e itens do menu legíveis nos dois temas. */
+html body.admin-body[data-admin-theme] .admin-nav-submenu :is(button, a, span) {
+  color: var(--gx-ink-2) !important;
+  opacity: 1 !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-nav-submenu :is(button, a):hover {
+  color: var(--gx-brand-ink) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-sidebar :is(.admin-nav-item strong, .admin-sidebar-operator strong) {
+  color: var(--gx-ink) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-sidebar :is(.admin-sidebar-operator small, .admin-sidebar-operator span) {
+  color: var(--gx-ink-2) !important;
+}
+
+html body.admin-body[data-admin-theme] .admin-sidebar {
+  background: var(--gx-surface) !important;
+  border-color: var(--gx-border) !important;
+}
+
+/* =====================================================================
+   Padrão único do menu lateral (medido por
+   tests/e2e/gestor-layout-consistency.spec.js): mesma largura, posição,
+   logo, itens e fontes em todas as abas e nos dois temas.
+   ===================================================================== */
+@media (min-width: 901px) {
+  html body.admin-body[data-admin-page][data-admin-theme] .admin-shell {
+    grid-template-columns: 248px minmax(0, 1fr) !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  html body.admin-body[data-admin-page][data-admin-theme] .admin-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    width: 248px !important;
+    min-width: 248px !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 20px 16px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--gx-border) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    gap: 14px !important;
+  }
+}
+
+/* Logo: recortada, transparente, mesmo tamanho nos dois temas. */
+html body.admin-body[data-admin-page][data-admin-theme] .admin-sidebar .admin-brand-logo {
+  display: block !important;
+  width: 168px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: contain !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html body.admin-body[data-admin-page][data-admin-theme] .admin-sidebar .admin-sidebar-brand-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  min-height: 72px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Itens do menu: mesma altura, fonte e recuo em todo lugar. */
+html body.admin-body[data-admin-page][data-admin-theme] .admin-nav .admin-nav-item {
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  font-size: 15px !important;
+}
+
+html body.admin-body[data-admin-page][data-admin-theme] .admin-nav .admin-nav-item strong {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+
+html body.admin-body[data-admin-page][data-admin-theme] .admin-nav .admin-nav-item.is-active strong {
+  font-weight: 600 !important;
+}
+
+html body.admin-body[data-admin-page][data-admin-theme] .admin-nav :is(
+  [data-admin-section="scheduled"],
+  [data-admin-section="deliveries"],
+  [data-admin-section="inventory"],
+  [data-admin-section="promotions"],
+  [data-admin-section="reviews"],
+  [data-admin-section="finance"],
+  [data-admin-section="reports"],
+  [data-admin-section="users"]
+) strong {
+  font-size: 14px !important;
 }

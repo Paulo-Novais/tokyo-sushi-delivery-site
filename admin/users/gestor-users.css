@@ -1,0 +1,267 @@
+/* Páginas de Usuários do restaurante com o mesmo menu, logo, medidas e
+   temas (claro/escuro) do Gestor. Só vale para o domínio do restaurante;
+   o Painel System usa system/system.css. */
+
+body.users-body[data-user-domain="RESTAURANT"] {
+  --gx-bg: #f4f5f7;
+  --gx-bg-2: #eef0f3;
+  --gx-surface: #ffffff;
+  --gx-border: #e3e6ea;
+  --gx-ink: #111827;
+  --gx-ink-2: #4b5563;
+  --gx-ink-3: #5d6470;
+  --gx-ink-4: #374151;
+  --gx-brand: #ff6a00;
+  --gx-brand-ink: #c2410c;
+  --gx-brand-soft: #fff1e6;
+  --gx-hover: #f7f8fa;
+  --gx-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), 0 6px 18px rgba(17, 24, 39, 0.06);
+  /* Tokens que o users.css já usa no conteúdo. */
+  --ux-accent: #ff6a00;
+  --ux-accent-dark: #c2410c;
+  --ux-accent-soft: #fff1e6;
+  --ux-ink: var(--gx-ink);
+  --ux-muted: var(--gx-ink-3);
+  --ux-line: var(--gx-border);
+  --ux-bg: var(--gx-bg);
+  --ux-card: var(--gx-surface);
+  background: var(--gx-bg);
+  color: var(--gx-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] {
+  color-scheme: dark;
+  --gx-bg: #121824;
+  --gx-bg-2: #19212f;
+  --gx-surface: #1a2231;
+  --gx-border: #2b3649;
+  --gx-ink: #e8ecf3;
+  --gx-ink-2: #b4bdcc;
+  --gx-ink-3: #97a2b5;
+  --gx-ink-4: #cdd4df;
+  --gx-brand: #ff7a1a;
+  --gx-brand-ink: #ffa463;
+  --gx-brand-soft: rgba(255, 122, 26, 0.14);
+  --gx-hover: #222c3d;
+  --gx-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 26px rgba(0, 0, 0, 0.28);
+  --ux-accent: #ff7a1a;
+  --ux-accent-dark: #ffa463;
+  --ux-accent-soft: rgba(255, 122, 26, 0.14);
+  --ux-success: #86efac;
+  --ux-warning: #fdba74;
+  --ux-danger: #fca5a5;
+  --ux-info: #93c5fd;
+}
+
+/* ---------- Menu lateral: mesmas medidas do Gestor ---------- */
+@media (min-width: 901px) {
+  body.users-body[data-user-domain="RESTAURANT"] .users-shell {
+    grid-template-columns: 248px minmax(0, 1fr);
+  }
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .users-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 248px;
+  padding: 20px 16px;
+  border-right: 1px solid var(--gx-border);
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+  overflow-y: auto;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-brand {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  margin: 0;
+  padding: 0;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-brand img {
+  display: block;
+  width: 168px;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+  filter: none;
+  background: transparent;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-brand-copy {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--gx-bg-2);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-brand-copy small {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-brand-copy strong {
+  color: var(--gx-ink);
+  font-size: 16px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav {
+  display: grid;
+  gap: 2px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gx-ink-4);
+  font-size: 15px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item strong {
+  color: var(--gx-ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-sub {
+  grid-template-columns: minmax(0, 1fr);
+  margin-left: 30px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-sub strong {
+  font-size: 14px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item:not(.is-sub) + .gx-nav-item:not(.is-sub),
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-sub + .gx-nav-item:not(.is-sub) {
+  margin-top: 6px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item:hover {
+  background: var(--gx-hover);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-active {
+  background: var(--gx-brand-soft);
+  box-shadow: inset 3px 0 0 var(--gx-brand);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-active strong {
+  font-weight: 600;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: var(--gx-ink-3);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item:hover .gx-nav-icon,
+body.users-body[data-user-domain="RESTAURANT"] .gx-nav-item.is-active .gx-nav-icon {
+  color: var(--gx-brand-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-account {
+  position: static;
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px;
+  border: 1px solid var(--gx-border);
+  border-radius: 8px;
+  background: var(--gx-surface);
+  color: var(--gx-ink-2);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-account strong {
+  color: var(--gx-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .gx-account .users-logout {
+  justify-content: center;
+  min-height: 44px;
+  margin: 0;
+  border: 1px solid var(--gx-border);
+  border-radius: 8px;
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+}
+
+/* ---------- Conteúdo no tema do Gestor ---------- */
+body.users-body[data-user-domain="RESTAURANT"] .users-content {
+  max-width: 1480px;
+  padding: clamp(12px, 2vw, 28px);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .users-page-head h1,
+body.users-body[data-user-domain="RESTAURANT"] .users-editor-title h1 {
+  color: var(--gx-ink);
+  font-size: clamp(22px, 2vw, 26px);
+  letter-spacing: 0;
+}
+
+body.users-body[data-user-domain="RESTAURANT"] :is(.users-panel, .users-stat, .users-form-card, .users-summary-card) {
+  border-color: var(--gx-border);
+  border-radius: 12px;
+  background: var(--gx-surface);
+  box-shadow: var(--gx-shadow);
+  color: var(--gx-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .users-button-primary {
+  border-color: var(--gx-brand);
+  background: var(--gx-brand);
+  color: #111827;
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] :is(.users-input, .users-field input, .users-field select, .users-field textarea) {
+  border-color: #3c4960;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] :is(.users-table th, .users-filter-meta, .users-pagination) {
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-2);
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] .users-table td {
+  border-color: var(--gx-border);
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] .users-table tr:hover td {
+  background: var(--gx-hover);
+}
+
+body.users-body[data-user-domain="RESTAURANT"][data-admin-theme="dark"] .users-button-secondary {
+  border-color: var(--gx-border);
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .users-mobilebar {
+  border-color: var(--gx-border);
+  background: var(--gx-surface);
+}
+
+body.users-body[data-user-domain="RESTAURANT"] .users-mobilebar img {
+  width: 120px;
+  filter: none;
+}
