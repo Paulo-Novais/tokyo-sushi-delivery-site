@@ -10441,6 +10441,8 @@ const renderOrdersStageBar = (statsRoot) => {
   statsRoot.innerHTML = `
     <div class="gx-orders-top">
       <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+      <div class="gx-orders-tools">
+      ${renderOrderAlertControl()}
       <div class="gx-mode-switch" role="tablist" aria-label="Tipo de pedido">
         ${[
           ["all", "Todos"],
@@ -10452,6 +10454,7 @@ const renderOrdersStageBar = (statsRoot) => {
               `<button type="button" role="tab" aria-selected="${mode === key}" class="${mode === key ? "is-active" : ""}" data-orders-mode="${key}">${escapeHtml(label)} · ${escapeHtml(String(modeCount(key)))}</button>`
           )
           .join("")}
+      </div>
       </div>
     </div>
     <div class="gx-stage-bar" role="tablist" aria-label="Filtrar pedidos por etapa">
@@ -10640,6 +10643,326 @@ const renderOrdersDetailPanel = (detailRoot) => {
       }
     </div>`;
 };
+
+// ---------- Alertas sonoros de pedidos ----------
+// Novo pedido (repete até aceitar), pedido passando de 20 min e atrasado (+30 min).
+// Som gerado no navegador (Web Audio): sem arquivos, sem servidor novo.
+const ORDER_ALERTS_KEY = "inovas_order_alerts_v1";
+const ORDER_ALERT_DEFAULTS = Object.freeze({
+  enabled: true,
+  newOrder: true,
+  repeatUntilAccepted: true,
+  warn: true,
+  late: true,
+});
+const ORDER_ALERT_REPEAT_MS = 30000;
+const orderAlertState = {
+  prefs: null,
+  known: null,
+  tones: new Map(),
+  audio: null,
+  lastRepeatAt: 0,
+  lastCheckAt: 0,
+  panelOpen: false,
+  baseTitle: "",
+  polling: false,
+};
+
+const getOrderAlertPrefs = () => {
+  if (!orderAlertState.prefs) {
+    let saved = {};
+    try {
+      saved = JSON.parse(window.localStorage.getItem(ORDER_ALERTS_KEY) || "{}") || {};
+    } catch {
+      saved = {};
+    }
+    orderAlertState.prefs = { ...ORDER_ALERT_DEFAULTS, ...saved };
+  }
+  return orderAlertState.prefs;
+};
+
+const setOrderAlertPref = (key, value) => {
+  const prefs = getOrderAlertPrefs();
+  if (!(key in ORDER_ALERT_DEFAULTS)) return;
+  prefs[key] = Boolean(value);
+  try {
+    window.localStorage.setItem(ORDER_ALERTS_KEY, JSON.stringify(prefs));
+  } catch {
+    // Sem armazenamento: vale só nesta aba.
+  }
+  syncOrderAlertBanner();
+};
+
+const isOrderAlertAudioReady = () => orderAlertState.audio?.state === "running";
+
+// O navegador só libera som depois de um clique/tecla na página.
+const unlockOrderAlertAudio = () => {
+  orderAlertState.gestured = true;
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return;
+  if (!orderAlertState.audio) {
+    try {
+      orderAlertState.audio = new AudioCtor();
+    } catch {
+      return;
+    }
+  }
+  if (orderAlertState.audio.state === "suspended") {
+    void orderAlertState.audio.resume().then(syncOrderAlertBanner, syncOrderAlertBanner);
+  }
+  syncOrderAlertBanner();
+};
+
+const ORDER_ALERT_SOUNDS = Object.freeze({
+  // Campainha clara e alegre (duas vezes).
+  newOrder: [
+    [880, 0, 0.14], [1175, 0.16, 0.14], [1568, 0.32, 0.28],
+    [880, 0.8, 0.14], [1175, 0.96, 0.14], [1568, 1.12, 0.32],
+  ].map(([freq, at, dur]) => ({ freq, at, dur, type: "sine", gain: 0.32 })),
+  // Atenção (20 min): um toque suave.
+  warn: [
+    { freq: 740, at: 0, dur: 0.22, type: "triangle", gain: 0.28 },
+    { freq: 587, at: 0.26, dur: 0.3, type: "triangle", gain: 0.24 },
+  ],
+  // Atrasado (+30 min): três toques graves e insistentes.
+  late: [0, 0.3, 0.6].map((at, index) => ({ freq: index === 2 ? 392 : 523, at, dur: 0.22, type: "square", gain: 0.12 })),
+});
+
+const playOrderAlertSound = (kind) => {
+  const notes = ORDER_ALERT_SOUNDS[kind];
+  const ctx = orderAlertState.audio;
+  if (!notes || !ctx || ctx.state !== "running") {
+    syncOrderAlertBanner(true);
+    return false;
+  }
+  const start = ctx.currentTime + 0.02;
+  notes.forEach((note) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = note.type;
+    osc.frequency.value = note.freq;
+    gain.gain.setValueAtTime(0.0001, start + note.at);
+    gain.gain.exponentialRampToValueAtTime(note.gain, start + note.at + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + note.at + note.dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(start + note.at);
+    osc.stop(start + note.at + note.dur + 0.05);
+  });
+  orderAlertState.lastPlayed = kind;
+  return true;
+};
+
+const getOrderAlertToastRoot = () => {
+  let root = document.querySelector("[data-order-alert-toasts]");
+  if (!root && document.body) {
+    root = document.createElement("div");
+    root.className = "gx-alert-toasts";
+    root.setAttribute("data-order-alert-toasts", "");
+    root.setAttribute("role", "status");
+    root.setAttribute("aria-live", "assertive");
+    document.body.appendChild(root);
+  }
+  return root;
+};
+
+const showOrderAlertToast = (kind, order, text) => {
+  const root = getOrderAlertToastRoot();
+  if (!root) return;
+  const toast = document.createElement("div");
+  toast.className = `gx-alert-toast is-${kind}`;
+  toast.innerHTML = `
+    <span class="gx-alert-toast-icon" aria-hidden="true">${kind === "newOrder" ? "🔔" : kind === "late" ? "⏰" : "⏳"}</span>
+    <span class="gx-alert-toast-text">${escapeHtml(text)}</span>
+    ${order ? `<button type="button" class="gx-alert-toast-open" data-order-alert-open="${escapeHtml(order.id)}">Ver pedido</button>` : ""}
+    <button type="button" class="gx-alert-toast-close" data-order-alert-dismiss aria-label="Fechar aviso">×</button>`;
+  root.prepend(toast);
+  [...root.children].slice(4).forEach((node) => node.remove());
+  window.setTimeout(() => toast.remove(), kind === "newOrder" ? 20000 : 12000);
+};
+
+// Aviso discreto quando o som ainda não foi liberado pelo navegador.
+const syncOrderAlertBanner = (force = false) => {
+  const prefs = getOrderAlertPrefs();
+  let banner = document.querySelector("[data-order-alert-unlock]");
+  const needs =
+    prefs.enabled &&
+    !isOrderAlertAudioReady() &&
+    document.body?.dataset.adminPage === "dashboard" &&
+    (force || !orderAlertState.gestured);
+  if (!needs) {
+    banner?.remove();
+    return;
+  }
+  if (!banner && (force || document.body)) {
+    banner = document.createElement("button");
+    banner.type = "button";
+    banner.className = "gx-alert-unlock";
+    banner.setAttribute("data-order-alert-unlock", "");
+    banner.innerHTML = "🔇 Clique aqui para ativar o som dos pedidos";
+    document.body.appendChild(banner);
+  }
+};
+
+const countWaitingOrders = (orders) => orders.filter((order) => order.status === "Recebido").length;
+
+const syncOrderAlertTitle = (orders) => {
+  if (!orderAlertState.baseTitle) orderAlertState.baseTitle = document.title.replace(/^\(\d+\)\s*/, "");
+  const waiting = countWaitingOrders(orders);
+  document.title = waiting > 0 ? `(${waiting}) ${waiting === 1 ? "Novo pedido" : "Novos pedidos"} · ${orderAlertState.baseTitle}` : orderAlertState.baseTitle;
+};
+
+const checkOrderAlerts = (orders = []) => {
+  const list = Array.isArray(orders) ? orders : [];
+  const prefs = getOrderAlertPrefs();
+  const active = list.filter((order) => !isFinalOrder(order));
+  orderAlertState.lastCheckAt = Date.now();
+  syncOrderAlertTitle(list);
+
+  // Primeira leitura: só memoriza (não toca pelos pedidos que já estavam na tela).
+  if (!orderAlertState.known) {
+    orderAlertState.known = new Set(list.map((order) => order.id));
+    active.forEach((order) => orderAlertState.tones.set(order.id, getOrderSla(order).tone));
+    orderAlertState.lastRepeatAt = Date.now();
+    return;
+  }
+
+  const fresh = list.filter((order) => !orderAlertState.known.has(order.id) && order.status === "Recebido");
+  list.forEach((order) => orderAlertState.known.add(order.id));
+
+  const escalations = { warn: [], late: [] };
+  active.forEach((order) => {
+    const tone = getOrderSla(order).tone;
+    const previous = orderAlertState.tones.get(order.id);
+    orderAlertState.tones.set(order.id, tone);
+    if (previous && previous !== tone && (tone === "warn" || tone === "late")) escalations[tone].push(order);
+  });
+
+  if (!prefs.enabled) return;
+
+  fresh.forEach((order) =>
+    showOrderAlertToast("newOrder", order, `Novo pedido de ${order.customerName || "cliente"} · ${formatMoney(order.totalAmount || 0)}`)
+  );
+  if (prefs.late) {
+    escalations.late.forEach((order) => showOrderAlertToast("late", order, `Pedido de ${order.customerName || "cliente"} passou de 30 min`));
+  }
+
+  let played = "";
+  if (fresh.length && prefs.newOrder) played = playOrderAlertSound("newOrder") ? "newOrder" : "blocked";
+  else if (escalations.late.length && prefs.late) played = playOrderAlertSound("late") ? "late" : "blocked";
+  else if (escalations.warn.length && prefs.warn) played = playOrderAlertSound("warn") ? "warn" : "blocked";
+
+  if (played === "newOrder") orderAlertState.lastRepeatAt = Date.now();
+
+  // Repete a campainha enquanto houver pedido esperando aceite.
+  if (
+    !played &&
+    prefs.newOrder &&
+    prefs.repeatUntilAccepted &&
+    countWaitingOrders(active) > 0 &&
+    Date.now() - orderAlertState.lastRepeatAt >= ORDER_ALERT_REPEAT_MS
+  ) {
+    if (playOrderAlertSound("newOrder")) orderAlertState.lastRepeatAt = Date.now();
+  }
+};
+
+// Fora de Pedidos/Painel a lista não é recarregada: busca leve só para os alertas.
+const pollOrderAlerts = async () => {
+  if (orderAlertState.polling || document.body?.dataset.adminPage !== "dashboard") return;
+  if (!hasAdminPermission("orders_view") || !hasPlanFeatureForSection("orders")) return;
+  if (Date.now() - orderAlertState.lastCheckAt < ADMIN_DASHBOARD_REFRESH_MS + 5000) return;
+  orderAlertState.polling = true;
+  try {
+    const payload = await fetchJson("/api/admin/orders/list?limit=80");
+    if (Array.isArray(payload.orders)) checkOrderAlerts(payload.orders.map(normalizeOrderRecord));
+  } catch {
+    // Silencioso: o próximo ciclo tenta de novo.
+  } finally {
+    orderAlertState.polling = false;
+  }
+};
+
+const renderOrderAlertControl = () => {
+  const prefs = getOrderAlertPrefs();
+  const option = (key, label) =>
+    `<label class="gx-sound-opt"><input type="checkbox" data-order-alert-pref="${key}" ${prefs[key] ? "checked" : ""} ${!prefs.enabled && key !== "enabled" ? "disabled" : ""} /><span>${escapeHtml(label)}</span></label>`;
+  return `
+    <div class="gx-sound">
+      <button type="button" class="gx-sound-toggle${prefs.enabled ? " is-on" : ""}" data-order-alert-panel aria-expanded="${orderAlertState.panelOpen}">
+        <span aria-hidden="true">${prefs.enabled ? "🔔" : "🔕"}</span> Sons
+      </button>
+      ${
+        orderAlertState.panelOpen
+          ? `<div class="gx-sound-panel" role="dialog" aria-label="Alertas sonoros">
+              ${option("enabled", "Alertas sonoros ligados")}
+              ${option("newOrder", "Novo pedido")}
+              ${option("repeatUntilAccepted", "Repetir a cada 30 s até aceitar")}
+              ${option("warn", "Pedido passou de 20 min")}
+              ${option("late", "Pedido atrasado (+30 min)")}
+              <div class="gx-sound-tests">
+                <button type="button" data-order-alert-test="newOrder">Testar novo pedido</button>
+                <button type="button" data-order-alert-test="late">Testar atrasado</button>
+              </div>
+            </div>`
+          : ""
+      }
+    </div>`;
+};
+
+document.addEventListener("pointerdown", unlockOrderAlertAudio, { capture: true });
+document.addEventListener("keydown", unlockOrderAlertAudio, { capture: true });
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  if (target.closest("[data-order-alert-unlock]")) {
+    unlockOrderAlertAudio();
+    return;
+  }
+  const panelButton = target.closest("[data-order-alert-panel]");
+  if (panelButton) {
+    orderAlertState.panelOpen = !orderAlertState.panelOpen;
+    renderDashboardStats();
+    return;
+  }
+  const test = target.closest("[data-order-alert-test]");
+  if (test) {
+    unlockOrderAlertAudio();
+    window.setTimeout(() => playOrderAlertSound(test.getAttribute("data-order-alert-test")), 60);
+    return;
+  }
+  if (target.closest("[data-order-alert-dismiss]")) {
+    target.closest(".gx-alert-toast")?.remove();
+    return;
+  }
+  const open = target.closest("[data-order-alert-open]");
+  if (open) {
+    const orderId = open.getAttribute("data-order-alert-open") || "";
+    open.closest(".gx-alert-toast")?.remove();
+    adminState.selectedOrderId = orderId;
+    adminState.ordersStage = "all";
+    const navButton = document.querySelector('.admin-nav [data-admin-section="orders"]');
+    if (adminState.activeSection !== "orders" && navButton instanceof HTMLElement) {
+      navButton.click();
+    } else {
+      adminState.ordersDrawerOpen = true;
+      renderModuleContent();
+      renderOrderDetails();
+    }
+    return;
+  }
+  if (orderAlertState.panelOpen && !target.closest(".gx-sound")) {
+    orderAlertState.panelOpen = false;
+    renderDashboardStats();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const input = event.target instanceof HTMLInputElement ? event.target : null;
+  const key = input?.getAttribute("data-order-alert-pref");
+  if (!key) return;
+  setOrderAlertPref(key, input.checked);
+  renderDashboardStats();
+});
 
 // Detalhes em painel deslizante nas telas menores.
 const syncOrdersDrawer = () => {
@@ -13734,6 +14057,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
       ADMIN_BRANDING.displayNameFallback ||
       "Gestor INOVAS";
     adminState.isLoadingOrders = false;
+    if (dashboardEndpoint.startsWith("/api/admin/orders/list")) checkOrderAlerts(adminState.orders);
 
     void ensurePublicCatalogItems();
 
@@ -15824,6 +16148,11 @@ const initDashboardPage = () => {
   window.setInterval(() => {
     void loadActiveAdminSection({ preserveSelection: true });
   }, ADMIN_DASHBOARD_REFRESH_MS);
+  // Alertas sonoros em qualquer tela do Gestor.
+  syncOrderAlertBanner();
+  window.setInterval(() => {
+    void pollOrderAlerts();
+  }, 10000);
 };
 
 const initLoginPage = async () => {

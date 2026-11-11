@@ -3879,33 +3879,232 @@ html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section=
   border-width: 2px !important;
 }
 
-/* Atrasado: vermelho "aceso", com brilho pulsando. */
-html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-late::after {
-  content: "" !important;
-  position: absolute !important;
-  inset: -2px !important;
-  z-index: 0 !important;
-  display: block !important;
-  border: 2px solid #ef4444 !important;
-  border-radius: 13px !important;
-  box-shadow: 0 0 14px 3px rgba(239, 68, 68, 0.75), inset 0 0 10px rgba(239, 68, 68, 0.35) !important;
-  background: none !important;
-  pointer-events: none !important;
-  animation: gx-late-glow 1.3s ease-in-out infinite;
-}
-
-@keyframes gx-late-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-late::after {
-    animation: none;
-  }
-}
-
 /* Legenda com as mesmas cores. */
 html body.admin-body .gx-age-key.is-mid i { background: #facc15; }
 html body.admin-body .gx-age-key.is-warn i { background: #f97316; }
 html body.admin-body .gx-age-key.is-late i { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.8); }
+
+/* =====================================================================
+   Pulso por tempo: todos os cartões são neutros e "respiram" até a sua cor.
+   Até 10 min fica parado. Quanto mais atrasado, mais rápido o pulso.
+   A cor fica numa camada atrás do texto (não atrapalha a leitura).
+   ===================================================================== */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket {
+  isolation: isolate;
+  border-width: 1.5px !important;
+  border-color: var(--gx-border) !important;
+  background: var(--gx-surface) !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late)::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -1.5px !important;
+  z-index: -1 !important;
+  display: block !important;
+  border: 2px solid var(--age-line) !important;
+  border-radius: 12px !important;
+  background: var(--age-bg) !important;
+  pointer-events: none !important;
+  opacity: 0;
+  animation: gx-age-pulse 2.6s ease-in-out infinite;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-warn::after {
+  animation-duration: 1.9s;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-age-late::after {
+  box-shadow: 0 0 16px 3px rgba(239, 68, 68, 0.7) !important;
+  animation-duration: 1.2s;
+}
+
+@keyframes gx-age-pulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Quem pede menos movimento vê a cor parada, a meio caminho. */
+@media (prefers-reduced-motion: reduce) {
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late)::after {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Texto escuro o tempo todo no claro (legível no neutro e na cor cheia). */
+html body.admin-body:not([data-admin-theme="dark"]) .gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) .gx-tag {
+  background: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* =====================================================================
+   Alertas sonoros: botão "Sons", avisos na tela e pedido para liberar o som.
+   ===================================================================== */
+.gx-orders-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gx-sound {
+  position: relative;
+}
+
+.gx-sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--gx-border);
+  border-radius: 12px;
+  background: var(--gx-surface);
+  color: var(--gx-ink-2);
+  font: 700 13.5px/1 inherit;
+  cursor: pointer;
+}
+
+.gx-sound-toggle.is-on {
+  color: var(--gx-ink);
+}
+
+.gx-sound-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  gap: 4px;
+  width: 290px;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  border: 1px solid var(--gx-border);
+  border-radius: 14px;
+  background: var(--gx-surface);
+  box-shadow: 0 16px 36px rgba(17, 24, 39, 0.2);
+}
+
+.gx-sound-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: var(--gx-ink);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.gx-sound-opt:hover {
+  background: var(--gx-bg-2);
+}
+
+.gx-sound-opt input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gx-brand);
+}
+
+.gx-sound-tests {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gx-border);
+}
+
+.gx-sound-tests button {
+  flex: 1 1 0;
+  min-height: 36px;
+  border: 1px solid var(--gx-border);
+  border-radius: 9px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink);
+  font: 700 12.5px/1.2 inherit;
+  cursor: pointer;
+}
+
+.gx-alert-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 300;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.gx-alert-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 14px;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: auto;
+  animation: gx-toast-in 0.25s ease-out;
+}
+
+.gx-alert-toast.is-newOrder { border-left: 5px solid var(--gx-brand); }
+.gx-alert-toast.is-late { border-left: 5px solid #ef4444; }
+.gx-alert-toast.is-warn { border-left: 5px solid #f97316; }
+
+.gx-alert-toast-icon {
+  font-size: 20px;
+}
+
+.gx-alert-toast-open {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--gx-brand);
+  color: #111827;
+  font: 800 13px/1 inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gx-alert-toast-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+@keyframes gx-toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.gx-alert-unlock {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 290;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #78350f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  font: 700 13.5px/1 inherit;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gx-alert-toast { animation: none; }
+}

@@ -60,6 +60,27 @@ test("Pedidos: grade, filtros, detalhes e ações como no esboço", async ({ pag
   await expect(tickets.first()).toHaveClass(/is-age-late/);
   await expect(page.locator(".gx-age-legend")).toContainText("+30 min");
 
+  // Cartões neutros que pulsam até a cor do tempo; quanto mais atrasado, mais rápido.
+  const pulse = await page.evaluate(() =>
+    Object.fromEntries(
+      ["fresh", "mid", "warn", "late"].map((tone) => {
+        const card = document.querySelector(`.gx-ticket.is-age-${tone}`);
+        const after = card ? getComputedStyle(card, "::after") : null;
+        return [tone, card ? { name: after.animationName, duration: after.animationDuration, bg: getComputedStyle(card).backgroundColor } : null];
+      })
+    )
+  );
+  console.log("pulso:", JSON.stringify(pulse));
+  expect(pulse.fresh.name).toBe("none");
+  for (const tone of ["mid", "warn", "late"]) {
+    expect(pulse[tone].name).toBe("gx-age-pulse");
+    expect(pulse[tone].bg).toBe(pulse.fresh.bg);
+  }
+  expect(parseFloat(pulse.late.duration)).toBeLessThan(parseFloat(pulse.warn.duration));
+  expect(parseFloat(pulse.warn.duration)).toBeLessThan(parseFloat(pulse.mid.duration));
+  await page.waitForTimeout(650);
+  await page.screenshot({ path: path.join(outDir, "pedidos-pulso-cheio.png") });
+
   // Todos / Entrega / Retirada somam certo.
   const modeCount = async (key) =>
     Number((await page.locator(`[data-orders-mode="${key}"]`).innerText()).split("·")[1].trim());
