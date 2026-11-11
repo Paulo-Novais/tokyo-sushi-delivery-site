@@ -1956,3 +1956,83 @@ body[data-admin-theme="dark"] .cash-v3 .cx-overlay {
 .cx-printer-tip {
   font-size: 13px;
 }
+
+/* ---------- Lançar pedido: escolha Mesa / Retirada / Entrega ---------- */
+.cx-launch-options {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 6px;
+}
+
+.cx-launch {
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--cx-border);
+  border-radius: 12px;
+  background: var(--cx-surface);
+  color: var(--cx-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cx-launch strong {
+  font-size: 17px;
+}
+
+.cx-launch span {
+  color: var(--cx-ink-2);
+  font-size: 13.5px;
+}
+
+.cx-launch:hover,
+.cx-launch:focus-visible {
+  border-color: var(--cx-accent);
+  background: var(--cx-accent-soft);
+}
+
+/* ---------- Pedido de retirada / entrega ---------- */
+.cx-counter-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.cx-counter-form .cx-field {
+  min-width: 0;
+}
+
+.cx-counter-form .cx-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.cx-req {
+  color: var(--cx-crit-ink);
+}
+
+.cx-counter-hint {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--cx-warn-bg);
+  color: var(--cx-warn-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cx-root[data-cx-screen="counter"] .cx-topbar-actions .cx-segmented {
+  min-width: 240px;
+}
+
+.cx-root[data-cx-screen="counter"] .cx-topbar-actions .cx-segmented button {
+  flex: 1 1 110px;
+}
+
+@media (max-width: 520px) {
+  .cx-counter-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

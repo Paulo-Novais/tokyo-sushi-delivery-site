@@ -61,6 +61,8 @@
     movement: { type: "WITHDRAWAL", amount: "", reason: "" },
     opening: { tableCount: null, openingAmount: "", serviceChargeRate: "10" },
     pdv: { query: "", categoryId: "all", multiplier: 1, noteItemId: "" },
+    // Pedido sem mesa: retirada no balcão ou entrega (telefone/balcão).
+    counter: null,
     bill: { discount: "", serviceEnabled: true },
     payment: { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0, splitCount: null },
     closing: { counted: "", notes: "" },
@@ -903,6 +905,204 @@
       </div>`;
   };
 
+  /* ---------- Tela 4b · Pedido de retirada ou entrega (sem mesa) ---------- */
+
+  const COUNTER_PAYMENTS = [
+    ["pix", "Pix"],
+    ["dinheiro", "Dinheiro"],
+    ["credito", "Crédito"],
+    ["debito", "Débito"],
+    ["pending", "A definir"],
+  ];
+
+  const newCounter = (mode) => ({
+    mode,
+    items: [],
+    name: "",
+    phone: "",
+    line: "",
+    number: "",
+    neighborhood: "",
+    complement: "",
+    reference: "",
+    fee: "",
+    payment: "pix",
+    cashFor: "",
+    notes: "",
+  });
+
+  const counterTotals = () => {
+    const counter = state.counter || newCounter("pickup");
+    const subtotal = counter.items.reduce((sum, item) => sum + cents(item.unitPrice) * item.quantity, 0);
+    const fee = counter.mode === "delivery" ? cents(counter.fee) : 0;
+    return { subtotal, fee, total: subtotal + fee };
+  };
+
+  const counterProblems = () => {
+    const counter = state.counter;
+    if (!counter) return ["Escolha retirada ou entrega."];
+    const problems = [];
+    if (!counter.items.length) problems.push("Adicione pelo menos um item.");
+    if (counter.name.trim().length < 2) problems.push("Informe o nome do cliente.");
+    if (counter.mode === "delivery") {
+      if (counter.phone.replace(/\D/g, "").length < 10) problems.push("Informe o telefone com DDD.");
+      if (counter.line.trim().length < 3 || !counter.number.trim() || counter.neighborhood.trim().length < 2) {
+        problems.push("Informe rua, número e bairro.");
+      }
+    }
+    return problems;
+  };
+
+  const counterAdd = (productId, quantity) => {
+    const product = getCatalogItems().find((item) => item.id === productId);
+    if (!state.counter || !product) return;
+    const qty = ui.clampInteger(quantity, { min: 1, max: 99 });
+    const existing = state.counter.items.find((item) => item.productId === productId && !item.notes);
+    if (existing) existing.quantity = Math.min(99, existing.quantity + qty);
+    else state.counter.items.push({ key: ++optimisticSeq, productId, productName: product.name, unitPrice: product.price, quantity: qty, notes: "" });
+    state.pdv.multiplier = 1;
+    render();
+  };
+
+  const counterField = (path, label, { type = "text", placeholder = "", required = false, inputmode = "", wide = false } = {}) => `
+    <label class="cx-field${wide ? " is-wide" : ""}">
+      <span>${escapeHtml(label)}${required ? ' <b class="cx-req" aria-hidden="true">*</b>' : ""}</span>
+      <input class="cx-input" type="${type}" data-cx-field="counter.${path}" value="${escapeHtml(state.counter[path])}" placeholder="${escapeHtml(placeholder)}" ${inputmode ? `inputmode="${inputmode}"` : ""} ${required ? "required" : ""} autocomplete="off" />
+    </label>`;
+
+  const renderCounter = () => {
+    const counter = state.counter;
+    if (!counter) {
+      state.screen = "salao";
+      return renderSalao();
+    }
+    const isDelivery = counter.mode === "delivery";
+    const totals = counterTotals();
+    const problems = counterProblems();
+    const sections = getCatalogSections();
+    return `
+      <header class="cx-topbar">
+        <div class="cx-topbar-title">
+          <h1>Lançar pedido · ${isDelivery ? "Entrega" : "Retirada no balcão"}</h1>
+          <p>${isDelivery ? "Pedido por telefone ou fora do site, entregue no endereço do cliente." : "Cliente pediu no balcão e vai levar."}</p>
+        </div>
+        <div class="cx-topbar-actions">
+          <div class="cx-segmented" role="group" aria-label="Tipo do pedido">
+            <button type="button" data-cx-set="counter.mode" data-cx-value="pickup" aria-pressed="${!isDelivery}">Retirada</button>
+            <button type="button" data-cx-set="counter.mode" data-cx-value="delivery" aria-pressed="${isDelivery}">Entrega</button>
+          </div>
+          <button class="cx-btn" type="button" data-cx-action="back-salao">← Salão <span class="cx-kbd">Esc</span></button>
+        </div>
+      </header>
+      ${feedback()}
+      <div class="cx-split">
+        <section class="cx-split-main">
+          <label class="cx-search">
+            <span class="cx-sr-only">Buscar produto por nome ou código</span>
+            <input class="cx-input cx-input-lg" data-cx-field="pdv.query" data-cx-enter="quick-add" data-cx-autofocus placeholder="Buscar por nome ou código · 3*12 + Enter lança 3 do item 12" value="${escapeHtml(
+              state.pdv.query
+            )}" autocomplete="off" />
+          </label>
+          <div class="cx-scroll-row" role="group" aria-label="Categorias">
+            <button type="button" class="cx-chip" data-cx-set="pdv.categoryId" data-cx-value="all" aria-pressed="${state.pdv.categoryId === "all"}">Todos</button>
+            ${sections
+              .map(
+                (section) =>
+                  `<button type="button" class="cx-chip" data-cx-set="pdv.categoryId" data-cx-value="${escapeHtml(section.id)}" aria-pressed="${
+                    state.pdv.categoryId === section.id
+                  }">${escapeHtml(section.title)}</button>`
+              )
+              .join("")}
+          </div>
+          <div class="cx-row-wrap cx-multiplier" role="group" aria-label="Quantidade do próximo item">
+            <span class="cx-muted">Próximo item ×</span>
+            ${[1, 2, 3, 4, 5, 6]
+              .map(
+                (value) =>
+                  `<button type="button" class="cx-chip" data-cx-set="pdv.multiplier" data-cx-value="${value}" aria-pressed="${
+                    state.pdv.multiplier === value
+                  }">×${value}</button>`
+              )
+              .join("")}
+          </div>
+          <div class="cx-grid-products" data-cx-products>${renderProducts()}</div>
+        </section>
+        <aside class="cx-split-side cx-panel cx-order" aria-label="Pedido de ${isDelivery ? "entrega" : "retirada"}">
+          <div class="cx-order-head"><h2>${isDelivery ? "Entrega" : "Retirada"}</h2><span class="cx-muted">${escapeHtml(
+            counter.items.reduce((sum, item) => sum + item.quantity, 0)
+          )} itens</span></div>
+          <div class="cx-panel-scroll">
+            <div class="cx-counter-form">
+              ${counterField("name", "Nome do cliente", { required: true, placeholder: "Ex.: Maria", wide: true })}
+              ${counterField("phone", "Telefone", { type: "tel", inputmode: "tel", required: isDelivery, placeholder: "(16) 99999-0000", wide: true })}
+              ${
+                isDelivery
+                  ? `${counterField("line", "Rua", { required: true, placeholder: "Rua das Flores", wide: true })}
+                     ${counterField("number", "Número", { required: true, placeholder: "115", inputmode: "numeric" })}
+                     ${counterField("neighborhood", "Bairro", { required: true, placeholder: "Centro" })}
+                     ${counterField("complement", "Complemento", { placeholder: "Apto 12" })}
+                     ${counterField("reference", "Referência", { placeholder: "Perto da praça" })}
+                     ${counterField("fee", "Taxa de entrega (R$)", { inputmode: "decimal", placeholder: "0,00" })}`
+                  : ""
+              }
+            </div>
+            <h3 class="cx-order-group">Pagamento</h3>
+            <div class="cx-chips" role="group" aria-label="Forma de pagamento">${COUNTER_PAYMENTS.map(
+              ([value, label]) =>
+                `<button type="button" class="cx-chip" data-cx-set="counter.payment" data-cx-value="${value}" aria-pressed="${counter.payment === value}">${escapeHtml(label)}</button>`
+            ).join("")}</div>
+            ${counter.payment === "dinheiro" ? `<div class="cx-counter-form">${counterField("cashFor", "Troco para (R$)", { inputmode: "decimal", placeholder: "Ex.: 100,00", wide: true })}</div>` : ""}
+            <div class="cx-counter-form">${counterField("notes", "Observação do pedido", { placeholder: "Ex.: sem cebolinha", wide: true })}</div>
+            <h3 class="cx-order-group">Itens</h3>
+            ${
+              counter.items.length
+                ? counter.items
+                    .map(
+                      (item) => `
+                        <div class="cx-order-line is-pending">
+                          <div class="cx-order-main"><strong>${escapeHtml(item.productName)}</strong></div>
+                          <div class="cx-stepper cx-stepper-sm">
+                            <button type="button" data-cx-counter-qty="${item.key}" data-cx-delta="-1" aria-label="Menos ${escapeHtml(item.productName)}">−</button>
+                            <output>${escapeHtml(item.quantity)}</output>
+                            <button type="button" data-cx-counter-qty="${item.key}" data-cx-delta="1" aria-label="Mais ${escapeHtml(item.productName)}">+</button>
+                          </div>
+                          <strong class="cx-num cx-line-total">${escapeHtml(money(reais(cents(item.unitPrice) * item.quantity)))}</strong>
+                        </div>`
+                    )
+                    .join("")
+                : '<p class="cx-empty">Clique num item ou digite o código para começar.</p>'
+            }
+          </div>
+          <dl class="cx-totals">
+            <div><dt>Itens</dt><dd class="cx-num">${escapeHtml(money(reais(totals.subtotal)))}</dd></div>
+            ${isDelivery ? `<div><dt>Taxa de entrega</dt><dd class="cx-num">${escapeHtml(money(reais(totals.fee)))}</dd></div>` : ""}
+            <div class="is-total"><dt>Total</dt><dd class="cx-num">${escapeHtml(money(reais(totals.total)))}</dd></div>
+          </dl>
+          ${problems.length && counter.items.length ? `<p class="cx-counter-hint">${escapeHtml(problems[0])}</p>` : ""}
+          <div class="cx-order-actions">
+            <button class="cx-btn" type="button" data-cx-action="counter-clear" ${counter.items.length ? "" : "disabled"}>Limpar</button>
+            <button class="cx-btn cx-btn-primary" type="button" data-cx-action="counter-send" ${problems.length || state.busy ? "disabled" : ""}>Enviar para a cozinha <span class="cx-kbd">F2</span></button>
+          </div>
+        </aside>
+      </div>`;
+  };
+
+  const renderLaunchModal = () => `
+    <div class="cx-modal-backdrop" role="presentation">
+      <div class="cx-modal" role="dialog" aria-modal="true" aria-labelledby="cx-launch-title">
+        <h2 id="cx-launch-title">Lançar pedido</h2>
+        <p class="cx-muted">Para onde vai este pedido?</p>
+        <div class="cx-launch-options">
+          <button type="button" class="cx-launch" data-cx-action="launch-table"><strong>🍽️ Mesa</strong><span>Comanda de uma mesa do salão</span></button>
+          <button type="button" class="cx-launch" data-cx-action="launch-pickup"><strong>🛍️ Retirada</strong><span>Cliente pediu no balcão e vai levar</span></button>
+          <button type="button" class="cx-launch" data-cx-action="launch-delivery"><strong>🛵 Entrega</strong><span>Pedido por telefone, com nome, telefone e endereço</span></button>
+        </div>
+        <div class="cx-modal-actions">
+          <button class="cx-btn" type="button" data-cx-action="close-modal">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+
   /* ---------- Tela 5 · Pagamento ---------- */
 
   /* Em quantas partes dividir: de 1 até as pessoas da mesa (nunca mais). */
@@ -1691,6 +1891,8 @@
       content = renderClosing();
     } else if (state.screen === "pdv") {
       content = renderPdv();
+    } else if (state.screen === "counter") {
+      content = renderCounter();
     } else if (state.screen === "payment") {
       content = renderPayment();
     } else {
@@ -1707,7 +1909,9 @@
               ? renderReceiptModal()
               : state.modal === "printer"
                 ? renderPrinterModal()
-                : "";
+                : state.modal === "launch"
+                  ? renderLaunchModal()
+                  : "";
     const showTopFeedback =
       state.view === "opening" || (!snapshot.register && state.view === "floor");
     state.root.innerHTML = `<div class="cx-root cash-v3" data-cx-screen="${escapeHtml(
@@ -1821,6 +2025,10 @@
   };
 
   const addProduct = async (productId, quantity) => {
+    if (state.screen === "counter") {
+      counterAdd(productId, quantity);
+      return;
+    }
     const tab = getTab();
     const product = getCatalogItems().find((item) => item.id === productId);
     if (!tab || !product || tab.status !== "OPEN") return;
@@ -1962,9 +2170,51 @@
     } else if (action === "new-tab") {
       startNewTab();
     } else if (action === "go-pdv") {
+      state.modal = "launch";
+      render();
+    } else if (action === "launch-table") {
+      state.modal = "";
       const tab = getTab() || getSnapshot().activeTabs.find((entry) => entry.status === "OPEN");
       if (tab) openTabScreen(tab);
       else startNewTab();
+    } else if (action === "launch-pickup" || action === "launch-delivery") {
+      state.modal = "";
+      state.counter = newCounter(action === "launch-delivery" ? "delivery" : "pickup");
+      state.pdv.query = "";
+      state.pdv.multiplier = 1;
+      state.screen = "counter";
+      render();
+    } else if (action === "counter-clear") {
+      if (state.counter) state.counter.items = [];
+      render();
+    } else if (action === "counter-send") {
+      const counter = state.counter;
+      if (!counter || counterProblems().length || state.busy) return;
+      const result = await postAction(
+        "counter-order",
+        {
+          mode: counter.mode,
+          customerName: counter.name.trim(),
+          customerPhone: counter.phone.trim(),
+          addressLine: counter.line.trim(),
+          addressNumber: counter.number.trim(),
+          addressNeighborhood: counter.neighborhood.trim(),
+          addressComplement: counter.complement.trim(),
+          addressReference: counter.reference.trim(),
+          deliveryFee: counter.mode === "delivery" ? reais(cents(counter.fee)) : 0,
+          paymentMethod: counter.payment,
+          cashAmount: counter.payment === "dinheiro" && cents(counter.cashFor) > 0 ? reais(cents(counter.cashFor)) : 0,
+          notes: counter.notes.trim(),
+          items: counter.items.map((item) => ({ productId: item.productId, quantity: item.quantity, notes: item.notes })),
+        },
+        "counter-order"
+      );
+      if (result) {
+        state.counter = null;
+        state.screen = "salao";
+        state.pdv.query = "";
+        render();
+      }
     } else if (action === "open-movement") {
       state.movement = { type: "WITHDRAWAL", amount: "", reason: "" };
       state.modal = "movement";
@@ -2123,6 +2373,16 @@
     const product = target.closest("[data-cx-product]");
     if (product) {
       await addProduct(product.dataset.cxProduct, state.pdv.multiplier);
+      return;
+    }
+    const counterQty = target.closest("[data-cx-counter-qty]");
+    if (counterQty && state.counter) {
+      const item = state.counter.items.find((entry) => String(entry.key) === counterQty.dataset.cxCounterQty);
+      if (item) {
+        item.quantity = Math.max(0, Math.min(99, item.quantity + Number(counterQty.dataset.cxDelta)));
+        state.counter.items = state.counter.items.filter((entry) => entry.quantity > 0);
+        render();
+      }
       return;
     }
     const qty = target.closest("[data-cx-qty]");
@@ -2324,6 +2584,9 @@
     } else if (event.key === "F2" && state.screen === "pdv") {
       event.preventDefault();
       await handleAction("send-order");
+    } else if (event.key === "F2" && state.screen === "counter") {
+      event.preventDefault();
+      await handleAction("counter-send");
     } else if (event.key === "F4" && (state.screen === "pdv" || state.screen === "payment")) {
       event.preventDefault();
       const tab = getTab();

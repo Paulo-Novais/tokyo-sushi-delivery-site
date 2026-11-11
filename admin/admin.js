@@ -1719,11 +1719,33 @@ const getOrderItemThumbnailUrl = (item) => {
   return "";
 };
 
+// Pedido de comanda (salão) vem do Caixa com fulfillmentMode "dining" e a mesa em addressFull.
+const isDiningOrder = (order) =>
+  String(order?.fulfillmentMode || "").toLowerCase() === "dining" || /^sal[aã]o$/i.test(String(order?.orderType || "").trim());
+const getDiningTableLabel = (order) => {
+  const label = String(order?.addressFull || "").trim();
+  if (label) return /^mesa\b/i.test(label) ? label : `Mesa ${label}`;
+  const fromNotes = /Mesa\s*([\w-]+)/i.exec(String(order?.customerNotes || ""));
+  return fromNotes ? `Mesa ${fromNotes[1]}` : "Mesa";
+};
+const getDiningTabCode = (order) => {
+  const match = /Comanda\s+([\w-]+)/i.exec(String(order?.customerNotes || ""));
+  return match ? match[1] : "";
+};
+const getOrderKind = (order) => (isDiningOrder(order) ? "dining" : order?.fulfillmentMode === "pickup" ? "pickup" : "delivery");
+const getOrderKindLabel = (order) => {
+  const kind = getOrderKind(order);
+  return kind === "dining" ? getDiningTableLabel(order) : kind === "pickup" ? "Retirada" : "Entrega";
+};
+const getOrderStatusLabel = (order) =>
+  isDiningOrder(order) && order?.status === "Entregue" ? "Servido" : ORDER_STATUS_BADGES[order?.status] || order?.status || "";
+
 const getOrderTypeLabel = (order) => {
   if (order.orderType === "scheduled" || order.timingMode === "scheduled") {
     return "Agendamento";
   }
 
+  if (isDiningOrder(order)) return getDiningTableLabel(order);
   return order.fulfillmentMode === "pickup" ? "Retirada" : "Entrega";
 };
 
@@ -3541,6 +3563,10 @@ const syncSelectionForActiveSection = () => {
   }
 
   if (adminState.activeSection === "orders") {
+    // O pedido aberto continua aberto enquanto existir (não pula para o primeiro da fila).
+    if (adminState.selectedOrderId && adminState.orders.some((order) => order.id === adminState.selectedOrderId)) {
+      return;
+    }
     const preferredOrder = getVisibleOperationalOrders()[0] || adminState.orders[0] || null;
 
     if (preferredOrder && adminState.selectedOrderId !== preferredOrder.id) {
@@ -3668,7 +3694,14 @@ const getOrderActions = (order) => {
     });
   }
 
-  if (order.status === "Pronto") {
+  if (order.status === "Pronto" && isDiningOrder(order)) {
+    actions.push({
+      label: "Marcar como servido",
+      status: "Entregue",
+      tone: "success",
+      note: "Pedido servido na mesa.",
+    });
+  } else if (order.status === "Pronto") {
     actions.push({
       label: order.fulfillmentMode === "pickup" ? "Concluir retirada" : "Despachar",
       status: order.fulfillmentMode === "pickup" ? "Retirada concluida" : "Saiu para entrega",
@@ -3745,6 +3778,10 @@ const renderOrderFlowStages = (order) =>
 
 const getManualStatusOptions = (order) =>
   ORDER_STATUSES.filter((status) => {
+    if (isDiningOrder(order) && (status === "Saiu para entrega" || status === "Retirada concluida")) {
+      return false;
+    }
+
     if (status === "Saiu para entrega" && order?.fulfillmentMode === "pickup") {
       return false;
     }
@@ -4871,7 +4908,7 @@ const renderScheduledOrderCard = (order) => {
   const scheduleState = getScheduledStatusLabel(order);
   const scheduleDistance = getScheduledTimeDistanceLabel(order);
   const quickNote = getOrderQuickNote(order);
-  const orderTypeLabel = order.fulfillmentMode === "pickup" ? "Retirada" : "Entrega";
+  const orderTypeLabel = getOrderKindLabel(order);
 
   return `
     <button
@@ -10261,7 +10298,7 @@ const ORDER_AGE_TIERS = Object.freeze([
   { key: "late", max: Infinity, label: "+30 min" },
 ]);
 const ORDERS_STAGE_KEYS = Object.freeze(["all", ...BOARD_COLUMNS.map((column) => column.key), "done", "cancelled"]);
-const ORDERS_MODE_KEYS = Object.freeze(["all", "delivery", "pickup"]);
+const ORDERS_MODE_KEYS = Object.freeze(["all", "dining", "delivery", "pickup"]);
 const ORDER_STATUS_BADGES = Object.freeze({
   Recebido: "Recebido",
   Aceito: "Aceito",
@@ -10310,8 +10347,7 @@ const getOrderProductLines = (order) =>
 
 const getOrdersStage = () => (ORDERS_STAGE_KEYS.includes(adminState.ordersStage) ? adminState.ordersStage : "all");
 const getOrdersMode = () => (ORDERS_MODE_KEYS.includes(adminState.ordersMode) ? adminState.ordersMode : "all");
-const matchesOrdersMode = (order, mode = getOrdersMode()) =>
-  mode === "all" || (mode === "pickup" ? order.fulfillmentMode === "pickup" : order.fulfillmentMode !== "pickup");
+const matchesOrdersMode = (order, mode = getOrdersMode()) => mode === "all" || getOrderKind(order) === mode;
 
 const getActiveOrdersForGrid = () => {
   const visibleOrders = getVisibleOperationalOrders();
@@ -10393,7 +10429,8 @@ const renderOrderCard = (order) => {
   const isPickup = order.fulfillmentMode === "pickup";
   const sla = getOrderSla(order);
   const statusKey = normalizeStatusKey(order.status);
-  const statusLabel = ORDER_STATUS_BADGES[order.status] || order.status;
+  const statusLabel = getOrderStatusLabel(order);
+  const kind = getOrderKind(order);
 
   // Esboço: nome + tempo · tipo + hora + valor · etapa.
   return `
@@ -10414,7 +10451,7 @@ const renderOrderCard = (order) => {
           <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
         </div>
         <div class="gx-ticket-meta">
-          <span class="gx-tag is-${isPickup ? "pickup" : "delivery"}">${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
+          <span class="gx-tag is-${kind}">${escapeHtml(getOrderKindLabel(order))}</span>
           ${isScheduled ? `<span class="gx-tag is-scheduled">Agendado</span>` : ""}
           <span class="gx-ticket-time" title="Feito às ${escapeHtml(formatTime(order.createdAt))}">${escapeHtml(formatTime(order.createdAt))}</span>
           <strong class="gx-ticket-total">${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>
@@ -10446,9 +10483,10 @@ const renderOrdersStageBar = (statsRoot) => {
       <div class="gx-mode-switch" role="tablist" aria-label="Tipo de pedido">
         ${[
           ["all", "Todos"],
+          ["dining", "Mesa"],
           ["delivery", "Entrega"],
           ["pickup", "Retirada"],
-        ]
+        ].filter(([key]) => key !== "dining" || mode === "dining" || modeCount("dining") > 0)
           .map(
             ([key, label]) =>
               `<button type="button" role="tab" aria-selected="${mode === key}" class="${mode === key ? "is-active" : ""}" data-orders-mode="${key}">${escapeHtml(label)} · ${escapeHtml(String(modeCount(key)))}</button>`
@@ -10482,6 +10520,8 @@ const ORDER_BIKE_ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><circle cx="6" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M6 17l4-7h5l3 7M14 6h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ORDER_BAG_ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const ORDER_TABLE_ICON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><path d="M4 9h16M6 9v10M18 9v10M8 5h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 const ORDER_CARD_ICON =
   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.8"/></svg>';
 
@@ -10560,10 +10600,11 @@ const renderOrdersDetailPanel = (detailRoot) => {
   const discount = Number(order.discountAmount || 0);
   const itemsSum = items.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
   const subtotal = Number(order.subtotal || order.productRevenue || 0) || itemsSum;
-  const steps = ["Recebido", "Aceito", "Em preparo", "Pronto", isPickup ? "Retirada concluida" : "Saiu para entrega"];
+  const isDining = isDiningOrder(order);
+  const steps = ["Recebido", "Aceito", "Em preparo", "Pronto", isDining ? "Entregue" : isPickup ? "Retirada concluida" : "Saiu para entrega"];
   const canonical = resolveCanonicalOrderStatus(order.status, order.fulfillmentMode) || order.status;
   const stepIndex = canonical === "Entregue" ? steps.length - 1 : steps.indexOf(canonical);
-  const stepLabel = ORDER_STATUS_BADGES[order.status] || order.status;
+  const stepLabel = getOrderStatusLabel(order);
 
   detailRoot.innerHTML = `
     <div class="gx-od">
@@ -10580,14 +10621,15 @@ const renderOrdersDetailPanel = (detailRoot) => {
             <dl>
               <div><dt>Pedido</dt><dd>#${escapeHtml(getOrderShortId(order))}</dd></div>
               ${order.customerPhone ? `<div><dt>Telefone</dt><dd>${phoneDigits ? `<a href="https://wa.me/55${escapeHtml(phoneDigits.replace(/^55/, ""))}" target="_blank" rel="noopener">${escapeHtml(order.customerPhone)}</a>` : escapeHtml(order.customerPhone)}</dd></div>` : ""}
-              ${!isPickup && address ? `<div><dt>Endereço</dt><dd>${escapeHtml(address)}</dd></div>` : ""}
+              ${isDining ? `<div><dt>Mesa</dt><dd>${escapeHtml(getDiningTableLabel(order))}${getDiningTabCode(order) ? ` · comanda ${escapeHtml(getDiningTabCode(order))}` : ""}</dd></div>` : ""}
+              ${!isPickup && !isDining && address ? `<div><dt>Endereço</dt><dd>${escapeHtml(address)}</dd></div>` : ""}
               ${order.timingMode === "scheduled" && order.scheduledFor ? `<div><dt>Agendado</dt><dd>${escapeHtml(formatDateTime(order.scheduledFor))}</dd></div>` : ""}
             </dl>
           </details>
         </div>
       </div>
       <div class="gx-od-pills">
-        <span class="gx-od-pill is-${isPickup ? "pickup" : "delivery"}">${isPickup ? ORDER_BAG_ICON : ORDER_BIKE_ICON}${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
+        <span class="gx-od-pill is-${getOrderKind(order)}">${isDining ? ORDER_TABLE_ICON : isPickup ? ORDER_BAG_ICON : ORDER_BIKE_ICON}${escapeHtml(getOrderKindLabel(order))}</span>
         <span class="gx-od-pill">${ORDER_CLOCK_ICON}Feito às ${escapeHtml(formatTime(order.createdAt))}</span>
       </div>
       ${order.customerNotes ? `<p class="gx-od-note"><b>Observação:</b> ${escapeHtml(order.customerNotes)}</p>` : ""}
@@ -10624,7 +10666,7 @@ const renderOrdersDetailPanel = (detailRoot) => {
       </ul>
       <dl class="gx-od-sums">
         <div><dt>Subtotal</dt><dd>${escapeHtml(formatMoney(subtotal))}</dd></div>
-        ${!isPickup || deliveryFee > 0 ? `<div><dt>Taxa de entrega</dt><dd>${escapeHtml(formatMoney(deliveryFee))}</dd></div>` : ""}
+        ${(!isPickup && !isDining) || deliveryFee > 0 ? `<div><dt>Taxa de entrega</dt><dd>${escapeHtml(formatMoney(deliveryFee))}</dd></div>` : ""}
         ${discount > 0 ? `<div><dt>Desconto</dt><dd>- ${escapeHtml(formatMoney(discount))}</dd></div>` : ""}
       </dl>
       <div class="gx-od-totalbox">
@@ -11282,7 +11324,7 @@ const renderBoardModalOrderRow = (order) => `
       </span>
       <span>
         <small>Fluxo</small>
-        <strong>${escapeHtml(order.fulfillmentMode === "pickup" ? "Retirada" : "Entrega")}</strong>
+        <strong>${escapeHtml(getOrderKindLabel(order))}</strong>
       </span>
     </div>
   </button>
@@ -12518,6 +12560,8 @@ const pickDefaultOrderId = () => {
 
 const loadOrderDetails = async (orderId, { showLoading = true } = {}) => {
   adminState.selectedOrderId = orderId;
+  // Não deixa o detalhe completo de outro pedido "grudado" enquanto este carrega.
+  if (adminState.selectedOrder && adminState.selectedOrder.id !== orderId) adminState.selectedOrder = null;
 
   if (showLoading) {
     adminState.isLoadingOrderDetails = true;
@@ -12559,6 +12603,11 @@ const loadOrderDetails = async (orderId, { showLoading = true } = {}) => {
 };
 
 const loadAuditLog = async ({ preserveSelection = true, silent = false } = {}) => {
+  // Sem permissão de auditoria, não chama a API (evita 403 repetidos que contam como risco).
+  if (!hasAdminPermission(SECTION_PERMISSION_MAP.audit) || !hasPlanFeatureForSection("audit")) {
+    adminState.isLoadingAudit = false;
+    return;
+  }
   adminState.isLoadingAudit = !silent;
 
   if (!silent && adminState.activeSection === "audit") {
@@ -12619,6 +12668,7 @@ const loadAuditLog = async ({ preserveSelection = true, silent = false } = {}) =
       return;
     }
 
+    if (silent) return;
     adminState.actionMessage = error.message || "Não foi possível carregar a auditoria operacional.";
     adminState.actionTone = "error";
 
@@ -14205,7 +14255,16 @@ const updateOrderStatus = async (orderId, nextStatus, note = "", options = {}) =
       }),
     });
 
-    adminState.selectedOrder = normalizeOrderRecord(payload.order || adminState.selectedOrder);
+    // Mantém o foco no pedido que recebeu a ação (nunca num detalhe antigo de outro pedido).
+    const returnedOrder = payload.order ? normalizeOrderRecord(payload.order) : null;
+    const matchesActed = (order) => order && (order.id === orderId || order.publicId === orderId);
+    const actedOrder = matchesActed(returnedOrder)
+      ? returnedOrder
+      : matchesActed(adminState.selectedOrder)
+        ? { ...adminState.selectedOrder, status: nextStatus }
+        : null;
+    adminState.selectedOrder = actedOrder;
+    adminState.selectedOrderId = actedOrder?.id || orderId;
     adminState.storageMode = payload.storageMode || adminState.storageMode;
     adminState.isUpdatingStatus = false;
     adminState.actionMessage = payload.message || `Status atualizado para ${nextStatus}.`;
@@ -16133,6 +16192,11 @@ const initDashboardPage = () => {
       const note = String(actionButton.dataset.actionNote || "").trim();
 
       if (!orderId || !nextStatus) {
+        return;
+      }
+
+      // Cancelar sempre pede confirmação (painel de detalhes).
+      if (nextStatus === "Cancelado" && !window.confirm("Cancelar este pedido? O cliente deixa de vê-lo em andamento.")) {
         return;
       }
 

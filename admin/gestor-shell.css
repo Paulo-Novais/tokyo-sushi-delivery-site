@@ -4108,3 +4108,19 @@ html body.admin-body:not([data-admin-theme="dark"]) .gx-ticket:is(.is-age-mid, .
 @media (prefers-reduced-motion: reduce) {
   .gx-alert-toast { animation: none; }
 }
+
+/* Pedido de mesa (comanda do Caixa): etiqueta própria, verde-azulada. */
+html body.admin-body :is(.gx-ticket, .gx-od) .gx-tag.is-dining,
+html body.admin-body .gx-od-pill.is-dining {
+  background: rgba(13, 148, 136, 0.15) !important;
+  color: #0f766e;
+}
+
+html body.admin-body[data-admin-theme="dark"] :is(.gx-ticket, .gx-od) .gx-tag.is-dining,
+html body.admin-body[data-admin-theme="dark"] .gx-od-pill.is-dining {
+  color: #5eead4;
+}
+
+html body.admin-body:not([data-admin-theme="dark"]) .gx-ticket:is(.is-age-mid, .is-age-warn, .is-age-late) .gx-tag.is-dining {
+  background: rgba(255, 255, 255, 0.75) !important;
+}
