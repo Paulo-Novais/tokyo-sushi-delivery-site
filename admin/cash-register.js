@@ -1,20 +1,41 @@
+/* Novo Caixa INOVAS Food — Abertura, Salão, Nova comanda, PDV, Pagamento e
+   Fechamento (docs/novo-caixa/ESPEC-CAIXA.md). Usa a API do Caixa v2
+   (/api/admin/cash-register/*) e os componentes de admin/cash-ui.css. */
 (() => {
   "use strict";
 
-  const PAYMENT_LABELS = Object.freeze({
-    CASH: "Dinheiro",
-    PIX: "PIX",
-    DEBIT_CARD: "Cartao de debito",
-    CREDIT_CARD: "Cartao de credito",
-    MEAL_VOUCHER: "Vale-refeicao",
-    OTHER: "Outros",
+  const ui = window.InovasCashUi;
+
+  const PAYMENT_METHODS = Object.freeze([
+    { key: "CASH", label: "Dinheiro" },
+    { key: "PIX", label: "Pix" },
+    { key: "CREDIT_CARD", label: "Crédito" },
+    { key: "DEBIT_CARD", label: "Débito" },
+    { key: "MEAL_VOUCHER", label: "Vale-refeição" },
+    { key: "OTHER", label: "Outro" },
+  ]);
+  const PAYMENT_LABELS = Object.freeze(
+    Object.fromEntries(PAYMENT_METHODS.map((method) => [method.key, method.label]))
+  );
+  const TABLE_LOOK = Object.freeze({
+    FREE: { label: "Livre", className: "is-free" },
+    OCCUPIED: { label: "Ocupada", className: "is-busy" },
+    AWAITING_PAYMENT: { label: "Pediu conta", className: "is-bill" },
+    UNAVAILABLE: { label: "Fora de uso", className: "is-reserved" },
   });
   const TABLE_FILTERS = Object.freeze([
     { key: "all", label: "Todas" },
     { key: "FREE", label: "Livres" },
     { key: "OCCUPIED", label: "Ocupadas" },
-    { key: "AWAITING_PAYMENT", label: "Aguardando" },
-    { key: "UNAVAILABLE", label: "Fechadas" },
+    { key: "AWAITING_PAYMENT", label: "Pediu conta" },
+  ]);
+  const QUICK_NOTES = Object.freeze([
+    "Sem cebolinha",
+    "Pouco arroz",
+    "Sem gelo",
+    "Sem molho",
+    "Molho à parte",
+    "Prioridade",
   ]);
   const VIEW_PATHS = Object.freeze({
     floor: "/admin/caixa/salao",
@@ -23,29 +44,37 @@
   });
   const MAX_TABLES = 200;
   const MAX_GUESTS = 100;
+
   const state = {
     root: null,
     context: {},
     snapshot: null,
     catalog: null,
     view: "floor",
+    screen: "salao",
     tableFilter: "all",
-    tableQuery: "",
-    productQuery: "",
-    categoryId: "all",
-    tablesCollapsed: false,
+    tableSearch: "",
     selectedTabId: "",
-    selectedPane: "consumption",
-    openTableId: "",
-    editOccupancyOpen: false,
-    paymentDraft: [],
-    closingDraft: null,
+    modal: "",
+    openTab: { tableId: "", guests: 0, customerName: "", waiterName: "" },
+    people: { guests: 1, customerName: "" },
+    movement: { type: "WITHDRAWAL", amount: "", reason: "" },
+    opening: { tableCount: null, openingAmount: "", serviceChargeRate: "10" },
+    pdv: { query: "", categoryId: "all", multiplier: 1, noteItemId: "" },
+    bill: { discount: "", serviceEnabled: true },
+    payment: { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 },
+    closing: { counted: "", notes: "" },
+    receiptTab: null,
+    optimistic: [],
+    qtyDelta: {},
     loading: false,
     loadingPromise: null,
-    busyAction: "",
+    busy: "",
     message: "",
     messageTone: "success",
   };
+
+  /* ---------- utilidades ---------- */
 
   const escapeHtml = (value) =>
     String(value ?? "")
@@ -54,56 +83,50 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
-  const mediaUrl = (value) => {
-    const source = String(value || "").trim();
-    if (!source) return "";
-    if (/^(?:https?:|data:|blob:|\/)/i.test(source)) return source;
-    return `/${source.replace(/^(?:\.\/)+/, "")}`;
+  const money = (value) => ui.formatMoney(value);
+  const cents = (value) => {
+    const parsed = ui.toCents(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   };
-  const money = (value) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Number(value || 0));
-  const dateTime = (value) => {
+  const reais = (value) => ui.fromCents(value);
+  const two = (number) => ui.formatTableNumber(number);
+  const timeOf = (value) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "--";
-    return new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(date);
+    return Number.isNaN(date.getTime())
+      ? "--"
+      : new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  };
+  const dayLabel = (value = new Date()) => {
+    const text = new Intl.DateTimeFormat("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+    }).format(new Date(value));
+    return text.charAt(0).toUpperCase() + text.slice(1);
   };
   const elapsed = (value) => {
     const start = new Date(value).getTime();
     if (!Number.isFinite(start)) return "";
     const minutes = Math.max(0, Math.round((Date.now() - start) / 60000));
     if (minutes < 60) return `${minutes} min`;
-    return `${Math.floor(minutes / 60)}h ${minutes % 60}min`;
+    return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
   };
   const normalizeSearch = (value) =>
     String(value || "")
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[̀-ͯ]/g, "")
       .toLowerCase()
       .trim();
-  const toNumber = (value) => {
-    const normalized = String(value ?? "")
-      .replace(/[^\d,.\-]/g, "")
-      .replace(",", ".");
-    const number = Number(normalized);
-    return Number.isFinite(number) ? number : 0;
-  };
-  const isIntegerBetween = (value, min, max) =>
-    Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
+  const peopleLabel = (count) => `${count} ${Number(count) === 1 ? "pessoa" : "pessoas"}`;
   const newIdempotencyKey = () =>
-    window.crypto?.randomUUID?.() ||
-    `cash-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    window.crypto?.randomUUID?.() || `cash-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const hasPermission = (permission) => {
     const permissions = state.context.permissions;
     if (!permissions || !Object.keys(permissions).length) return true;
     return permissions[permission] === true;
   };
+
   const getSnapshot = () =>
     state.snapshot || {
       register: null,
@@ -113,28 +136,37 @@
       activeTabs: [],
       recentTabs: [],
       auditEvents: [],
+      movements: [],
     };
-  const getActiveTab = () => {
-    const snapshot = getSnapshot();
-    const selected = snapshot.activeTabs.find(
-      (tab) => tab.id === state.selectedTabId
+  const getTab = () =>
+    getSnapshot().activeTabs.find((tab) => tab.id === state.selectedTabId) || null;
+  const getTableOf = (tab) =>
+    getSnapshot().tables.find((table) => table.id === tab?.tableId) || null;
+  const tableNumber = (table) => (table?.number ? two(table.number) : table?.label || "--");
+
+  const getCatalogItems = () => {
+    const sections = Array.isArray(state.catalog?.sections) ? state.catalog.sections : [];
+    let code = 0;
+    return sections.flatMap((section) =>
+      (Array.isArray(section.items) ? section.items : [])
+        .filter((item) => item.isOrderable === true && item.isPaused !== true && item.isAvailable !== false)
+        .map((item) => {
+          code += 1;
+          return {
+            ...item,
+            code,
+            sectionId: item.sectionId || section.id,
+            sectionTitle: item.sectionTitle || section.title,
+          };
+        })
     );
-    return selected || snapshot.activeTabs[0] || null;
-  };
-  const getSelectedTable = () => {
-    const tab = getActiveTab();
-    return getSnapshot().tables.find((table) => table.id === tab?.tableId) || null;
   };
   const getCatalogSections = () =>
-    Array.isArray(state.catalog?.sections) ? state.catalog.sections : [];
-  const getCatalogItems = () =>
-    getCatalogSections().flatMap((section) =>
-      (Array.isArray(section.items) ? section.items : []).map((item) => ({
-        ...item,
-        sectionId: item.sectionId || section.id,
-        sectionTitle: item.sectionTitle || section.title,
-      }))
+    (Array.isArray(state.catalog?.sections) ? state.catalog.sections : []).filter((section) =>
+      (section.items || []).some((item) => item.isOrderable === true && item.isPaused !== true)
     );
+
+  /* ---------- servidor ---------- */
 
   const fetchJson = async (url, options = {}) => {
     const response = await fetch(url, {
@@ -142,24 +174,20 @@
       headers: {
         Accept: "application/json",
         ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
       },
       ...options,
     });
     let payload = null;
     try {
       payload = await response.json();
-    } catch (error) {
+    } catch {
       payload = null;
     }
     if (!response.ok) {
-      const requestError = new Error(
-        payload?.error || "Nao foi possivel concluir a operacao."
-      );
-      requestError.status = response.status;
-      requestError.errorCode = payload?.errorCode || "request_error";
-      requestError.payload = payload;
-      throw requestError;
+      const error = new Error(payload?.error || "Não foi possível concluir a operação.");
+      error.status = response.status;
+      error.errorCode = payload?.errorCode || "request_error";
+      throw error;
     }
     return payload || {};
   };
@@ -167,39 +195,28 @@
   const setMessage = (message, tone = "success") => {
     state.message = message || "";
     state.messageTone = tone;
-  };
-  const syncSelection = () => {
-    const tabs = getSnapshot().activeTabs || [];
-    if (!tabs.some((tab) => tab.id === state.selectedTabId)) {
-      state.selectedTabId = tabs[0]?.id || "";
-      state.paymentDraft = [];
-      state.closingDraft = null;
+    window.clearTimeout(setMessage.timer);
+    if (message && tone === "success") {
+      setMessage.timer = window.setTimeout(() => {
+        state.message = "";
+        render();
+      }, 3500);
     }
   };
-  const getClosingDraft = (tab) => {
-    if (!tab) {
-      return {
-        discountAmount: 0,
-        serviceChargeEnabled: false,
-      };
-    }
-    if (!state.closingDraft || state.closingDraft.tabId !== tab.id) {
-      state.closingDraft = {
-        tabId: tab.id,
-        discountAmount: Number(tab.discountAmount || 0),
-        serviceChargeEnabled: tab.serviceChargeEnabled !== false,
-      };
-    }
-    return state.closingDraft;
-  };
+
   const applySnapshot = (payload) => {
     state.snapshot = payload?.snapshot || payload;
     if (payload?.catalog) state.catalog = payload.catalog;
-    syncSelection();
+    const tabs = getSnapshot().activeTabs || [];
+    if (state.selectedTabId && !tabs.some((tab) => tab.id === state.selectedTabId)) {
+      state.selectedTabId = "";
+      if (state.screen !== "salao") state.screen = "salao";
+    }
   };
-  const postAction = async (action, body, busyLabel) => {
-    state.busyAction = busyLabel || action;
-    setMessage("");
+
+  const postAction = async (action, body, busyLabel, { quiet = false } = {}) => {
+    state.busy = busyLabel || action;
+    if (!quiet) setMessage("");
     render();
     try {
       const payload = await fetchJson(`/api/admin/cash-register/${action}`, {
@@ -207,7 +224,7 @@
         body: JSON.stringify(body || {}),
       });
       applySnapshot(payload);
-      setMessage(payload.message || "Operacao concluida.", "success");
+      if (!quiet) setMessage(payload.message || "Feito.", "success");
       return payload;
     } catch (error) {
       if (error.status === 401) {
@@ -217,7 +234,7 @@
       setMessage(error.message, "error");
       return null;
     } finally {
-      state.busyAction = "";
+      state.busy = "";
       render();
     }
   };
@@ -232,16 +249,9 @@
         applySnapshot(payload);
         state.context = {
           ...state.context,
-          adminName:
-            payload.admin?.displayName ||
-            payload.admin?.name ||
-            state.context.adminName ||
-            "",
+          adminName: payload.admin?.displayName || payload.admin?.name || state.context.adminName || "",
           restaurantName:
-            payload.admin?.restaurantName ||
-            payload.admin?.restaurant ||
-            state.context.restaurantName ||
-            "",
+            payload.admin?.restaurantName || payload.admin?.restaurant || state.context.restaurantName || "",
           permissions: payload.admin?.permissions || state.context.permissions,
         };
       } catch (error) {
@@ -262,1321 +272,1602 @@
 
   const setView = (view, { updateUrl = true } = {}) => {
     state.view = ["floor", "opening", "closing"].includes(view) ? view : "floor";
+    if (state.view !== "floor") state.screen = "salao";
+    state.modal = "";
     if (updateUrl && window.history?.replaceState) {
       window.history.replaceState({}, "", VIEW_PATHS[state.view]);
     }
     render();
   };
 
-  const renderFeedback = () =>
-    state.message
-      ? `<div class="cash-feedback is-${escapeHtml(
-          state.messageTone
-        )}" role="status">${escapeHtml(state.message)}</div>`
-      : "";
-  const renderLoading = () => `
-    <section class="cash-loading" aria-live="polite">
-      <span class="cash-loading-mark"></span>
-      <strong>Sincronizando Caixa e Salao</strong>
-      <p>Buscando caixa, mesas, comandas e cardapio deste restaurante.</p>
-    </section>
-  `;
-  const renderHeader = () => {
-    const snapshot = getSnapshot();
-    const register = snapshot.register;
-    const restaurantName =
-      state.context.restaurantName || "Restaurante selecionado";
-    return `
-      <header class="cash-header">
-        <div class="cash-header-title">
-          <div>
-            <span class="cash-kicker">${escapeHtml(restaurantName)}</span>
-            <h2>Caixa - Salao</h2>
-          </div>
-          <span class="cash-register-status ${
-            register ? "is-open" : "is-closed"
-          }">${register ? "CAIXA ABERTO" : "CAIXA FECHADO"}</span>
-        </div>
-        <div class="cash-register-meta">
-          <span><small>Operador</small><strong>${escapeHtml(
-            register?.openingUserDisplayName || "--"
-          )}</strong></span>
-          <span><small>Abertura</small><strong>${escapeHtml(
-            register ? dateTime(register.openedAt) : "--"
-          )}</strong></span>
-          <span><small>Valor inicial</small><strong>${escapeHtml(
-            register ? money(register.openingAmount) : "--"
-          )}</strong></span>
-          <button class="cash-icon-button" type="button" data-cash-action="refresh" aria-label="Atualizar Caixa" title="Atualizar Caixa">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </header>
-    `;
-  };
+  /* ---------- pedaços comuns ---------- */
 
-  const renderOpeningView = () => {
+  const feedback = () =>
+    state.message
+      ? `<div class="cx-feedback is-${escapeHtml(state.messageTone)}" role="${
+          state.messageTone === "error" ? "alert" : "status"
+        }">${escapeHtml(state.message)}</div>`
+      : "";
+
+  const kpi = (label, value, helper = "") => `
+    <article class="cx-kpi"><span>${escapeHtml(label)}</span><strong class="cx-big">${escapeHtml(value)}</strong>${
+      helper ? `<small>${escapeHtml(helper)}</small>` : ""
+    }</article>`;
+
+  const stepper = (field, value, { min, max, label }) => `
+    <div class="cx-stepper" data-cx-stepper="${field}">
+      <button type="button" data-cx-step-field="${field}" data-cx-delta="-1" aria-label="Diminuir ${escapeHtml(label)}" ${
+        value <= min ? "disabled" : ""
+      }>−</button>
+      <output aria-live="polite" aria-label="${escapeHtml(label)}">${escapeHtml(value)}</output>
+      <button type="button" data-cx-step-field="${field}" data-cx-delta="1" aria-label="Aumentar ${escapeHtml(label)}" ${
+        value >= max ? "disabled" : ""
+      }>+</button>
+    </div>`;
+
+  const skeleton = () => `
+    <div class="cx-root cash-v3">
+      <div class="cx-topbar"><div class="cx-topbar-title"><h1>Caixa</h1><p>Carregando caixa, mesas e cardápio…</p></div></div>
+      <div class="cx-grid-tables">${Array.from({ length: 12 }, () => '<div class="cx-skeleton"></div>').join("")}</div>
+    </div>`;
+
+  /* ---------- Tela 1 · Abertura ---------- */
+
+  const renderOpening = () => {
     const snapshot = getSnapshot();
     const register = snapshot.register;
     if (register) {
       return `
-        <section class="cash-focused-view">
-          <article class="cash-focused-card is-success">
-            <span class="cash-focused-icon">✓</span>
-            <span class="cash-kicker">Turno em andamento</span>
-            <h3>O caixa esta aberto</h3>
-            <p>Aberto por ${escapeHtml(
-              register.openingUserDisplayName
-            )} em ${escapeHtml(dateTime(register.openedAt))}.</p>
-            <dl class="cash-definition-grid">
-              <div><dt>Valor inicial</dt><dd>${escapeHtml(
-                money(register.openingAmount)
-              )}</dd></div>
-              <div><dt>Taxa de servico</dt><dd>${escapeHtml(
-                `${register.serviceChargeRate}%`
-              )}</dd></div>
-              <div><dt>Mesas no turno</dt><dd>${escapeHtml(
-                snapshot.tables.length
-              )}</dd></div>
-              <div><dt>Observacao</dt><dd>${escapeHtml(
-                register.openingNotes || "Sem observacao"
-              )}</dd></div>
-            </dl>
-            <button class="cash-primary-button" type="button" data-cash-view="floor">Ir para o Salao</button>
-          </article>
-        </section>
-      `;
+        <section class="cx-center-card">
+          <span class="cx-eyebrow">Turno em andamento</span>
+          <h1>O caixa já está aberto</h1>
+          <p class="cx-muted">Aberto por ${escapeHtml(register.openingUserDisplayName)} às ${escapeHtml(
+        timeOf(register.openedAt)
+      )} · fundo de troco ${escapeHtml(money(register.openingAmount))} · ${escapeHtml(
+        snapshot.tables.length
+      )} mesas.</p>
+          <button class="cx-btn cx-btn-primary cx-btn-lg" type="button" data-cx-view="floor">Ir para o Salão</button>
+        </section>`;
     }
+    const lastCount = Math.min(MAX_TABLES, Math.max(1, Number(snapshot.lastClosedRegister?.tableCount || 0)));
+    if (state.opening.tableCount === null) state.opening.tableCount = snapshot.lastClosedRegister?.tableCount ? lastCount : 12;
+    const count = state.opening.tableCount;
+    const presets = [10, 15, 20, 25, 30];
     return `
-      <section class="cash-focused-view">
-        <form class="cash-focused-card" data-cash-form="open-register">
-          <span class="cash-kicker">Abertura de Caixa</span>
-          <h3>Iniciar o turno</h3>
-          <p>Defina as mesas deste turno. A configuracao podera ser alterada novamente na proxima abertura.</p>
-          <div class="cash-form-grid">
-            <label>
-              <span>Operador</span>
-              <input value="${escapeHtml(
-                state.context.adminName || "Operador autenticado"
-              )}" disabled />
-            </label>
-            <label>
-              <span>Quantidade inicial de mesas</span>
-              <input name="tableCount" type="number" min="1" max="${MAX_TABLES}" step="1" inputmode="numeric" value="${escapeHtml(
-                Math.min(
-                  MAX_TABLES,
-                  Math.max(1, Number(snapshot.lastClosedRegister?.tableCount || 12))
-                )
-              )}" required />
-              <small>Configuracao do Salao · limite de ${MAX_TABLES} mesas</small>
-            </label>
-            <label>
-              <span>Valor inicial</span>
-              <input name="openingAmount" type="number" min="0" step="0.01" value="0.00" required />
-            </label>
-            <label>
-              <span>Taxa de servico (%)</span>
-              <input name="serviceChargeRate" type="number" min="0" max="30" step="0.01" value="10.00" required />
-            </label>
-            <label class="is-wide">
-              <span>Observacao opcional</span>
-              <textarea name="notes" rows="3" maxlength="600" placeholder="Ex.: Fundo de troco conferido."></textarea>
-            </label>
-          </div>
-          <button class="cash-primary-button" type="submit" ${
-            state.busyAction ? "disabled" : ""
-          }>${state.busyAction === "open-register" ? "Abrindo..." : "Abrir Caixa"}</button>
-        </form>
-      </section>
-    `;
-  };
-
-  const renderClosingView = () => {
-    const snapshot = getSnapshot();
-    const register = snapshot.register;
-    const summary = snapshot.registerSummary;
-    const closed = snapshot.lastClosedRegister;
-    if (!register) {
-      return `
-        <section class="cash-focused-view">
-          <article class="cash-focused-card">
-            <span class="cash-kicker">Fechamento de Caixa</span>
-            <h3>Nao ha caixa aberto</h3>
-            <p>${
-              closed
-                ? `O ultimo caixa foi fechado em ${escapeHtml(
-                    dateTime(closed.closedAt)
-                  )}.`
-                : "Abra um caixa para iniciar a operacao."
-            }</p>
+      <div class="cx-split cx-opening">
+        <form class="cx-split-main cx-card" data-cx-form="open-register" novalidate>
+          <span class="cx-eyebrow">${escapeHtml(dayLabel())}</span>
+          <div class="cx-row-between">
+            <h1>Abrir caixa</h1>
             ${
-              closed
-                ? `<dl class="cash-definition-grid">
-                    <div><dt>Valor esperado</dt><dd>${escapeHtml(
-                      money(closed.expectedCash)
-                    )}</dd></div>
-                    <div><dt>Valor informado</dt><dd>${escapeHtml(
-                      money(closed.countedCash)
-                    )}</dd></div>
-                    <div><dt>Diferenca</dt><dd class="${
-                      Number(closed.differenceAmount || 0) === 0
-                        ? "is-positive"
-                        : "is-negative"
-                    }">${escapeHtml(money(closed.differenceAmount))}</dd></div>
-                  </dl>`
+              snapshot.lastClosedRegister?.tableCount
+                ? `<button class="cx-link" type="button" data-cx-action="use-last-count">Usar mesma quantidade do último turno (${escapeHtml(
+                    lastCount
+                  )})</button>`
                 : ""
             }
-            <button class="cash-primary-button" type="button" data-cash-view="opening">Abrir Caixa</button>
-          </article>
-        </section>
-      `;
-    }
-    const paymentTotals = summary?.paymentTotals || {};
-    const activeCount = snapshot.activeTabs.length;
-    return `
-      <section class="cash-closing-layout">
-        <article class="cash-closing-summary">
-          <div class="cash-section-heading">
-            <div><span class="cash-kicker">Conferencia do turno</span><h3>Resumo do caixa</h3></div>
-            <span>${escapeHtml(dateTime(register.openedAt))}</span>
           </div>
-          <div class="cash-closing-kpis">
-            <div><small>Valor inicial</small><strong>${escapeHtml(
-              money(register.openingAmount)
-            )}</strong></div>
-            <div><small>Total vendido</small><strong>${escapeHtml(
-              money(summary?.totalSold)
-            )}</strong></div>
-            <div><small>Dinheiro esperado</small><strong>${escapeHtml(
-              money(summary?.expectedCash)
-            )}</strong></div>
-            <div><small>Comandas abertas</small><strong>${escapeHtml(
-              activeCount
-            )}</strong></div>
+          <div class="cx-fields">
+            <label class="cx-field"><span>Operador do caixa</span><input class="cx-input" value="${escapeHtml(
+              state.context.adminName || "Operador autenticado"
+            )}" disabled /></label>
+            <label class="cx-field"><span>Fundo de troco (R$)</span><input class="cx-input cx-num" name="openingAmount" data-cx-field="opening.openingAmount" inputmode="decimal" placeholder="0,00" value="${escapeHtml(
+              state.opening.openingAmount
+            )}" /></label>
           </div>
-          <div class="cash-payment-breakdown">
-            ${Object.entries(PAYMENT_LABELS)
-              .map(
-                ([method, label]) => `
-                  <div><span>${escapeHtml(label)}</span><strong>${escapeHtml(
-                    money(paymentTotals[method])
-                  )}</strong></div>
-                `
-              )
-              .join("")}
-            <div><span>Descontos</span><strong>${escapeHtml(
-              money(summary?.discounts)
-            )}</strong></div>
-            <div><span>Taxa de servico</span><strong>${escapeHtml(
-              money(summary?.serviceCharges)
-            )}</strong></div>
+          <div class="cx-field">
+            <span>Quantidade de mesas hoje</span>
+            <div class="cx-row-wrap">
+              ${stepper("opening.tableCount", count, { min: 1, max: MAX_TABLES, label: "mesas" })}
+              <div class="cx-chips">${presets
+                .map(
+                  (preset) =>
+                    `<button type="button" class="cx-chip" data-cx-set="opening.tableCount" data-cx-value="${preset}" aria-pressed="${
+                      preset === count
+                    }">${preset}</button>`
+                )
+                .join("")}</div>
+            </div>
           </div>
-        </article>
-        <form class="cash-focused-card cash-close-form" data-cash-form="close-register">
-          <span class="cash-kicker">Contagem final</span>
-          <h3>Fechar Caixa</h3>
-          <p>A operacao sera bloqueada depois da confirmacao.</p>
-          ${
-            activeCount
-              ? `<div class="cash-inline-warning">Finalize ${escapeHtml(
-                  activeCount
-                )} comanda(s) antes de fechar.</div>`
-              : ""
-          }
-          <label>
-            <span>Valor informado em dinheiro</span>
-            <input name="countedCash" type="number" min="0" step="0.01" value="${escapeHtml(
-              Number(summary?.expectedCash || 0).toFixed(2)
-            )}" required />
-          </label>
-          <label>
-            <span>Observacao opcional</span>
-            <textarea name="notes" rows="4" maxlength="600"></textarea>
-          </label>
-          <button class="cash-danger-button" type="submit" ${
-            activeCount || state.busyAction ? "disabled" : ""
-          }>${state.busyAction === "close-register" ? "Fechando..." : "Confirmar Fechamento"}</button>
+          <label class="cx-field cx-field-inline"><span>Taxa de serviço padrão (%)</span><input class="cx-input cx-num" data-cx-field="opening.serviceChargeRate" inputmode="decimal" value="${escapeHtml(
+            state.opening.serviceChargeRate
+          )}" /></label>
+          <p class="cx-note">As mesas não têm lugares fixos: todas começam com 0 pessoas. Quantas pessoas sentaram é informado ao abrir a comanda.</p>
+          <button class="cx-btn cx-btn-primary cx-btn-lg cx-btn-block" type="submit" ${state.busy ? "disabled" : ""}>${
+      state.busy === "open-register" ? "Abrindo…" : `Abrir caixa com ${count} mesas`
+    }</button>
         </form>
-      </section>
-    `;
+        <aside class="cx-split-side cx-card">
+          <div class="cx-row-between"><h2>Prévia do salão</h2><span class="cx-muted">Todas livres · 0 pessoas</span></div>
+          <div class="cx-grid-mini">${Array.from({ length: count }, (_, index) => `
+            <div class="cx-mini-table"><strong>${two(index + 1)}</strong><span>Livre</span><small>0 pessoas</small></div>`).join("")}</div>
+        </aside>
+      </div>`;
   };
 
-  const tableStatusLabel = (status) =>
-    ({
-      FREE: "Livre",
-      OCCUPIED: "Ocupada",
-      AWAITING_PAYMENT: "Aguardando",
-      UNAVAILABLE: "Fechada",
-    }[status] || status);
-  const renderTablePanel = () => {
+  /* ---------- Tela 2 · Salão ---------- */
+
+  const tableCard = (table) => {
+    const look = TABLE_LOOK[table.status] || TABLE_LOOK.UNAVAILABLE;
+    const tab = table.activeTab;
+    const line1 = tab ? `${peopleLabel(tab.guestCount)} · ${elapsed(tab.openedAt)}` : "0 pessoas";
+    const line2 = tab
+      ? money(tab.totalAmount)
+      : table.status === "FREE"
+        ? "Abrir comanda →"
+        : "";
+    return `
+      <button type="button" class="cx-status-card ${look.className}" data-cx-table="${escapeHtml(table.id)}" aria-label="Mesa ${escapeHtml(
+        tableNumber(table)
+      )}, ${escapeHtml(look.label)}, ${escapeHtml(line1)}">
+        <span class="cx-card-number">${escapeHtml(tableNumber(table))}</span>
+        <span class="cx-card-status">${escapeHtml(look.label)}</span>
+        <span class="cx-card-meta">${escapeHtml(line1)}</span>
+        ${tab?.customerName ? `<span class="cx-card-meta">${escapeHtml(tab.customerName)}</span>` : ""}
+        <span class="cx-card-meta cx-num"><strong>${escapeHtml(line2)}</strong></span>
+      </button>`;
+  };
+
+  const renderSalao = () => {
     const snapshot = getSnapshot();
-    const query = normalizeSearch(state.tableQuery);
-    const tables = snapshot.tables.filter((table) => {
-      const matchesFilter =
-        state.tableFilter === "all" || table.status === state.tableFilter;
-      const matchesQuery =
-        !query || normalizeSearch(`${table.label} ${table.number || ""}`).includes(query);
-      return matchesFilter && matchesQuery;
-    });
-    const counts = snapshot.tables.reduce(
-      (summary, table) => {
-        summary.all += 1;
-        summary[table.status] = (summary[table.status] || 0) + 1;
-        return summary;
+    const register = snapshot.register;
+    const summary = snapshot.registerSummary || {};
+    const tables = snapshot.tables;
+    const counts = tables.reduce(
+      (acc, table) => {
+        acc.all += 1;
+        acc[table.status] = (acc[table.status] || 0) + 1;
+        return acc;
       },
       { all: 0 }
     );
+    const occupied = tables.filter((table) => table.activeTab);
+    const people = occupied.reduce((sum, table) => sum + Number(table.activeTab.guestCount || 0), 0);
+    const openValue = occupied.reduce((sum, table) => sum + cents(table.activeTab.totalAmount), 0);
+    const visible = tables.filter((table) => state.tableFilter === "all" || table.status === state.tableFilter);
     return `
-      <aside class="cash-tables-panel ${state.tablesCollapsed ? "is-collapsed" : ""}">
-        <div class="cash-section-heading">
-          <div><span class="cash-kicker">Salao</span><h3>Mesas</h3></div>
-          <div class="cash-table-panel-controls">
-            <strong>${escapeHtml(snapshot.tables.length)}</strong>
-            <button class="cash-add-table-button" type="button" data-cash-action="add-table" ${
-              snapshot.tables.length >= MAX_TABLES ||
-              state.busyAction ||
-              !hasPermission("cash_register_open")
-                ? "disabled"
-                : ""
-            }>+ Adicionar mesa</button>
-            <button class="cash-mobile-collapse" type="button" data-cash-action="toggle-tables" aria-expanded="${
-              state.tablesCollapsed ? "false" : "true"
-            }">${state.tablesCollapsed ? "Mostrar" : "Recolher"}</button>
-          </div>
+      <header class="cx-topbar">
+        <div class="cx-topbar-title">
+          <h1>Caixa · ${escapeHtml(state.context.restaurantName || "Salão")}</h1>
+          <p>Caixa aberto por ${escapeHtml(register.openingUserDisplayName)} às ${escapeHtml(timeOf(register.openedAt))} · Fundo ${escapeHtml(
+      money(register.openingAmount)
+    )}</p>
         </div>
-        <label class="cash-search">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <input type="search" data-cash-input="table-search" value="${escapeHtml(
-            state.tableQuery
-          )}" placeholder="Buscar mesa..." />
-        </label>
-        <div class="cash-table-filters">
-          ${TABLE_FILTERS.map(
-            (filter) => `
-              <button type="button" class="${
-                state.tableFilter === filter.key ? "is-active" : ""
-              }" data-cash-table-filter="${filter.key}">
-                ${escapeHtml(filter.label)}
-                <span>${escapeHtml(counts[filter.key] || 0)}</span>
-              </button>
-            `
-          ).join("")}
-        </div>
-        <div class="cash-table-grid">
+        <div class="cx-topbar-actions">
+          <label class="cx-search-table"><span class="cx-sr-only">Número da mesa</span><input class="cx-input cx-num" data-cx-field="tableSearch" data-cx-enter="open-table-number" inputmode="numeric" placeholder="Nº da mesa + Enter" value="${escapeHtml(
+            state.tableSearch
+          )}" /></label>
           ${
-            tables.length
-              ? tables
-                  .map((table) => {
-                    const tab = table.activeTab;
-                    return `
-                      <button type="button" class="cash-table-card is-${escapeHtml(
-                        table.status.toLowerCase()
-                      )} ${
-                        tab?.id === state.selectedTabId ? "is-selected" : ""
-                      }" data-cash-table="${escapeHtml(table.id)}">
-                        <span class="cash-table-icon" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" fill="none"><path d="M4 11h16M6 11v6M18 11v6M8 8h8v3H8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </span>
-                        <span class="cash-table-number ${
-                          tab?.customerName ? "is-customer" : ""
-                        }">${escapeHtml(tab?.customerName || table.label)}</span>
-                        <strong>${escapeHtml(tableStatusLabel(table.status))}</strong>
-                        ${
-                          tab
-                            ? `<small class="cash-table-occupancy">${escapeHtml(
-                                tab.customerName
-                                  ? `${table.label} · ${tab.guestCount} pessoas`
-                                  : `${tab.guestCount} pessoas`
-                              )}</small>
-                               <b>${escapeHtml(money(tab.totalAmount))}</b>
-                               <small>${escapeHtml(elapsed(tab.openedAt))}</small>`
-                            : `<small class="cash-table-occupancy">Livre</small>`
-                        }
-                      </button>
-                    `;
-                  })
-                  .join("")
-              : `<div class="cash-empty-compact">Nenhuma mesa neste filtro.</div>`
+            hasPermission("cash_register_open_tab")
+              ? '<button class="cx-btn" type="button" data-cx-action="new-tab">+ Nova comanda <span class="cx-kbd">F1</span></button>'
+              : ""
+          }
+          <button class="cx-btn" type="button" data-cx-action="go-pdv">Lançar pedido <span class="cx-kbd">F3</span></button>
+          ${
+            hasPermission("cash_register_close")
+              ? '<button class="cx-btn" type="button" data-cx-action="open-movement">Sangria / Suprimento</button>'
+              : ""
+          }
+          ${
+            hasPermission("cash_register_close")
+              ? '<button class="cx-btn cx-btn-dark" type="button" data-cx-view="closing">Fechar caixa</button>'
+              : ""
           }
         </div>
-        <footer class="cash-table-legend">
-          <span><i class="is-free"></i>Livre</span>
-          <span><i class="is-occupied"></i>Ocupada</span>
-          <span><i class="is-waiting"></i>Aguardando</span>
-        </footer>
-      </aside>
-    `;
-  };
-
-  const itemStatusLabel = (status) =>
-    ({
-      PENDING: "Pendente",
-      SENT: "Enviado",
-      IN_PREPARATION: "Em preparo",
-      READY: "Pronto",
-      DELIVERED: "Entregue",
-      CANCELLED: "Cancelado",
-    }[status] || status);
-  const renderConsumption = (tab) => {
-    if (!tab.items.length) {
-      return `
-        <div class="cash-command-empty">
-          <span>+</span><strong>Comanda vazia</strong>
-          <p>Escolha um produto do cardapio abaixo para iniciar o consumo.</p>
-        </div>
-      `;
-    }
-    return `
-      <div class="cash-items-head">
-        <span>Item</span><span>Qtd.</span><span>Unit.</span><span>Total</span><span>Status</span><span></span>
-      </div>
-      <div class="cash-items-list">
-        ${tab.items
-          .map(
-            (item) => `
-              <article class="cash-item-row">
-                <div class="cash-item-product">
-                  ${
-                    item.imageUrl
-                      ? `<img src="${escapeHtml(
-                          mediaUrl(item.imageUrl)
-                        )}" alt="" loading="lazy" />`
-                      : `<span class="cash-item-placeholder">${escapeHtml(
-                          item.productName.slice(0, 1)
-                        )}</span>`
-                  }
-                  <div><strong>${escapeHtml(item.productName)}</strong><small>${escapeHtml(
-                    item.category || ""
-                  )}</small>
-                  ${
-                    item.status === "PENDING"
-                      ? `<input data-cash-item-note="${escapeHtml(
-                          item.id
-                        )}" value="${escapeHtml(
-                          item.notes || ""
-                        )}" maxlength="400" placeholder="Adicionar observacao..." />`
-                      : item.notes
-                        ? `<em>${escapeHtml(item.notes)}</em>`
-                        : ""
-                  }</div>
-                </div>
-                <div class="cash-quantity-control">
-                  ${
-                    item.status === "PENDING" && tab.status === "OPEN"
-                      ? `<button type="button" data-cash-quantity="${escapeHtml(
-                          item.id
-                        )}" data-delta="-1" aria-label="Diminuir">−</button>`
-                      : ""
-                  }
-                  <strong>${escapeHtml(item.quantity)}</strong>
-                  ${
-                    item.status === "PENDING" && tab.status === "OPEN"
-                      ? `<button type="button" data-cash-quantity="${escapeHtml(
-                          item.id
-                        )}" data-delta="1" aria-label="Aumentar">+</button>`
-                      : ""
-                  }
-                </div>
-                <span>${escapeHtml(money(item.unitPrice))}</span>
-                <strong>${escapeHtml(money(item.totalPrice))}</strong>
-                <span class="cash-item-status is-${escapeHtml(
-                  item.status.toLowerCase()
-                )}">${escapeHtml(itemStatusLabel(item.status))}</span>
-                ${
-                  item.status === "PENDING" && tab.status === "OPEN"
-                    ? `<button class="cash-remove-item" type="button" data-cash-remove-item="${escapeHtml(
-                        item.id
-                      )}" aria-label="Remover item">×</button>`
-                    : `<span></span>`
-                }
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    `;
-  };
-  const renderOrdersPane = (tab) => `
-    <div class="cash-batch-list">
-      ${
-        tab.batches.length
-          ? tab.batches
-              .map(
-                (batch) => `
-                  <article>
-                    <span>${escapeHtml(`Pedido ${batch.batchNumber}`)}</span>
-                    <strong>${escapeHtml(
-                      batch.orderPublicId || batch.orderId
-                    )}</strong>
-                    <small>${escapeHtml(
-                      `${itemStatusLabel(
-                        ({
-                          Recebido: "SENT",
-                          Aceito: "SENT",
-                          "Em preparo": "IN_PREPARATION",
-                          Pronto: "READY",
-                          Entregue: "DELIVERED",
-                        })[batch.orderStatus] || batch.orderStatus
-                      )} · ${dateTime(batch.sentAt)}`
-                    )}</small>
-                  </article>
-                `
-              )
-              .join("")
-          : `<div class="cash-command-empty"><strong>Nenhum pedido enviado</strong><p>Os lotes enviados aparecem aqui sem duplicar itens anteriores.</p></div>`
-      }
-    </div>
-  `;
-  const renderHistoryPane = (tab) => {
-    const events = getSnapshot().auditEvents.filter(
-      (event) => event.tabId === tab.id
-    );
-    return `
-      <div class="cash-history-list">
-        ${
-          events.length
-            ? events
-                .map(
-                  (event) => `
-                    <article><i></i><div><strong>${escapeHtml(
-                      event.eventType.replace(/_/g, " ")
-                    )}</strong><small>${escapeHtml(
-                      `${event.actorDisplayName} · ${dateTime(event.createdAt)}`
-                    )}</small></div></article>
-                  `
-                )
-                .join("")
-            : `<div class="cash-command-empty"><strong>Sem eventos</strong></div>`
-        }
-      </div>
-    `;
-  };
-
-  const renderProductBrowser = (tab) => {
-    if (tab.status !== "OPEN") return "";
-    const sections = getCatalogSections();
-    const query = normalizeSearch(state.productQuery);
-    const items = getCatalogItems()
-      .filter((item) => item.isOrderable === true)
-      .filter(
-        (item) =>
-          state.categoryId === "all" || item.sectionId === state.categoryId
-      )
-      .filter(
-        (item) =>
-          !query ||
-          normalizeSearch(
-            `${item.name} ${item.category || ""} ${item.sectionTitle || ""} ${
-              item.id
-            }`
-          ).includes(query)
-      )
-      .slice(0, 18);
-    return `
-      <section class="cash-product-browser">
-        <div class="cash-product-browser-head">
-          <div><strong>Adicionar item</strong><small>Produtos disponiveis deste restaurante</small></div>
-          <label class="cash-search"><input type="search" data-cash-input="product-search" value="${escapeHtml(
-            state.productQuery
-          )}" placeholder="Buscar produto ou codigo..." /></label>
-        </div>
-        <div class="cash-category-tabs">
-          <button type="button" class="${
-            state.categoryId === "all" ? "is-active" : ""
-          }" data-cash-category="all">Todos</button>
-          ${sections
-            .slice(0, 8)
-            .map(
-              (section) => `
-                <button type="button" class="${
-                  state.categoryId === section.id ? "is-active" : ""
-                }" data-cash-category="${escapeHtml(section.id)}">${escapeHtml(
-                  section.title
-                )}</button>
-              `
-            )
-            .join("")}
-        </div>
-        <div class="cash-product-grid">
-          ${
-            items.length
-              ? items
-                  .map(
-                    (item) => `
-                      <button type="button" class="cash-product-card" data-cash-product="${escapeHtml(
-                        item.id
-                      )}" ${state.busyAction ? "disabled" : ""}>
-                        ${
-                          item.image
-                            ? `<img src="${escapeHtml(
-                                mediaUrl(item.image)
-                              )}" alt="" loading="lazy" />`
-                            : `<span class="cash-product-placeholder">${escapeHtml(
-                                item.name.slice(0, 1)
-                              )}</span>`
-                        }
-                        <span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(
-                          money(item.price)
-                        )}</small></span>
-                      </button>
-                    `
-                  )
-                  .join("")
-              : `<div class="cash-empty-compact">Nenhum produto disponivel neste filtro.</div>`
-          }
-        </div>
-      </section>
-    `;
-  };
-
-  const renderRecentReceipt = (tab) => `
-    <main class="cash-command-panel cash-receipt">
-      <header>
-        <div>
-          <span class="cash-kicker">Pagamento confirmado</span>
-          <h3>Comprovante nao fiscal</h3>
-          <p>${escapeHtml(
-            `${tab.table?.label || "Mesa"} · ${tab.publicId} · ${dateTime(
-              tab.closedAt
-            )}`
-          )}</p>
-        </div>
-        <button class="cash-print-button cash-receipt-actions" type="button" data-cash-action="print">
-          Imprimir comprovante
-        </button>
       </header>
-      <div class="cash-receipt-lines">
-        ${(tab.items || [])
-          .filter((item) => item.status !== "CANCELLED")
-          .map(
-            (item) => `
-              <div><span>${escapeHtml(
-                `${item.quantity}x ${item.productName}`
-              )}</span><strong>${escapeHtml(money(item.totalPrice))}</strong></div>
-            `
-          )
-          .join("")}
+      ${feedback()}
+      <section class="cx-kpis" aria-label="Resumo do salão">
+        ${kpi("Mesas ocupadas", `${occupied.length} de ${tables.length}`)}
+        ${kpi("Pessoas no salão", String(people))}
+        ${kpi("Em aberto nas mesas", money(reais(openValue)))}
+        ${kpi("Recebido no turno", money(summary.totalSold || 0))}
+      </section>
+      <div class="cx-row-between cx-filters-row">
+        <div class="cx-chips" role="group" aria-label="Filtrar mesas">${TABLE_FILTERS.map(
+          (filter) =>
+            `<button type="button" class="cx-chip" data-cx-filter="${filter.key}" aria-pressed="${
+              state.tableFilter === filter.key
+            }">${escapeHtml(filter.label)} · ${escapeHtml(counts[filter.key] || 0)}</button>`
+        ).join("")}</div>
+        <div class="cx-row-wrap">
+          <span class="cx-muted cx-hide-narrow">Mesa livre abre comanda · ocupada lança itens</span>
+          ${
+            hasPermission("cash_register_open") && tables.length < MAX_TABLES
+              ? '<button class="cx-btn cx-btn-ghost" type="button" data-cx-action="add-table">+ Mesa</button>'
+              : ""
+          }
+        </div>
       </div>
-      <dl class="cash-receipt-totals">
-        <div><dt>Subtotal</dt><dd>${escapeHtml(money(tab.subtotal))}</dd></div>
-        <div><dt>Desconto</dt><dd>${escapeHtml(
-          money(tab.discountAmount)
-        )}</dd></div>
-        <div><dt>Taxa de servico</dt><dd>${escapeHtml(
-          money(tab.serviceChargeAmount)
-        )}</dd></div>
-        <div class="is-total"><dt>Total</dt><dd>${escapeHtml(
-          money(tab.totalAmount)
-        )}</dd></div>
-      </dl>
-      <section class="cash-receipt-payments">
-        <strong>Pagamentos</strong>
-        ${(tab.payments || [])
-          .map(
-            (payment) => `
-              <div><span>${escapeHtml(
-                PAYMENT_LABELS[payment.method] || payment.method
-              )}</span><strong>${escapeHtml(money(payment.amount))}</strong></div>
+      <div class="cx-grid-tables" data-cx-tables>${
+        visible.length ? visible.map(tableCard).join("") : '<p class="cx-empty">Nenhuma mesa neste filtro.</p>'
+      }</div>
+      <footer class="cx-shortcuts" aria-label="Atalhos">
+        <span><span class="cx-kbd">Nº + Enter</span> abre a mesa</span>
+        <span><span class="cx-kbd">F1</span> nova comanda</span>
+        <span><span class="cx-kbd">F3</span> lançar pedido</span>
+        <span><span class="cx-kbd">Esc</span> voltar</span>
+      </footer>`;
+  };
+
+  /* ---------- Tela 3 · Nova comanda (modal) ---------- */
+
+  const renderOpenTabModal = () => {
+    const free = getSnapshot().tables.filter((table) => table.status === "FREE");
+    const draft = state.openTab;
+    if (!free.some((table) => table.id === draft.tableId)) draft.tableId = free[0]?.id || "";
+    const selected = free.find((table) => table.id === draft.tableId);
+    const ready = Boolean(selected) && draft.guests >= 1;
+    return `
+      <div class="cx-overlay" data-cx-overlay>
+        <form class="cx-dialog" role="dialog" aria-modal="true" aria-labelledby="cx-open-title" data-cx-form="open-tab" novalidate>
+          <div class="cx-modal-head"><h2 id="cx-open-title">Nova comanda</h2><button class="cx-btn cx-btn-ghost" type="button" data-cx-action="close-modal">Esc</button></div>
+          <div class="cx-modal-body">
+            <section>
+              <div class="cx-row-between"><h3>1. Escolha a mesa</h3><span class="cx-muted">Só aparecem as livres</span></div>
               ${
-                Number(payment.changeAmount || 0) > 0
-                  ? `<small>Troco: ${escapeHtml(
-                      money(payment.changeAmount)
-                    )}</small>`
+                free.length
+                  ? `<div class="cx-grid-pick">${free
+                      .map(
+                        (table) =>
+                          `<button type="button" class="cx-pick" data-cx-set="openTab.tableId" data-cx-value="${escapeHtml(
+                            table.id
+                          )}" aria-pressed="${table.id === draft.tableId}"><strong>${escapeHtml(
+                            tableNumber(table)
+                          )}</strong><small>0 pessoas</small></button>`
+                      )
+                      .join("")}</div>`
+                  : '<p class="cx-hint is-error">Não há mesas livres. Use “+ Mesa” no Salão.</p>'
+              }
+            </section>
+            <section>
+              <h3>2. Quantas pessoas sentaram? <span class="cx-muted">(obrigatório)</span></h3>
+              <div class="cx-row-wrap">
+                ${stepper("openTab.guests", draft.guests, { min: 0, max: MAX_GUESTS, label: "pessoas" })}
+                <div class="cx-chips">${[1, 2, 3, 4, 5, 6, 7, 8]
+                  .map(
+                    (value) =>
+                      `<button type="button" class="cx-chip" data-cx-set="openTab.guests" data-cx-value="${value}" aria-pressed="${
+                        value === draft.guests
+                      }">${value}</button>`
+                  )
+                  .join("")}</div>
+              </div>
+              ${
+                draft.guests < 1
+                  ? '<p class="cx-warn" role="note">A mesa está com <strong>0 pessoas</strong>. Informe quantas sentaram para abrir a comanda.</p>'
                   : ""
               }
-            `
-          )
-          .join("")}
-      </section>
-      <p class="cash-receipt-footer">Documento sem valor fiscal · emitido pelo INOVAS Food</p>
-    </main>
-  `;
-
-  const renderCommandPanel = () => {
-    const tab = getActiveTab();
-    const table = getSelectedTable();
-    if (!tab || !table) {
-      const recentTab = getSnapshot().recentTabs?.[0];
-      if (recentTab?.status === "CLOSED" && recentTab.payments?.length) {
-        return renderRecentReceipt(recentTab);
-      }
-      return `
-        <main class="cash-command-panel is-empty">
-          <div class="cash-command-empty">
-            <span>⌁</span><strong>Selecione uma mesa</strong>
-            <p>Mesas livres abrem uma nova comanda. Mesas ocupadas carregam o consumo atual.</p>
+            </section>
+            <div class="cx-fields">
+              <label class="cx-field"><span>3. Nome ou apelido (opcional)</span><input class="cx-input" data-cx-field="openTab.customerName" maxlength="180" value="${escapeHtml(
+                draft.customerName
+              )}" placeholder="Ex.: Ana" /></label>
+              <label class="cx-field"><span>Garçom</span><input class="cx-input" data-cx-field="openTab.waiterName" maxlength="120" value="${escapeHtml(
+                draft.waiterName
+              )}" /></label>
+            </div>
           </div>
-        </main>
-      `;
-    }
-    const pendingCount = tab.items.filter((item) => item.status === "PENDING").length;
-    const paneContent =
-      state.selectedPane === "orders"
-        ? renderOrdersPane(tab)
-        : state.selectedPane === "history"
-          ? renderHistoryPane(tab)
-          : renderConsumption(tab);
+          <div class="cx-modal-actions">
+            <button class="cx-btn" type="button" data-cx-action="close-modal">Cancelar <span class="cx-kbd">Esc</span></button>
+            <button class="cx-btn cx-btn-primary" type="submit" data-cx-confirm ${ready && !state.busy ? "" : "disabled"}>${
+      ready
+        ? `Abrir mesa ${escapeHtml(tableNumber(selected))} · ${escapeHtml(peopleLabel(draft.guests))} <span class="cx-kbd">Enter</span>`
+        : selected
+          ? `Informe as pessoas para abrir a mesa ${escapeHtml(tableNumber(selected))}`
+          : "Sem mesa livre"
+    }</button>
+          </div>
+        </form>
+      </div>`;
+  };
+
+  const renderPeopleModal = () => {
+    const tab = getTab();
+    if (!tab) return "";
     return `
-      <main class="cash-command-panel">
-        <header class="cash-command-header">
-          <div class="cash-command-identity">
-            <span class="cash-command-table">${escapeHtml(
-              tab.customerName || table.label
-            )}</span>
+      <div class="cx-overlay" data-cx-overlay>
+        <form class="cx-dialog" role="dialog" aria-modal="true" aria-labelledby="cx-people-title" data-cx-form="update-tab" novalidate>
+          <div class="cx-modal-head"><h2 id="cx-people-title">Pessoas na mesa ${escapeHtml(tableNumber(getTableOf(tab)))}</h2><button class="cx-btn cx-btn-ghost" type="button" data-cx-action="close-modal">Esc</button></div>
+          <div class="cx-modal-body">
+            <p class="cx-muted">Alguém chegou ou saiu? O valor por pessoa é recalculado. A alteração fica na auditoria.</p>
+            ${stepper("people.guests", state.people.guests, { min: 1, max: MAX_GUESTS, label: "pessoas" })}
+            <label class="cx-field"><span>Nome ou apelido (opcional)</span><input class="cx-input" data-cx-field="people.customerName" maxlength="180" value="${escapeHtml(
+              state.people.customerName
+            )}" /></label>
+          </div>
+          <div class="cx-modal-actions">
+            <button class="cx-btn" type="button" data-cx-action="close-modal">Cancelar</button>
+            <button class="cx-btn cx-btn-primary" type="submit" data-cx-confirm ${state.busy ? "disabled" : ""}>Salvar · ${escapeHtml(
+      peopleLabel(state.people.guests)
+    )}</button>
+          </div>
+        </form>
+      </div>`;
+  };
+
+  const renderMovementModal = () => {
+    const movement = state.movement;
+    const amount = cents(movement.amount);
+    const valid = amount > 0 && movement.reason.trim().length >= 3;
+    const list = getSnapshot().movements || [];
+    return `
+      <div class="cx-overlay" data-cx-overlay>
+        <form class="cx-dialog" role="dialog" aria-modal="true" aria-labelledby="cx-move-title" data-cx-form="movement" novalidate>
+          <div class="cx-modal-head"><h2 id="cx-move-title">Sangria / Suprimento</h2><button class="cx-btn cx-btn-ghost" type="button" data-cx-action="close-modal">Esc</button></div>
+          <div class="cx-modal-body">
+            <div class="cx-segmented" role="group" aria-label="Tipo de movimento">
+              <button type="button" data-cx-set="movement.type" data-cx-value="WITHDRAWAL" aria-pressed="${movement.type === "WITHDRAWAL"}">Sangria · tirar dinheiro</button>
+              <button type="button" data-cx-set="movement.type" data-cx-value="SUPPLY" aria-pressed="${movement.type === "SUPPLY"}">Suprimento · colocar dinheiro</button>
+            </div>
+            <div class="cx-fields">
+              <label class="cx-field"><span>Valor (R$)</span><input class="cx-input cx-num" data-cx-field="movement.amount" inputmode="decimal" placeholder="0,00" value="${escapeHtml(
+                movement.amount
+              )}" /></label>
+              <label class="cx-field"><span>Motivo (obrigatório)</span><input class="cx-input" data-cx-field="movement.reason" maxlength="300" placeholder="${
+                movement.type === "WITHDRAWAL" ? "Ex.: dinheiro para o cofre" : "Ex.: reforço de troco"
+              }" value="${escapeHtml(movement.reason)}" /></label>
+            </div>
+            <p class="cx-muted">Dinheiro esperado na gaveta agora: <strong class="cx-num">${escapeHtml(
+              money(getSnapshot().registerSummary?.expectedCash || 0)
+            )}</strong></p>
             ${
-              tab.customerName
-                ? `<small>${escapeHtml(table.label)}</small>`
+              list.length
+                ? `<div class="cx-list"><h3>Neste turno</h3>${list
+                    .map(
+                      (entry) =>
+                        `<div class="cx-list-row"><span>${escapeHtml(timeOf(entry.createdAt))} · ${
+                          entry.movementType === "SUPPLY" ? "Suprimento" : "Sangria"
+                        } · ${escapeHtml(entry.reason)}</span><strong class="cx-num">${
+                          entry.movementType === "SUPPLY" ? "+" : "−"
+                        } ${escapeHtml(money(entry.amount))}</strong></div>`
+                    )
+                    .join("")}</div>`
                 : ""
             }
-            <span class="cash-command-status is-${escapeHtml(
-              tab.status.toLowerCase()
-            )}">${escapeHtml(
-              tab.status === "AWAITING_PAYMENT" ? "Aguardando pagamento" : "Ocupada"
-            )}</span>
           </div>
-          <div class="cash-command-header-actions">
-            <button class="cash-edit-occupancy-button" type="button" data-cash-action="edit-occupancy">Editar ocupacao</button>
-            <button class="cash-print-button" type="button" data-cash-action="print">Imprimir comanda</button>
+          <div class="cx-modal-actions">
+            <button class="cx-btn" type="button" data-cx-action="close-modal">Cancelar</button>
+            <button class="cx-btn cx-btn-primary" type="submit" data-cx-confirm ${valid && !state.busy ? "" : "disabled"}>Registrar ${
+      movement.type === "SUPPLY" ? "suprimento" : "sangria"
+    }${amount > 0 ? ` · ${escapeHtml(money(reais(amount)))}` : ""}</button>
           </div>
-          <dl>
-            <div><dt>Comanda</dt><dd>${escapeHtml(tab.publicId)}</dd></div>
-            <div><dt>Aberta em</dt><dd>${escapeHtml(dateTime(tab.openedAt))}</dd></div>
-            <div><dt>Garcom</dt><dd>${escapeHtml(tab.waiterName)}</dd></div>
-            <div><dt>Cliente</dt><dd>${escapeHtml(
-              tab.customerName || "Nao informado"
-            )}</dd></div>
-            <div><dt>Pessoas</dt><dd>${escapeHtml(tab.guestCount)}</dd></div>
-          </dl>
-        </header>
-        <nav class="cash-command-tabs">
-          <button type="button" class="${
-            state.selectedPane === "consumption" ? "is-active" : ""
-          }" data-cash-pane="consumption">Consumo</button>
-          <button type="button" class="${
-            state.selectedPane === "orders" ? "is-active" : ""
-          }" data-cash-pane="orders">Pedidos <span>${escapeHtml(
-            tab.batches.length
-          )}</span></button>
-          <button type="button" class="${
-            state.selectedPane === "history" ? "is-active" : ""
-          }" data-cash-pane="history">Historico</button>
-        </nav>
-        <section class="cash-command-content">${paneContent}</section>
-        ${state.selectedPane === "consumption" ? renderProductBrowser(tab) : ""}
+        </form>
+      </div>`;
+  };
+
+  /* ---------- Tela 4 · Lançar pedido (PDV) ---------- */
+
+  const findProductsForQuery = (query) => {
+    const items = getCatalogItems();
+    const text = String(query || "").trim();
+    if (/^\d+$/.test(text)) {
+      const byCode = items.find((item) => item.code === Number(text));
+      return byCode ? [byCode] : [];
+    }
+    const needle = normalizeSearch(text);
+    return items.filter((item) =>
+      normalizeSearch(`${item.name} ${item.sectionTitle || ""} ${item.category || ""}`).includes(needle)
+    );
+  };
+
+  const visibleProducts = () => {
+    const query = state.pdv.query.trim();
+    if (query) {
+      const quick = ui.parseQuickEntry(query);
+      return findProductsForQuery(quick.query).slice(0, 60);
+    }
+    return getCatalogItems()
+      .filter((item) => state.pdv.categoryId === "all" || item.sectionId === state.pdv.categoryId)
+      .slice(0, 120);
+  };
+
+  const renderProducts = () => {
+    const products = visibleProducts();
+    return products.length
+      ? products
+          .map(
+            (item) => `
+              <button type="button" class="cx-product" data-cx-product="${escapeHtml(item.id)}" ${state.busy === "add-item" ? "aria-busy=\"true\"" : ""}>
+                <span class="cx-product-code">#${escapeHtml(item.code)}</span>
+                <strong>${escapeHtml(item.name)}</strong>
+                <span class="cx-num">${escapeHtml(money(item.price))}</span>
+              </button>`
+          )
+          .join("")
+      : '<p class="cx-empty">Nenhum produto encontrado. Confira o código ou o nome.</p>';
+  };
+
+  const itemLine = (item, editable) => `
+    <div class="cx-order-line ${editable ? "is-pending" : ""}">
+      <div class="cx-order-main">
+        <strong>${escapeHtml(item.productName)}</strong>
+        ${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}
         ${
-          tab.status === "OPEN"
-            ? `<footer class="cash-command-actions">
-                <button class="cash-secondary-button" type="button" data-cash-action="print">Mais opcoes</button>
-                <button class="cash-send-button" type="button" data-cash-action="send-order" ${
-                  !pendingCount || state.busyAction ? "disabled" : ""
-                }>Enviar Pedido ${pendingCount ? `<span>${pendingCount}</span>` : ""}</button>
-              </footer>`
+          editable && !item.optimistic
+            ? `<button type="button" class="cx-link" data-cx-action="toggle-note" data-cx-item="${escapeHtml(item.id)}">${
+                state.pdv.noteItemId === item.id ? "Fechar observação" : "Observação"
+              }</button>`
             : ""
         }
-      </main>
-    `;
+      </div>
+      ${
+        editable
+          ? item.optimistic
+        ? `<span class="cx-num cx-qty" aria-busy="true">${escapeHtml(item.quantity)}× · gravando…</span>`
+        : `<div class="cx-stepper cx-stepper-sm">
+              <button type="button" data-cx-qty="${escapeHtml(item.id)}" data-cx-delta="-1" aria-label="Menos ${escapeHtml(item.productName)}">−</button>
+              <output>${escapeHtml(item.quantity)}</output>
+              <button type="button" data-cx-qty="${escapeHtml(item.id)}" data-cx-delta="1" aria-label="Mais ${escapeHtml(item.productName)}">+</button>
+            </div>`
+          : `<span class="cx-num cx-qty">${escapeHtml(item.quantity)}×</span>`
+      }
+      <strong class="cx-num cx-line-total">${escapeHtml(money(item.totalPrice))}</strong>
+    </div>
+    ${
+      editable && state.pdv.noteItemId === item.id
+        ? `<div class="cx-note-editor">
+            <div class="cx-chips">${QUICK_NOTES.map(
+              (note) =>
+                `<button type="button" class="cx-chip" data-cx-note-chip="${escapeHtml(note)}" data-cx-item="${escapeHtml(item.id)}" aria-pressed="${String(
+                  item.notes || ""
+                ).includes(note)}">${escapeHtml(note)}</button>`
+            ).join("")}</div>
+            <input class="cx-input" data-cx-note-input="${escapeHtml(item.id)}" maxlength="400" placeholder="Outra observação e Enter" value="${escapeHtml(
+              item.notes || ""
+            )}" />
+          </div>`
+        : ""
+    }`;
+
+  /* Itens do servidor + lançamentos otimistas ainda não confirmados. */
+  const displayItems = (tab) => {
+    const items = (tab.items || []).map((item) => {
+      const delta = state.qtyDelta[item.id] || 0;
+      if (!delta) return item;
+      const quantity = Math.max(0, Number(item.quantity) + delta);
+      return { ...item, quantity, totalPrice: reais(cents(item.unitPrice) * quantity) };
+    }).filter((item) => item.quantity > 0);
+    for (const entry of state.optimistic) {
+      const match = items.find(
+        (item) => item.status === "PENDING" && item.productId === entry.productId && !String(item.notes || "").trim()
+      );
+      if (match) {
+        const index = items.indexOf(match);
+        const quantity = Math.min(99, Number(match.quantity) + entry.qty);
+        items[index] = { ...match, quantity, totalPrice: reais(cents(match.unitPrice) * quantity) };
+      } else {
+        items.push({
+          id: `tmp-${entry.key}`,
+          productId: entry.productId,
+          productName: entry.productName,
+          notes: "",
+          quantity: entry.qty,
+          unitPrice: entry.unitPrice,
+          totalPrice: reais(cents(entry.unitPrice) * entry.qty),
+          status: "PENDING",
+          optimistic: true,
+        });
+      }
+    }
+    return items;
   };
 
-  const getPaymentTotal = () =>
-    state.paymentDraft.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const renderPaymentPanel = () => {
-    const tab = getActiveTab();
+  const tabTotals = (tab) => {
+    const items = displayItems(tab).filter((item) => item.status !== "CANCELLED");
+    const pending = items.filter((item) => item.status === "PENDING");
+    const sent = items.filter((item) => item.status !== "PENDING");
+    const sum = (list) => list.reduce((acc, item) => acc + cents(item.totalPrice), 0);
+    const subtotal = sum(items);
+    const serviceRate = Number(tab.serviceChargeRate || 0);
+    const service = tab.serviceChargeEnabled === false ? 0 : Math.round((subtotal * serviceRate) / 100);
+    const total = subtotal + service;
+    return {
+      pending,
+      sent,
+      pendingTotal: sum(pending),
+      sentTotal: sum(sent),
+      subtotal,
+      service,
+      serviceRate,
+      total,
+      perPerson: Math.round(total / Math.max(1, Number(tab.guestCount || 1))),
+    };
+  };
+
+  const renderPdv = () => {
+    const tab = getTab();
+    const table = getTableOf(tab);
     if (!tab) {
-      return `
-        <aside class="cash-payment-panel">
-          <div class="cash-command-empty"><strong>Resumo da conta</strong><p>Selecione uma comanda para visualizar os valores.</p></div>
+      state.screen = "salao";
+      return renderSalao();
+    }
+    const totals = tabTotals(tab);
+    const sections = getCatalogSections();
+    const locked = tab.status !== "OPEN";
+    return `
+      <header class="cx-topbar">
+        <div class="cx-topbar-title">
+          <h1>Lançar pedido · Mesa ${escapeHtml(tableNumber(table))}</h1>
+          <p>${escapeHtml(peopleLabel(tab.guestCount))} · aberta há ${escapeHtml(elapsed(tab.openedAt))}${
+      tab.customerName ? ` · ${escapeHtml(tab.customerName)}` : ""
+    } · garçom ${escapeHtml(tab.waiterName || "--")}</p>
+        </div>
+        <div class="cx-topbar-actions">
+          <button class="cx-btn" type="button" data-cx-action="back-salao">← Salão <span class="cx-kbd">Esc</span></button>
+          ${
+            hasPermission("cash_register_open_tab")
+              ? '<button class="cx-btn" type="button" data-cx-action="edit-people">Trocar pessoas</button>'
+              : ""
+          }
+        </div>
+      </header>
+      ${feedback()}
+      ${
+        locked
+          ? '<div class="cx-warn" role="note">Esta conta está em pagamento. Para lançar novos itens, volte ao pedido pela tela de pagamento.</div>'
+          : ""
+      }
+      <div class="cx-split">
+        <section class="cx-split-main">
+          <label class="cx-search">
+            <span class="cx-sr-only">Buscar produto por nome ou código</span>
+            <input class="cx-input cx-input-lg" data-cx-field="pdv.query" data-cx-enter="quick-add" data-cx-autofocus placeholder="Buscar por nome ou código · 3*12 + Enter lança 3 do item 12" value="${escapeHtml(
+              state.pdv.query
+            )}" ${locked ? "disabled" : ""} autocomplete="off" />
+          </label>
+          <div class="cx-scroll-row" role="group" aria-label="Categorias">
+            <button type="button" class="cx-chip" data-cx-set="pdv.categoryId" data-cx-value="all" aria-pressed="${state.pdv.categoryId === "all"}">Todos</button>
+            ${sections
+              .map(
+                (section) =>
+                  `<button type="button" class="cx-chip" data-cx-set="pdv.categoryId" data-cx-value="${escapeHtml(section.id)}" aria-pressed="${
+                    state.pdv.categoryId === section.id
+                  }">${escapeHtml(section.title)}</button>`
+              )
+              .join("")}
+          </div>
+          <div class="cx-row-wrap cx-multiplier" role="group" aria-label="Quantidade do próximo item">
+            <span class="cx-muted">Próximo item ×</span>
+            ${[1, 2, 3, 4, 5, 6]
+              .map(
+                (value) =>
+                  `<button type="button" class="cx-chip" data-cx-set="pdv.multiplier" data-cx-value="${value}" aria-pressed="${
+                    state.pdv.multiplier === value
+                  }">×${value}</button>`
+              )
+              .join("")}
+            <span class="cx-muted cx-hide-narrow">Escolha antes de clicar no item</span>
+          </div>
+          <div class="cx-grid-products" data-cx-products>${renderProducts()}</div>
+        </section>
+        <aside class="cx-split-side cx-panel cx-order" aria-label="Pedido da mesa">
+          <div class="cx-order-head"><h2>Mesa ${escapeHtml(tableNumber(table))}</h2><span class="cx-muted">${escapeHtml(
+      totals.pending.length
+    )} ${totals.pending.length === 1 ? "item novo" : "itens novos"}</span></div>
+          <div class="cx-panel-scroll">
+            ${
+              totals.sent.length
+                ? `<h3 class="cx-order-group">Já na cozinha</h3>${totals.sent.map((item) => itemLine(item, false)).join("")}`
+                : ""
+            }
+            <h3 class="cx-order-group">Para enviar</h3>
+            ${
+              totals.pending.length
+                ? totals.pending.map((item) => itemLine(item, !locked)).join("")
+                : '<p class="cx-empty">Clique num item ou digite o código para começar.</p>'
+            }
+          </div>
+          <dl class="cx-totals">
+            <div><dt>Itens novos</dt><dd class="cx-num">${escapeHtml(money(reais(totals.pendingTotal)))}</dd></div>
+            <div><dt>Já na mesa</dt><dd class="cx-num">${escapeHtml(money(reais(totals.sentTotal)))}</dd></div>
+            <div><dt>Serviço ${escapeHtml(totals.serviceRate)}%</dt><dd class="cx-num">${escapeHtml(money(reais(totals.service)))}</dd></div>
+            <div class="is-total"><dt>Total da mesa</dt><dd class="cx-num">${escapeHtml(money(reais(totals.total)))}</dd></div>
+            <div><dt>Por pessoa (${escapeHtml(tab.guestCount)})</dt><dd class="cx-num">${escapeHtml(money(reais(totals.perPerson)))}</dd></div>
+          </dl>
+          <div class="cx-order-actions">
+            <button class="cx-btn" type="button" data-cx-action="clear-pending" ${!totals.pending.length || locked ? "disabled" : ""}>Limpar</button>
+            ${
+              hasPermission("cash_register_close_tab")
+                ? `<button class="cx-btn" type="button" data-cx-action="go-payment" ${
+                    !(tab.items || []).length ? "disabled" : ""
+                  }>Fechar conta <span class="cx-kbd">F4</span></button>`
+                : ""
+            }
+            <button class="cx-btn cx-btn-primary" type="button" data-cx-action="send-order" ${
+              !totals.pending.length || locked || state.busy ? "disabled" : ""
+            }>Enviar para a cozinha <span class="cx-kbd">F2</span></button>
+          </div>
         </aside>
-      `;
+      </div>`;
+  };
+
+  /* ---------- Tela 5 · Pagamento ---------- */
+
+  const paymentState = (tab) => {
+    const total = cents(tab.totalAmount);
+    const paid = state.payment.draft.reduce((sum, entry) => sum + cents(entry.amount), 0);
+    const missing = Math.max(0, total - paid);
+    const shares = ui.splitEqually(reais(total), Math.max(1, Number(tab.guestCount || 1))).map(cents);
+    return { total, paid, missing, shares };
+  };
+
+  const dueNow = (tab, info) => {
+    if (state.payment.mode === "equal") {
+      const share = info.shares[state.payment.shareIndex] ?? 0;
+      return Math.min(share, info.missing);
     }
-    const isAwaiting = tab.status === "AWAITING_PAYMENT";
-    const paymentTotal = getPaymentTotal();
-    const remaining = Math.max(0, Number((tab.totalAmount - paymentTotal).toFixed(2)));
-    const canDiscount = hasPermission("cash_register_discount");
-    const canRemoveService = hasPermission("cash_register_remove_service");
-    const closingDraft = getClosingDraft(tab);
-    const previewDiscount = Math.min(
-      Number(tab.subtotal || 0),
-      Math.max(0, Number(closingDraft.discountAmount || 0))
-    );
-    const previewServiceAmount = closingDraft.serviceChargeEnabled
-      ? Number(
-          (
-            (Number(tab.subtotal || 0) * Number(tab.serviceChargeRate || 0)) /
-            100
-          ).toFixed(2)
-        )
-      : 0;
-    const previewTotal = Number(
-      Math.max(
-        0,
-        Number(tab.subtotal || 0) -
-          previewDiscount +
-          previewServiceAmount +
-          Number(tab.additionAmount || 0)
-      ).toFixed(2)
-    );
+    const typed = cents(state.payment.entry);
+    return Math.min(typed > 0 ? typed : info.missing, info.missing);
+  };
+
+  const renderBillStep = (tab) => {
+    const totals = tabTotals(tab);
+    const discount = cents(state.bill.discount);
+    const service = state.bill.serviceEnabled ? Math.round((totals.subtotal * totals.serviceRate) / 100) : 0;
+    const total = Math.max(0, totals.subtotal - Math.min(discount, totals.subtotal) + service);
     return `
-      <aside class="cash-payment-panel">
-        <section class="cash-account-summary">
-          <h3>Resumo da conta</h3>
-          <div><span>Subtotal</span><strong>${escapeHtml(money(tab.subtotal))}</strong></div>
-          <label class="cash-summary-control">
-            <span>Desconto</span>
-            ${
-              isAwaiting
-                ? `<strong>${escapeHtml(money(tab.discountAmount))}</strong>`
-                : `<input type="number" min="0" step="0.01" value="${escapeHtml(
-                    Number(closingDraft.discountAmount || 0).toFixed(2)
-                  )}" data-cash-input="discount" ${canDiscount ? "" : "disabled"} />`
-            }
-          </label>
-          <label class="cash-summary-control">
-            <span>Taxa de servico (${escapeHtml(tab.serviceChargeRate)}%)</span>
-            ${
-              isAwaiting
-                ? `<strong>${escapeHtml(money(tab.serviceChargeAmount))}</strong>`
-                : `<span class="cash-service-toggle"><input type="checkbox" data-cash-input="service-enabled" ${
-                    closingDraft.serviceChargeEnabled ? "checked" : ""
-                  } ${canRemoveService ? "" : "disabled"} /><strong>${escapeHtml(
-                    money(previewServiceAmount)
-                  )}</strong></span>`
-            }
-          </label>
-          <div><span>Acrescimos</span><strong>${escapeHtml(
-            money(tab.additionAmount)
-          )}</strong></div>
-          <div class="cash-account-total"><span>Total</span><strong>${escapeHtml(
-            money(isAwaiting ? tab.totalAmount : previewTotal)
-          )}</strong></div>
+      <div class="cx-split">
+        <section class="cx-split-main cx-card">
+          <h2>Conferir a conta</h2>
+          ${
+            totals.pending.length
+              ? `<p class="cx-warn" role="note">Há ${escapeHtml(totals.pending.length)} item(ns) ainda não enviado(s) para a cozinha. Envie ou remova antes de fechar a conta.</p>`
+              : ""
+          }
+          <div class="cx-list">${totals.sent
+            .map(
+              (item) =>
+                `<div class="cx-list-row"><span>${escapeHtml(item.quantity)}× ${escapeHtml(item.productName)}</span><strong class="cx-num">${escapeHtml(
+                  money(item.totalPrice)
+                )}</strong></div>`
+            )
+            .join("")}</div>
         </section>
-        ${
-          isAwaiting
-            ? `
-              <section class="cash-payment-methods">
-                <div class="cash-section-heading"><div><span class="cash-kicker">Recebimento</span><h3>Pagamentos</h3></div><strong>${escapeHtml(
-                  money(remaining)
-                )}</strong></div>
-                <div class="cash-payment-method-grid">
-                  ${Object.entries(PAYMENT_LABELS)
+        <aside class="cx-split-side cx-card">
+          <dl class="cx-totals">
+            <div><dt>Subtotal</dt><dd class="cx-num">${escapeHtml(money(reais(totals.subtotal)))}</dd></div>
+          </dl>
+          <label class="cx-check"><input type="checkbox" data-cx-toggle="bill.serviceEnabled" ${state.bill.serviceEnabled ? "checked" : ""} ${
+      hasPermission("cash_register_remove_service") ? "" : "disabled"
+    } /><span>Taxa de serviço ${escapeHtml(totals.serviceRate)}% · <strong class="cx-num">${escapeHtml(money(reais(service)))}</strong></span></label>
+          <label class="cx-field"><span>Desconto (R$)</span><input class="cx-input cx-num" data-cx-field="bill.discount" inputmode="decimal" placeholder="0,00" value="${escapeHtml(
+            state.bill.discount
+          )}" ${hasPermission("cash_register_discount") ? "" : "disabled title=\"Seu cargo não pode dar desconto\""} /></label>
+          <dl class="cx-totals"><div class="is-total"><dt>Total a cobrar</dt><dd class="cx-num">${escapeHtml(money(reais(total)))}</dd></div>
+          <div><dt>Por pessoa (${escapeHtml(tab.guestCount)})</dt><dd class="cx-num">${escapeHtml(
+      money(reais(Math.round(total / Math.max(1, tab.guestCount))))
+    )}</dd></div></dl>
+          <button class="cx-btn cx-btn-primary cx-btn-lg cx-btn-block" type="button" data-cx-action="begin-closing" ${
+            totals.pending.length || !totals.sent.length || state.busy ? "disabled" : ""
+          }>Fechar conta e cobrar <span class="cx-kbd">F4</span></button>
+          <button class="cx-btn cx-btn-block" type="button" data-cx-action="back-pdv">← Voltar ao pedido</button>
+        </aside>
+      </div>`;
+  };
+
+  const renderPayment = () => {
+    const tab = getTab();
+    const table = getTableOf(tab);
+    if (!tab) {
+      state.screen = "salao";
+      return renderSalao();
+    }
+    const header = `
+      <header class="cx-topbar">
+        <div class="cx-topbar-title">
+          <h1>Fechar conta · Mesa ${escapeHtml(tableNumber(table))}</h1>
+          <p>${escapeHtml(peopleLabel(tab.guestCount))}${tab.customerName ? ` · ${escapeHtml(tab.customerName)}` : ""}</p>
+        </div>
+        <div class="cx-topbar-actions"><button class="cx-btn" type="button" data-cx-action="back-salao">← Salão</button></div>
+      </header>
+      ${feedback()}`;
+    if (tab.status === "OPEN") return header + renderBillStep(tab);
+
+    const info = paymentState(tab);
+    const due = dueNow(tab, info);
+    const isCash = state.payment.method === "CASH";
+    const received = isCash ? cents(state.payment.entry) || due : due;
+    const change = ui.cashChange(reais(due), reais(received));
+    const paidShares = new Set(state.payment.draft.map((entry) => entry.shareIndex).filter((value) => value !== undefined));
+    const canConfirm = hasPermission("cash_register_confirm_payment");
+    return `${header}
+      <div class="cx-split">
+        <section class="cx-split-main">
+          <div class="cx-card cx-row-between"><span class="cx-muted">Total da mesa</span><strong class="cx-big">${escapeHtml(
+            money(reais(info.total))
+          )}</strong></div>
+          <div class="cx-segmented" role="group" aria-label="Forma de divisão">
+            <button type="button" data-cx-set="payment.mode" data-cx-value="equal" aria-pressed="${state.payment.mode === "equal"}">Dividir igual</button>
+            <button type="button" data-cx-set="payment.mode" data-cx-value="free" aria-pressed="${state.payment.mode === "free"}">Valor livre</button>
+          </div>
+          <p class="cx-muted">${
+            state.payment.mode === "equal"
+              ? `Total dividido igualmente entre ${escapeHtml(peopleLabel(tab.guestCount))}. O centavo que sobra vai para a última.`
+              : "Digite qualquer valor; o sistema mostra quanto ainda falta."
+          }</p>
+          ${
+            state.payment.mode === "equal"
+              ? `<div class="cx-grid-shares">${info.shares
+                  .map((share, index) => {
+                    const paid = paidShares.has(index);
+                    const active = !paid && index === state.payment.shareIndex;
+                    return `<button type="button" class="cx-share ${paid ? "is-paid" : active ? "is-active" : ""}" data-cx-set="payment.shareIndex" data-cx-value="${index}" ${
+                      paid ? "disabled" : ""
+                    }><span>Pessoa ${index + 1}</span><strong class="cx-num">${escapeHtml(money(reais(share)))}</strong><small>${
+                      paid ? "Pago" : active ? "Recebendo agora" : "Pendente"
+                    }</small></button>`;
+                  })
+                  .join("")}</div>`
+              : ""
+          }
+          <div class="cx-card">
+            <h3>Pagamentos lançados</h3>
+            ${
+              state.payment.draft.length
+                ? state.payment.draft
                     .map(
-                      ([method, label]) => `
-                        <button type="button" data-cash-payment-method="${method}">
-                          <span>${escapeHtml(label.slice(0, 1))}</span>${escapeHtml(label)}
-                        </button>
-                      `
+                      (entry, index) =>
+                        `<div class="cx-list-row"><span>${
+                          entry.shareIndex !== undefined ? `Pessoa ${entry.shareIndex + 1} · ` : ""
+                        }${escapeHtml(PAYMENT_LABELS[entry.method])}${
+                          entry.method === "CASH" && cents(entry.receivedAmount) > cents(entry.amount)
+                            ? ` · troco ${escapeHtml(money(reais(cents(entry.receivedAmount) - cents(entry.amount))))}`
+                            : ""
+                        }</span><span class="cx-row-wrap"><strong class="cx-num">${escapeHtml(money(entry.amount))}</strong><button type="button" class="cx-link" data-cx-remove-payment="${index}">Remover</button></span></div>`
                     )
-                    .join("")}
-                </div>
-                <div class="cash-payment-draft">
-                  ${
-                    state.paymentDraft.length
-                      ? state.paymentDraft
-                          .map(
-                            (payment, index) => `
-                              <article>
-                                <div><strong>${escapeHtml(
-                                  PAYMENT_LABELS[payment.method]
-                                )}</strong><button type="button" data-cash-remove-payment="${index}">Remover</button></div>
-                                <label><span>Valor</span><input type="number" min="0.01" step="0.01" value="${escapeHtml(
-                                  Number(payment.amount || 0).toFixed(2)
-                                )}" data-cash-payment-amount="${index}" /></label>
-                                ${
-                                  payment.method === "CASH"
-                                    ? `<label><span>Valor recebido</span><input type="number" min="0" step="0.01" value="${escapeHtml(
-                                        Number(
-                                          payment.receivedAmount ||
-                                            payment.amount ||
-                                            0
-                                        ).toFixed(2)
-                                      )}" data-cash-payment-received="${index}" /></label>
-                                      <small>Troco: ${escapeHtml(
-                                        money(
-                                          Math.max(
-                                            0,
-                                            Number(payment.receivedAmount || 0) -
-                                              Number(payment.amount || 0)
-                                          )
-                                        )
-                                      )}</small>`
-                                    : ""
-                                }
-                              </article>
-                            `
-                          )
-                          .join("")
-                      : `<p>Escolha uma ou mais formas de pagamento.</p>`
-                  }
-                </div>
-                <div class="cash-payment-balance">
-                  <span>Informado <strong>${escapeHtml(
-                    money(paymentTotal)
-                  )}</strong></span>
-                  <span>Restante <strong>${escapeHtml(
-                    money(remaining)
-                  )}</strong></span>
-                </div>
-                <button class="cash-confirm-button" type="button" data-cash-action="confirm-payment" ${
-                  remaining !== 0 || !state.paymentDraft.length || state.busyAction
-                    ? "disabled"
-                    : ""
-                }>Confirmar Pagamento</button>
-                <button class="cash-link-button" type="button" data-cash-action="reopen-tab">Reabrir comanda</button>
-              </section>
-            `
-            : `
-              <section class="cash-payment-start">
-                <p>Ao fechar a conta, novos itens ficam bloqueados ate uma reabertura explicita.</p>
-                <button class="cash-close-account-button" type="button" data-cash-action="begin-closing" ${
-                  !tab.items.length || state.busyAction ? "disabled" : ""
-                }>Fechar Conta</button>
-              </section>
-            `
-        }
-      </aside>
-    `;
-  };
-
-  const renderOpenTableModal = () => {
-    const table = getSnapshot().tables.find(
-      (entry) => entry.id === state.openTableId
-    );
-    if (!table) return "";
-    return `
-      <div class="cash-modal" role="presentation">
-        <button type="button" class="cash-modal-backdrop" data-cash-action="close-modal" aria-label="Fechar"></button>
-        <form class="cash-modal-dialog" data-cash-form="open-tab">
-          <input type="hidden" name="tableId" value="${escapeHtml(table.id)}" />
-          <span class="cash-kicker">Nova comanda</span>
-          <h3>${escapeHtml(table.label)}</h3>
-          <p>Informe a ocupacao real desta mesa.</p>
-          <label><span>Quantas pessoas estao nesta mesa?</span><input name="guestCount" type="number" min="1" max="${MAX_GUESTS}" step="1" inputmode="numeric" value="1" required /></label>
-          <label><span>Nome do cliente ou responsavel (opcional)</span><input name="customerName" maxlength="180" placeholder="Ex.: Daniel" /></label>
-          <label><span>Garcom responsavel</span><input name="waiterName" value="${escapeHtml(
-            state.context.adminName || ""
-          )}" required /></label>
-          <div class="cash-modal-actions">
-            <button class="cash-secondary-button" type="button" data-cash-action="close-modal">Cancelar</button>
-            <button class="cash-primary-button" type="submit">Abrir Comanda</button>
+                    .join("")
+                : '<p class="cx-muted">Nenhum pagamento lançado ainda.</p>'
+            }
+            <div class="cx-list-row is-strong"><span>Falta receber</span><strong class="cx-num">${escapeHtml(money(reais(info.missing)))}</strong></div>
+            <p class="cx-hint">Os pagamentos são gravados todos juntos ao finalizar a mesa.</p>
           </div>
-        </form>
-      </div>
-    `;
-  };
-
-  const renderEditOccupancyModal = () => {
-    const tab = getActiveTab();
-    const table = getSelectedTable();
-    if (!state.editOccupancyOpen || !tab || !table) return "";
-    return `
-      <div class="cash-modal" role="presentation">
-        <button type="button" class="cash-modal-backdrop" data-cash-action="close-modal" aria-label="Fechar"></button>
-        <form class="cash-modal-dialog" data-cash-form="update-tab">
-          <input type="hidden" name="tabId" value="${escapeHtml(tab.id)}" />
-          <span class="cash-kicker">Editar ocupacao</span>
-          <h3>${escapeHtml(tab.customerName || table.label)}</h3>
-          <p>${escapeHtml(table.label)} · alteracoes registradas na auditoria.</p>
-          <label><span>Quantidade de pessoas</span><input name="guestCount" type="number" min="1" max="${MAX_GUESTS}" step="1" inputmode="numeric" value="${escapeHtml(
-            tab.guestCount
-          )}" required /></label>
-          <label><span>Nome do cliente ou responsavel (opcional)</span><input name="customerName" maxlength="180" value="${escapeHtml(
-            tab.customerName || ""
-          )}" placeholder="Ex.: Daniel" /></label>
-          <div class="cash-modal-actions">
-            <button class="cash-secondary-button" type="button" data-cash-action="close-modal">Cancelar</button>
-            <button class="cash-primary-button" type="submit">Salvar alteracoes</button>
-          </div>
-        </form>
-      </div>
-    `;
-  };
-
-  const renderFloorView = () => {
-    const snapshot = getSnapshot();
-    if (!snapshot.register) {
-      return `
-        <section class="cash-focused-view cash-setup-view">
-          <article class="cash-focused-card">
-            <span class="cash-kicker">Caixa fechado</span>
-            <h3>Abra o Caixa para configurar o Salao</h3>
-            <p>A quantidade inicial de mesas sera definida para o novo turno.</p>
-            <button class="cash-primary-button" type="button" data-cash-view="opening">Abrir Caixa</button>
-          </article>
         </section>
-      `;
+        <aside class="cx-split-side cx-card">
+          <h2>Recebendo agora${state.payment.mode === "equal" && info.missing ? ` · Pessoa ${state.payment.shareIndex + 1}` : ""}</h2>
+          <strong class="cx-big">${escapeHtml(money(reais(due)))}</strong>
+          <div class="cx-chips" role="group" aria-label="Forma de pagamento">${PAYMENT_METHODS.map(
+            (method) =>
+              `<button type="button" class="cx-chip" data-cx-set="payment.method" data-cx-value="${method.key}" aria-pressed="${
+                state.payment.method === method.key
+              }">${escapeHtml(method.label)}</button>`
+          ).join("")}</div>
+          ${
+            isCash || state.payment.mode === "free"
+              ? `<label class="cx-field"><span>${isCash ? "Valor recebido em dinheiro" : "Valor deste pagamento"}</span><input class="cx-input cx-input-lg cx-num" data-cx-field="payment.entry" data-cx-enter="add-payment" inputmode="decimal" placeholder="${escapeHtml(
+                  money(reais(due))
+                )}" value="${escapeHtml(state.payment.entry)}" /></label>`
+              : ""
+          }
+          ${
+            isCash
+              ? `<div class="cx-chips">${[
+                  ["Exato", reais(due)],
+                  ["R$ 50", 50],
+                  ["R$ 80", 80],
+                  ["R$ 100", 100],
+                  ["R$ 200", 200],
+                ]
+                  .map(
+                    ([label, value]) =>
+                      `<button type="button" class="cx-chip" data-cx-set="payment.entry" data-cx-value="${escapeHtml(
+                        String(value).replace(".", ",")
+                      )}">${escapeHtml(label)}</button>`
+                  )
+                  .join("")}</div>
+                <div class="cx-change ${change.missing ? "is-missing" : ""}"><span>${change.missing ? "Falta" : "Troco"}</span><strong class="cx-num">${escapeHtml(
+                  money(change.missing || change.change)
+                )}</strong></div>`
+              : `<p class="cx-note">${
+                  state.payment.method === "PIX"
+                    ? "Mostre o QR Code ao cliente e confirme aqui quando o Pix cair."
+                    : `Passe ${escapeHtml(money(reais(due)))} na maquininha e confirme quando aprovar.`
+                }</p>`
+          }
+          <button class="cx-btn cx-btn-primary cx-btn-block" type="button" data-cx-action="add-payment" ${
+            !due || (isCash && change.missing) || !canConfirm ? "disabled" : ""
+          }>Confirmar pagamento <span class="cx-kbd">Enter</span></button>
+          <button class="cx-btn cx-btn-dark cx-btn-lg cx-btn-block" type="button" data-cx-action="finish-payment" ${
+            info.missing || !state.payment.draft.length || state.busy || !canConfirm ? "disabled" : ""
+          }>${info.missing ? `Finalizar e liberar mesa (falta ${escapeHtml(money(reais(info.missing)))})` : "Finalizar e liberar mesa"}</button>
+          ${
+            !state.payment.draft.length
+              ? '<button class="cx-btn cx-btn-block" type="button" data-cx-action="reopen-tab">← Voltar ao pedido (reabrir conta)</button>'
+              : ""
+          }
+        </aside>
+      </div>`;
+  };
+
+  /* ---------- Tela 6 · Fechamento ---------- */
+
+  const renderClosing = () => {
+    const snapshot = getSnapshot();
+    const register = snapshot.register;
+    if (!register) {
+      const closed = snapshot.lastClosedRegister;
+      return `
+        <section class="cx-center-card">
+          <span class="cx-eyebrow">Caixa fechado</span>
+          <h1>Não há caixa aberto</h1>
+          ${
+            closed
+              ? `<p class="cx-muted">Último fechamento às ${escapeHtml(timeOf(closed.closedAt))}: esperado ${escapeHtml(
+                  money(closed.expectedCash)
+                )}, contado ${escapeHtml(money(closed.countedCash))}, diferença ${escapeHtml(money(closed.differenceAmount))}.</p>`
+              : ""
+          }
+          <button class="cx-btn cx-btn-primary cx-btn-lg" type="button" data-cx-view="opening">Abrir caixa</button>
+        </section>`;
     }
+    const summary = snapshot.registerSummary || {};
+    const totals = summary.paymentTotals || {};
+    const openTabs = snapshot.activeTabs.length;
+    const movements = snapshot.movements || [];
+    const expected = cents(summary.expectedCash);
+    const counted = cents(state.closing.counted);
+    const hasCounted = state.closing.counted.trim() !== "";
+    const difference = hasCounted ? counted - expected : 0;
+    const needsNotes = hasCounted && difference !== 0 && !state.closing.notes.trim();
+    const canClose = !openTabs && hasCounted && !needsNotes && !state.busy;
     return `
-      <section class="cash-floor-layout">
-        ${renderTablePanel()}
-        ${renderCommandPanel()}
-        ${renderPaymentPanel()}
-      </section>
-      ${renderOpenTableModal()}
-      ${renderEditOccupancyModal()}
-    `;
+      <header class="cx-topbar">
+        <div class="cx-topbar-title"><h1>Fechar caixa</h1><p>${escapeHtml(dayLabel())} · aberto por ${escapeHtml(
+      register.openingUserDisplayName
+    )} às ${escapeHtml(timeOf(register.openedAt))}</p></div>
+        <div class="cx-topbar-actions"><button class="cx-btn" type="button" data-cx-view="floor">← Salão</button></div>
+      </header>
+      ${feedback()}
+      ${
+        openTabs
+          ? `<div class="cx-warn cx-row-between" role="alert"><span><strong>${escapeHtml(openTabs)} ${
+              openTabs === 1 ? "mesa ainda está aberta" : "mesas ainda estão abertas"
+            }.</strong> Feche as comandas antes de fechar o caixa.</span><button class="cx-btn" type="button" data-cx-action="show-open-tables">Ver mesas abertas</button></div>`
+          : ""
+      }
+      <div class="cx-split">
+        <section class="cx-split-main cx-card">
+          <h2>Recebido no turno</h2>
+          <div class="cx-list">${PAYMENT_METHODS.map(
+            (method) =>
+              `<div class="cx-list-row"><span>${escapeHtml(method.label)}</span><strong class="cx-num">${escapeHtml(money(totals[method.key] || 0))}</strong></div>`
+          ).join("")}
+            <div class="cx-list-row is-strong"><span>Total</span><strong class="cx-num">${escapeHtml(money(summary.totalSold || 0))}</strong></div>
+          </div>
+          <p class="cx-muted">${escapeHtml(summary.closedTabs || 0)} comandas pagas${
+      summary.closedTabs ? ` · ticket médio ${escapeHtml(money(reais(Math.round(cents(summary.totalSold) / summary.closedTabs))))}` : ""
+    } · descontos ${escapeHtml(money(summary.discounts || 0))} · serviço ${escapeHtml(money(summary.serviceCharges || 0))}</p>
+        </section>
+        <form class="cx-split-side cx-card" data-cx-form="close-register" novalidate>
+          <h2>Dinheiro na gaveta</h2>
+          <div class="cx-list">
+            <div class="cx-list-row"><span>Fundo de troco (abertura)</span><strong class="cx-num">${escapeHtml(money(register.openingAmount))}</strong></div>
+            <div class="cx-list-row"><span>Vendas em dinheiro</span><strong class="cx-num">+ ${escapeHtml(money(totals.CASH || 0))}</strong></div>
+            ${movements
+              .slice()
+              .reverse()
+              .map(
+                (entry) =>
+                  `<div class="cx-list-row"><span>${entry.movementType === "SUPPLY" ? "Suprimento" : "Sangria"} (${escapeHtml(
+                    timeOf(entry.createdAt)
+                  )}) · ${escapeHtml(entry.reason)}</span><strong class="cx-num">${entry.movementType === "SUPPLY" ? "+" : "−"} ${escapeHtml(
+                    money(entry.amount)
+                  )}</strong></div>`
+              )
+              .join("")}
+            <div class="cx-list-row is-strong"><span>Esperado</span><strong class="cx-num">${escapeHtml(money(reais(expected)))}</strong></div>
+          </div>
+          <label class="cx-field"><span>Contado na gaveta (R$)</span><input class="cx-input cx-input-lg cx-num" data-cx-field="closing.counted" inputmode="decimal" placeholder="0,00" value="${escapeHtml(
+            state.closing.counted
+          )}" /></label>
+          <div class="cx-change ${difference < 0 ? "is-missing" : ""}" aria-live="polite"><span>Diferença</span><strong class="cx-num">${
+      hasCounted ? `${difference > 0 ? "+ " : difference < 0 ? "− " : ""}${escapeHtml(money(reais(Math.abs(difference))))}` : "—"
+    }</strong></div>
+          <label class="cx-field"><span>Observação ${hasCounted && difference !== 0 ? "(obrigatória: há diferença)" : "(opcional)"}</span><textarea class="cx-input" rows="3" data-cx-field="closing.notes" maxlength="600">${escapeHtml(
+      state.closing.notes
+    )}</textarea></label>
+          ${needsNotes ? '<p class="cx-hint is-error">Explique a diferença para fechar o caixa.</p>' : ""}
+          <div class="cx-row-wrap">
+            <button class="cx-btn" type="button" data-cx-action="print">Imprimir relatório do turno</button>
+            <button class="cx-btn cx-btn-primary" type="submit" ${canClose ? "" : "disabled"}>${
+      state.busy === "close-register" ? "Fechando…" : openTabs ? "Fechar caixa (há mesas abertas)" : "Fechar caixa"
+    }</button>
+          </div>
+        </form>
+      </div>`;
+  };
+
+  /* ---------- comprovante ---------- */
+
+  const renderReceiptModal = () => {
+    const tab = state.receiptTab;
+    if (!tab) return "";
+    return `
+      <div class="cx-overlay" data-cx-overlay>
+        <div class="cx-dialog cx-print-area" role="dialog" aria-modal="true" aria-labelledby="cx-receipt-title">
+          <div class="cx-modal-head"><h2 id="cx-receipt-title">Mesa liberada</h2><button class="cx-btn cx-btn-ghost cx-no-print" type="button" data-cx-action="close-modal">Esc</button></div>
+          <div class="cx-modal-body">
+            <p class="cx-muted">Comprovante não fiscal · ${escapeHtml(tab.publicId || "")} · ${escapeHtml(timeOf(tab.closedAt || new Date()))}</p>
+            <div class="cx-list">${(tab.items || [])
+              .filter((item) => item.status !== "CANCELLED")
+              .map(
+                (item) =>
+                  `<div class="cx-list-row"><span>${escapeHtml(item.quantity)}× ${escapeHtml(item.productName)}</span><strong class="cx-num">${escapeHtml(
+                    money(item.totalPrice)
+                  )}</strong></div>`
+              )
+              .join("")}
+              <div class="cx-list-row"><span>Desconto</span><strong class="cx-num">${escapeHtml(money(tab.discountAmount || 0))}</strong></div>
+              <div class="cx-list-row"><span>Serviço</span><strong class="cx-num">${escapeHtml(money(tab.serviceChargeAmount || 0))}</strong></div>
+              <div class="cx-list-row is-strong"><span>Total</span><strong class="cx-num">${escapeHtml(money(tab.totalAmount || 0))}</strong></div>
+              ${(tab.payments || [])
+                .map(
+                  (payment) =>
+                    `<div class="cx-list-row"><span>${escapeHtml(PAYMENT_LABELS[payment.method] || payment.method)}${
+                      Number(payment.changeAmount || 0) > 0 ? ` · troco ${escapeHtml(money(payment.changeAmount))}` : ""
+                    }</span><strong class="cx-num">${escapeHtml(money(payment.amount))}</strong></div>`
+                )
+                .join("")}
+            </div>
+            <p class="cx-hint">Documento sem valor fiscal · emitido pelo INOVAS Food</p>
+          </div>
+          <div class="cx-modal-actions cx-no-print">
+            <button class="cx-btn" type="button" data-cx-action="print">Imprimir comprovante</button>
+            <button class="cx-btn cx-btn-primary" type="button" data-cx-action="close-modal" data-cx-confirm>Voltar ao Salão <span class="cx-kbd">Enter</span></button>
+          </div>
+        </div>
+      </div>`;
+  };
+
+  /* ---------- render ---------- */
+
+  const captureFocus = () => {
+    const active = document.activeElement;
+    if (!active || !state.root?.contains(active)) return null;
+    const key = active.getAttribute("data-cx-field") || active.getAttribute("data-cx-note-input");
+    if (!key) return null;
+    return { key, start: active.selectionStart, end: active.selectionEnd };
+  };
+
+  const restoreFocus = (focus) => {
+    let target = null;
+    if (focus) {
+      target =
+        state.root.querySelector(`[data-cx-field="${focus.key}"]`) ||
+        state.root.querySelector(`[data-cx-note-input="${focus.key}"]`);
+    }
+    if (!target && !state.modal) target = state.root.querySelector("[data-cx-autofocus]");
+    if (!target && state.modal) target = state.root.querySelector(".cx-dialog [data-cx-confirm]:not([disabled]), .cx-dialog input");
+    if (!target || target.disabled) return;
+    target.focus({ preventScroll: true });
+    if (focus && typeof target.setSelectionRange === "function" && focus.start !== null && focus.start !== undefined) {
+      try {
+        target.setSelectionRange(focus.start, focus.end);
+      } catch {
+        // tipo de campo sem seleção
+      }
+    }
   };
 
   const render = () => {
     if (!state.root) return;
     if (state.loading && !state.snapshot) {
-      state.root.innerHTML = renderLoading();
+      state.root.innerHTML = skeleton();
       return;
     }
-    const content =
-      state.view === "opening"
-        ? renderOpeningView()
-        : state.view === "closing"
-          ? renderClosingView()
-          : renderFloorView();
-    state.root.innerHTML = `
-      <div class="cash-register-module">
-        ${renderHeader()}
-        ${renderFeedback()}
-        ${content}
-      </div>
-    `;
+    const focus = captureFocus();
+    const snapshot = getSnapshot();
+    let content;
+    if (state.view === "opening" || (!snapshot.register && state.view === "floor")) {
+      content = renderOpening();
+    } else if (state.view === "closing") {
+      content = renderClosing();
+    } else if (state.screen === "pdv") {
+      content = renderPdv();
+    } else if (state.screen === "payment") {
+      content = renderPayment();
+    } else {
+      content = renderSalao();
+    }
+    const modal =
+      state.modal === "open-tab"
+        ? renderOpenTabModal()
+        : state.modal === "people"
+          ? renderPeopleModal()
+          : state.modal === "movement"
+            ? renderMovementModal()
+            : state.modal === "receipt"
+              ? renderReceiptModal()
+              : "";
+    const showTopFeedback =
+      state.view === "opening" || (!snapshot.register && state.view === "floor");
+    state.root.innerHTML = `<div class="cx-root cash-v3" data-cx-screen="${escapeHtml(
+      state.view === "floor" ? state.screen : state.view
+    )}">${showTopFeedback ? feedback() : ""}${content}${modal}</div>`;
+    restoreFocus(focus);
   };
 
-  const handleClick = async (event) => {
-    const viewButton = event.target.closest("[data-cash-view]");
-    if (viewButton) {
-      setView(viewButton.dataset.cashView);
-      return;
+  const renderProductsOnly = () => {
+    const container = state.root?.querySelector("[data-cx-products]");
+    if (container) container.innerHTML = renderProducts();
+  };
+
+  /* ---------- ações ---------- */
+
+  const setPath = (path, value) => {
+    const [group, key] = path.split(".");
+    if (key) state[group][key] = value;
+    else state[group] = value;
+  };
+  const getPath = (path) => {
+    const [group, key] = path.split(".");
+    return key ? state[group][key] : state[group];
+  };
+
+  const goSalao = () => {
+    state.optimistic = [];
+    state.qtyDelta = {};
+    state.screen = "salao";
+    state.modal = "";
+    state.pdv.query = "";
+    state.pdv.noteItemId = "";
+    render();
+  };
+
+  const openTabScreen = (tab) => {
+    state.selectedTabId = tab.id;
+    state.pdv.query = "";
+    state.pdv.multiplier = 1;
+    state.pdv.noteItemId = "";
+    if (tab.status === "AWAITING_PAYMENT") {
+      resetPayment(tab);
+      state.screen = "payment";
+    } else {
+      state.screen = "pdv";
     }
-    const filter = event.target.closest("[data-cash-table-filter]");
-    if (filter) {
-      state.tableFilter = filter.dataset.cashTableFilter;
+    state.modal = "";
+    render();
+  };
+
+  const resetPayment = (tab) => {
+    state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 };
+    state.bill = {
+      discount: tab && Number(tab.discountAmount) ? String(tab.discountAmount).replace(".", ",") : "",
+      serviceEnabled: tab ? tab.serviceChargeEnabled !== false : true,
+    };
+  };
+
+  const startNewTab = (tableId = "") => {
+    if (!hasPermission("cash_register_open_tab")) return;
+    state.openTab = {
+      tableId,
+      guests: 0,
+      customerName: "",
+      waiterName: state.context.adminName || "",
+    };
+    state.modal = "open-tab";
+    render();
+  };
+
+  const openTableByNumber = () => {
+    const number = Number(String(state.tableSearch).trim());
+    const table = getSnapshot().tables.find((entry) => Number(entry.number) === number);
+    state.tableSearch = "";
+    if (!table) {
+      setMessage(`Mesa ${String(number).padStart(2, "0")} não existe neste turno.`, "error");
       render();
       return;
     }
-    const category = event.target.closest("[data-cash-category]");
-    if (category) {
-      state.categoryId = category.dataset.cashCategory;
-      render();
-      return;
+    if (table.activeTab) openTabScreen(getSnapshot().activeTabs.find((tab) => tab.id === table.activeTab.id) || table.activeTab);
+    else if (table.status === "FREE") startNewTab(table.id);
+  };
+
+  const pendingMatch = (tab, productId) =>
+    (tab.items || []).find(
+      (item) => item.status === "PENDING" && item.productId === productId && !String(item.notes || "").trim()
+    );
+
+  /* Lançamentos com UI otimista. A tela mostra na hora (state.optimistic e
+     state.qtyDelta) e as gravações vão para o servidor uma de cada vez, sempre
+     calculadas sobre o estado mais recente do servidor. Se falhar, desfaz. */
+  let mutationChain = Promise.resolve();
+  let optimisticSeq = 0;
+  const enqueue = (job) => {
+    mutationChain = mutationChain.then(job, job);
+    return mutationChain;
+  };
+
+  const runMutation = async (action, body) => {
+    try {
+      const payload = await fetchJson(`/api/admin/cash-register/${action}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      applySnapshot(payload);
+      return payload;
+    } catch (error) {
+      if (error.status === 401) window.location.href = "/admin/login.html";
+      throw error;
     }
-    const pane = event.target.closest("[data-cash-pane]");
-    if (pane) {
-      state.selectedPane = pane.dataset.cashPane;
-      render();
-      return;
-    }
-    const tableButton = event.target.closest("[data-cash-table]");
-    if (tableButton) {
-      const table = getSnapshot().tables.find(
-        (entry) => entry.id === tableButton.dataset.cashTable
-      );
-      if (table?.activeTab) {
-        state.selectedTabId = table.activeTab.id;
-        state.paymentDraft = [];
-        state.closingDraft = null;
-        render();
-      } else if (table?.status === "FREE" && getSnapshot().register) {
-        state.openTableId = table.id;
-        render();
+  };
+
+  const addProduct = async (productId, quantity) => {
+    const tab = getTab();
+    const product = getCatalogItems().find((item) => item.id === productId);
+    if (!tab || !product || tab.status !== "OPEN") return;
+    const qty = ui.clampInteger(quantity, { min: 1, max: 99 });
+    const entry = { key: ++optimisticSeq, productId, productName: product.name, unitPrice: product.price, qty };
+    state.optimistic.push(entry);
+    state.pdv.multiplier = 1;
+    render();
+    await enqueue(async () => {
+      try {
+        const fresh = getTab();
+        if (!fresh || fresh.status !== "OPEN") throw new Error("A comanda não está mais aberta.");
+        const existing = pendingMatch(fresh, productId);
+        const payload = existing
+          ? { itemId: existing.id, quantity: Math.min(99, Number(existing.quantity) + qty), notes: existing.notes || "" }
+          : { tabId: fresh.id, productId, quantity: qty };
+        state.optimistic = state.optimistic.filter((item) => item.key !== entry.key);
+        await runMutation(existing ? "update-item" : "add-item", payload);
+      } catch (error) {
+        state.optimistic = state.optimistic.filter((item) => item.key !== entry.key);
+        setMessage(`Não foi possível lançar ${product.name}; o item foi desfeito. ${error.message}`, "error");
       }
+      render();
+    });
+  };
+
+  const changeQuantity = async (itemId, delta) => {
+    const tab = getTab();
+    const item = tab?.items.find((entry) => entry.id === itemId);
+    if (!item || item.status !== "PENDING") return;
+    state.qtyDelta[itemId] = (state.qtyDelta[itemId] || 0) + delta;
+    render();
+    await enqueue(async () => {
+      const pendingDelta = state.qtyDelta[itemId] || 0;
+      delete state.qtyDelta[itemId];
+      if (!pendingDelta) return;
+      try {
+        const fresh = getTab()?.items.find((entry) => entry.id === itemId);
+        if (!fresh) return;
+        const next = Number(fresh.quantity) + pendingDelta;
+        if (next < 1) await runMutation("remove-item", { itemId });
+        else await runMutation("update-item", { itemId, quantity: Math.min(99, next), notes: fresh.notes || "" });
+      } catch (error) {
+        setMessage(`Não foi possível alterar a quantidade; a alteração foi desfeita. ${error.message}`, "error");
+      }
+      render();
+    });
+  };
+
+  const saveNote = async (itemId, notes) => {
+    const tab = getTab();
+    const item = tab?.items.find((entry) => entry.id === itemId);
+    if (!item || item.status !== "PENDING" || String(item.notes || "") === notes) return;
+    await postAction("update-item", { itemId, quantity: item.quantity, notes }, "update-item", { quiet: true });
+  };
+
+  const quickAdd = async () => {
+    const parsed = ui.parseQuickEntry(state.pdv.query);
+    if (!parsed.query) return;
+    const matches = findProductsForQuery(parsed.query);
+    if (!matches.length) {
+      setMessage(`Nenhum produto com o código ou nome “${parsed.query}”.`, "error");
+      render();
       return;
     }
-    const productButton = event.target.closest("[data-cash-product]");
-    if (productButton) {
-      const tab = getActiveTab();
-      if (!tab) return;
-      await postAction(
-        "add-item",
-        { tabId: tab.id, productId: productButton.dataset.cashProduct, quantity: 1 },
-        "add-item"
-      );
+    if (matches.length > 1 && !/^\d+$/.test(parsed.query)) {
+      renderProductsOnly();
       return;
     }
-    const quantityButton = event.target.closest("[data-cash-quantity]");
-    if (quantityButton) {
-      const tab = getActiveTab();
-      const item = tab?.items.find(
-        (entry) => entry.id === quantityButton.dataset.cashQuantity
-      );
-      if (!item) return;
-      const nextQuantity = Math.max(
-        1,
-        Number(item.quantity) + Number(quantityButton.dataset.delta || 0)
-      );
-      await postAction(
-        "update-item",
-        { itemId: item.id, quantity: nextQuantity, notes: item.notes || "" },
-        "update-item"
-      );
-      return;
-    }
-    const removeItem = event.target.closest("[data-cash-remove-item]");
-    if (removeItem) {
-      await postAction(
-        "remove-item",
-        { itemId: removeItem.dataset.cashRemoveItem },
-        "remove-item"
-      );
-      return;
-    }
-    const methodButton = event.target.closest("[data-cash-payment-method]");
-    if (methodButton) {
-      const tab = getActiveTab();
-      if (!tab) return;
-      const remaining = Math.max(
-        0,
-        Number((tab.totalAmount - getPaymentTotal()).toFixed(2))
-      );
-      if (remaining <= 0) {
-        setMessage("O total da conta ja foi distribuido.", "error");
+    state.pdv.query = "";
+    await addProduct(matches[0].id, parsed.quantity);
+  };
+
+  const addPaymentEntry = () => {
+    const tab = getTab();
+    if (!tab || tab.status !== "AWAITING_PAYMENT") return;
+    const info = paymentState(tab);
+    const due = dueNow(tab, info);
+    if (!due) return;
+    const entry = { method: state.payment.method, amount: reais(due) };
+    if (entry.method === "CASH") {
+      const received = cents(state.payment.entry) || due;
+      if (received < due) {
+        setMessage("O valor recebido é menor que o devido.", "error");
         render();
         return;
       }
-      state.paymentDraft.push({
-        method: methodButton.dataset.cashPaymentMethod,
-        amount: remaining,
-        receivedAmount: remaining,
-      });
-      render();
-      return;
+      entry.receivedAmount = reais(received);
     }
-    const removePayment = event.target.closest("[data-cash-remove-payment]");
-    if (removePayment) {
-      state.paymentDraft.splice(Number(removePayment.dataset.cashRemovePayment), 1);
-      render();
-      return;
+    if (state.payment.mode === "equal") entry.shareIndex = state.payment.shareIndex;
+    state.payment.draft.push(entry);
+    state.payment.entry = "";
+    if (state.payment.mode === "equal") {
+      const paidShares = new Set(state.payment.draft.map((item) => item.shareIndex));
+      const next = info.shares.findIndex((_, index) => !paidShares.has(index));
+      state.payment.shareIndex = next === -1 ? 0 : next;
     }
-    const actionButton = event.target.closest("[data-cash-action]");
-    if (!actionButton) return;
-    const action = actionButton.dataset.cashAction;
-    if (action === "refresh") {
-      await load({ force: true });
-    } else if (action === "toggle-tables") {
-      state.tablesCollapsed = !state.tablesCollapsed;
+    setMessage("");
+    render();
+  };
+
+  const finishPayment = async () => {
+    const tab = getTab();
+    if (!tab) return;
+    const tabSnapshot = JSON.parse(JSON.stringify(tab));
+    const result = await postAction(
+      "confirm-payment",
+      {
+        tabId: tab.id,
+        idempotencyKey: newIdempotencyKey(),
+        payments: state.payment.draft.map((entry) => ({
+          method: entry.method,
+          amount: Number(entry.amount),
+          ...(entry.method === "CASH" ? { receivedAmount: Number(entry.receivedAmount) } : {}),
+        })),
+      },
+      "confirm-payment"
+    );
+    if (result) {
+      const recent = (getSnapshot().recentTabs || []).find((entry) => entry.id === tabSnapshot.id);
+      state.receiptTab = recent || { ...tabSnapshot, payments: state.payment.draft };
+      resetPayment(null);
+      state.selectedTabId = "";
+      state.screen = "salao";
+      state.modal = "receipt";
+      setMessage(`Mesa ${tableNumber(getTableOf(tabSnapshot))} liberada · 0 pessoas.`, "success");
+      render();
+    }
+  };
+
+  const handleAction = async (action, element) => {
+    if (action === "close-modal") {
+      state.modal = "";
+      state.receiptTab = null;
+      render();
+    } else if (action === "use-last-count") {
+      state.opening.tableCount = Math.min(MAX_TABLES, Math.max(1, Number(getSnapshot().lastClosedRegister?.tableCount || 12)));
+      render();
+    } else if (action === "new-tab") {
+      startNewTab();
+    } else if (action === "go-pdv") {
+      const tab = getTab() || getSnapshot().activeTabs.find((entry) => entry.status === "OPEN");
+      if (tab) openTabScreen(tab);
+      else startNewTab();
+    } else if (action === "open-movement") {
+      state.movement = { type: "WITHDRAWAL", amount: "", reason: "" };
+      state.modal = "movement";
       render();
     } else if (action === "add-table") {
       await postAction("add-table", {}, "add-table");
-    } else if (action === "edit-occupancy") {
-      state.editOccupancyOpen = true;
+    } else if (action === "back-salao") {
+      goSalao();
+    } else if (action === "back-pdv") {
+      state.screen = "pdv";
       render();
-    } else if (action === "close-modal") {
-      state.openTableId = "";
-      state.editOccupancyOpen = false;
-      render();
-    } else if (action === "print") {
-      window.print();
-    } else if (action === "send-order") {
-      const tab = getActiveTab();
-      if (tab) await postAction("send-order", { tabId: tab.id }, "send-order");
-    } else if (action === "begin-closing") {
-      const tab = getActiveTab();
+    } else if (action === "edit-people") {
+      const tab = getTab();
       if (!tab) return;
-      const discountInput = state.root.querySelector('[data-cash-input="discount"]');
-      const serviceInput = state.root.querySelector(
-        '[data-cash-input="service-enabled"]'
-      );
-      const closingDraft = getClosingDraft(tab);
-      await postAction(
+      state.people = { guests: Number(tab.guestCount || 1), customerName: tab.customerName || "" };
+      state.modal = "people";
+      render();
+    } else if (action === "toggle-note") {
+      const itemId = element.dataset.cxItem;
+      state.pdv.noteItemId = state.pdv.noteItemId === itemId ? "" : itemId;
+      render();
+    } else if (action === "clear-pending") {
+      const tab = getTab();
+      const pending = (tab?.items || []).filter((item) => item.status === "PENDING");
+      if (!pending.length || !window.confirm(`Remover os ${pending.length} itens que ainda não foram para a cozinha?`)) return;
+      for (const item of pending) {
+        // eslint-disable-next-line no-await-in-loop
+        await postAction("remove-item", { itemId: item.id }, "remove-item", { quiet: true });
+      }
+    } else if (action === "send-order") {
+      await mutationChain;
+      const tab = getTab();
+      if (tab && (tab.items || []).some((item) => item.status === "PENDING")) {
+        await postAction("send-order", { tabId: tab.id }, "send-order");
+      }
+    } else if (action === "go-payment") {
+      await mutationChain;
+      const tab = getTab();
+      if (!tab) return;
+      resetPayment(tab);
+      state.screen = "payment";
+      render();
+    } else if (action === "begin-closing") {
+      const tab = getTab();
+      if (!tab) return;
+      const result = await postAction(
         "begin-closing",
         {
           tabId: tab.id,
-          discountAmount: toNumber(
-            discountInput?.value ?? closingDraft.discountAmount ?? 0
-          ),
-          serviceChargeEnabled:
-            serviceInput?.checked ?? closingDraft.serviceChargeEnabled,
+          discountAmount: reais(cents(state.bill.discount)),
+          serviceChargeEnabled: state.bill.serviceEnabled,
           serviceChargeRate: tab.serviceChargeRate,
         },
         "begin-closing"
       );
-      state.paymentDraft = [];
-    } else if (action === "reopen-tab") {
-      const tab = getActiveTab();
-      if (tab) {
-        await postAction("reopen-tab", { tabId: tab.id }, "reopen-tab");
-        state.paymentDraft = [];
-        state.closingDraft = null;
+      if (result) {
+        state.payment = { mode: "equal", draft: [], method: "CASH", entry: "", shareIndex: 0 };
+        render();
       }
-    } else if (action === "confirm-payment") {
-      const tab = getActiveTab();
+    } else if (action === "reopen-tab") {
+      const tab = getTab();
       if (!tab) return;
-      const payload = {
-        tabId: tab.id,
-        idempotencyKey: newIdempotencyKey(),
-        payments: state.paymentDraft.map((payment) => ({
-          method: payment.method,
-          amount: Number(payment.amount),
-          ...(payment.method === "CASH"
-            ? { receivedAmount: Number(payment.receivedAmount) }
-            : {}),
-        })),
-      };
-      const result = await postAction(
-        "confirm-payment",
-        payload,
-        "confirm-payment"
-      );
-      if (result) state.paymentDraft = [];
+      const result = await postAction("reopen-tab", { tabId: tab.id }, "reopen-tab");
+      if (result) {
+        state.screen = "pdv";
+        render();
+      }
+    } else if (action === "add-payment") {
+      addPaymentEntry();
+    } else if (action === "finish-payment") {
+      await finishPayment();
+    } else if (action === "show-open-tables") {
+      state.tableFilter = "OCCUPIED";
+      setView("floor");
+    } else if (action === "print") {
+      window.print();
+    } else if (action === "refresh") {
+      await load({ force: true });
     }
   };
 
-  const handleSubmit = async (event) => {
-    const form = event.target.closest("[data-cash-form]");
-    if (!form) return;
-    event.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    const type = form.dataset.cashForm;
-    if (type === "open-register") {
-      if (!isIntegerBetween(data.tableCount, 1, MAX_TABLES)) {
-        setMessage(
-          `A quantidade de mesas deve ser um numero inteiro entre 1 e ${MAX_TABLES}.`,
-          "error"
-        );
-        render();
-        return;
-      }
-      await postAction(
-        "open",
-        {
-          openingAmount: toNumber(data.openingAmount),
-          serviceChargeRate: toNumber(data.serviceChargeRate),
-          tableCount: Number(data.tableCount),
-          notes: data.notes || "",
-        },
-        "open-register"
-      );
-      if (getSnapshot().register) setView("floor");
-    } else if (type === "open-tab") {
-      if (!isIntegerBetween(data.guestCount, 1, MAX_GUESTS)) {
-        setMessage(
-          `A quantidade de pessoas deve ser um numero inteiro entre 1 e ${MAX_GUESTS}.`,
-          "error"
-        );
-        render();
-        return;
-      }
-      const result = await postAction(
-        "open-tab",
-        {
-          tableId: data.tableId,
-          guestCount: Number(data.guestCount),
-          waiterName: data.waiterName,
-          customerName: data.customerName || "",
-        },
-        "open-tab"
-      );
-      if (result) {
-        state.openTableId = "";
-        state.selectedTabId = result.tab?.id || result.tabId || state.selectedTabId;
-        state.closingDraft = null;
-        render();
-      }
-    } else if (type === "update-tab") {
-      if (!isIntegerBetween(data.guestCount, 1, MAX_GUESTS)) {
-        setMessage(
-          `A quantidade de pessoas deve ser um numero inteiro entre 1 e ${MAX_GUESTS}.`,
-          "error"
-        );
-        render();
-        return;
-      }
-      const result = await postAction(
-        "update-tab",
-        {
-          tabId: data.tabId,
-          guestCount: Number(data.guestCount),
-          customerName: data.customerName || "",
-        },
-        "update-tab"
-      );
-      if (result) {
-        state.editOccupancyOpen = false;
-        render();
-      }
-    } else if (type === "close-register") {
-      if (
-        !window.confirm(
-          "Confirmar o fechamento do caixa? Novas vendas ficarao bloqueadas ate a proxima abertura."
-        )
-      ) {
-        return;
-      }
-      await postAction(
-        "close",
-        {
-          countedCash: toNumber(data.countedCash),
-          notes: data.notes || "",
-        },
-        "close-register"
-      );
+  const handleClick = async (event) => {
+    const target = event.target;
+    if (target.matches("[data-cx-overlay]")) {
+      state.modal = "";
+      state.receiptTab = null;
+      render();
+      return;
     }
+    const viewButton = target.closest("[data-cx-view]");
+    if (viewButton) {
+      setView(viewButton.dataset.cxView);
+      return;
+    }
+    const stepButton = target.closest("[data-cx-step-field]");
+    if (stepButton && !stepButton.disabled) {
+      const field = stepButton.dataset.cxStepField;
+      const limits =
+        field === "opening.tableCount"
+          ? { min: 1, max: MAX_TABLES }
+          : field === "openTab.guests"
+            ? { min: 0, max: MAX_GUESTS }
+            : { min: 1, max: MAX_GUESTS };
+      setPath(field, ui.clampInteger(Number(getPath(field)) + Number(stepButton.dataset.cxDelta), limits));
+      render();
+      return;
+    }
+    const setButton = target.closest("[data-cx-set]");
+    if (setButton && !setButton.disabled) {
+      const path = setButton.dataset.cxSet;
+      const raw = setButton.dataset.cxValue;
+      const numeric = ["opening.tableCount", "openTab.guests", "pdv.multiplier", "payment.shareIndex"].includes(path);
+      setPath(path, numeric ? Number(raw) : raw);
+      if (path === "payment.method" || path === "payment.mode" || path === "payment.shareIndex") state.payment.entry = "";
+      if (path === "pdv.categoryId") state.pdv.query = "";
+      render();
+      return;
+    }
+    const filter = target.closest("[data-cx-filter]");
+    if (filter) {
+      state.tableFilter = filter.dataset.cxFilter;
+      render();
+      return;
+    }
+    const tableButton = target.closest("[data-cx-table]");
+    if (tableButton) {
+      const table = getSnapshot().tables.find((entry) => entry.id === tableButton.dataset.cxTable);
+      if (!table) return;
+      if (table.activeTab) {
+        openTabScreen(getSnapshot().activeTabs.find((tab) => tab.id === table.activeTab.id) || table.activeTab);
+      } else if (table.status === "FREE") {
+        startNewTab(table.id);
+      }
+      return;
+    }
+    const product = target.closest("[data-cx-product]");
+    if (product) {
+      await addProduct(product.dataset.cxProduct, state.pdv.multiplier);
+      return;
+    }
+    const qty = target.closest("[data-cx-qty]");
+    if (qty) {
+      await changeQuantity(qty.dataset.cxQty, Number(qty.dataset.cxDelta));
+      return;
+    }
+    const noteChip = target.closest("[data-cx-note-chip]");
+    if (noteChip) {
+      const tab = getTab();
+      const item = tab?.items.find((entry) => entry.id === noteChip.dataset.cxItem);
+      if (!item) return;
+      const note = noteChip.dataset.cxNoteChip;
+      const parts = String(item.notes || "")
+        .split(" · ")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const next = parts.includes(note) ? parts.filter((part) => part !== note) : [...parts, note];
+      await saveNote(item.id, next.join(" · "));
+      return;
+    }
+    const removePayment = target.closest("[data-cx-remove-payment]");
+    if (removePayment) {
+      state.payment.draft.splice(Number(removePayment.dataset.cxRemovePayment), 1);
+      render();
+      return;
+    }
+    const action = target.closest("[data-cx-action]");
+    if (action && !action.disabled) await handleAction(action.dataset.cxAction, action);
   };
 
   const handleInput = (event) => {
-    const input = event.target;
-    if (input.matches('[data-cash-input="table-search"]')) {
-      state.tableQuery = input.value;
-      render();
-      state.root
-        ?.querySelector('[data-cash-input="table-search"]')
-        ?.focus();
-    } else if (input.matches('[data-cash-input="product-search"]')) {
-      state.productQuery = input.value;
-      render();
-      const replacement = state.root?.querySelector(
-        '[data-cash-input="product-search"]'
-      );
-      replacement?.focus();
-      replacement?.setSelectionRange(
-        replacement.value.length,
-        replacement.value.length
-      );
-    } else if (input.matches("[data-cash-payment-amount]")) {
-      const index = Number(input.dataset.cashPaymentAmount);
-      if (state.paymentDraft[index]) {
-        state.paymentDraft[index].amount = toNumber(input.value);
+    const field = event.target.closest("[data-cx-field]");
+    if (field) {
+      setPath(field.dataset.cxField, field.value);
+      if (field.dataset.cxField === "pdv.query") {
+        renderProductsOnly();
+        return;
       }
-    } else if (input.matches("[data-cash-payment-received]")) {
-      const index = Number(input.dataset.cashPaymentReceived);
-      if (state.paymentDraft[index]) {
-        state.paymentDraft[index].receivedAmount = toNumber(input.value);
-      }
+      if (field.dataset.cxField === "tableSearch") return;
+      render();
     }
   };
 
   const handleChange = async (event) => {
-    const noteInput = event.target.closest("[data-cash-item-note]");
-    if (noteInput) {
-      const tab = getActiveTab();
-      const item = tab?.items.find(
-        (entry) => entry.id === noteInput.dataset.cashItemNote
+    const toggle = event.target.closest("[data-cx-toggle]");
+    if (toggle) {
+      setPath(toggle.dataset.cxToggle, toggle.checked);
+      render();
+      return;
+    }
+    const noteInput = event.target.closest("[data-cx-note-input]");
+    if (noteInput) await saveNote(noteInput.dataset.cxNoteInput, noteInput.value.trim());
+  };
+
+  const handleSubmit = async (event) => {
+    const form = event.target.closest("[data-cx-form]");
+    if (!form) return;
+    event.preventDefault();
+    const type = form.dataset.cxForm;
+    if (type === "open-register") {
+      const result = await postAction(
+        "open",
+        {
+          openingAmount: reais(cents(state.opening.openingAmount)),
+          serviceChargeRate: Number(String(state.opening.serviceChargeRate).replace(",", ".")) || 0,
+          tableCount: state.opening.tableCount,
+          notes: "",
+        },
+        "open-register"
       );
-      if (item && noteInput.value !== item.notes) {
-        await postAction(
-          "update-item",
-          {
-            itemId: item.id,
-            quantity: item.quantity,
-            notes: noteInput.value,
-          },
-          "update-item"
-        );
+      if (result && getSnapshot().register) {
+        state.opening.tableCount = null;
+        setView("floor");
+      }
+    } else if (type === "open-tab") {
+      const draft = state.openTab;
+      if (!draft.tableId || draft.guests < 1) return;
+      const result = await postAction(
+        "open-tab",
+        {
+          tableId: draft.tableId,
+          guestCount: draft.guests,
+          waiterName: draft.waiterName || state.context.adminName || "Garçom",
+          customerName: draft.customerName || "",
+        },
+        "open-tab"
+      );
+      if (result) {
+        const tabId = result.tab?.id || result.tabId;
+        const tab = getSnapshot().activeTabs.find((entry) => entry.id === tabId) ||
+          getSnapshot().activeTabs.find((entry) => entry.tableId === draft.tableId);
+        state.modal = "";
+        if (tab) openTabScreen(tab);
+        else render();
+      }
+    } else if (type === "update-tab") {
+      const tab = getTab();
+      if (!tab) return;
+      const result = await postAction(
+        "update-tab",
+        { tabId: tab.id, guestCount: state.people.guests, customerName: state.people.customerName || "" },
+        "update-tab"
+      );
+      if (result) {
+        state.modal = "";
+        render();
+      }
+    } else if (type === "movement") {
+      const result = await postAction(
+        "movement",
+        {
+          type: state.movement.type,
+          amount: reais(cents(state.movement.amount)),
+          reason: state.movement.reason.trim(),
+        },
+        "movement"
+      );
+      if (result) {
+        state.modal = "";
+        render();
+      }
+    } else if (type === "close-register") {
+      if (!window.confirm("Fechar o caixa? Depois de fechar, não é possível lançar vendas neste turno.")) return;
+      const result = await postAction(
+        "close",
+        { countedCash: reais(cents(state.closing.counted)), notes: state.closing.notes.trim() },
+        "close-register"
+      );
+      if (result) state.closing = { counted: "", notes: "" };
+    }
+  };
+
+  const isVisible = () => Boolean(state.root && state.root.isConnected && state.root.offsetParent !== null);
+
+  const handleKeydown = async (event) => {
+    if (!isVisible()) return;
+    const target = event.target;
+    if (event.key === "Enter" && target.closest?.("[data-cx-enter]")) {
+      event.preventDefault();
+      const enterAction = target.closest("[data-cx-enter]").dataset.cxEnter;
+      if (enterAction === "open-table-number") openTableByNumber();
+      else if (enterAction === "quick-add") await quickAdd();
+      else if (enterAction === "add-payment") addPaymentEntry();
+      return;
+    }
+    if (event.key === "Enter" && target.matches?.("[data-cx-note-input]")) {
+      event.preventDefault();
+      await saveNote(target.dataset.cxNoteInput, target.value.trim());
+      return;
+    }
+    if (event.key === "Escape") {
+      if (state.modal) {
+        event.preventDefault();
+        state.modal = "";
+        state.receiptTab = null;
+        render();
+      } else if (state.view === "floor" && state.screen !== "salao") {
+        event.preventDefault();
+        goSalao();
       }
       return;
     }
-    if (
-      event.target.matches("[data-cash-payment-amount]") ||
-      event.target.matches("[data-cash-payment-received]")
-    ) {
+    if (event.key === "Enter" && state.modal === "receipt") {
+      event.preventDefault();
+      state.modal = "";
+      state.receiptTab = null;
       render();
       return;
     }
-    if (
-      event.target.matches('[data-cash-input="discount"]') ||
-      event.target.matches('[data-cash-input="service-enabled"]')
-    ) {
-      const closingDraft = getClosingDraft(getActiveTab());
-      if (event.target.matches('[data-cash-input="discount"]')) {
-        closingDraft.discountAmount = toNumber(event.target.value);
-      } else {
-        closingDraft.serviceChargeEnabled = event.target.checked;
+    const snapshot = getSnapshot();
+    if (!snapshot.register || state.view !== "floor" || state.modal) return;
+    if (event.key === "F1") {
+      event.preventDefault();
+      startNewTab();
+    } else if (event.key === "F3") {
+      event.preventDefault();
+      await handleAction("go-pdv");
+    } else if (event.key === "F2" && state.screen === "pdv") {
+      event.preventDefault();
+      await handleAction("send-order");
+    } else if (event.key === "F4" && (state.screen === "pdv" || state.screen === "payment")) {
+      event.preventDefault();
+      const tab = getTab();
+      if (!tab) return;
+      if (state.screen === "pdv") await handleAction("go-payment");
+      else if (tab.status === "OPEN") await handleAction("begin-closing");
+    } else if (state.screen === "salao" && /^\d$/.test(event.key) && !target.closest?.("input, textarea, select")) {
+      const input = state.root.querySelector('[data-cx-field="tableSearch"]');
+      if (input) {
+        event.preventDefault();
+        input.focus();
+        input.value += event.key;
+        state.tableSearch = input.value;
       }
-      render();
     }
   };
 
@@ -1590,6 +1881,7 @@
       root.addEventListener("submit", handleSubmit);
       root.addEventListener("input", handleInput);
       root.addEventListener("change", handleChange);
+      document.addEventListener("keydown", handleKeydown);
     }
     render();
   };
