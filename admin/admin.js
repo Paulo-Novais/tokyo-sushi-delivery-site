@@ -10477,7 +10477,10 @@ const renderOrdersStageBar = (statsRoot) => {
 
   statsRoot.innerHTML = `
     <div class="gx-orders-top">
-      <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+      <div class="gx-orders-titles">
+        <h1 class="gx-orders-title">Pedidos</h1>
+        <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+      </div>
       <div class="gx-orders-tools">
       ${renderOrderAlertControl()}
       <div class="gx-mode-switch" role="tablist" aria-label="Tipo de pedido">
