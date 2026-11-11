@@ -16,13 +16,13 @@ const ADMIN_THEME_DEFAULT = "light";
 const ADMIN_THEME_OPTIONS = new Set(["light", "dark"]);
 const PUBLIC_SITE_LAYOUT_OPTIONS = Object.freeze([
   { key: "MODERN", label: "MODERN", helper: "Tokyo atual, banner grande, categorias horizontais e cards modernos." },
-  { key: "CATALOGO", label: "CATALOGO", helper: "Menu lateral, produtos em lista e navegacao rapida." },
+  { key: "CATÁLOGO", label: "CATÁLOGO", helper: "Menu lateral, produtos em lista e navegacao rápida." },
   { key: "PREMIUM", label: "PREMIUM", helper: "Banner maior, fotos maiores e acabamento visual mais sofisticado." },
 ]);
 const PUBLIC_SITE_THEME_OPTIONS = Object.freeze([
   { key: "LIGHT", label: "Tema Claro" },
   { key: "DARK", label: "Tema Escuro" },
-  { key: "AUTO", label: "Tema Automatico" },
+  { key: "AUTO", label: "Tema Automático" },
 ]);
 const ORDER_STATUSES = [
   "Recebido",
@@ -40,7 +40,7 @@ const CUSTOMER_CRM_TAG_OPTIONS = [
   { key: "", label: "Todas as tags" },
   { key: "vip", label: "VIP" },
   { key: "recorrente", label: "Recorrente" },
-  { key: "atencao", label: "Atencao" },
+  { key: "atencao", label: "Atenção" },
   { key: "bloqueado", label: "Bloqueado" },
 ];
 const CUSTOMER_CRM_INACTIVE_FILTERS = [
@@ -51,7 +51,7 @@ const CUSTOMER_CRM_INACTIVE_FILTERS = [
   { key: "90", label: "Sem comprar ha 90 dias" },
 ];
 const CUSTOMER_CRM_SORT_OPTIONS = [
-  { key: "recent", label: "Ultima compra" },
+  { key: "recent", label: "Última compra" },
   { key: "spend-desc", label: "Maior gasto" },
   { key: "orders-desc", label: "Mais pedidos" },
   { key: "lapsed-desc", label: "Mais tempo sem compra" },
@@ -74,18 +74,18 @@ const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "inventory", label: "Estoque", helper: "Itens e validade" },
 ]);
 const SYSTEM_NAV_SECTIONS = Object.freeze([
-  { key: "users", label: "Usuarios", helper: "Acessos da plataforma" },
+  { key: "users", label: "Usuários", helper: "Acessos da plataforma" },
   { key: "orders", label: "Pedidos", helper: "Pesquisa por restaurante" },
   { key: "scheduled", label: "Agendados", helper: "Agenda por restaurante" },
-  { key: "menu", label: "Cardapio", helper: "Catalogos por restaurante" },
-  { key: "deliveries", label: "Entregas", helper: "Operacao por restaurante" },
+  { key: "menu", label: "Cardápio", helper: "Catálogos por restaurante" },
+  { key: "deliveries", label: "Entregas", helper: "Operação por restaurante" },
   { key: "customers", label: "Clientes", helper: "Base por restaurante" },
-  { key: "promotions", label: "Promocoes", helper: "Campanhas por restaurante" },
-  { key: "metrics", label: "Metricas", helper: "Consolidado ou restaurante" },
-  { key: "reports", label: "Relatorios", helper: "Consolidado ou restaurante" },
+  { key: "promotions", label: "Promoções", helper: "Campanhas por restaurante" },
+  { key: "metrics", label: "Métricas", helper: "Consolidado ou restaurante" },
+  { key: "reports", label: "Relatórios", helper: "Consolidado ou restaurante" },
   { key: "finance", label: "Financeiro", helper: "Consolidado ou restaurante" },
-  { key: "reviews", label: "Avaliacoes", helper: "Feedback por restaurante" },
-  { key: "settings", label: "Configuracoes", helper: "Ajustes da plataforma" },
+  { key: "reviews", label: "Avaliações", helper: "Feedback por restaurante" },
+  { key: "settings", label: "Configurações", helper: "Ajustes da plataforma" },
 ]);
 const NAV_SECTIONS = Object.freeze([
   ...RESTAURANT_NAV_SECTIONS,
@@ -161,14 +161,14 @@ const SECTION_FEATURE_MAP = Object.freeze({
 const SYSTEM_GLOBAL_FILTERS = Object.freeze({
   orders: Object.freeze([
     { key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" },
-    { key: "order", label: "Pedido", placeholder: "ID ou codigo" },
+    { key: "order", label: "Pedido", placeholder: "ID ou código" },
     { key: "customer", label: "Cliente", placeholder: "Nome ou telefone" },
     { key: "status", label: "Status", placeholder: "Todos" },
     { key: "date", label: "Data", type: "date", placeholder: "" },
   ]),
   scheduled: Object.freeze([
     { key: "restaurant", label: "Restaurante", placeholder: "Todos os restaurantes" },
-    { key: "order", label: "Pedido", placeholder: "ID ou codigo" },
+    { key: "order", label: "Pedido", placeholder: "ID ou código" },
     { key: "customer", label: "Cliente", placeholder: "Nome ou telefone" },
     { key: "date", label: "Data", type: "date", placeholder: "" },
   ]),
@@ -213,8 +213,8 @@ const OWNER_USER_TYPE_OPTIONS = Object.freeze(
   RESTAURANT_USER_TYPE_OPTIONS.filter((option) => option.key !== "OWNER")
 );
 const USER_SCOPE_OPTIONS = Object.freeze([
-  { key: "SYSTEM", label: "Usuario do Sistema" },
-  { key: "RESTAURANT", label: "Usuario de Restaurante" },
+  { key: "SYSTEM", label: "Usuário do Sistema" },
+  { key: "RESTAURANT", label: "Usuário de Restaurante" },
 ]);
 const SYSTEM_USER_TYPES = Object.freeze(SYSTEM_USER_TYPE_OPTIONS.map((option) => option.key));
 const RESTAURANT_USER_TYPES = Object.freeze(RESTAURANT_USER_TYPE_OPTIONS.map((option) => option.key));
@@ -248,7 +248,7 @@ const USER_TABLE_COLUMNS = Object.freeze([
   { key: "plan", label: "Plano", sortable: true },
   { key: "profile", label: "Perfil", sortable: true },
   { key: "status", label: "Status", sortable: true },
-  { key: "actions", label: "Acoes", sortable: false },
+  { key: "actions", label: "Ações", sortable: false },
 ]);
 const USER_PERMISSION_ACTIONS_FALLBACK = Object.freeze([
   { key: "view", label: "Visualizar" },
@@ -261,16 +261,16 @@ const USER_PERMISSION_MODULES_FALLBACK = Object.freeze([
   { key: "cash_register", label: "Caixa e salao" },
   { key: "orders", label: "Pedidos" },
   { key: "customers", label: "Clientes" },
-  { key: "catalog", label: "Cardapio" },
-  { key: "promotions", label: "Promocoes" },
-  { key: "reviews", label: "Avaliacoes" },
-  { key: "reports", label: "Relatorios" },
+  { key: "catalog", label: "Cardápio" },
+  { key: "promotions", label: "Promoções" },
+  { key: "reviews", label: "Avaliações" },
+  { key: "reports", label: "Relatórios" },
   { key: "inventory", label: "Estoque" },
   { key: "financial", label: "Financeiro" },
-  { key: "settings", label: "Configuracoes" },
-  { key: "users", label: "Usuarios" },
+  { key: "settings", label: "Configurações" },
+  { key: "users", label: "Usuários" },
   { key: "delivery", label: "Entrega" },
-  { key: "business_hours", label: "Horarios" },
+  { key: "business_hours", label: "Horários" },
   { key: "special_dates", label: "Datas especiais" },
 ]);
 const SECTION_TITLES = {
@@ -278,12 +278,12 @@ const SECTION_TITLES = {
     chip: "Dashboard gerencial",
     title: "Resumo do turno e indicadores",
     description:
-      "Leitura executiva da operacao com volume, receita, conclusoes e sinais de atencao do turno.",
+      "Leitura executiva da operação com volume, receita, conclusoes e sinais de atenção do turno.",
     focus: "Visao gerencial do turno",
   },
   "cash-register": {
     chip: "Caixa e salao",
-    title: "Operacao presencial",
+    title: "Operação presencial",
     description: "Mesas, comandas, pedidos e recebimentos do atendimento no salao.",
     focus: "Turno do caixa",
   },
@@ -291,44 +291,44 @@ const SECTION_TITLES = {
     chip: "Pedidos operacionais",
     title: "Kanban e execucao dos pedidos",
     description: "Fila operacional viva com kanban central e painel lateral dedicado para cada pedido.",
-    focus: "Sala de operacao",
+    focus: "Sala de operação",
   },
   scheduled: {
     chip: "Agendamentos",
     title: "Agenda operacional de pedidos futuros",
-    description: "Pedidos agendados com leitura por data, modalidade e proximidade do horario programado.",
+    description: "Pedidos agendados com leitura por data, modalidade e proximidade do horário programado.",
     focus: "Fila futura do gestor",
   },
   menu: {
-    chip: "Cardapio",
-    title: "Painel operacional do cardapio do site",
-    description: "Crie categorias, ajuste pratos, fotos, precos e disponibilidade do que aparece para o cliente.",
-    focus: "Controle vivo do cardapio",
+    chip: "Cardápio",
+    title: "Painel operacional do cardápio do site",
+    description: "Crie categorias, ajuste pratos, fotos, preços e disponibilidade do que aparece para o cliente.",
+    focus: "Controle vivo do cardápio",
   },
   promotions: {
-    chip: "Promocoes administrativas",
-    title: "Campanhas, validade e preco promocional",
+    chip: "Promoções administrativas",
+    title: "Campanhas, validade e preço promocional",
     description:
-      "Gerencie promocoes com periodo, ativacao automatica, reflexo no site e preco valido no fechamento do pedido.",
+      "Gerencie promoções com período, ativação automática, reflexo no site e preço válido no fechamento do pedido.",
     focus: "Campanhas vivas do gestor",
   },
   reviews: {
-    chip: "Avaliacoes operacionais",
-    title: "Reputacao do site e publicacao automatica",
+    chip: "Avaliações operacionais",
+    title: "Reputação do site e publicação automática",
     description:
-      "Acompanhe notas, comentarios, janela de publicacao e o que fica visivel no site em tempo real.",
-    focus: "Reputacao do site",
+      "Acompanhe notas, comentários, janela de publicação e o que fica visível no site em tempo real.",
+    focus: "Reputação do site",
   },
   deliveries: {
     chip: "Central de entregas",
-    title: "Configuracao operacional de entregas",
-    description: "Taxas, area atendida, retirada, entregadores e status do delivery em um so lugar.",
+    title: "Configuração operacional de entregas",
+    description: "Taxas, área atendida, retirada, entregadores e status do delivery em um só lugar.",
     focus: "Regras do checkout",
   },
   customers: {
     chip: "Base de clientes",
-    title: "Recorrencia e relacionamento",
-    description: "Veja historico recente, recorrencia e clientes que mais movem a operacao.",
+    title: "Recorrência e relacionamento",
+    description: "Veja histórico recente, recorrência e clientes que mais movem a operação.",
     focus: "Leitura da carteira",
   },
   finance: {
@@ -338,41 +338,41 @@ const SECTION_TITLES = {
     focus: "Caixa do turno",
   },
   metrics: {
-    chip: "Metricas operacionais",
+    chip: "Métricas operacionais",
     title: "Desempenho do fluxo e dos admins",
-    description: "Leitura gerencial baseada na trilha real de auditoria e nos pedidos do periodo.",
-    focus: "Indicadores vivos da operacao",
+    description: "Leitura gerencial baseada na trilha real de auditoria e nos pedidos do período.",
+    focus: "Indicadores vivos da operação",
   },
   reports: {
-    chip: "Relatorios operacionais",
+    chip: "Relatórios operacionais",
     title: "Performance do turno e gargalos",
-    description: "Acompanhe volume, status, canais e sinais para tomada rapida de decisao.",
+    description: "Acompanhe volume, status, canais e sinais para tomada rápida de decisao.",
     focus: "Inteligencia operacional",
   },
   audit: {
     chip: "Auditoria operacional",
-    title: "Trilha de acoes do gestor",
-    description: "Consulte quem executou cada movimento critico na operacao e em qual pedido.",
-    focus: "Rastro da operacao",
+    title: "Trilha de ações do gestor",
+    description: "Consulte quem executou cada movimento critico na operação e em qual pedido.",
+    focus: "Rastro da operação",
   },
   inventory: {
     chip: "Estoque operacional",
-    title: "Controle rapido de estoque",
+    title: "Controle rápido de estoque",
     description:
-      "Acompanhe quantidades, minimos e validade dos insumos para a rotina diaria do restaurante.",
+      "Acompanhe quantidades, mínimos e validade dos insumos para a rotina diária do restaurante.",
     focus: "Itens e validade",
   },
   settings: {
-    chip: "Configuracoes do site",
-    title: "Personalizacao publica do restaurante",
+    chip: "Configurações do site",
+    title: "Personalização publica do restaurante",
     description:
-      "Ajuste marca, contato, cores e textos que aparecem somente no site publico do cliente.",
+      "Ajuste marca, contato, cores e textos que aparecem somente no site público do cliente.",
     focus: "Identidade do site",
   },
   users: {
-    chip: "Usuarios e permissoes",
-    title: "Usuarios",
-    description: "Gerencie acessos, status e permissoes granulares do Gestor.",
+    chip: "Usuários e permissões",
+    title: "Usuários",
+    description: "Gerencie acessos, status e permissões granulares do Gestor.",
     focus: "Controle de acesso",
   },
 };
@@ -414,7 +414,7 @@ const BOARD_COLUMNS = [
   {
     key: "received",
     label: "Recebidos",
-    helper: "Entraram pelo site e aguardam a primeira acao.",
+    helper: "Entraram pelo site e aguardam a primeira ação.",
     accentClass: "is-new-column",
   },
   {
@@ -426,7 +426,7 @@ const BOARD_COLUMNS = [
   {
     key: "preparing",
     label: "Em preparo",
-    helper: "Pedidos em producao na cozinha.",
+    helper: "Pedidos em produção na cozinha.",
     accentClass: "is-preparing-column",
   },
   {
@@ -443,11 +443,11 @@ const BOARD_COLUMNS = [
   },
 ];
 const ACTION_NOTES = {
-  Aceito: "Pedido aceito pela operacao.",
+  Aceito: "Pedido aceito pela operação.",
   "Em preparo": "Pedido encaminhado para a cozinha.",
   Pronto: "Pedido finalizado na cozinha e pronto para expedicao.",
   "Saiu para entrega": "Pedido despachado para entrega.",
-  Entregue: "Entrega concluida no gestor.",
+  Entregue: "Entrega concluída no gestor.",
   "Retirada concluida": "Retirada concluida no gestor.",
   Cancelado: "Pedido cancelado pelo gestor.",
 };
@@ -461,7 +461,7 @@ const AUDIT_ACTION_LABELS = {
   order_finalized: "Pedido entregue",
   order_cancelled: "Pedido cancelado",
   status_updated: "Status atualizado",
-  manual_order_update: "Alteracao manual",
+  manual_order_update: "Alteração manual",
 };
 const DASHBOARD_REVENUE_PERIODS = [
   { key: "today", label: "Hoje" },
@@ -478,7 +478,7 @@ const FINANCE_PERIOD_FALLBACK_OPTIONS = Object.freeze([
   { key: "today", label: "Hoje" },
   { key: "7d", label: "7 dias" },
   { key: "30d", label: "30 dias" },
-  { key: "month_current", label: "Mes atual" },
+  { key: "month_current", label: "Mês atual" },
   { key: "custom", label: "Personalizado" },
 ]);
 const FINANCE_STATUS_FILTER_OPTIONS = Object.freeze([
@@ -491,7 +491,7 @@ const FINANCE_PAYMENT_FILTER_OPTIONS = Object.freeze([
   { key: "all", label: "Todas formas" },
   { key: "dinheiro", label: "Dinheiro" },
   { key: "pix", label: "Pix" },
-  { key: "cartao", label: "Cartao" },
+  { key: "cartao", label: "Cartão" },
   { key: "online_outros", label: "Online/outros" },
 ]);
 const INVENTORY_NEW_ITEM_ID = "__new_inventory_item__";
@@ -504,17 +504,17 @@ const INVENTORY_STATUS_OPTIONS = Object.freeze([
 const INVENTORY_STATUS_META = Object.freeze({
   ok: {
     label: "OK",
-    helper: "Acima do minimo",
+    helper: "Acima do mínimo",
     className: "is-ok",
   },
   low: {
     label: "Baixo",
-    helper: "Proximo do minimo",
+    helper: "Próximo do mínimo",
     className: "is-low",
   },
   critical: {
     label: "Critico",
-    helper: "Abaixo do minimo",
+    helper: "Abaixo do mínimo",
     className: "is-critical",
   },
 });
@@ -566,7 +566,7 @@ const DELIVERY_SETTINGS_DEFAULT_DRAFT = Object.freeze({
     maxRadiusKm: 14.9,
     servedNeighborhoods: [],
     blockedNeighborhoods: [],
-    outOfAreaMessage: "No momento nao entregamos nessa regiao.",
+    outOfAreaMessage: "No momento não entregamos nessa região.",
   },
   freeShipping: {
     enabled: false,
@@ -577,11 +577,11 @@ const DELIVERY_SETTINGS_DEFAULT_DRAFT = Object.freeze({
   pickup: {
     enabled: true,
     estimateMinutes: 25,
-    message: "Retirada disponivel em 25 minutos",
+    message: "Retirada disponível em 25 minutos",
   },
   status: {
     deliveriesEnabled: true,
-    pausedMessage: "Entregas pausadas temporariamente. Retirada no balcao disponivel.",
+    pausedMessage: "Entregas pausadas temporariamente. Retirada no balcão disponível.",
   },
   couriers: [],
   courierPayout: {
@@ -653,7 +653,7 @@ const RESTAURANT_SETTINGS_DEFAULT_DRAFT = Object.freeze({
   description:
     ADMIN_SITE_APPEARANCE.identity?.description ||
     ADMIN_RESTAURANT_BRAND.description ||
-    "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
+    "Cada detalhe e pensado para transformar seu pedido em uma experiência única.",
   instagram: ADMIN_SITE_APPEARANCE.social?.instagram || "",
   facebook: ADMIN_SITE_APPEARANCE.social?.facebook || "",
   tiktok: ADMIN_SITE_APPEARANCE.social?.tiktok || "",
@@ -661,7 +661,7 @@ const RESTAURANT_SETTINGS_DEFAULT_DRAFT = Object.freeze({
   seoTitle: ADMIN_SITE_APPEARANCE.seo?.title || ADMIN_RESTAURANT_BRAND.name || "Tokyo Sushi Delivery",
   seoDescription:
     ADMIN_SITE_APPEARANCE.seo?.description ||
-    "Tokyo Sushi Delivery com experiencia premium, cardapio sofisticado e pedidos direto pelo site.",
+    "Tokyo Sushi Delivery com experiência premium, cardápio sofisticado e pedidos direto pelo site.",
   seoShareImage:
     ADMIN_SITE_APPEARANCE.seo?.shareImage ||
     ADMIN_ASSETS.socialImage ||
@@ -720,7 +720,7 @@ const RESTAURANT_SETTINGS_DEFAULT_DRAFT = Object.freeze({
     timeZone: "America/Sao_Paulo",
     acceptOrdersOutsideHours: false,
     closedMessage:
-      "Estamos fechados agora. Voce pode agendar seu pedido para o proximo horario de atendimento.",
+      "Estamos fechados agora. Você pode agendar seu pedido para o próximo horário de atendimento.",
     peakPreparationExtraMinutes: 0,
     specialDates: [],
     days: createDefaultBusinessScheduleDays(),
@@ -729,7 +729,7 @@ const RESTAURANT_SETTINGS_DEFAULT_DRAFT = Object.freeze({
   defaultDeliveryFee: 9,
   averagePreparationTimeMinutes: 25,
   presentationText:
-    "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
+    "Cada detalhe e pensado para transformar seu pedido em uma experiência única.",
   updatedAt: "",
   updatedByLogin: "",
   updatedByDisplayName: "",
@@ -1198,7 +1198,7 @@ const formatDateTime = (value) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Horario indisponivel";
+    return "Horário indisponível";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {
@@ -1564,7 +1564,7 @@ const fetchJson = async (url, options = {}) => {
   }
 
   if (!response.ok) {
-    const requestError = new Error(data?.error || "Nao foi possivel concluir a operacao.");
+    const requestError = new Error(data?.error || "Não foi possível concluir a operação.");
     requestError.status = response.status;
     requestError.errorCode = data?.errorCode || "request_error";
     requestError.payload = data;
@@ -1606,7 +1606,7 @@ const formatMissingAdminRequirement = (requirement) => {
 
 const formatAdminLoginError = (error) => {
   if (!error) {
-    return "Nao foi possivel concluir a operacao.";
+    return "Não foi possível concluir a operação.";
   }
 
   if (error.errorCode === "admin_not_configured") {
@@ -1618,13 +1618,13 @@ const formatAdminLoginError = (error) => {
       .filter(Boolean);
 
     if (missingLabels.length) {
-      return `Login administrativo nao configurado. Configure: ${missingLabels.join("; ")}.`;
+      return `Login administrativo não configurado. Configure: ${missingLabels.join("; ")}.`;
     }
 
-    return "Login administrativo nao configurado no servidor.";
+    return "Login administrativo não configurado no servidor.";
   }
 
-  return error.message || "Nao foi possivel concluir a operacao.";
+  return error.message || "Não foi possível concluir a operação.";
 };
 
 const getSafeAdminRedirect = () => {
@@ -1651,7 +1651,7 @@ const buildStorageLabel = (storageMode) => {
     return "Modo local de desenvolvimento";
   }
 
-  return "Configuracao pendente";
+  return "Configuração pendente";
 };
 
 const getAdminDisplayInitials = (value) => {
@@ -1739,9 +1739,9 @@ const OPERATIONAL_STATUS_REASON_LABELS = {
   closed_day: "Dia fechado",
   special_date_closed: "Data especial fechada",
   before_open: "Antes da abertura",
-  after_close: "Apos o fechamento",
+  after_close: "Após o fechamento",
   pause: "Durante a pausa",
-  invalid_window: "Horario configurado invalido",
+  invalid_window: "Horário configurado inválido",
 };
 
 const getOrderOperationalStatusSnapshot = (order) => {
@@ -1761,7 +1761,7 @@ const getOperationalStatusLabel = (snapshot) => {
   }
 
   if (snapshot.acceptsOrdersOutsideHours || snapshot.acceptsImmediateOrders) {
-    return "Fechado, liberado pela configuracao";
+    return "Fechado, liberado pela configuração";
   }
 
   if (snapshot.orderTimingMode === "scheduled" && !snapshot.immediateValidationApplied) {
@@ -1791,7 +1791,7 @@ const getOperationalReasonLabel = (snapshot) => {
   const closedReason = String(snapshot?.closedReason || "").trim();
 
   if (!closedReason) {
-    return snapshot?.isOpen ? "Dentro do horario" : "Sem motivo registrado";
+    return snapshot?.isOpen ? "Dentro do horário" : "Sem motivo registrado";
   }
 
   return OPERATIONAL_STATUS_REASON_LABELS[closedReason] || closedReason;
@@ -1806,7 +1806,7 @@ const getOperationalSpecialDateLabel = (snapshot) => {
         : null;
 
   if (!snapshot?.isSpecialDateActive && !specialDate) {
-    return "Nao";
+    return "Não";
   }
 
   return [specialDate?.name, specialDate?.date].filter(Boolean).join(" | ") || "Sim";
@@ -1814,7 +1814,7 @@ const getOperationalSpecialDateLabel = (snapshot) => {
 
 const getOperationalLocalDateTimeLabel = (snapshot) =>
   [snapshot?.localDate, snapshot?.localTime].filter(Boolean).join(" ") ||
-  (snapshot?.checkedAt ? formatDateTime(snapshot.checkedAt) : "Nao informado");
+  (snapshot?.checkedAt ? formatDateTime(snapshot.checkedAt) : "Não informado");
 
 const renderOrderOperationalStatusCard = (order) => {
   const snapshot = getOrderOperationalStatusSnapshot(order);
@@ -1825,7 +1825,7 @@ const renderOrderOperationalStatusCard = (order) => {
 
   const optionalRows = [
     snapshot.nextOpeningLabel
-      ? `<span class="admin-detail-summary-item"><strong>Proxima abertura</strong><span>${escapeHtml(snapshot.nextOpeningLabel)}</span></span>`
+      ? `<span class="admin-detail-summary-item"><strong>Próxima abertura</strong><span>${escapeHtml(snapshot.nextOpeningLabel)}</span></span>`
       : "",
     snapshot.message || snapshot.specialDateNotice
       ? `<span class="admin-detail-summary-item"><strong>Mensagem</strong><span>${escapeHtml(
@@ -1847,14 +1847,14 @@ const renderOrderOperationalStatusCard = (order) => {
         <span class="admin-detail-summary-item"><strong>Data/hora local</strong><span>${escapeHtml(
           getOperationalLocalDateTimeLabel(snapshot)
         )}</span></span>
-        <span class="admin-detail-summary-item"><strong>Horario</strong><span>${escapeHtml(
-          snapshot.todayHoursLabel || [snapshot.openTime, snapshot.closeTime].filter(Boolean).join(" as ") || "Nao informado"
+        <span class="admin-detail-summary-item"><strong>Horário</strong><span>${escapeHtml(
+          snapshot.todayHoursLabel || [snapshot.openTime, snapshot.closeTime].filter(Boolean).join(" as ") || "Não informado"
         )}</span></span>
         <span class="admin-detail-summary-item"><strong>Data especial</strong><span>${escapeHtml(
           getOperationalSpecialDateLabel(snapshot)
         )}</span></span>
-        <span class="admin-detail-summary-item"><strong>Fora do horario</strong><span>${escapeHtml(
-          snapshot.acceptsOrdersOutsideHours ? "Aceita" : "Nao aceita"
+        <span class="admin-detail-summary-item"><strong>Fora do horário</strong><span>${escapeHtml(
+          snapshot.acceptsOrdersOutsideHours ? "Aceita" : "Não aceita"
         )}</span></span>
         <span class="admin-detail-summary-item"><strong>Motivo</strong><span>${escapeHtml(
           getOperationalReasonLabel(snapshot)
@@ -1878,13 +1878,13 @@ const getPaymentLabel = (paymentMethod) => {
     case "dinheiro":
       return "Dinheiro";
     case "credito":
-      return "Cartao de credito";
+      return "Cartão de crédito";
     case "debito":
-      return "Cartao de debito";
+      return "Cartão de débito";
     case "pix":
       return "Pix";
     default:
-      return "Nao informado";
+      return "Não informado";
   }
 };
 
@@ -1934,7 +1934,7 @@ const getAuditActionLabel = (action, status = "") => {
     return "Retirada concluida";
   }
 
-  return AUDIT_ACTION_LABELS[normalizedAction] || (canonicalStatus ? `Status ${canonicalStatus}` : "Atualizacao operacional");
+  return AUDIT_ACTION_LABELS[normalizedAction] || (canonicalStatus ? `Status ${canonicalStatus}` : "Atualização operacional");
 };
 
 const getAuditActorLabel = (entry) =>
@@ -2066,13 +2066,13 @@ const isScheduledDueSoon = (order, nowTimestamp = getNowTimestamp()) => {
 };
 
 const getScheduledStatusLabel = (order) =>
-  isScheduledDueSoon(order) ? "Proximo do horario" : "Agendado";
+  isScheduledDueSoon(order) ? "Próximo do horário" : "Agendado";
 
 const getScheduledTimeDistanceLabel = (order) => {
   const scheduledTimestamp = getOrderScheduledTimestamp(order);
 
   if (!Number.isFinite(scheduledTimestamp) || scheduledTimestamp === Number.MAX_SAFE_INTEGER) {
-    return "Horario nao informado";
+    return "Horário não informado";
   }
 
   const remainingMs = Math.max(0, scheduledTimestamp - getNowTimestamp());
@@ -2103,7 +2103,7 @@ const getOrderWaitLabel = (order) => {
 
 const getOrderQuickNote = (order) =>
   String(order?.customerNotes || order?.latestStatusNote || "").replace(/\s+/g, " ").trim() ||
-  "Sem observacoes rapidas.";
+  "Sem observações rapidas.";
 
 const getNonCancelledOrders = () => adminState.orders.filter((order) => order.status !== "Cancelado");
 
@@ -2375,7 +2375,7 @@ const getPromotionPricingValueLabel = (promotion) => {
 
   return typeof promotion.fixedPrice === "number"
     ? formatMoney(promotion.fixedPrice)
-    : "Preco fixo";
+    : "Preço fixo";
 };
 
 const getPromotionPricePreviewLabel = (promotion) => {
@@ -2383,7 +2383,7 @@ const getPromotionPricePreviewLabel = (promotion) => {
     return formatMoney(promotion.activePricePreview);
   }
 
-  return promotion.pricingType === "fixed_price" ? "Preco fixo" : "Desconto variavel";
+  return promotion.pricingType === "fixed_price" ? "Preço fixo" : "Desconto variável";
 };
 
 const getPromotionDateRangeLabel = (promotion) =>
@@ -2460,7 +2460,7 @@ const getCustomerRecords = () => {
     .map((record) => ({
       ...record,
       averageTicket: record.ordersCount > 0 ? record.totalRevenue / record.ordersCount : 0,
-      paymentSummary: Array.from(record.paymentMethods).map(getPaymentLabel).join(", ") || "Nao informado",
+      paymentSummary: Array.from(record.paymentMethods).map(getPaymentLabel).join(", ") || "Não informado",
       orders: record.orders.sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt)),
     }))
     .sort((left, right) => {
@@ -2882,9 +2882,9 @@ const exportFinanceClosingSummary = () => {
   const closing = snapshot.closing || {};
   const lines = [
     "Resumo do fechamento financeiro",
-    `Periodo: ${snapshot.filters?.rangeLabel || ""}`,
+    `Período: ${snapshot.filters?.rangeLabel || ""}`,
     `Faturamento bruto: ${formatMoney(overview.grossRevenue || 0)}`,
-    `Faturamento liquido: ${formatMoney(overview.netRevenue || 0)}`,
+    `Faturamento líquido: ${formatMoney(overview.netRevenue || 0)}`,
     `Valor de entrega: ${formatMoney(overview.deliveryFees || 0)}`,
     `Repasse entregadores: ${formatMoney(overview.deliveryPayout || 0)}`,
     `Pedidos pagos: ${overview.paidOrders || 0}`,
@@ -2892,11 +2892,11 @@ const exportFinanceClosingSummary = () => {
     `Pendente: ${formatMoney(overview.pendingAmount || 0)}`,
     `Total esperado: ${formatMoney(closing.totalExpected || 0)}`,
     `Total recebido: ${formatMoney(closing.totalReceived || 0)}`,
-    `Diferenca: ${formatMoney(closing.difference || 0)}`,
+    `Diferença: ${formatMoney(closing.difference || 0)}`,
     `Dinheiro a conferir: ${formatMoney(closing.cashExpected || 0)}`,
     `Pix recebido: ${formatMoney(closing.pixReceived || 0)}`,
-    `Cartao recebido: ${formatMoney(closing.cardReceived || 0)}`,
-    `Observacoes: ${closing.notes || "Sem observacoes internas."}`,
+    `Cartão recebido: ${formatMoney(closing.cardReceived || 0)}`,
+    `Observações: ${closing.notes || "Sem observações internas."}`,
   ];
 
   downloadTextFile(
@@ -2985,7 +2985,7 @@ const getDashboardOverview = () => {
       key: "pickup",
       label: "Retirada",
       value: validOrders.filter((order) => order.fulfillmentMode === "pickup").length,
-      helper: "Pedidos para retirada no balcao",
+      helper: "Pedidos para retirada no balcão",
     },
     {
       key: "active",
@@ -2997,7 +2997,7 @@ const getDashboardOverview = () => {
       key: "scheduled",
       label: "Agendados",
       value: visibleOrders.filter((order) => isScheduledAwaitingActivation(order)).length,
-      helper: "Pedidos com horario futuro",
+      helper: "Pedidos com horário futuro",
     },
   ];
 
@@ -3164,7 +3164,7 @@ const renderSectionChrome = () => {
       : isDashboardSection
       ? "Dashboard gerencial"
       : isOrdersSection
-        ? "Operacao em tempo real"
+        ? "Operação em tempo real"
         : sectionMeta.chip;
   }
 
@@ -3184,7 +3184,7 @@ const renderSectionChrome = () => {
       : isDashboardSection
       ? "Acompanhe em tempo real o desempenho do turno, pedidos e entregas. Dados atualizados automaticamente."
       : isOrdersSection
-        ? "Acompanhe e gerencie todos os pedidos em tempo real, com a proxima acao sempre visivel para a operacao."
+        ? "Acompanhe e gerencie todos os pedidos em tempo real, com a próxima ação sempre visível para a operação."
         : sectionMeta.description;
   }
 
@@ -3202,11 +3202,11 @@ const renderSectionChrome = () => {
       : isCustomersSection
         ? "Buscar cliente"
       : isUsersSection
-        ? "Buscar usuario"
+        ? "Buscar usuário"
       : isPromotionsSection
-        ? "Buscar promocao"
+        ? "Buscar promoção"
         : isReviewsSection
-            ? "Buscar avaliacao"
+            ? "Buscar avaliação"
             : "Buscar pedido";
   }
 
@@ -3218,7 +3218,7 @@ const renderSectionChrome = () => {
       : isOrdersSection
       ? "Buscar pedido, cliente, telefone..."
       : isScheduledSection
-        ? "Buscar por numero, cliente, telefone ou horario"
+        ? "Buscar por número, cliente, telefone ou horário"
       : isMenuSection
         ? "Buscar por item, categoria ou id"
       : isInventorySection
@@ -3228,9 +3228,9 @@ const renderSectionChrome = () => {
       : isUsersSection
         ? "Buscar por nome, login, email ou tipo"
       : isPromotionsSection
-        ? "Buscar por promocao, item, categoria ou validade"
+        ? "Buscar por promoção, item, categoria ou validade"
         : isReviewsSection
-          ? "Buscar por cliente, comentario ou contato"
+          ? "Buscar por cliente, comentário ou contato"
           : "Filtrar a leitura operacional";
   }
 
@@ -3244,7 +3244,7 @@ const renderSectionChrome = () => {
 
   if (dashboardSummarySecondaryNode) {
     dashboardSummarySecondaryNode.textContent = `Atualizado em ${
-      adminState.generatedAt ? formatDateTime(adminState.generatedAt) : "sincronizacao inicial"
+      adminState.generatedAt ? formatDateTime(adminState.generatedAt) : "sincronização inicial"
     } com ${dashboardOverview.finalizados} finalizado(s) e ${dashboardOverview.cancelados} cancelado(s).`;
   }
 
@@ -3277,8 +3277,8 @@ const renderSectionChrome = () => {
 
     if (turnPanelSecondaryNode) {
       turnPanelSecondaryNode.textContent = adminState.generatedAt
-        ? `Ultima sincronizacao: ${formatDateTime(adminState.generatedAt)}`
-        : "Aguardando a primeira sincronizacao do turno.";
+        ? `Última sincronização: ${formatDateTime(adminState.generatedAt)}`
+        : "Aguardando a primeira sincronização do turno.";
     }
   }
 
@@ -3290,17 +3290,17 @@ const renderSectionChrome = () => {
         : isScheduledSection
           ? "Busca operacional de agendamentos"
         : isMenuSection
-          ? "Busca operacional de itens do cardapio"
+          ? "Busca operacional de itens do cardápio"
         : isInventorySection
           ? "Busca operacional de estoque"
         : isCustomersSection
           ? "Busca operacional de clientes"
         : isUsersSection
-          ? "Busca administrativa de usuarios"
+          ? "Busca administrativa de usuários"
         : isPromotionsSection
-            ? "Busca operacional de promocoes"
+            ? "Busca operacional de promoções"
             : isReviewsSection
-              ? "Busca operacional de avaliacoes"
+              ? "Busca operacional de avaliações"
               : "Busca operacional de pedidos"
     );
   }
@@ -3316,27 +3316,27 @@ const renderSectionChrome = () => {
         : isCustomersSection
           ? `Filtrando clientes por: ${adminState.searchQuery}`
         : isUsersSection
-          ? `Filtrando usuarios por: ${adminState.searchQuery}`
+          ? `Filtrando usuários por: ${adminState.searchQuery}`
         : isPromotionsSection
-          ? `Filtrando promocoes por: ${adminState.searchQuery}`
+          ? `Filtrando promoções por: ${adminState.searchQuery}`
           : isReviewsSection
-            ? `Filtrando avaliacoes por: ${adminState.searchQuery}`
+            ? `Filtrando avaliações por: ${adminState.searchQuery}`
         : `Filtrando pedidos por: ${adminState.searchQuery}`
       : isMenuSection
-        ? "Buscando no catalogo administrativo e nas categorias do site."
+        ? "Buscando no catálogo administrativo e nas categorias do site."
         : isScheduledSection
-          ? "Buscando na agenda futura por numero, cliente, telefone e horario."
+          ? "Buscando na agenda futura por número, cliente, telefone e horário."
         : isInventorySection
           ? "Buscando em insumos, categorias, validade e status de estoque."
         : isCustomersSection
-          ? "Buscando na carteira por nome, telefone, tags e endereco."
+          ? "Buscando na carteira por nome, telefone, tags e endereço."
         : isUsersSection
           ? "Buscando por nome, login, email, status e tipo."
         : isPromotionsSection
-          ? "Buscando em campanhas, periodos e itens vinculados."
+          ? "Buscando em campanhas, períodos e itens vinculados."
           : isReviewsSection
-            ? "Buscando em clientes, comentarios, notas e janelas de publicacao."
-        : "Buscando na operacao ativa e nos pedidos recentes.";
+            ? "Buscando em clientes, comentários, notas e janelas de publicação."
+        : "Buscando na operação ativa e nos pedidos recentes.";
   }
 
   if (detailChipNode) {
@@ -3345,7 +3345,7 @@ const renderSectionChrome = () => {
       : isInventorySection
         ? "Estoque"
         : isUsersSection
-          ? "Usuarios"
+          ? "Usuários"
         : "Painel gerencial";
   }
 
@@ -3858,19 +3858,19 @@ const updateSidebarMeta = () => {
   if (boardTotalNode) {
     boardTotalNode.textContent =
       adminState.activeSection === "dashboard"
-        ? `${dashboardOverview.activeOrders} pedido(s) ativos e ${dashboardOverview.finalizados} concluido(s) no recorte atual.`
+        ? `${dashboardOverview.activeOrders} pedido(s) ativos e ${dashboardOverview.finalizados} concluído(s) no recorte atual.`
         : adminState.activeSection === "scheduled"
         ? `${scheduledOrders.length} pedido(s) agendado(s) aguardando liberacao para o fluxo ativo.`
         : adminState.activeSection === "menu"
-        ? `${menuItemsCount} item(ns) visiveis para controle operacional do cardapio.`
+        ? `${menuItemsCount} item(ns) visíveis para controle operacional do cardápio.`
         : adminState.activeSection === "promotions"
-        ? `${promotions.length} promocao(oes) visivel(is) no gestor.`
+        ? `${promotions.length} promoção(ões) visível(is) no gestor.`
         : adminState.activeSection === "metrics" && metricsSnapshot
-        ? `${metricsHeadline.totalOrders} pedido(s) analisado(s) no periodo.`
+        ? `${metricsHeadline.totalOrders} pedido(s) analisado(s) no período.`
         : adminState.activeSection === "finance"
         ? `${financeOverview.paidOrders || 0} pedido(s) pago(s), ${financeOverview.pendingOrders || 0} pendente(s) e ${financeOverview.cancelledOrders || 0} cancelado(s).`
         : visibleOrders.length > 0
-          ? `${visibleOrders.length} pedido(s) ativos em operacao.`
+          ? `${visibleOrders.length} pedido(s) ativos em operação.`
           : "Nenhum pedido ativo no kanban.";
   }
 
@@ -3882,7 +3882,7 @@ const updateSidebarMeta = () => {
       : adminState.activeSection === "metrics" && metricsSnapshot
         ? `${metricsSnapshot.filters.periodLabel} | ${metricsFilters.startDate} ate ${metricsFilters.endDate}`
       : adminState.activeSection === "finance"
-        ? financeSnapshot.filters?.rangeLabel || "Periodo financeiro"
+        ? financeSnapshot.filters?.rangeLabel || "Período financeiro"
       : sectionMeta.focus;
   }
 
@@ -3893,16 +3893,16 @@ const updateSidebarMeta = () => {
         : adminState.activeSection === "scheduled"
           ? `${scheduledOrders.length} agendamento(s) encontrados com o filtro atual.`
           : adminState.activeSection === "promotions"
-            ? `${promotions.length} promocao(oes) encontrada(s) com o filtro atual.`
+            ? `${promotions.length} promoção(ões) encontrada(s) com o filtro atual.`
           : `${visibleOrders.length} pedido(s) encontrado(s) com o filtro atual.`
       : adminState.activeSection === "dashboard"
         ? `Pedidos do dia, receita e fechamento consolidados para ${adminState.adminDisplayName || "o turno atual"}.`
       : adminState.activeSection === "scheduled"
-        ? `${sectionMeta.title} com entrega, retirada e horarios futuros separados da fila imediata.`
+        ? `${sectionMeta.title} com entrega, retirada e horários futuros separados da fila imediata.`
       : adminState.activeSection === "menu"
-        ? `${sectionMeta.title} sincronizado com o site publico e com a criacao de pedidos.`
+        ? `${sectionMeta.title} sincronizado com o site público e com a criação de pedidos.`
       : adminState.activeSection === "promotions"
-        ? `${sectionMeta.title} com vigencia automatica, reflexo publico e preco valido no fechamento.`
+        ? `${sectionMeta.title} com vigência automática, reflexo público e preço válido no fechamento.`
       : adminState.activeSection === "metrics" && metricsSnapshot
         ? `${metricsHeadline.totalFinalized} concluidos, ${metricsHeadline.totalCancelled} cancelados e ${metricsHeadline.totalPickedUp} retirados no recorte atual.`
       : adminState.activeSection === "finance"
@@ -3918,14 +3918,14 @@ const updateSidebarMeta = () => {
       : adminState.activeSection === "scheduled"
         ? "Filtre por data para trabalhar a agenda futura sem misturar com pedidos imediatos."
       : adminState.activeSection === "menu"
-        ? "A busca global encontra itens, categorias e estados operacionais do cardapio."
+        ? "A busca global encontra itens, categorias e estados operacionais do cardápio."
       : adminState.activeSection === "promotions"
-        ? "A busca global encontra campanhas, periodos, categorias e itens afetados."
+        ? "A busca global encontra campanhas, períodos, categorias e itens afetados."
       : adminState.activeSection === "metrics" && metricsSnapshot
-        ? "Os filtros deste modulo leem pedidos reais e trilha de auditoria do periodo."
+        ? "Os filtros deste modulo leem pedidos reais e trilha de auditoria do período."
       : adminState.activeSection === "finance"
         ? "Os filtros desta aba recalculam faturamento, pagamentos, repasses e fechamento."
-      : "Buscando na operacao ativa e nos pedidos recentes.";
+      : "Buscando na operação ativa e nos pedidos recentes.";
   }
 
   if (opsRibbonRoot) {
@@ -3944,7 +3944,7 @@ const updateSidebarMeta = () => {
           <article class="admin-ribbon-card">
             <span>Conclusao</span>
             <strong>${escapeHtml(formatPercent(metricsHeadline.completionRate))}</strong>
-            <p>${escapeHtml(String(metricsHeadline.totalFinalized))} pedido(s) concluidos no periodo.</p>
+            <p>${escapeHtml(String(metricsHeadline.totalFinalized))} pedido(s) concluídos no período.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Cancelamento</span>
@@ -3954,12 +3954,12 @@ const updateSidebarMeta = () => {
           <article class="admin-ribbon-card">
             <span>Resposta inicial</span>
             <strong>${escapeHtml(formatDuration(metricsHeadline.responseAverageMs))}</strong>
-            <p>Tempo medio do primeiro toque administrativo.</p>
+            <p>Tempo médio do primeiro toque administrativo.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Receita valida</span>
             <strong>${escapeHtml(formatMoney(metricsSnapshot.overview?.totalRevenue || 0))}</strong>
-            <p>Ticket medio de ${escapeHtml(formatMoney(metricsSnapshot.overview?.averageTicket || 0))}.</p>
+            <p>Ticket médio de ${escapeHtml(formatMoney(metricsSnapshot.overview?.averageTicket || 0))}.</p>
           </article>
         `
         : adminState.activeSection === "finance"
@@ -3967,17 +3967,17 @@ const updateSidebarMeta = () => {
           <article class="admin-ribbon-card is-accent">
             <span class="admin-chip">Financeiro</span>
             <strong>${escapeHtml(formatMoney(financeOverview.grossRevenue || 0))}</strong>
-            <p>${escapeHtml(financeSnapshot.filters?.rangeLabel || "Periodo financeiro atual")}.</p>
+            <p>${escapeHtml(financeSnapshot.filters?.rangeLabel || "Período financeiro atual")}.</p>
           </article>
           <article class="admin-ribbon-card">
-            <span>Liquido</span>
+            <span>Líquido</span>
             <strong>${escapeHtml(formatMoney(financeOverview.netRevenue || 0))}</strong>
-            <p>Produtos apos taxas de entrega e descontos estimados.</p>
+            <p>Produtos após taxas de entrega e descontos estimados.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Recebido</span>
             <strong>${escapeHtml(formatMoney(financeOverview.receivedRevenue || 0))}</strong>
-            <p>${escapeHtml(String(financeOverview.paidOrders || 0))} pedido(s) pago(s) no periodo.</p>
+            <p>${escapeHtml(String(financeOverview.paidOrders || 0))} pedido(s) pago(s) no período.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Repasse</span>
@@ -3994,12 +3994,12 @@ const updateSidebarMeta = () => {
           <article class="admin-ribbon-card is-accent">
             <span class="admin-chip">${escapeHtml(sectionMeta.chip)}</span>
             <strong>${escapeHtml(sectionMeta.title)}</strong>
-            <p>Leitura rapida do fluxo principal com foco no kanban e no painel lateral.</p>
+            <p>Leitura rápida do fluxo principal com foco no kanban e no painel lateral.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Prontos</span>
             <strong>${escapeHtml(String(getStatsSnapshot().readyOrders ?? 0))}</strong>
-            <p>Pedidos aguardando retirada ou saida para entrega.</p>
+            <p>Pedidos aguardando retirada ou saída para entrega.</p>
           </article>
           <article class="admin-ribbon-card">
             <span>Agendados</span>
@@ -4007,7 +4007,7 @@ const updateSidebarMeta = () => {
             <p>Pedidos futuros separados da fila imediata.</p>
           </article>
           <article class="admin-ribbon-card">
-            <span>Atualizacao</span>
+            <span>Atualização</span>
             <strong>${escapeHtml(
               adminState.generatedAt ? formatTime(adminState.generatedAt) : "--:--"
             )}</strong>
@@ -4021,7 +4021,7 @@ const updateSidebarMeta = () => {
             <span>Busca</span>
             <strong>${escapeHtml(hasSearch ? "Filtro ativo" : "Sem filtro")}</strong>
             <p>${escapeHtml(
-              hasSearch ? `Resultados para: ${adminState.searchQuery}` : "Toda a operacao visivel no momento."
+              hasSearch ? `Resultados para: ${adminState.searchQuery}` : "Toda a operação visível no momento."
             )}</p>
           </article>
         `;
@@ -4204,7 +4204,7 @@ const renderDashboardStats = () => {
             label: "Prontos",
             toneClass: "is-ready",
             iconKey: "ready",
-            summary: "Liberados para saida",
+            summary: "Liberados para saída",
           }),
           buildStageStat("Saiu para entrega", {
             label: "Saiu para entrega",
@@ -4216,7 +4216,7 @@ const renderDashboardStats = () => {
             label: "Finalizados hoje",
             value: overview.finalizados,
             helper: formatMoney(overview.finance.closedRevenue || 0),
-            summary: "Concluidos no recorte",
+            summary: "Concluídos no recorte",
             toneClass: "is-revenue",
             iconKey: "finished",
           },
@@ -4285,14 +4285,14 @@ const renderDashboardStats = () => {
           {
             label: "Valor bruto vendido",
             value: formatMoney(overview.finance.grossRevenue || 0),
-            helper: "pedidos nao cancelados",
+            helper: "pedidos não cancelados",
             toneClass: "is-neutral",
             iconKey: "revenue",
           },
           {
             label: "Finalizados",
             value: overview.finalizados,
-            helper: "pedidos concluidos",
+            helper: "pedidos concluídos",
             toneClass: "is-ready",
             iconKey: "finished",
           },
@@ -4304,9 +4304,9 @@ const renderDashboardStats = () => {
             iconKey: "accepted",
           },
           {
-            label: "Ticket medio",
+            label: "Ticket médio",
             value: formatMoney(overview.finance.averageTicket || 0),
-            helper: "media por pedido valido",
+            helper: "média por pedido válido",
             toneClass: "is-revenue",
             iconKey: "revenue",
           },
@@ -4400,15 +4400,15 @@ const renderDashboardExecutiveRow = (overview) => {
         <article class="admin-dashboard-summary-card is-blue">
           <div class="admin-dashboard-summary-card-head">
             <span class="admin-dashboard-summary-card-icon" aria-hidden="true">${renderDashboardMetricIcon("ticket")}</span>
-            <span>Ticket medio</span>
+            <span>Ticket médio</span>
           </div>
           <strong>${escapeHtml(formatMoney(overview.finance.averageTicket || 0))}</strong>
-          <small>Media por pedido valido</small>
+          <small>Média por pedido válido</small>
         </article>
         <article class="admin-dashboard-summary-card is-purple">
           <div class="admin-dashboard-summary-card-head">
             <span class="admin-dashboard-summary-card-icon" aria-hidden="true">${renderDashboardMetricIcon("completed")}</span>
-            <span>Pedidos concluidos</span>
+            <span>Pedidos concluídos</span>
           </div>
           <strong>${escapeHtml(String(overview.finalizados))}</strong>
           <small>Encerrados com sucesso</small>
@@ -4425,7 +4425,7 @@ const renderDashboardExecutiveRow = (overview) => {
     </article>
     <article class="admin-dashboard-block admin-dashboard-distribution-block">
       <div class="admin-dashboard-block-head">
-        <h3>Distribuicao por status</h3>
+        <h3>Distribuição por status</h3>
         <span>${escapeHtml(`${overview.visibleOrders.length} pedido(s) no recorte`)}</span>
       </div>
       <div class="admin-dashboard-status-list">
@@ -4624,7 +4624,7 @@ const renderDashboardModule = () => {
         <div class="admin-dashboard-block-head">
           <div>
             <h3>Fluxo do turno</h3>
-            <small>${escapeHtml(`${overview.validOrders.length} pedido(s) validos`)}</small>
+            <small>${escapeHtml(`${overview.validOrders.length} pedido(s) válidos`)}</small>
           </div>
         </div>
         <div class="admin-dashboard-flow-list">
@@ -4647,7 +4647,7 @@ const renderDashboardModule = () => {
             <strong>${escapeHtml(formatMoney(overview.finance.grossRevenue || 0))}</strong>
           </article>
           <article class="admin-dashboard-revenue-card">
-            <span>Ticket medio</span>
+            <span>Ticket médio</span>
             <strong>${escapeHtml(formatMoney(overview.finance.averageTicket || 0))}</strong>
           </article>
           <article class="admin-dashboard-revenue-card">
@@ -4659,7 +4659,7 @@ const renderDashboardModule = () => {
 
       <article class="admin-dashboard-block admin-dashboard-notes-panel">
         <div class="admin-dashboard-block-head">
-          <h3>Leitura rapida</h3>
+          <h3>Leitura rápida</h3>
           <span>${escapeHtml(adminState.searchQuery ? "Filtro ativo" : "Visao completa")}</span>
         </div>
         <div class="admin-dashboard-note-list">
@@ -4686,7 +4686,7 @@ const renderDashboardModule = () => {
               <small>${escapeHtml(
                 adminState.generatedAt
                   ? `Dados sincronizados em ${formatDateTime(adminState.generatedAt)}.`
-                  : "Aguardando sincronizacao inicial do turno."
+                  : "Aguardando sincronização inicial do turno."
               )}</small>
             </div>
             <span class="admin-dashboard-note-arrow" aria-hidden="true">›</span>
@@ -4809,7 +4809,7 @@ const renderOrdersModuleShell = () => {
         <div>
           <span class="admin-chip">Encerrados</span>
           <h3>Consulta de encerrados</h3>
-          <p>Pedidos concluidos e cancelados saem do kanban ativo e ficam separados para consulta.</p>
+          <p>Pedidos concluídos e cancelados saem do kanban ativo e ficam separados para consulta.</p>
         </div>
         <div class="admin-module-head-meta">
           <span>Total encerrado</span>
@@ -4888,7 +4888,7 @@ const renderClosedOrders = () => {
     cancelledRoot,
     getCancelledOrders(),
     "Nenhum pedido cancelado",
-    "Quando houver cancelamentos, eles ficam separados para consulta rapida."
+    "Quando houver cancelamentos, eles ficam separados para consulta rápida."
   );
 };
 
@@ -4916,7 +4916,7 @@ const renderScheduledOrderCard = (order) => {
       </div>
 
       <div class="admin-scheduled-card-grid">
-        <span><strong>Horario</strong>${escapeHtml(order.scheduledLabel || formatDateTime(order.scheduledFor))}</span>
+        <span><strong>Horário</strong>${escapeHtml(order.scheduledLabel || formatDateTime(order.scheduledFor))}</span>
         <span><strong>Fluxo</strong>${escapeHtml(orderTypeLabel)}</span>
         <span><strong>Pagamento</strong>${escapeHtml(getPaymentLabel(order.paymentMethod))}</span>
         <span><strong>Total</strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</span>
@@ -4959,7 +4959,7 @@ const renderScheduledModule = () => {
         <p>Use a agenda para acompanhar entrega, retirada e o momento exato em que cada pedido entra na fila ativa.</p>
       </div>
       <div class="admin-module-head-meta">
-        <span>Proximo horario</span>
+        <span>Próximo horário</span>
         <strong>${escapeHtml(
           snapshot.summary?.nextScheduledAt ? formatDateTime(snapshot.summary.nextScheduledAt) : "Sem agenda futura"
         )}</strong>
@@ -4972,7 +4972,7 @@ const renderScheduledModule = () => {
         <strong>${escapeHtml(String(snapshot.summary?.totalOrders || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-warm">
-        <span>Proximos do horario</span>
+        <span>Próximos do horário</span>
         <strong>${escapeHtml(String(snapshot.summary?.dueSoonOrders || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-cyan">
@@ -5052,14 +5052,14 @@ const getMenuItemStateCopy = (item) => {
   }
 
   if (item.availabilityState === "unavailable") {
-    return "Indisponivel";
+    return "Indisponível";
   }
 
   return "Ativo";
 };
 
 const getMenuItemPriceLabel = (value) =>
-  typeof value === "number" ? formatMoney(value) : "Sem preco";
+  typeof value === "number" ? formatMoney(value) : "Sem preço";
 
 const getMenuSnapshot = () =>
   adminState.menuSnapshot || {
@@ -5105,7 +5105,7 @@ const renderMenuItemPreview = (item) => {
 
   return `
     <div class="admin-menu-item-media">
-      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.name || "Prato do cardapio")}" loading="lazy" decoding="async" />
+      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.name || "Prato do cardápio")}" loading="lazy" decoding="async" />
     </div>
   `;
 };
@@ -5131,7 +5131,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
     ? `Este prato participa da rotacao da home na posicao ${highlightPosition + 1}.`
     : featuredItemIds.length >= MENU_HOME_HIGHLIGHT_LIMIT
       ? `Limite de ${MENU_HOME_HIGHLIGHT_LIMIT} destaques atingido. Remova um destaque atual para incluir outro prato.`
-      : `Voce pode destacar ate ${MENU_HOME_HIGHLIGHT_LIMIT} pratos para rotacionar na home.`;
+      : `Você pode destacar até ${MENU_HOME_HIGHLIGHT_LIMIT} pratos para rotacionar na home.`;
   const imageValue = isNew ? "" : item.image || "";
   const imageTextValue = imageValue.startsWith("data:") ? "" : imageValue;
 
@@ -5150,7 +5150,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
           <div class="admin-menu-item-copy-top">
             <div>
               <strong>${escapeHtml(isNew ? "Novo prato" : itemName)}</strong>
-              <small>${escapeHtml(isNew ? `sera criado em ${section.title}` : `${itemCategory || "Categoria"} | ${item.id}`)}</small>
+              <small>${escapeHtml(isNew ? `será criado em ${section.title}` : `${itemCategory || "Categoria"} | ${item.id}`)}</small>
             </div>
             <div class="admin-menu-item-badges">
               ${
@@ -5183,12 +5183,12 @@ const renderMenuItemCard = (item, section, options = {}) => {
             </label>
 
             <label class="admin-field admin-field-wide">
-              <span>Descricao</span>
+              <span>Descrição</span>
               <textarea class="admin-input admin-textarea" name="description" placeholder="Descreva o prato para o site." ${isBusy ? "disabled" : ""}>${escapeHtml(itemDescription)}</textarea>
             </label>
 
             <label class="admin-field">
-              <span>Preco</span>
+              <span>Preço</span>
               <input class="admin-input" type="text" name="price" inputmode="decimal" value="${escapeHtml(itemPrice)}" placeholder="Ex.: 39.90" ${isBusy ? "disabled" : ""} />
             </label>
 
@@ -5207,7 +5207,7 @@ const renderMenuItemCard = (item, section, options = {}) => {
               <select class="admin-input" name="availabilityState" ${isBusy ? "disabled" : ""}>
                 <option value="active" ${availabilityState === "active" ? "selected" : ""}>Ativo</option>
                 <option value="paused" ${availabilityState === "paused" ? "selected" : ""}>Pausado</option>
-                <option value="unavailable" ${availabilityState === "unavailable" ? "selected" : ""}>Indisponivel</option>
+                <option value="unavailable" ${availabilityState === "unavailable" ? "selected" : ""}>Indisponível</option>
               </select>
             </label>
 
@@ -5226,10 +5226,10 @@ const renderMenuItemCard = (item, section, options = {}) => {
 
           <div class="admin-menu-item-footer">
             <div class="admin-menu-price-meta">
-              <span><strong>Preco atual</strong>${escapeHtml(isNew ? "Sera definido ao salvar" : getMenuItemPriceLabel(item.price))}</span>
+              <span><strong>Preço atual</strong>${escapeHtml(isNew ? "Será definido ao salvar" : getMenuItemPriceLabel(item.price))}</span>
               <span><strong>Base original</strong>${escapeHtml(isNew ? "Novo item" : getMenuItemPriceLabel(item.basePrice))}</span>
-              <span><strong>Ultima alteracao</strong>${escapeHtml(
-                !isNew && item.overrideUpdatedAt ? formatDateTime(item.overrideUpdatedAt) : "Catalogo atual"
+              <span><strong>Última alteração</strong>${escapeHtml(
+                !isNew && item.overrideUpdatedAt ? formatDateTime(item.overrideUpdatedAt) : "Catálogo atual"
               )}</span>
             </div>
 
@@ -5277,7 +5277,7 @@ const renderMenuSectionCard = (section) => {
         <div class="admin-module-card-head">
           <div>
             <h3>${escapeHtml(section.title)}</h3>
-            <p>${escapeHtml(section.description || "Categoria operacional do site e do cardapio publico.")}</p>
+            <p>${escapeHtml(section.description || "Categoria operacional do site e do cardápio público.")}</p>
           </div>
           <span>${escapeHtml(`${section.items.length} item(ns)`)}</span>
         </div>
@@ -5294,7 +5294,7 @@ const renderMenuSectionCard = (section) => {
           </label>
 
           <label class="admin-field admin-field-wide">
-            <span>Descricao da categoria</span>
+            <span>Descrição da categoria</span>
             <textarea class="admin-input admin-textarea" name="description" placeholder="Explique rapidamente o setor no site." ${isBusy ? "disabled" : ""}>${escapeHtml(section.description || "")}</textarea>
           </label>
         </div>
@@ -5329,7 +5329,7 @@ const renderMenuModule = () => {
   const featuredItemIds = getMenuFeaturedItemIds(snapshot);
   const featuredSelectionCopy =
     featuredItemIds.length === 0
-      ? `Escolha ate ${MENU_HOME_HIGHLIGHT_LIMIT} pratos para rotacionar no card principal da home do cliente.`
+      ? `Escolha até ${MENU_HOME_HIGHLIGHT_LIMIT} pratos para rotacionar no card principal da home do cliente.`
       : featuredItemIds.length >= MENU_HOME_HIGHLIGHT_LIMIT
         ? `Limite de ${MENU_HOME_HIGHLIGHT_LIMIT} destaques ativo. Remova um prato atual para incluir outro.`
         : `${featuredItemIds.length} de ${MENU_HOME_HIGHLIGHT_LIMIT} destaques ativos na rotacao principal da home.`;
@@ -5341,8 +5341,8 @@ const renderMenuModule = () => {
   if (adminState.isLoadingMenu && !snapshot.sections.length) {
     moduleRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-loading">
-        <strong>Carregando catalogo</strong>
-        <span>O gestor esta preparando categorias, pratos, fotos e controles do cardapio publico.</span>
+        <strong>Carregando catálogo</strong>
+        <span>O gestor esta preparando categorias, pratos, fotos e controles do cardápio público.</span>
       </div>
     `;
     return;
@@ -5351,9 +5351,9 @@ const renderMenuModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Cardapio</span>
-        <h2>Controle vivo do cardapio do site</h2>
-        <p>Crie categorias, cadastre pratos, ajuste foto, preco, descricao, pausa e destaque o item que vai aparecer na capa do cliente.</p>
+        <span class="admin-chip">Cardápio</span>
+        <h2>Controle vivo do cardápio do site</h2>
+        <p>Crie categorias, cadastre pratos, ajuste foto, preço, descrição, pausa e destaque o item que vai aparecer na capa do cliente.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>Itens publicados</span>
@@ -5375,7 +5375,7 @@ const renderMenuModule = () => {
         <strong>${escapeHtml(String(snapshot.summary?.pausedItems || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-danger">
-        <span>Indisponiveis</span>
+        <span>Indisponíveis</span>
         <strong>${escapeHtml(String(snapshot.summary?.unavailableItems || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-cyan">
@@ -5383,7 +5383,7 @@ const renderMenuModule = () => {
         <strong>${escapeHtml(String(snapshot.summary?.highlightedItems || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-gold">
-        <span>Sem preco</span>
+        <span>Sem preço</span>
         <strong>${escapeHtml(String(snapshot.summary?.itemsWithoutPrice || 0))}</strong>
       </article>
     </section>
@@ -5412,14 +5412,14 @@ const renderMenuModule = () => {
             <option value="">Todos</option>
             <option value="active" ${adminState.menuFilters.availabilityState === "active" ? "selected" : ""}>Ativos</option>
             <option value="paused" ${adminState.menuFilters.availabilityState === "paused" ? "selected" : ""}>Pausados</option>
-            <option value="unavailable" ${adminState.menuFilters.availabilityState === "unavailable" ? "selected" : ""}>Indisponiveis</option>
+            <option value="unavailable" ${adminState.menuFilters.availabilityState === "unavailable" ? "selected" : ""}>Indisponíveis</option>
           </select>
         </label>
       </div>
 
       <div class="admin-menu-toolbar-copy">
         <strong>${escapeHtml(featuredSelectionCopy)}</strong>
-        <p>Itens pausados somem do site do cliente, mas continuam aqui para reativacao posterior. O card principal sempre mostra apenas Consulte e pode alternar entre ate 3 destaques.</p>
+        <p>Itens pausados somem do site do cliente, mas continuam aqui para reativacao posterior. O card principal sempre mostra apenas Consulte e pode alternar entre até 3 destaques.</p>
       </div>
     </section>
 
@@ -5428,7 +5428,7 @@ const renderMenuModule = () => {
         <div class="admin-module-card-head">
           <div>
             <h3>Nova categoria</h3>
-            <p>Crie um novo setor do cardapio sem editar o codigo do site.</p>
+            <p>Crie um novo setor do cardápio sem editar o código do site.</p>
           </div>
           <span>Nova</span>
         </div>
@@ -5445,7 +5445,7 @@ const renderMenuModule = () => {
           </label>
 
           <label class="admin-field admin-field-wide">
-            <span>Descricao</span>
+            <span>Descrição</span>
             <textarea class="admin-input admin-textarea" name="description" placeholder="Explique rapidamente essa categoria para o site." ${newSectionBusy ? "disabled" : ""}></textarea>
           </label>
         </div>
@@ -5465,7 +5465,7 @@ const renderMenuModule = () => {
           : `
             <div class="admin-empty-state">
               <strong>Nenhum item encontrado</strong>
-              <span>Ajuste a busca global ou os filtros do cardapio para ampliar a lista.</span>
+              <span>Ajuste a busca global ou os filtros do cardápio para ampliar a lista.</span>
             </div>
           `
       }
@@ -5524,13 +5524,13 @@ const renderPromotionCard = (promotion) => {
         <div class="admin-promotion-card-grid">
           <span><strong>Tipo</strong>${escapeHtml(promotion.pricingLabel)}</span>
           <span><strong>Valor</strong>${escapeHtml(getPromotionPricingValueLabel(promotion))}</span>
-          <span><strong>Preco final</strong>${escapeHtml(getPromotionPricePreviewLabel(promotion))}</span>
+          <span><strong>Preço final</strong>${escapeHtml(getPromotionPricePreviewLabel(promotion))}</span>
           <span><strong>Validade</strong>${escapeHtml(getPromotionDateRangeLabel(promotion))}</span>
         </div>
 
         <div class="admin-promotion-card-footer">
           <small>${escapeHtml(
-            previewNames || "Sem itens vinculados visiveis no recorte atual."
+            previewNames || "Sem itens vinculados visíveis no recorte atual."
           )}</small>
           <strong>${escapeHtml(
             `${promotion.appliedItemsCount || 0}/${promotion.affectedItemsCount || 0} item(ns) afetado(s)`
@@ -5583,8 +5583,8 @@ const renderPromotionsModule = () => {
   if (adminState.isLoadingPromotions && !snapshot.promotions.length) {
     moduleRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-loading">
-        <strong>Carregando promocoes</strong>
-        <span>O gestor esta preparando campanhas, vigencia e reflexo operacional no site.</span>
+        <strong>Carregando promoções</strong>
+        <span>O gestor esta preparando campanhas, vigência e reflexo operacional no site.</span>
       </div>
     `;
     return;
@@ -5593,12 +5593,12 @@ const renderPromotionsModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Promocoes</span>
-        <h2>Campanhas com validade e preco aplicado no pedido</h2>
-        <p>Crie promocoes por item ou categoria com ativacao automatica, expiração por periodo e valor valido no fechamento.</p>
+        <span class="admin-chip">Promoções</span>
+        <h2>Campanhas com validade e preço aplicado no pedido</h2>
+        <p>Crie promoções por item ou categoria com ativação automática, expiração por período e valor válido no fechamento.</p>
       </div>
       <div class="admin-module-head-meta">
-        <span>Promocoes ativas</span>
+        <span>Promoções ativas</span>
         <strong>${escapeHtml(String(snapshot.summary?.activePromotions || 0))}</strong>
       </div>
     </header>
@@ -5640,7 +5640,7 @@ const renderPromotionsModule = () => {
           data-promotion-new
           ${adminState.promotionSaving ? "disabled" : ""}
         >
-          Nova promocao
+          Nova promoção
         </button>
       </div>
     </section>
@@ -5649,7 +5649,7 @@ const renderPromotionsModule = () => {
       <article class="admin-module-card">
         <div class="admin-module-card-head">
           <div>
-            <h3>Promocoes cadastradas</h3>
+            <h3>Promoções cadastradas</h3>
             <p>Veja validade, escopo, itens afetados e estado operacional de cada campanha.</p>
           </div>
           <span>${escapeHtml(`${visiblePromotions.length} registro(s)`)}</span>
@@ -5661,7 +5661,7 @@ const renderPromotionsModule = () => {
               ? visiblePromotions.map(renderPromotionCard).join("")
               : `
                 <div class="admin-empty-state admin-empty-state-inline">
-                  <strong>Nenhuma promocao encontrada</strong>
+                  <strong>Nenhuma promoção encontrada</strong>
                   <span>Ajuste a busca, altere o filtro ou cadastre uma nova campanha.</span>
                 </div>
               `
@@ -5672,8 +5672,8 @@ const renderPromotionsModule = () => {
       <article class="admin-module-card">
         <div class="admin-module-card-head">
           <div>
-            <h3>${escapeHtml(selectedPromotion ? "Editar promocao" : "Nova promocao")}</h3>
-            <p>Defina validade, escopo e valor promocional sem quebrar o preco operacional do cardapio.</p>
+            <h3>${escapeHtml(selectedPromotion ? "Editar promoção" : "Nova promoção")}</h3>
+            <p>Defina validade, escopo e valor promocional sem quebrar o preço operacional do cardápio.</p>
           </div>
           <span>${escapeHtml(selectedPromotion ? selectedPromotion.statusLabel : "Rascunho")}</span>
         </div>
@@ -5702,9 +5702,9 @@ const renderPromotionsModule = () => {
           </label>
 
           <label class="admin-field">
-            <span>Tipo da promocao</span>
+            <span>Tipo da promoção</span>
             <select class="admin-input" name="pricingType" data-promotion-form-toggle ${adminState.promotionSaving ? "disabled" : ""}>
-              <option value="fixed_price" ${promotionDraft.pricingType === "fixed_price" ? "selected" : ""}>Preco fixo</option>
+              <option value="fixed_price" ${promotionDraft.pricingType === "fixed_price" ? "selected" : ""}>Preço fixo</option>
               <option value="percent_discount" ${promotionDraft.pricingType === "percent_discount" ? "selected" : ""}>Desconto percentual</option>
             </select>
           </label>
@@ -5746,7 +5746,7 @@ const renderPromotionsModule = () => {
           </label>
 
           <label class="admin-field" data-promotion-pricing-group="fixed_price">
-            <span>Preco promocional</span>
+            <span>Preço promocional</span>
             <input
               class="admin-input"
               type="text"
@@ -5778,7 +5778,7 @@ const renderPromotionsModule = () => {
           </label>
 
           <label class="admin-field">
-            <span>Inicio</span>
+            <span>Início</span>
             <input
               class="admin-input"
               type="datetime-local"
@@ -5801,12 +5801,12 @@ const renderPromotionsModule = () => {
 
           <label class="admin-menu-checkbox admin-field-wide">
             <input type="checkbox" name="isEnabled" ${promotionDraft.isEnabled !== false ? "checked" : ""} ${adminState.promotionSaving ? "disabled" : ""} />
-            <span>Promocao habilitada para ativar automaticamente no periodo valido</span>
+            <span>Promoção habilitada para ativar automaticamente no período válido</span>
           </label>
 
           <div class="admin-menu-item-actions admin-field-wide">
             <button class="admin-button admin-button-primary" type="submit" ${adminState.promotionSaving ? "disabled" : ""}>
-              ${adminState.promotionSaving ? "Salvando..." : selectedPromotion ? "Salvar promocao" : "Criar promocao"}
+              ${adminState.promotionSaving ? "Salvando..." : selectedPromotion ? "Salvar promoção" : "Criar promoção"}
             </button>
             <button class="admin-button admin-button-secondary" type="button" data-promotion-new ${adminState.promotionSaving ? "disabled" : ""}>
               Limpar formulario
@@ -5839,17 +5839,17 @@ const renderReviewCard = (review) => {
             <small>${escapeHtml(formatDateTime(review.createdAt))}</small>
           </div>
           <span class="${getReviewStatusClassName(review.status)}">${escapeHtml(
-            review.statusLabel || "Avaliacao"
+            review.statusLabel || "Avaliação"
           )}</span>
         </div>
 
         <div class="admin-review-card-meta">
           <span class="admin-review-stars">${escapeHtml(buildReviewStars(review.rating))}</span>
           <span>${escapeHtml(`${review.rating || 0}/5`)}</span>
-          <span>${escapeHtml(review.publicationLabel || "Janela automatica")}</span>
+          <span>${escapeHtml(review.publicationLabel || "Janela automática")}</span>
         </div>
 
-        <p class="admin-review-card-message">${escapeHtml(review.message || "Sem comentario.")}</p>
+        <p class="admin-review-card-message">${escapeHtml(review.message || "Sem comentário.")}</p>
 
         <div class="admin-review-card-footer">
           <small>${escapeHtml(contactLabel)}</small>
@@ -5900,8 +5900,8 @@ const renderReviewsModule = () => {
   if (adminState.isLoadingReviews && !snapshot.reviews.length) {
     moduleRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-loading">
-        <strong>Carregando avaliacoes</strong>
-        <span>O gestor esta buscando feedbacks reais, janela de publicacao e leitura recente do site.</span>
+        <strong>Carregando avaliações</strong>
+        <span>O gestor esta buscando feedbacks reais, janela de publicação e leitura recente do site.</span>
       </div>
     `;
     return;
@@ -5910,12 +5910,12 @@ const renderReviewsModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Avaliacoes</span>
-        <h2>Feedback real com publicacao automatica no site</h2>
-        <p>Consulte as notas recebidas, a janela de exibicao por estrelas e o que esta visivel agora para o cliente.</p>
+        <span class="admin-chip">Avaliações</span>
+        <h2>Feedback real com publicação automática no site</h2>
+        <p>Consulte as notas recebidas, a janela de exibição por estrelas e o que está visível agora para o cliente.</p>
       </div>
       <div class="admin-module-head-meta">
-        <span>Media visual</span>
+        <span>Média visual</span>
         <strong>${escapeHtml(String(Number(snapshot.summary?.displayAverage || 0).toFixed(1)))}</strong>
       </div>
     </header>
@@ -5934,7 +5934,7 @@ const renderReviewsModule = () => {
         <strong>${escapeHtml(String(snapshot.summary?.recentReviews || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-cyan">
-        <span>Media interna</span>
+        <span>Média interna</span>
         <strong>${escapeHtml(String(Number(snapshot.summary?.internalAverage || 0).toFixed(1)))}</strong>
       </article>
       <article class="admin-mini-stat is-danger">
@@ -5978,8 +5978,8 @@ const renderReviewsModule = () => {
       <article class="admin-module-card">
         <div class="admin-module-card-head">
           <div>
-            <h3>Avaliacoes registradas</h3>
-            <p>O site publica automaticamente conforme a nota e o admin pode ocultar ou remover quando necessario.</p>
+            <h3>Avaliações registradas</h3>
+            <p>O site publica automaticamente conforme a nota e o admin pode ocultar ou remover quando necessário.</p>
           </div>
           <span>${escapeHtml(`${visibleReviews.length} registro(s)`)}</span>
         </div>
@@ -5990,7 +5990,7 @@ const renderReviewsModule = () => {
               ? visibleReviews.map(renderReviewCard).join("")
               : `
                 <div class="admin-empty-state admin-empty-state-inline">
-                  <strong>Nenhuma avaliacao encontrada</strong>
+                  <strong>Nenhuma avaliação encontrada</strong>
                   <span>Ajuste a busca global ou altere os filtros para ampliar a consulta.</span>
                 </div>
               `
@@ -6058,7 +6058,7 @@ const formatDeliveryBandLabel = (band) => {
   }
 
   if (minKm <= 0) {
-    return `Ate ${String(maxKm).replace(".", ",")} km`;
+    return `Até ${String(maxKm).replace(".", ",")} km`;
   }
 
   return `${String(minKm).replace(".", ",")} a ${String(maxKm).replace(".", ",")} km`;
@@ -6236,7 +6236,7 @@ const renderDeliveryBandRow = (band, index, { isBusy = false } = {}) => `
       <input class="admin-input" type="number" step="0.01" data-delivery-band-field="courierFee" value="${escapeHtml(formatAdminNumberValue(band.courierFee))}" ${isBusy ? "disabled" : ""} />
     </label>
     <label class="admin-delivery-field">
-      <span>Pedido minimo</span>
+      <span>Pedido mínimo</span>
       <input class="admin-input" type="number" step="0.01" data-delivery-band-field="minimumOrder" value="${escapeHtml(formatAdminNumberValue(band.minimumOrder))}" ${isBusy ? "disabled" : ""} />
     </label>
     <label class="admin-delivery-toggle">
@@ -6264,7 +6264,7 @@ const renderDeliveryCourierRow = (courier, index, { isBusy = false } = {}) => `
       <input class="admin-input" type="text" data-delivery-courier-field="phone" value="${escapeHtml(courier.phone || "")}" ${isBusy ? "disabled" : ""} />
     </label>
     <label class="admin-delivery-field">
-      <span>Taxa padrao</span>
+      <span>Taxa padrão</span>
       <input class="admin-input" type="number" step="0.01" data-delivery-courier-field="defaultFee" value="${escapeHtml(formatAdminNumberValue(courier.defaultFee))}" ${isBusy ? "disabled" : ""} />
     </label>
     <label class="admin-delivery-toggle">
@@ -6289,17 +6289,17 @@ const renderDeliveriesModule = () => {
   const draft = getDeliverySettingsDraft();
   const isBusy = adminState.isLoadingDeliverySettings || adminState.deliverySettingsSaving;
   const bandIdsWithFreeShipping = new Set(draft.freeShipping?.bandIds || []);
-  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda nao salvo";
+  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda não salvo";
 
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
         <span class="admin-chip">Central de entregas</span>
-        <h2>Configuracao operacional de entregas</h2>
-        <p>Controle de taxas, prazos, area atendida, retirada, pausa temporaria e entregadores usados pelo checkout.</p>
+        <h2>Configuração operacional de entregas</h2>
+        <p>Controle de taxas, prazos, área atendida, retirada, pausa temporária e entregadores usados pelo checkout.</p>
       </div>
       <div class="admin-module-head-meta">
-        <span>Ultima atualizacao</span>
+        <span>Última atualização</span>
         <strong>${escapeHtml(adminState.isLoadingDeliverySettings ? "Carregando..." : updatedLabel)}</strong>
       </div>
     </header>
@@ -6310,7 +6310,7 @@ const renderDeliveriesModule = () => {
         <strong>${escapeHtml(String(summary.activeBands ?? draft.distanceBands.length))}</strong>
       </article>
       <article class="admin-mini-stat is-cyan">
-        <span>Raio maximo</span>
+        <span>Raio máximo</span>
         <strong>${escapeHtml(String(draft.serviceArea?.maxRadiusKm || 0).replace(".", ","))} km</strong>
       </article>
       <article class="admin-mini-stat is-gold">
@@ -6336,7 +6336,7 @@ const renderDeliveriesModule = () => {
           <span>${escapeHtml(draft.status?.deliveriesEnabled === false ? "Entrega pausada" : "Entrega ativa")} | ${escapeHtml(draft.pickup?.enabled === false ? "Retirada desativada" : "Retirada ativa")}</span>
         </div>
         <div class="admin-delivery-savebar-actions">
-          <button class="admin-button admin-button-secondary" type="button" data-delivery-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar alteracoes</button>
+          <button class="admin-button admin-button-secondary" type="button" data-delivery-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar alterações</button>
           <button class="admin-button admin-button-primary" type="button" data-delivery-settings-action="save" ${isBusy ? "disabled" : ""}>
             ${adminState.deliverySettingsSaving ? "Salvando..." : "Salvar entregas"}
           </button>
@@ -6369,8 +6369,8 @@ const renderDeliveriesModule = () => {
           </div>
         </header>
         <div class="admin-delivery-form-grid">
-          ${renderDeliveryField({ label: "Tempo minimo", field: "deliveryTime.minMinutes", value: formatAdminNumberValue(draft.deliveryTime?.minMinutes), type: "number", step: "1", disabled: isBusy })}
-          ${renderDeliveryField({ label: "Tempo maximo", field: "deliveryTime.maxMinutes", value: formatAdminNumberValue(draft.deliveryTime?.maxMinutes), type: "number", step: "1", disabled: isBusy })}
+          ${renderDeliveryField({ label: "Tempo mínimo", field: "deliveryTime.minMinutes", value: formatAdminNumberValue(draft.deliveryTime?.minMinutes), type: "number", step: "1", disabled: isBusy })}
+          ${renderDeliveryField({ label: "Tempo máximo", field: "deliveryTime.maxMinutes", value: formatAdminNumberValue(draft.deliveryTime?.maxMinutes), type: "number", step: "1", disabled: isBusy })}
           ${renderDeliveryTextarea({ label: "Mensagem exibida", field: "deliveryTime.message", value: draft.deliveryTime?.message || "", placeholder: "Entrega estimada entre 40 e 60 minutos", disabled: isBusy })}
         </div>
       </article>
@@ -6378,15 +6378,15 @@ const renderDeliveriesModule = () => {
       <article class="admin-delivery-card">
         <header class="admin-delivery-card-head">
           <div>
-            <span class="admin-chip">Area de entrega</span>
+            <span class="admin-chip">Área de entrega</span>
             <h3>Raio e bairros</h3>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
-          ${renderDeliveryField({ label: "Raio maximo (km)", field: "serviceArea.maxRadiusKm", value: formatAdminNumberValue(draft.serviceArea?.maxRadiusKm), type: "number", step: "0.1", disabled: isBusy })}
+          ${renderDeliveryField({ label: "Raio máximo (km)", field: "serviceArea.maxRadiusKm", value: formatAdminNumberValue(draft.serviceArea?.maxRadiusKm), type: "number", step: "0.1", disabled: isBusy })}
           ${renderDeliveryTextarea({ label: "Bairros atendidos", field: "serviceArea.servedNeighborhoods", value: joinDeliveryAdminList(draft.serviceArea?.servedNeighborhoods), placeholder: "Um bairro por linha. Vazio libera pelo raio.", disabled: isBusy })}
           ${renderDeliveryTextarea({ label: "Bairros bloqueados", field: "serviceArea.blockedNeighborhoods", value: joinDeliveryAdminList(draft.serviceArea?.blockedNeighborhoods), placeholder: "Um bairro por linha.", disabled: isBusy })}
-          ${renderDeliveryTextarea({ label: "Mensagem fora da area", field: "serviceArea.outOfAreaMessage", value: draft.serviceArea?.outOfAreaMessage || "", placeholder: "No momento nao entregamos nessa regiao.", disabled: isBusy })}
+          ${renderDeliveryTextarea({ label: "Mensagem fora da área", field: "serviceArea.outOfAreaMessage", value: draft.serviceArea?.outOfAreaMessage || "", placeholder: "No momento não entregamos nessa região.", disabled: isBusy })}
         </div>
       </article>
 
@@ -6399,7 +6399,7 @@ const renderDeliveriesModule = () => {
         </header>
         <div class="admin-delivery-form-grid">
           ${renderDeliveryToggle({ label: "Frete gratis ativo", field: "freeShipping.enabled", checked: draft.freeShipping?.enabled === true, disabled: isBusy })}
-          ${renderDeliveryField({ label: "Valor minimo do pedido", field: "freeShipping.minimumOrder", value: formatAdminNumberValue(draft.freeShipping?.minimumOrder), type: "number", step: "0.01", disabled: isBusy })}
+          ${renderDeliveryField({ label: "Valor mínimo do pedido", field: "freeShipping.minimumOrder", value: formatAdminNumberValue(draft.freeShipping?.minimumOrder), type: "number", step: "0.01", disabled: isBusy })}
           <label class="admin-delivery-field">
             <span>Aplicacao</span>
             <select class="admin-input" data-delivery-field="freeShipping.appliesToAllBands" ${isBusy ? "disabled" : ""}>
@@ -6426,13 +6426,13 @@ const renderDeliveriesModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">Retirada</span>
-            <h3>Balcao</h3>
+            <h3>Balcão</h3>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
           ${renderDeliveryToggle({ label: "Retirada habilitada", field: "pickup.enabled", checked: draft.pickup?.enabled !== false, disabled: isBusy })}
           ${renderDeliveryField({ label: "Tempo estimado", field: "pickup.estimateMinutes", value: formatAdminNumberValue(draft.pickup?.estimateMinutes), type: "number", step: "1", disabled: isBusy })}
-          ${renderDeliveryTextarea({ label: "Mensagem exibida", field: "pickup.message", value: draft.pickup?.message || "", placeholder: "Retirada disponivel em 25 minutos", disabled: isBusy })}
+          ${renderDeliveryTextarea({ label: "Mensagem exibida", field: "pickup.message", value: draft.pickup?.message || "", placeholder: "Retirada disponível em 25 minutos", disabled: isBusy })}
         </div>
       </article>
 
@@ -6440,12 +6440,12 @@ const renderDeliveriesModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">Status da entrega</span>
-            <h3>Pausa temporaria</h3>
+            <h3>Pausa temporária</h3>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
           ${renderDeliveryToggle({ label: "Entregas habilitadas", field: "status.deliveriesEnabled", checked: draft.status?.deliveriesEnabled !== false, disabled: isBusy })}
-          ${renderDeliveryTextarea({ label: "Mensagem quando pausado", field: "status.pausedMessage", value: draft.status?.pausedMessage || "", placeholder: "Entregas pausadas temporariamente. Retirada no balcao disponivel.", disabled: isBusy })}
+          ${renderDeliveryTextarea({ label: "Mensagem quando pausado", field: "status.pausedMessage", value: draft.status?.pausedMessage || "", placeholder: "Entregas pausadas temporariamente. Retirada no balcão disponível.", disabled: isBusy })}
         </div>
       </article>
 
@@ -6453,7 +6453,7 @@ const renderDeliveriesModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">Entregadores</span>
-            <h3>Cadastro basico</h3>
+            <h3>Cadastro básico</h3>
             <p>Cadastro preparado para uso operacional e financeiro, sem rastreamento em tempo real nesta etapa.</p>
           </div>
           <button class="admin-button admin-button-secondary" type="button" data-delivery-settings-action="add-courier" ${isBusy ? "disabled" : ""}>Cadastrar entregador</button>
@@ -6503,7 +6503,7 @@ const renderCustomerModule = () => {
     moduleRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-loading">
         <strong>Carregando clientes</strong>
-        <span>Consolidando pedidos, recorrencia, gastos e historico de relacionamento.</span>
+        <span>Consolidando pedidos, recorrência, gastos e histórico de relacionamento.</span>
       </div>
     `;
     return;
@@ -6519,7 +6519,7 @@ const renderCustomerModule = () => {
       <div>
         <span class="admin-chip">CRM simples</span>
         <h2>Relacionamento e fidelizacao</h2>
-        <p>Clientes consolidados a partir dos pedidos, com sinais de recorrencia, sumico e acao sugerida.</p>
+        <p>Clientes consolidados a partir dos pedidos, com sinais de recorrência, sumico e ação sugerida.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>Clientes na base</span>
@@ -6595,10 +6595,10 @@ const renderCustomerModule = () => {
                       ${buildCustomerTagChips(customer)}
                     </div>
                     <div class="admin-customer-card-grid">
-                      <span><strong>Ultima compra</strong>${escapeHtml(formatDateTime(customer.lastPurchaseAt || ""))}</span>
+                      <span><strong>Última compra</strong>${escapeHtml(formatDateTime(customer.lastPurchaseAt || ""))}</span>
                       <span><strong>Total gasto</strong>${escapeHtml(formatMoney(customer.totalSpent || 0))}</span>
-                      <span><strong>Ticket medio</strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</span>
-                      <span><strong>Endereco</strong>${escapeHtml(customer.mostUsedAddress || "Nao informado")}</span>
+                      <span><strong>Ticket médio</strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</span>
+                      <span><strong>Endereço</strong>${escapeHtml(customer.mostUsedAddress || "Não informado")}</span>
                     </div>
                     <div class="admin-customer-action-line">
                       <small>${escapeHtml(getCustomerDaysSinceLabel(customer))}</small>
@@ -6658,11 +6658,11 @@ const renderFinanceModule = () => {
     {
       label: "Faturamento bruto",
       value: formatMoney(overview.grossRevenue || 0),
-      helper: `${overview.validOrders || 0} pedido(s) validos`,
+      helper: `${overview.validOrders || 0} pedido(s) válidos`,
       tone: "is-green",
     },
     {
-      label: "Faturamento liquido",
+      label: "Faturamento líquido",
       value: formatMoney(overview.netRevenue || 0),
       helper: "Bruto menos entrega e descontos",
       tone: "is-blue",
@@ -6670,7 +6670,7 @@ const renderFinanceModule = () => {
     {
       label: "Valor de entrega",
       value: formatMoney(overview.deliveryFees || 0),
-      helper: "Taxas cobradas no periodo",
+      helper: "Taxas cobradas no período",
       tone: "is-warm",
     },
     {
@@ -6680,9 +6680,9 @@ const renderFinanceModule = () => {
       tone: "is-purple",
     },
     {
-      label: "Ticket medio",
+      label: "Ticket médio",
       value: formatMoney(overview.averageTicket || 0),
-      helper: "Media dos pedidos validos",
+      helper: "Média dos pedidos válidos",
       tone: "is-blue",
     },
     {
@@ -6711,7 +6711,7 @@ const renderFinanceModule = () => {
         <span class="admin-chip">Financeiro</span>
         <h2>Financeiro</h2>
         <p>Visao de faturamento, repasses, taxas e fechamento.</p>
-        <small>${escapeHtml(snapshot.filters?.rangeLabel || "Periodo financeiro")}</small>
+        <small>${escapeHtml(snapshot.filters?.rangeLabel || "Período financeiro")}</small>
       </div>
       <div class="admin-finance-actions" aria-label="Exportacoes financeiras">
         <button class="admin-button admin-button-secondary" type="button" data-finance-export="csv">Exportar CSV</button>
@@ -6719,7 +6719,7 @@ const renderFinanceModule = () => {
       </div>
     </header>
 
-    <section class="admin-finance-period-card" aria-label="Filtros de periodo financeiro">
+    <section class="admin-finance-period-card" aria-label="Filtros de período financeiro">
       <div class="admin-finance-period-tabs">
         ${periodOptions
           .map(
@@ -6737,7 +6737,7 @@ const renderFinanceModule = () => {
       </div>
       <div class="admin-finance-custom-range${snapshot.filters?.period === "custom" ? " is-active" : ""}">
         <label class="admin-field admin-finance-date-field">
-          <span>Inicio</span>
+          <span>Início</span>
           <input
             class="admin-input"
             type="date"
@@ -6809,10 +6809,10 @@ const renderFinanceModule = () => {
           <div class="admin-finance-closing-grid">
             <span><strong>Total esperado</strong>${escapeHtml(formatMoney(closing.totalExpected || 0))}</span>
             <span><strong>Total recebido</strong>${escapeHtml(formatMoney(closing.totalReceived || 0))}</span>
-            <span class="${Number(closing.difference || 0) < 0 ? "is-negative" : "is-positive"}"><strong>Diferenca</strong>${escapeHtml(formatMoney(closing.difference || 0))}</span>
+            <span class="${Number(closing.difference || 0) < 0 ? "is-negative" : "is-positive"}"><strong>Diferença</strong>${escapeHtml(formatMoney(closing.difference || 0))}</span>
             <span><strong>Dinheiro a conferir</strong>${escapeHtml(formatMoney(closing.cashExpected || 0))}</span>
             <span><strong>Pix recebido</strong>${escapeHtml(formatMoney(closing.pixReceived || 0))}</span>
-            <span><strong>Cartao recebido</strong>${escapeHtml(formatMoney(closing.cardReceived || 0))}</span>
+            <span><strong>Cartão recebido</strong>${escapeHtml(formatMoney(closing.cardReceived || 0))}</span>
           </div>
           <label class="admin-field">
             <span>Valor contado em dinheiro</span>
@@ -6826,7 +6826,7 @@ const renderFinanceModule = () => {
             />
           </label>
           <label class="admin-field">
-            <span>Observacoes internas</span>
+            <span>Observações internas</span>
             <textarea class="admin-input admin-textarea" name="notes" rows="4" placeholder="Registre divergencias, sangrias, comprovantes ou contexto do fechamento.">${escapeHtml(closing.notes || "")}</textarea>
           </label>
           <div class="admin-finance-closing-actions">
@@ -6858,15 +6858,15 @@ const renderFinanceModule = () => {
                     `
                   )
                   .join("")
-              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem receita no periodo</strong><span>Quando houver pedidos pagos, a curva aparece aqui.</span></div>`
+              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem receita no período</strong><span>Quando houver pedidos pagos, a curva aparece aqui.</span></div>`
           }
         </div>
       </article>
 
       <article class="admin-module-card admin-finance-chart-card">
         <div class="admin-module-card-head">
-          <h3>Pedidos por horario</h3>
-          <span>Volume de pedidos validos</span>
+          <h3>Pedidos por horário</h3>
+          <span>Volume de pedidos válidos</span>
         </div>
         <div class="admin-finance-bars">
           ${
@@ -6882,7 +6882,7 @@ const renderFinanceModule = () => {
                     `
                   )
                   .join("")
-              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem pedidos no periodo</strong><span>O volume por horario depende dos pedidos validos do filtro.</span></div>`
+              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem pedidos no período</strong><span>O volume por horário depende dos pedidos válidos do filtro.</span></div>`
           }
         </div>
       </article>
@@ -6890,7 +6890,7 @@ const renderFinanceModule = () => {
       <article class="admin-module-card admin-finance-chart-card">
         <div class="admin-module-card-head">
           <h3>Receita por forma de pagamento</h3>
-          <span>Distribuicao recebida</span>
+          <span>Distribuição recebida</span>
         </div>
         <div class="admin-finance-donut-list">
           ${paymentBreakdown
@@ -6931,7 +6931,7 @@ const renderFinanceModule = () => {
     <section class="admin-module-card admin-finance-table-card">
       <div class="admin-finance-table-head">
         <div>
-          <h3>Relatorio por pedidos</h3>
+          <h3>Relatório por pedidos</h3>
           <span>${escapeHtml(String(filteredOrders.length))} pedido(s) no filtro atual</span>
         </div>
         <div class="admin-finance-table-filters">
@@ -6963,7 +6963,7 @@ const renderFinanceModule = () => {
             <tr>
               <th>Pedido</th>
               <th>Cliente</th>
-              <th>Horario</th>
+              <th>Horário</th>
               <th>Pagamento</th>
               <th>Produtos</th>
               <th>Entrega</th>
@@ -6997,7 +6997,7 @@ const renderFinanceModule = () => {
                     <td colspan="9">
                       <div class="admin-empty-state admin-empty-state-soft">
                         <strong>Nenhum pedido no filtro</strong>
-                        <span>Ajuste periodo, status financeiro ou forma de pagamento.</span>
+                        <span>Ajuste período, status financeiro ou forma de pagamento.</span>
                       </div>
                     </td>
                   </tr>
@@ -7021,9 +7021,9 @@ const renderReportsModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Relatorios</span>
+        <span class="admin-chip">Relatórios</span>
         <h2>Performance do turno e gargalos</h2>
-        <p>Panorama de volume, status, canal de atendimento e distribuicao ao longo do turno.</p>
+        <p>Panorama de volume, status, canal de atendimento e distribuição ao longo do turno.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>Pedidos analisados</span>
@@ -7034,7 +7034,7 @@ const renderReportsModule = () => {
     <section class="admin-reports-grid">
       <article class="admin-module-card">
         <div class="admin-module-card-head">
-          <h3>Distribuicao por status</h3>
+          <h3>Distribuição por status</h3>
           <span>Onde o fluxo trava</span>
         </div>
         <div class="admin-report-bars">
@@ -7079,7 +7079,7 @@ const renderReportsModule = () => {
         </div>
 
         <div class="admin-module-card-head admin-module-card-head-secondary">
-          <h3>Faixas de horario</h3>
+          <h3>Faixas de horário</h3>
           <span>Picos recentes</span>
         </div>
         <div class="admin-dual-metric-list">
@@ -7205,8 +7205,8 @@ const renderMetricsHighlights = (snapshot) => {
         <strong>${escapeHtml(highlights.mostActiveAdmin?.adminDisplayName || "Sem leitura")}</strong>
         <small>${
           highlights.mostActiveAdmin
-            ? escapeHtml(`${highlights.mostActiveAdmin.totalActions} acao(oes) no periodo`)
-            : "Ainda nao ha acoes suficientes para ranquear."
+            ? escapeHtml(`${highlights.mostActiveAdmin.totalActions} acao(oes) no período`)
+            : "Ainda não ha ações suficientes para ranquear."
         }</small>
       </article>
 
@@ -7226,7 +7226,7 @@ const renderMetricsHighlights = (snapshot) => {
         <small>${
           highlights.completionLeader
             ? escapeHtml(`${highlights.completionLeader.finalizedOrders} pedido(s) encerrados`)
-            : "Nenhuma conclusao atribuida no periodo."
+            : "Nenhuma conclusao atribuida no período."
         }</small>
       </article>
 
@@ -7244,7 +7244,7 @@ const renderMetricsAdminRows = (rows) => {
     return `
       <div class="admin-empty-state admin-empty-state-soft">
         <strong>Sem leitura por admin neste recorte</strong>
-        <span>Ajuste periodo, fluxo ou usuario para carregar a participacao operacional.</span>
+        <span>Ajuste período, fluxo ou usuário para carregar a participacao operacional.</span>
       </div>
     `;
   }
@@ -7253,9 +7253,9 @@ const renderMetricsAdminRows = (rows) => {
     <div class="admin-metrics-admin-table">
       <div class="admin-metrics-admin-row is-head">
         <span>Admin</span>
-        <span>Acoes</span>
+        <span>Ações</span>
         <span>Aceitos</span>
-        <span>Concluidos</span>
+        <span>Concluídos</span>
         <span>Cancelados</span>
         <span>Resposta</span>
         <span>Participacao</span>
@@ -7321,14 +7321,14 @@ const renderMetricsComparisonCards = (comparison) => {
                 <strong>${escapeHtml(formatMetricUnitValue(metric.currentValue, metric.unit))}</strong>
               </div>
               <div class="admin-metrics-trend-meta">
-                <small>${escapeHtml(comparison.currentRangeLabel || "Periodo atual")}</small>
+                <small>${escapeHtml(comparison.currentRangeLabel || "Período atual")}</small>
                 <span class="admin-metrics-trend-pill ${getMetricToneClass(metric)}">
                   ${escapeHtml(getMetricDirectionLabel(metric))} ${escapeHtml(formatMetricDeltaPercent(metric))}
                 </span>
               </div>
               <p>
-                Periodo anterior: ${escapeHtml(formatMetricUnitValue(metric.previousValue, metric.unit))} em
-                ${escapeHtml(comparison.previousRangeLabel || "periodo anterior")}.
+                Período anterior: ${escapeHtml(formatMetricUnitValue(metric.previousValue, metric.unit))} em
+                ${escapeHtml(comparison.previousRangeLabel || "período anterior")}.
               </p>
             </article>
           `
@@ -7378,11 +7378,11 @@ const renderMetricsLineChart = (currentSeries = [], previousSeries = [], options
   return `
     <div class="admin-metrics-chart-shell">
       <div class="admin-metrics-chart-legend">
-        <span><i class="is-current"></i>${escapeHtml(options.currentLabel || "Periodo atual")}</span>
-        <span><i class="is-previous"></i>${escapeHtml(options.previousLabel || "Periodo anterior")}</span>
+        <span><i class="is-current"></i>${escapeHtml(options.currentLabel || "Período atual")}</span>
+        <span><i class="is-previous"></i>${escapeHtml(options.previousLabel || "Período anterior")}</span>
       </div>
       <svg class="admin-metrics-chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(
-        options.title || "Grafico operacional"
+        options.title || "Gráfico operacional"
       )}">
         <defs>
           <linearGradient id="adminMetricsArea" x1="0" x2="0" y1="0" y2="1">
@@ -7476,9 +7476,9 @@ const renderMetricsModule = () => {
     ? snapshot.periodOptions
     : [
         { key: "today", label: "Hoje" },
-        { key: "7d", label: "Ultimos 7 dias" },
-        { key: "30d", label: "Ultimos 30 dias" },
-        { key: "custom", label: "Periodo customizado" },
+        { key: "7d", label: "Últimos 7 dias" },
+        { key: "30d", label: "Últimos 30 dias" },
+        { key: "custom", label: "Período customizado" },
       ];
   const adminOptions = Array.isArray(snapshot?.adminOptions) ? snapshot.adminOptions : [];
   const statusOptions = Array.isArray(snapshot?.statusOptions)
@@ -7500,7 +7500,7 @@ const renderMetricsModule = () => {
   if (adminState.isLoadingMetrics && !snapshot) {
     moduleRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-loading">
-        <strong>Carregando metricas operacionais</strong>
+        <strong>Carregando métricas operacionais</strong>
         <span>Consolidando pedidos e trilha de auditoria para montar a leitura gerencial.</span>
       </div>
     `;
@@ -7510,19 +7510,19 @@ const renderMetricsModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Metricas</span>
-        <h2>Desempenho operacional por periodo e por admin</h2>
+        <span class="admin-chip">Métricas</span>
+        <h2>Desempenho operacional por período e por admin</h2>
         <p>Indicadores reais calculados a partir dos pedidos do recorte e da trilha de auditoria do gestor.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>Escopo atual</span>
-        <strong>${escapeHtml(snapshot?.filters?.periodLabel || "Ultimos 7 dias")}</strong>
+        <strong>${escapeHtml(snapshot?.filters?.periodLabel || "Últimos 7 dias")}</strong>
       </div>
     </header>
 
     <section class="admin-metrics-toolbar">
       <label class="admin-field">
-        <span>Periodo</span>
+        <span>Período</span>
         <select class="admin-input" data-metrics-filter="period">
           ${periodOptions
             .map(
@@ -7598,7 +7598,7 @@ const renderMetricsModule = () => {
         ? `
           <div class="admin-empty-state">
             <strong>Nenhum pedido encontrado neste recorte</strong>
-            <span>Ajuste periodo, fluxo ou admin para consultar outra faixa da operacao.</span>
+            <span>Ajuste período, fluxo ou admin para consultar outra faixa da operação.</span>
           </div>
         `
         : `
@@ -7635,18 +7635,18 @@ const renderMetricsModule = () => {
             <article class="admin-module-card">
               <div class="admin-module-card-head">
                 <h3>Pedidos por dia</h3>
-                <span>Atual x periodo anterior</span>
+                <span>Atual x período anterior</span>
               </div>
               ${renderMetricsLineChart(charts.ordersByDay?.current || [], charts.ordersByDay?.previous || [], {
                 title: "Pedidos por dia",
-                currentLabel: comparison?.currentRangeLabel || "Periodo atual",
-                previousLabel: comparison?.previousRangeLabel || "Periodo anterior",
+                currentLabel: comparison?.currentRangeLabel || "Período atual",
+                previousLabel: comparison?.previousRangeLabel || "Período anterior",
               })}
             </article>
 
             <article class="admin-module-card">
               <div class="admin-module-card-head">
-                <h3>Evolucao do periodo</h3>
+                <h3>Evolucao do período</h3>
                 <span>Crescimento acumulado</span>
               </div>
               ${renderMetricsLineChart(
@@ -7654,8 +7654,8 @@ const renderMetricsModule = () => {
                 charts.cumulativeOrders?.previous || [],
                 {
                   title: "Evolucao acumulada dos pedidos",
-                  currentLabel: comparison?.currentRangeLabel || "Periodo atual",
-                  previousLabel: comparison?.previousRangeLabel || "Periodo anterior",
+                  currentLabel: comparison?.currentRangeLabel || "Período atual",
+                  previousLabel: comparison?.previousRangeLabel || "Período anterior",
                 }
               )}
             </article>
@@ -7665,7 +7665,7 @@ const renderMetricsModule = () => {
             <article class="admin-module-card">
               <div class="admin-module-card-head">
                 <h3>Status dos pedidos</h3>
-                <span>Distribuicao visual do recorte</span>
+                <span>Distribuição visual do recorte</span>
               </div>
               ${renderMetricsDistributionChart(charts.status || [])}
             </article>
@@ -7682,7 +7682,7 @@ const renderMetricsModule = () => {
           <section class="admin-metrics-grid">
             <article class="admin-module-card">
               <div class="admin-module-card-head">
-                <h3>Tempo medio entre etapas</h3>
+                <h3>Tempo médio entre etapas</h3>
                 <span>Base real do fluxo</span>
               </div>
               ${renderMetricsStageList(snapshot.stageMetrics || [])}
@@ -7691,7 +7691,7 @@ const renderMetricsModule = () => {
             <article class="admin-module-card">
               <div class="admin-module-card-head">
                 <h3>Destaques de desempenho</h3>
-                <span>Quem puxou a operacao</span>
+                <span>Quem puxou a operação</span>
               </div>
               ${renderMetricsHighlights(snapshot)}
             </article>
@@ -7701,7 +7701,7 @@ const renderMetricsModule = () => {
             <article class="admin-module-card admin-metrics-admin-card">
               <div class="admin-module-card-head">
                 <h3>Ranking operacional por admin</h3>
-                <span>${escapeHtml(String((snapshot.byAdmin || []).length))} usuario(s) no periodo</span>
+                <span>${escapeHtml(String((snapshot.byAdmin || []).length))} usuário(s) no período</span>
               </div>
               ${renderMetricsAdminRows(snapshot.byAdmin || [])}
             </article>
@@ -7714,7 +7714,7 @@ const renderMetricsModule = () => {
 
               <div class="admin-module-card-head admin-module-card-head-secondary">
                 <h3>Status atual</h3>
-                <span>Pedidos criados no periodo</span>
+                <span>Pedidos criados no período</span>
               </div>
               ${renderMetricsBreakdownRows(snapshot.statusBreakdown || [])}
 
@@ -7726,7 +7726,7 @@ const renderMetricsModule = () => {
 
               <div class="admin-module-card-head admin-module-card-head-secondary">
                 <h3>Efetividade</h3>
-                <span>Leitura gerencial rapida</span>
+                <span>Leitura gerencial rápida</span>
               </div>
               <div class="admin-metrics-breakdown">
                 <div class="admin-metrics-breakdown-row">
@@ -7742,7 +7742,7 @@ const renderMetricsModule = () => {
                   <strong>${escapeHtml(formatMoney(snapshot.overview.totalRevenue || 0))}</strong>
                 </div>
                 <div class="admin-metrics-breakdown-row">
-                  <span>Ticket medio</span>
+                  <span>Ticket médio</span>
                   <strong>${escapeHtml(formatMoney(snapshot.overview.averageTicket || 0))}</strong>
                 </div>
               </div>
@@ -7802,7 +7802,7 @@ const renderInventoryItemCard = (item) => {
             <strong>${escapeHtml(formatInventoryQuantity(item.quantity))}</strong>
             ${escapeHtml(item.unit)}
           </span>
-          <small>Minimo: ${escapeHtml(formatInventoryQuantity(item.minimumQuantity))} ${escapeHtml(item.unit)}</small>
+          <small>Mínimo: ${escapeHtml(formatInventoryQuantity(item.minimumQuantity))} ${escapeHtml(item.unit)}</small>
         </div>
         <div class="admin-inventory-item-footer">
           ${renderInventoryValidity(item)}
@@ -7885,8 +7885,8 @@ const renderInventoryModule = () => {
     <header class="admin-module-head admin-inventory-head">
       <div>
         <span class="admin-chip">Estoque</span>
-        <h2>Controle diario de insumos</h2>
-        <p>Entradas, baixas manuais, minimo por item e validade em leitura rapida.</p>
+        <h2>Controle diário de insumos</h2>
+        <p>Entradas, baixas manuais, mínimo por item e validade em leitura rápida.</p>
       </div>
       <button
         class="admin-button admin-button-primary"
@@ -7915,7 +7915,7 @@ const renderInventoryModule = () => {
         <strong>${escapeHtml(String(summary.criticalItems || 0))}</strong>
       </article>
       <article class="admin-mini-stat is-warm">
-        <span>Validade proxima</span>
+        <span>Validade próxima</span>
         <strong>${escapeHtml(String(summary.expiringSoonItems || 0))}</strong>
       </article>
     </section>
@@ -7984,8 +7984,8 @@ const renderAuditModule = () => {
     <header class="admin-module-head">
       <div>
         <span class="admin-chip">Auditoria</span>
-        <h2>Logs operacionais por usuario</h2>
-        <p>Trilha real de acoes do gestor conectada aos pedidos em producao.</p>
+        <h2>Logs operacionais por usuário</h2>
+        <p>Trilha real de ações do gestor conectada aos pedidos em produção.</p>
       </div>
       <div class="admin-module-head-meta">
         <span>Eventos carregados</span>
@@ -7995,7 +7995,7 @@ const renderAuditModule = () => {
 
     <section class="admin-module-kpis">
       <article class="admin-mini-stat is-blue">
-        <span>Usuarios ativos</span>
+        <span>Usuários ativos</span>
         <strong>${escapeHtml(String(auditOverview.uniqueAdmins))}</strong>
       </article>
       <article class="admin-mini-stat is-cyan">
@@ -8003,7 +8003,7 @@ const renderAuditModule = () => {
         <strong>${escapeHtml(String(auditOverview.uniqueOrders))}</strong>
       </article>
       <article class="admin-mini-stat is-warm">
-        <span>Ultimo evento</span>
+        <span>Último evento</span>
         <strong>${escapeHtml(
           auditOverview.lastEventAt ? formatTime(auditOverview.lastEventAt) : "--:--"
         )}</strong>
@@ -8016,9 +8016,9 @@ const renderAuditModule = () => {
 
     <section class="admin-audit-toolbar">
       <label class="admin-field">
-        <span>Usuario</span>
+        <span>Usuário</span>
         <select class="admin-input" name="adminLogin" data-audit-filter="adminLogin">
-          <option value="">Todos os usuarios</option>
+          <option value="">Todos os usuários</option>
           ${adminState.auditAdminOptions
             .map(
               (entry) => `
@@ -8035,9 +8035,9 @@ const renderAuditModule = () => {
       </label>
 
       <label class="admin-field">
-        <span>Acao</span>
+        <span>Ação</span>
         <select class="admin-input" name="action" data-audit-filter="action">
-          <option value="">Todas as acoes</option>
+          <option value="">Todas as ações</option>
           ${adminState.auditActionOptions
             .map(
               (entry) => `
@@ -8059,7 +8059,7 @@ const renderAuditModule = () => {
           class="admin-input"
           type="search"
           value="${escapeHtml(adminState.auditFilters.orderQuery || "")}"
-          placeholder="Buscar por numero, id ou cliente"
+          placeholder="Buscar por número, id ou cliente"
           data-audit-filter="orderQuery"
         />
       </label>
@@ -8489,7 +8489,7 @@ const renderRestaurantScheduleDayRow = (dayKey, day = {}, isBusy = false) => `
       disabled: isBusy,
     })}
     ${renderRestaurantSettingsField({
-      label: "Pausa 1 inicio",
+      label: "Pausa 1 início",
       field: `businessSchedule.days.${dayKey}.pauseStart`,
       value: day.pauseStart || "",
       type: "time",
@@ -8528,7 +8528,7 @@ const renderRestaurantSpecialDateRow = (entry = {}, index = 0, isBusy = false) =
         label: "Nome/descricao",
         field: `businessSchedule.specialDates.${index}.name`,
         value: entry.name || "",
-        placeholder: "Feriado, evento, manutencao...",
+        placeholder: "Feriado, evento, manutenção...",
         disabled: isBusy,
       }).replace(
         "data-restaurant-settings-field",
@@ -8576,7 +8576,7 @@ const renderRestaurantSpecialDateRow = (entry = {}, index = 0, isBusy = false) =
         "closeTime"
       )}
       ${renderRestaurantSettingsField({
-        label: "Pausa especial inicio",
+        label: "Pausa especial início",
         field: `businessSchedule.specialDates.${index}.pauseStart`,
         value: entry.pauseStart || "",
         type: "time",
@@ -8715,7 +8715,7 @@ const renderRestaurantAppearancePreview = () => {
       style="--preview-primary:${escapeHtml(draft.primaryColor)};--preview-secondary:${escapeHtml(draft.secondaryColor)};--preview-accent:${escapeHtml(draft.accentColor)};--preview-gradient-start:${escapeHtml(draft.gradientStart)};--preview-gradient-end:${escapeHtml(draft.gradientEnd)};"
     >
       <div class="admin-site-preview-hero">
-        <img src="${escapeHtml(draft.bannerUrl)}" alt="Previa do banner publico" data-preview-banner loading="lazy" />
+        <img src="${escapeHtml(draft.bannerUrl)}" alt="Previa do banner público" data-preview-banner loading="lazy" />
         <div>
           <span data-preview-layout>${escapeHtml(draft.layout)}</span>
           <strong data-preview-name>${escapeHtml(draft.restaurantName)}</strong>
@@ -8723,7 +8723,7 @@ const renderRestaurantAppearancePreview = () => {
         </div>
       </div>
       <div class="admin-site-preview-body">
-        <img src="${escapeHtml(draft.logoUrl)}" alt="Previa do logo publico" data-preview-logo loading="lazy" />
+        <img src="${escapeHtml(draft.logoUrl)}" alt="Previa do logo público" data-preview-logo loading="lazy" />
         <p data-preview-description>${escapeHtml(draft.description)}</p>
         <div class="admin-site-preview-swatches" aria-label="Paleta configurada">
           <span style="background:${escapeHtml(draft.primaryColor)}"></span>
@@ -8755,7 +8755,7 @@ const renderRestaurantSettingsModule = () => {
   const accessAddress = snapshot.accessAddress || {};
   const draft = getRestaurantSettingsDraft();
   const isBusy = adminState.isLoadingRestaurantSettings || adminState.restaurantSettingsSaving;
-  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda nao salvo";
+  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda não salvo";
   const logoPreview = resolveAdminAssetUrl(draft.logoUrl || RESTAURANT_SETTINGS_DEFAULT_DRAFT.logoUrl);
   const bannerPreview = resolveAdminAssetUrl(draft.bannerUrl || RESTAURANT_SETTINGS_DEFAULT_DRAFT.bannerUrl);
   const addressFields = draft.addressFields || RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields;
@@ -8782,12 +8782,12 @@ const renderRestaurantSettingsModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-module-head">
       <div>
-        <span class="admin-chip">Configuracoes do site publico</span>
-        <h2>Personalizacao do restaurante</h2>
+        <span class="admin-chip">Configurações do site público</span>
+        <h2>Personalização do restaurante</h2>
         <p>Esses ajustes afetam somente o site do cliente. O painel administrativo mantem sua identidade visual fixa.</p>
       </div>
       <div class="admin-module-head-meta">
-        <span>Ultima atualizacao</span>
+        <span>Última atualização</span>
         <strong>${escapeHtml(adminState.isLoadingRestaurantSettings ? "Carregando..." : updatedLabel)}</strong>
       </div>
     </header>
@@ -8802,12 +8802,12 @@ const renderRestaurantSettingsModule = () => {
         <strong>${escapeHtml(summary.restaurantKey || draft.restaurantKey || "default")}</strong>
       </article>
       <article class="admin-mini-stat is-gold">
-        <span>Raio maximo</span>
+        <span>Raio máximo</span>
         <strong>${escapeHtml(String(deliveryBase.maxDeliveryRadiusKm || 0).replace(".", ","))} km</strong>
       </article>
       <article class="admin-mini-stat is-warm">
-        <span>Pedidos fora do horario</span>
-        <strong>${escapeHtml(businessSchedule.acceptOrdersOutsideHours ? "Aceita" : "Nao aceita")}</strong>
+        <span>Pedidos fora do horário</span>
+        <strong>${escapeHtml(businessSchedule.acceptOrdersOutsideHours ? "Aceita" : "Não aceita")}</strong>
       </article>
     </section>
 
@@ -8820,13 +8820,13 @@ const renderRestaurantSettingsModule = () => {
 
       <div class="admin-delivery-savebar">
         <div>
-          <strong>Fonte de personalizacao do site publico</strong>
+          <strong>Fonte de personalização do site público</strong>
           <span>Preparado para futura migracao: restaurant_key ${escapeHtml(draft.restaurantKey || "default")}</span>
         </div>
         <div class="admin-delivery-savebar-actions">
-          <button class="admin-button admin-button-secondary" type="button" data-restaurant-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar alteracoes</button>
+          <button class="admin-button admin-button-secondary" type="button" data-restaurant-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar alterações</button>
           <button class="admin-button admin-button-primary" type="button" data-restaurant-settings-action="save" ${isBusy ? "disabled" : ""}>
-            ${adminState.restaurantSettingsSaving ? "Salvando..." : "Salvar configuracoes"}
+            ${adminState.restaurantSettingsSaving ? "Salvando..." : "Salvar configurações"}
           </button>
         </div>
       </div>
@@ -8855,7 +8855,7 @@ const renderRestaurantSettingsModule = () => {
           <div>
             <span class="admin-chip">Identidade</span>
             <h3>Marca e imagens principais</h3>
-            <p>Use caminhos locais, URLs HTTPS ou imagens hospedadas. Estes campos aparecem apenas no site publico.</p>
+            <p>Use caminhos locais, URLs HTTPS ou imagens hospedadas. Estes campos aparecem apenas no site público.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
@@ -8863,7 +8863,7 @@ const renderRestaurantSettingsModule = () => {
           ${renderRestaurantSettingsField({ label: "Logo", field: "logoUrl", value: draft.logoUrl || "", placeholder: "./site-images/logo.png", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Banner principal", field: "bannerUrl", value: draft.bannerUrl || "", placeholder: "./site-images/banner.png", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Slogan", field: "slogan", value: draft.slogan || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.slogan, disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descricao publica", field: "description", value: draft.description || "", placeholder: "Descricao institucional exibida no site publico.", disabled: isBusy })}
+          ${renderRestaurantSettingsTextarea({ label: "Descrição publica", field: "description", value: draft.description || "", placeholder: "Descrição institucional exibida no site público.", disabled: isBusy })}
           ${renderRestaurantSettingsTextarea({ label: "Texto de apresentacao", field: "presentationText", value: draft.presentationText || "", placeholder: "Texto exibido na home e no rodape do site.", disabled: isBusy })}
         </div>
         <div class="admin-settings-preview-grid">
@@ -8883,13 +8883,13 @@ const renderRestaurantSettingsModule = () => {
           <div>
             <span class="admin-chip">Aparencia do Site</span>
             <h3>Layouts, tema e preview</h3>
-            <p>Selecione a experiencia publica do restaurante. O Gestor permanece com a identidade administrativa atual.</p>
+            <p>Selecione a experiência publica do restaurante. O Gestor permanece com a identidade administrativa atual.</p>
           </div>
         </header>
         <div class="admin-appearance-grid">
           <div class="admin-delivery-form-grid">
-            ${renderRestaurantSettingsSelect({ label: "Layout publico", field: "siteLayout", value: draft.siteLayout || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteLayout, options: PUBLIC_SITE_LAYOUT_OPTIONS, disabled: isBusy })}
-            ${renderRestaurantSettingsSelect({ label: "Tema publico", field: "siteTheme", value: draft.siteTheme || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteTheme, options: PUBLIC_SITE_THEME_OPTIONS, disabled: isBusy })}
+            ${renderRestaurantSettingsSelect({ label: "Layout público", field: "siteLayout", value: draft.siteLayout || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteLayout, options: PUBLIC_SITE_LAYOUT_OPTIONS, disabled: isBusy })}
+            ${renderRestaurantSettingsSelect({ label: "Tema público", field: "siteTheme", value: draft.siteTheme || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteTheme, options: PUBLIC_SITE_THEME_OPTIONS, disabled: isBusy })}
             <div class="admin-settings-layout-help is-wide">
               ${PUBLIC_SITE_LAYOUT_OPTIONS.map((option) => `
                 <article>
@@ -8914,7 +8914,7 @@ const renderRestaurantSettingsModule = () => {
           ${renderRestaurantSettingsField({ label: "Cor principal", field: "primaryColor", value: draft.primaryColor || "", type: "color", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Cor secundaria", field: "secondaryColor", value: draft.secondaryColor || "", type: "color", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Cor destaque", field: "accentColor", value: draft.accentColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.accentColor, type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Gradiente inicio", field: "gradientStart", value: draft.gradientStart || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientStart, type: "color", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Gradiente início", field: "gradientStart", value: draft.gradientStart || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientStart, type: "color", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Gradiente fim", field: "gradientEnd", value: draft.gradientEnd || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientEnd, type: "color", disabled: isBusy })}
           ${renderRestaurantSettingsToggle({ label: "Usar gradiente no destaque visual", field: "useGradient", checked: draft.useGradient !== false, disabled: isBusy })}
           <div class="admin-settings-color-preview is-wide">
@@ -8922,7 +8922,7 @@ const renderRestaurantSettingsModule = () => {
             <span style="background:${escapeHtml(draft.secondaryColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.secondaryColor)}"></span>
             <span style="background:${escapeHtml(draft.accentColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.accentColor)}"></span>
             <span style="background:linear-gradient(135deg, ${escapeHtml(draft.gradientStart || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientStart)}, ${escapeHtml(draft.gradientEnd || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientEnd)})"></span>
-            <strong>As cores sao aplicadas no site publico apos salvar.</strong>
+            <strong>As cores são aplicadas no site público após salvar.</strong>
           </div>
         </div>
       </article>
@@ -8936,7 +8936,7 @@ const renderRestaurantSettingsModule = () => {
         </header>
         <div class="admin-delivery-form-grid">
           ${renderRestaurantSettingsField({ label: "WhatsApp", field: "whatsapp", value: draft.whatsapp || "", placeholder: "5516999999999", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Horario em texto (fallback)", field: "businessHours", value: draft.businessHours || "", placeholder: "18:00 as 23:00", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Horário em texto (fallback)", field: "businessHours", value: draft.businessHours || "", placeholder: "18:00 as 23:00", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Instagram", field: "instagram", value: draft.instagram || "", placeholder: "https://instagram.com/restaurante", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Facebook", field: "facebook", value: draft.facebook || "", placeholder: "https://facebook.com/restaurante", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "TikTok", field: "tiktok", value: draft.tiktok || "", placeholder: "https://tiktok.com/@restaurante", disabled: isBusy })}
@@ -8948,18 +8948,18 @@ const renderRestaurantSettingsModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">SEO</span>
-            <h3>Titulo, compartilhamento e OpenGraph</h3>
-            <p>Configura metadados do site publico sem alterar URLs, dominio ou rotas existentes.</p>
+            <h3>Título, compartilhamento e OpenGraph</h3>
+            <p>Configura metadados do site público sem alterar URLs, dominio ou rotas existentes.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Titulo da pagina", field: "seoTitle", value: draft.seoTitle || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Título da página", field: "seoTitle", value: draft.seoTitle || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Imagem de compartilhamento", field: "seoShareImage", value: draft.seoShareImage || "", placeholder: "/site-images/combinado-imperial.png", disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descricao SEO", field: "seoDescription", value: draft.seoDescription || "", placeholder: "Descricao exibida em buscadores e compartilhamentos.", disabled: isBusy })}
+          ${renderRestaurantSettingsTextarea({ label: "Descrição SEO", field: "seoDescription", value: draft.seoDescription || "", placeholder: "Descrição exibida em buscadores e compartilhamentos.", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Keywords", field: "seoKeywords", value: (draft.seoKeywords || []).join(", "), placeholder: "sushi, delivery, restaurante", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "OpenGraph titulo", field: "seoOpenGraph.title", value: draft.seoOpenGraph?.title || "", placeholder: draft.seoTitle || RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "OpenGraph título", field: "seoOpenGraph.title", value: draft.seoOpenGraph?.title || "", placeholder: draft.seoTitle || RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "OpenGraph imagem", field: "seoOpenGraph.image", value: draft.seoOpenGraph?.image || "", placeholder: draft.seoShareImage || RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoShareImage, disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "OpenGraph descricao", field: "seoOpenGraph.description", value: draft.seoOpenGraph?.description || "", placeholder: "Descricao usada ao compartilhar o site.", disabled: isBusy })}
+          ${renderRestaurantSettingsTextarea({ label: "OpenGraph descrição", field: "seoOpenGraph.description", value: draft.seoOpenGraph?.description || "", placeholder: "Descrição usada ao compartilhar o site.", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "OpenGraph tipo", field: "seoOpenGraph.type", value: draft.seoOpenGraph?.type || "website", placeholder: "website", disabled: isBusy })}
         </div>
       </article>
@@ -8969,7 +8969,7 @@ const renderRestaurantSettingsModule = () => {
           <div>
             <span class="admin-chip">Rodape INOVAS</span>
             <h3>Marca institucional da plataforma</h3>
-            <p>A marca permanece sempre visivel nesta etapa. A flag showPlatformBranding fica preparada para uso futuro.</p>
+            <p>A marca permanece sempre visível nesta etapa. A flag showPlatformBranding fica preparada para uso futuro.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
@@ -8977,16 +8977,16 @@ const renderRestaurantSettingsModule = () => {
           ${renderRestaurantSettingsField({ label: "Chamada do rodape", field: "platformFooter.headline", value: draft.platformFooter?.headline || "", placeholder: "Desenvolvido por INOVAS Food", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "URL", field: "platformFooter.url", value: draft.platformFooter?.url || "", placeholder: "https://inovasfood.com.br", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "URL exibida", field: "platformFooter.displayUrl", value: draft.platformFooter?.displayUrl || "", placeholder: "inovasfood.com.br", disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descricao institucional", field: "platformFooter.description", value: draft.platformFooter?.description || "", placeholder: "Plataforma profissional para restaurantes", disabled: isBusy })}
+          ${renderRestaurantSettingsTextarea({ label: "Descrição institucional", field: "platformFooter.description", value: draft.platformFooter?.description || "", placeholder: "Plataforma profissional para restaurantes", disabled: isBusy })}
         </div>
       </article>
 
       <article class="admin-delivery-card is-wide">
         <header class="admin-delivery-card-head">
           <div>
-            <span class="admin-chip">Horario estruturado</span>
+            <span class="admin-chip">Horário estruturado</span>
             <h3>Funcionamento por dia da semana</h3>
-            <p>O site publico usa esta grade para identificar loja aberta ou fechada. O texto acima continua como fallback.</p>
+            <p>O site público usa esta grade para identificar loja aberta ou fechada. O texto acima continua como fallback.</p>
           </div>
         </header>
         <div class="admin-settings-schedule-list">
@@ -8996,7 +8996,7 @@ const renderRestaurantSettingsModule = () => {
         </div>
         <div class="admin-delivery-form-grid">
           ${renderRestaurantSettingsToggle({
-            label: "Aceitar pedidos fora do horario",
+            label: "Aceitar pedidos fora do horário",
             field: "businessSchedule.acceptOrdersOutsideHours",
             checked: businessSchedule.acceptOrdersOutsideHours === true,
             disabled: isBusy,
@@ -9013,7 +9013,7 @@ const renderRestaurantSettingsModule = () => {
             label: "Mensagem quando estiver fechado",
             field: "businessSchedule.closedMessage",
             value: businessSchedule.closedMessage || "",
-            placeholder: "Estamos fechados agora. Voce pode agendar seu pedido para o proximo horario.",
+            placeholder: "Estamos fechados agora. Você pode agendar seu pedido para o próximo horário.",
             disabled: isBusy,
           })}
         </div>
@@ -9023,8 +9023,8 @@ const renderRestaurantSettingsModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">Datas especiais</span>
-            <h3>Excecoes de funcionamento</h3>
-            <p>Estas datas tem prioridade sobre a grade semanal para feriados, eventos, folgas, manutencoes ou horarios especiais.</p>
+            <h3>Exceções de funcionamento</h3>
+            <p>Estas datas tem prioridade sobre a grade semanal para feriados, eventos, folgas, manutenções ou horários especiais.</p>
           </div>
           <button class="admin-button admin-button-secondary" type="button" data-restaurant-settings-action="add-special-date" ${isBusy ? "disabled" : ""}>
             Adicionar data
@@ -9039,7 +9039,7 @@ const renderRestaurantSettingsModule = () => {
               : `
                 <div class="admin-empty-state admin-empty-state-soft">
                   <strong>Nenhuma data especial cadastrada</strong>
-                  <span>Adicione excecoes para feriados, eventos, folgas, manutencoes ou atendimento em horario diferente.</span>
+                  <span>Adicione exceções para feriados, eventos, folgas, manutenções ou atendimento em horário diferente.</span>
                 </div>
               `
           }
@@ -9049,21 +9049,21 @@ const renderRestaurantSettingsModule = () => {
       <article class="admin-delivery-card is-wide">
         <header class="admin-delivery-card-head">
           <div>
-            <span class="admin-chip">Endereco estruturado</span>
-            <h3>Base fisica do restaurante</h3>
-            <p>O site exibe um endereco amigavel a partir destes campos. A chave permanece restaurant_key default nesta etapa.</p>
+            <span class="admin-chip">Endereço estruturado</span>
+            <h3>Base física do restaurante</h3>
+            <p>O site exibe um endereço amigável a partir destes campos.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
           ${renderRestaurantSettingsField({ label: "CEP", field: "addressFields.postalCode", value: addressFields.postalCode || "", placeholder: "14400-520", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Rua", field: "addressFields.street", value: addressFields.street || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields.street, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Numero", field: "addressFields.number", value: addressFields.number || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields.number, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Complemento", field: "addressFields.complement", value: addressFields.complement || "", placeholder: "Loja, sala, ponto de referencia", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Número", field: "addressFields.number", value: addressFields.number || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields.number, disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Complemento", field: "addressFields.complement", value: addressFields.complement || "", placeholder: "Loja, sala, ponto de referência", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Bairro", field: "addressFields.neighborhood", value: addressFields.neighborhood || "", placeholder: "Centro", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Cidade", field: "addressFields.city", value: addressFields.city || "", placeholder: "Franca", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Estado", field: "addressFields.state", value: addressFields.state || "", placeholder: "SP", disabled: isBusy })}
           <div class="admin-settings-color-preview is-wide">
-            <strong>Endereco exibido: ${escapeHtml(friendlyAddress || "Complete os campos para gerar o endereco publico.")}</strong>
+            <strong>Endereço exibido: ${escapeHtml(friendlyAddress || "Complete os campos para gerar o endereço público.")}</strong>
           </div>
         </div>
       </article>
@@ -9072,20 +9072,20 @@ const renderRestaurantSettingsModule = () => {
         <header class="admin-delivery-card-head">
           <div>
             <span class="admin-chip">Base de entrega</span>
-            <h3>Coordenadas, raio e regras padrao</h3>
-            <p>Latitude e longitude passam a ser a origem prioritaria do calculo. Se ficarem vazias, o site usa a origem legada.</p>
+            <h3>Coordenadas, raio e regras padrão</h3>
+            <p>Latitude e longitude passam a ser a origem prioritária do cálculo. Se ficarem vazias, o site usa a origem legada.</p>
           </div>
         </header>
         <div class="admin-delivery-form-grid">
           ${renderRestaurantSettingsField({ label: "Latitude", field: "deliveryBase.latitude", value: formatAdminNumberValue(deliveryBase.latitude), type: "number", step: "0.000001", placeholder: "-20.536416", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Longitude", field: "deliveryBase.longitude", value: formatAdminNumberValue(deliveryBase.longitude), type: "number", step: "0.000001", placeholder: "-47.393922", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Raio maximo de entrega (km)", field: "deliveryBase.maxDeliveryRadiusKm", value: formatAdminNumberValue(deliveryBase.maxDeliveryRadiusKm), type: "number", step: "0.1", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Taxa fixa padrao", field: "deliveryBase.fixedDeliveryFee", value: formatAdminNumberValue(deliveryBase.fixedDeliveryFee), type: "number", step: "0.01", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Raio máximo de entrega (km)", field: "deliveryBase.maxDeliveryRadiusKm", value: formatAdminNumberValue(deliveryBase.maxDeliveryRadiusKm), type: "number", step: "0.1", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Taxa fixa padrão", field: "deliveryBase.fixedDeliveryFee", value: formatAdminNumberValue(deliveryBase.fixedDeliveryFee), type: "number", step: "0.01", disabled: isBusy })}
           ${renderRestaurantSettingsField({ label: "Valor por km", field: "deliveryBase.pricePerKm", value: formatAdminNumberValue(deliveryBase.pricePerKm), type: "number", step: "0.01", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Pedido minimo para entrega", field: "deliveryBase.minimumDeliveryOrder", value: formatAdminNumberValue(deliveryBase.minimumDeliveryOrder), type: "number", step: "0.01", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Pedido mínimo para entrega", field: "deliveryBase.minimumDeliveryOrder", value: formatAdminNumberValue(deliveryBase.minimumDeliveryOrder), type: "number", step: "0.01", disabled: isBusy })}
           ${renderRestaurantSettingsToggle({ label: "Permitir retirada no local", field: "deliveryBase.pickupEnabled", checked: deliveryBase.pickupEnabled !== false, disabled: isBusy })}
           ${renderRestaurantSettingsToggle({ label: "Permitir entrega", field: "deliveryBase.deliveryEnabled", checked: deliveryBase.deliveryEnabled !== false, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Tempo medio de preparo", field: "averagePreparationTimeMinutes", value: formatAdminNumberValue(draft.averagePreparationTimeMinutes), type: "number", step: "1", disabled: isBusy })}
+          ${renderRestaurantSettingsField({ label: "Tempo médio de preparo", field: "averagePreparationTimeMinutes", value: formatAdminNumberValue(draft.averagePreparationTimeMinutes), type: "number", step: "1", disabled: isBusy })}
         </div>
       </article>
     </section>
@@ -9482,18 +9482,18 @@ const renderAdminUserActions = (user) => {
 
   return `
     <div class="admin-user-row-actions">
-      <button class="admin-user-icon-button" type="button" data-user-view="${escapeHtml(login)}" aria-label="Visualizar usuario" title="Visualizar usuario">
+      <button class="admin-user-icon-button" type="button" data-user-view="${escapeHtml(login)}" aria-label="Visualizar usuário" title="Visualizar usuário">
         ${renderAdminUserIcon("view")}
       </button>
-      <button class="admin-user-icon-button" type="button" data-user-select="${escapeHtml(login)}" aria-label="Editar usuario" title="Editar usuario" ${!canEditUser ? "disabled" : ""}>
+      <button class="admin-user-icon-button" type="button" data-user-select="${escapeHtml(login)}" aria-label="Editar usuário" title="Editar usuário" ${!canEditUser ? "disabled" : ""}>
         ${renderAdminUserIcon("edit")}
       </button>
       <button
         class="admin-user-icon-button is-danger"
         type="button"
         data-user-delete="${escapeHtml(login)}"
-        aria-label="Excluir usuario"
-        title="Excluir usuario"
+        aria-label="Excluir usuário"
+        title="Excluir usuário"
         ${isBusy || !canDeleteUser ? "disabled" : ""}
       >
         ${renderAdminUserIcon("delete")}
@@ -9607,7 +9607,7 @@ const renderAdminUsersTable = () => {
                 <tr>
                   <td colspan="${escapeHtml(String(USER_TABLE_COLUMNS.length))}">
                     <div class="admin-empty-state admin-empty-state-soft">
-                      <strong>Nenhum usuario encontrado</strong>
+                      <strong>Nenhum usuário encontrado</strong>
                       <span>Ajuste a busca ou os filtros ativos.</span>
                     </div>
                   </td>
@@ -9633,7 +9633,7 @@ const renderAdminUsersPagination = () => {
         <span>de ${escapeHtml(String(filteredCount))}</span>
       </div>
       <label>
-        <span>Por pagina</span>
+        <span>Por página</span>
         <select class="admin-input" data-user-page-size>
           ${USER_PAGE_SIZE_OPTIONS.map((size) => `
             <option value="${escapeHtml(String(size))}" ${size === adminState.userPageSize ? "selected" : ""}>
@@ -9648,7 +9648,7 @@ const renderAdminUsersPagination = () => {
         </button>
         <span>${escapeHtml(String(adminState.userPage))}/${escapeHtml(String(pageCount))}</span>
         <button class="admin-action-button is-compact" type="button" data-user-page="next" ${adminState.userPage >= pageCount ? "disabled" : ""}>
-          Proxima
+          Próxima
         </button>
       </div>
     </footer>
@@ -9673,7 +9673,7 @@ const getAdminUsersRestaurantFilterOptions = () => {
 };
 
 const renderAdminUsersFilters = () => `
-  <div class="admin-users-toolbar" aria-label="Filtros de usuarios">
+  <div class="admin-users-toolbar" aria-label="Filtros de usuários">
     <label class="admin-delivery-field">
       <span>Busca</span>
       <input
@@ -9728,15 +9728,15 @@ const renderAdminUserScopeField = ({ userScope, disabled }) => {
     return `
       <input type="hidden" name="userScope" value="RESTAURANT" />
       <div class="admin-user-scope-readonly">
-        <span>Tipo de usuario</span>
-        <strong>Usuario de Restaurante</strong>
+        <span>Tipo de usuário</span>
+        <strong>Usuário de Restaurante</strong>
       </div>
     `;
   }
 
   return `
     <fieldset class="admin-user-scope-group">
-      <legend>Tipo de usuario</legend>
+      <legend>Tipo de usuário</legend>
       ${USER_SCOPE_OPTIONS.map((option) => `
         <label class="admin-user-scope-option">
           <input
@@ -9770,10 +9770,10 @@ const renderAdminUserDialog = () => {
   const formDisabled = isViewing || isBusy || !selectedUserCanSubmit;
   const selectedRestaurantKey = userScope === "SYSTEM" ? "" : selectedUser.restaurantKey || getCurrentUsersRestaurantKey();
   const dialogTitle = isViewing
-    ? selectedUser.name || selectedUser.login || "Visualizar usuario"
+    ? selectedUser.name || selectedUser.login || "Visualizar usuário"
     : isCreating
-      ? "Novo usuario"
-      : selectedUser.name || selectedUser.login || "Editar usuario";
+      ? "Novo usuário"
+      : selectedUser.name || selectedUser.login || "Editar usuário";
 
   return `
     <div class="admin-users-modal" role="presentation">
@@ -9781,9 +9781,9 @@ const renderAdminUserDialog = () => {
       <aside class="admin-users-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-user-dialog-title">
         <header class="admin-users-dialog-head">
           <div>
-            <span class="admin-chip">${escapeHtml(isViewing ? "Visualizacao" : isCreating ? "Cadastro" : "Edicao")}</span>
+            <span class="admin-chip">${escapeHtml(isViewing ? "Visualizacao" : isCreating ? "Cadastro" : "Edição")}</span>
             <h3 id="admin-user-dialog-title">${escapeHtml(dialogTitle)}</h3>
-            <p>${escapeHtml(userScope === "SYSTEM" ? "Usuario da plataforma INOVAS Food." : "Usuario vinculado a um restaurante.")}</p>
+            <p>${escapeHtml(userScope === "SYSTEM" ? "Usuário da plataforma INOVAS Food." : "Usuário vinculado a um restaurante.")}</p>
           </div>
           <button class="admin-user-icon-button" type="button" data-user-dialog-close aria-label="Fechar" title="Fechar">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -9846,29 +9846,29 @@ const renderAdminUserDialog = () => {
             </label>
             <label class="admin-delivery-field">
               <span>${isCreating ? "Senha inicial" : "Nova senha"}</span>
-              <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatoria" : "Preencha para redefinir"}" ${formDisabled ? "disabled" : ""} ${isCreating ? "required" : ""} />
+              <input class="admin-input" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="${isCreating ? "Obrigatória" : "Preencha para redefinir"}" ${formDisabled ? "disabled" : ""} ${isCreating ? "required" : ""} />
             </label>
           </div>
 
           <section class="admin-users-permissions" hidden aria-hidden="true">
             <header class="admin-users-card-head">
               <div>
-                <span class="admin-chip">Permissoes</span>
-                <h3>Modulos e acoes</h3>
+                <span class="admin-chip">Permissões</span>
+                <h3>Modulos e ações</h3>
               </div>
-              <small>${selectedUserType === "CUSTOM" ? "Permissoes individuais" : "Perfil padrao aplicado automaticamente"}</small>
+              <small>${selectedUserType === "CUSTOM" ? "Permissões individuais" : "Perfil padrão aplicado automaticamente"}</small>
             </header>
             ${
               selectedUserCanSubmit
                 ? ""
                 : `
                   <div class="admin-feedback is-error">
-                    Este perfil e protegido ou esta fora do seu escopo de administracao.
+                    Este perfil e protegido ou esta fora do seu escopo de administração.
                   </div>
                 `
             }
             <details class="admin-users-permission-details">
-              <summary>Personalizar permissoes</summary>
+              <summary>Personalizar permissões</summary>
               ${renderAdminUserPermissions(selectedUser, isBusy)}
             </details>
           </section>
@@ -9876,7 +9876,7 @@ const renderAdminUserDialog = () => {
           <div class="admin-delivery-savebar">
             <div>
               <strong>${escapeHtml(getAdminUserProfileLabel({ ...selectedUser, userType: selectedUserType }))}</strong>
-              <span>${escapeHtml(userScope === "SYSTEM" ? "Administracao da plataforma" : `Restaurante ${selectedRestaurantKey || "nao informado"}`)}</span>
+              <span>${escapeHtml(userScope === "SYSTEM" ? "Administração da plataforma" : `Restaurante ${selectedRestaurantKey || "não informado"}`)}</span>
             </div>
             <div class="admin-delivery-savebar-actions">
               <button class="admin-button admin-button-secondary" type="button" data-user-dialog-close>
@@ -9903,7 +9903,7 @@ const renderAdminUserDialog = () => {
               ${
                 !isViewing
                   ? `<button class="admin-button admin-button-primary" type="submit" ${formDisabled ? "disabled" : ""}>
-                      ${adminState.userSaving ? "Salvando..." : "Salvar usuario"}
+                      ${adminState.userSaving ? "Salvando..." : "Salvar usuário"}
                     </button>`
                   : ""
               }
@@ -9932,28 +9932,28 @@ const renderUsersModule = () => {
   moduleRoot.innerHTML = `
     <header class="admin-users-page-head">
       <div>
-        <h2>Usuarios</h2>
-        <p>Gerencie os usuarios e permissoes do sistema por escopo.</p>
+        <h2>Usuários</h2>
+        <p>Gerencie os usuários e permissões do sistema por escopo.</p>
       </div>
       ${
         canCreateAdminUsers()
           ? `
             <a class="admin-button admin-button-primary admin-users-new-button" href="/admin/usuarios/novo" data-user-new ${isBusy ? 'aria-disabled="true"' : ""}>
               <span aria-hidden="true">+</span>
-              Novo usuario
+              Novo usuário
             </a>
           `
           : ""
       }
     </header>
 
-    <section class="admin-users-summary-grid" aria-label="Resumo de usuarios">
+    <section class="admin-users-summary-grid" aria-label="Resumo de usuários">
       <article class="admin-users-summary-card is-total">
         <span class="admin-users-summary-icon" aria-hidden="true">${renderAdminUserIcon("view")}</span>
         <div>
-          <span>Total de usuarios</span>
+          <span>Total de usuários</span>
           <strong>${escapeHtml(String(users.length))}</strong>
-          <small>Todos os usuarios</small>
+          <small>Todos os usuários</small>
         </div>
       </article>
       <article class="admin-users-summary-card is-active">
@@ -9961,7 +9961,7 @@ const renderUsersModule = () => {
         <div>
           <span>Ativos</span>
           <strong>${escapeHtml(String(activeCount))}</strong>
-          <small>Usuarios ativos</small>
+          <small>Usuários ativos</small>
         </div>
       </article>
       <article class="admin-users-summary-card is-inactive">
@@ -9969,7 +9969,7 @@ const renderUsersModule = () => {
         <div>
           <span>Inativos</span>
           <strong>${escapeHtml(String(inactiveCount))}</strong>
-          <small>Usuarios inativos</small>
+          <small>Usuários inativos</small>
         </div>
       </article>
       <article class="admin-users-summary-card is-blocked">
@@ -9977,7 +9977,7 @@ const renderUsersModule = () => {
         <div>
           <span>Bloqueados</span>
           <strong>${escapeHtml(String(blockedCount))}</strong>
-          <small>Usuarios bloqueados</small>
+          <small>Usuários bloqueados</small>
         </div>
       </article>
     </section>
@@ -9996,7 +9996,7 @@ const renderUsersModule = () => {
           adminState.isLoadingUsers
             ? `
               <div class="admin-empty-state admin-empty-state-loading">
-                <strong>Carregando usuarios</strong>
+                <strong>Carregando usuários</strong>
                 <span>Sincronizando acessos do gestor.</span>
               </div>
             `
@@ -10019,7 +10019,7 @@ const renderPlaceholderModule = () => {
     adminState.activeSection
   )
     ? "Fase 2 do gestor"
-    : "Proxima fase";
+    : "Próxima fase";
 
   if (!moduleRoot) {
     return;
@@ -10027,9 +10027,9 @@ const renderPlaceholderModule = () => {
 
   moduleRoot.innerHTML = `
     <div class="admin-empty-state">
-      <strong>${escapeHtml(section?.label || "Modulo")} em preparacao</strong>
+      <strong>${escapeHtml(section?.label || "Modulo")} em preparação</strong>
       <span>${escapeHtml(
-        `${roadmapLabel}: este modulo entra depois da consolidacao do fluxo principal de pedidos. A base de navegacao ja esta pronta para evoluir sem refazer o gestor.`
+        `${roadmapLabel}: este modulo entra depois da consolidacao do fluxo principal de pedidos. A base de navegacao já esta pronta para evoluir sem refazer o gestor.`
       )}</span>
     </div>
   `;
@@ -10046,11 +10046,11 @@ const renderPlanBlockedModule = () => {
 
   moduleRoot.innerHTML = `
     <div class="admin-empty-state" data-admin-plan-blocked>
-      <strong>Este modulo nao esta disponivel no plano atual.</strong>
+      <strong>Este modulo não esta disponível no plano atual.</strong>
       <span>${escapeHtml(
         featureKey
           ? `${section?.label || "Modulo"} depende do recurso comercial ${featureKey}.`
-          : `${section?.label || "Modulo"} nao esta liberado no contrato atual.`
+          : `${section?.label || "Modulo"} não esta liberado no contrato atual.`
       )}</span>
     </div>
   `;
@@ -10219,7 +10219,7 @@ const renderBoard = () => {
       <div class="admin-board-loading">
         <div class="admin-empty-state admin-empty-state-loading">
           <strong>Carregando pedidos</strong>
-          <span>Estamos sincronizando a operacao do gestor com a base de pedidos.</span>
+          <span>Estamos sincronizando a operação do gestor com a base de pedidos.</span>
         </div>
       </div>
     `;
@@ -10430,7 +10430,7 @@ const renderDetailActionButtons = (order, actions) =>
     : `
       <div class="admin-inline-note">
         <strong>Pedido encerrado</strong>
-        <span>Este pedido ja saiu da operacao ativa.</span>
+        <span>Este pedido já saiu da operação ativa.</span>
       </div>
     `;
 
@@ -10438,16 +10438,16 @@ const renderOrderDetailHistoryMeta = (order) => `
   <span><strong>Status atual</strong>${escapeHtml(order.status)}</span>
   <span><strong>Criado em</strong>${escapeHtml(formatDateTime(order.createdAt))}</span>
   <span><strong>Atualizado em</strong>${escapeHtml(formatDateTime(order.updatedAt))}</span>
-  <span><strong>Ultima observacao</strong>${escapeHtml(order.latestStatusNote || "Sem observacao operacional.")}</span>
+  <span><strong>Última observação</strong>${escapeHtml(order.latestStatusNote || "Sem observação operacional.")}</span>
 `;
 
 const renderOrderNotesBlock = (order) => `
   <section class="admin-detail-card admin-detail-card-notes">
     <div class="admin-detail-card-head">
-      <h3>Observacoes</h3>
+      <h3>Observações</h3>
     </div>
     <div class="admin-detail-note-block">
-      <p>${escapeHtml(order.customerNotes || order.latestStatusNote || "Sem observacoes registradas para este pedido.")}</p>
+      <p>${escapeHtml(order.customerNotes || order.latestStatusNote || "Sem observações registradas para este pedido.")}</p>
     </div>
   </section>
 `;
@@ -10673,7 +10673,7 @@ const renderBoardModalOrderRow = (order) => `
 
     <div class="admin-board-modal-row-meta">
       <span>
-        <small>Horario</small>
+        <small>Horário</small>
         <strong>${escapeHtml(
           order.timingMode === "scheduled" ? order.scheduledLabel || "--" : formatTime(order.createdAt)
         )}</strong>
@@ -10757,7 +10757,7 @@ const renderBoardColumnModal = () => {
         <strong>${escapeHtml(formatMoney(
           columnOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0)
         ))}</strong>
-        <small>Total visivel desta etapa</small>
+        <small>Total visível desta etapa</small>
       </span>
       <span>
         <strong>${escapeHtml(
@@ -10807,7 +10807,7 @@ const renderOrderItems = (items, itemType) => {
       const promotionLabel =
         item.type === "product" && metadata?.promotion?.name
           ? [
-              `Promocao: ${metadata.promotion.name}`,
+              `Promoção: ${metadata.promotion.name}`,
               typeof metadata.promotion.promotionalUnitPrice === "number"
                 ? `Unitario ${formatMoney(metadata.promotion.promotionalUnitPrice)}`
                 : "",
@@ -10842,7 +10842,7 @@ const renderStatusHistory = (history) => {
   if (!Array.isArray(history) || history.length === 0) {
     return `
       <div class="admin-empty-inline">
-        <span>Sem atualizacoes registradas ate o momento.</span>
+        <span>Sem atualizacoes registradas até o momento.</span>
       </div>
     `;
   }
@@ -10860,7 +10860,7 @@ const renderStatusHistory = (history) => {
             </div>
           </div>
           <p>${escapeHtml(
-            [getAuditActorLabel(entry), entry.note || "Atualizacao operacional registrada."]
+            [getAuditActorLabel(entry), entry.note || "Atualização operacional registrada."]
               .filter(Boolean)
               .join(" | ")
           )}</p>
@@ -10896,7 +10896,7 @@ const renderAuditList = (events) => {
             <span>${escapeHtml(entry.customerName || "Pedido operacional")}</span>
             <span>${escapeHtml(entry.status || "Sem status")}</span>
           </div>
-          <p>${escapeHtml(entry.note || "Atualizacao operacional registrada.")}</p>
+          <p>${escapeHtml(entry.note || "Atualização operacional registrada.")}</p>
         </button>
       `
     )
@@ -10943,7 +10943,7 @@ const renderCustomerDetails = () => {
     detailRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-soft">
         <strong>Nenhum cliente selecionado</strong>
-        <span>Escolha um cliente no modulo para ver recorrencia, receita e pedidos recentes.</span>
+        <span>Escolha um cliente no modulo para ver recorrência, receita e pedidos recentes.</span>
       </div>
     `;
     return;
@@ -10963,7 +10963,7 @@ const renderCustomerDetails = () => {
         <div>
           <span class="admin-chip">Cliente selecionado</span>
           <h3>${escapeHtml(customer.customerName)}</h3>
-          <p>${escapeHtml(customer.customerPhone || customer.customerEmail || "Contato nao informado")}</p>
+          <p>${escapeHtml(customer.customerPhone || customer.customerEmail || "Contato não informado")}</p>
         </div>
         <span class="admin-order-status ${customer.isLapsed ? "is-cancelled" : "is-confirmed"}">${escapeHtml(
           customer.isLapsed ? "Sumiu" : customer.isRecurring ? "Recorrente" : "Cliente"
@@ -10973,7 +10973,7 @@ const renderCustomerDetails = () => {
       <div class="admin-detail-hero-meta">
         <span><strong>Pedidos</strong>${escapeHtml(String(customer.ordersCount))}</span>
         <span><strong>Total gasto</strong>${escapeHtml(formatMoney(customer.totalSpent || 0))}</span>
-        <span><strong>Ticket medio</strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</span>
+        <span><strong>Ticket médio</strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</span>
       </div>
     </section>
 
@@ -10989,12 +10989,12 @@ const renderCustomerDetails = () => {
         <span>${escapeHtml(customer.suggestedAction || "Mandar mensagem no WhatsApp")}</span>
       </div>
       <div class="admin-detail-fields">
-        <span><strong>Telefone</strong>${escapeHtml(customer.customerPhone || "Nao informado")}</span>
-        <span><strong>E-mail</strong>${escapeHtml(customer.customerEmail || "Nao informado")}</span>
-        <span><strong>Ultima compra</strong>${escapeHtml(formatDateTime(customer.lastPurchaseAt || ""))}</span>
-        <span><strong>Ultimo status</strong>${escapeHtml(customer.lastStatus || "Nao informado")}</span>
-        <span><strong>Endereco mais usado</strong>${escapeHtml(customer.mostUsedAddress || "Nao informado")}</span>
-        <span><strong>Pedido recente</strong>${escapeHtml(customer.lastOrderPublicId || "Nao informado")}</span>
+        <span><strong>Telefone</strong>${escapeHtml(customer.customerPhone || "Não informado")}</span>
+        <span><strong>E-mail</strong>${escapeHtml(customer.customerEmail || "Não informado")}</span>
+        <span><strong>Última compra</strong>${escapeHtml(formatDateTime(customer.lastPurchaseAt || ""))}</span>
+        <span><strong>Último status</strong>${escapeHtml(customer.lastStatus || "Não informado")}</span>
+        <span><strong>Endereço mais usado</strong>${escapeHtml(customer.mostUsedAddress || "Não informado")}</span>
+        <span><strong>Pedido recente</strong>${escapeHtml(customer.lastOrderPublicId || "Não informado")}</span>
       </div>
       <div class="admin-customer-profile-actions">
         ${
@@ -11007,7 +11007,7 @@ const renderCustomerDetails = () => {
 
     <section class="admin-detail-card">
       <div class="admin-detail-card-head">
-        <h3>Tags e observacoes</h3>
+        <h3>Tags e observações</h3>
         <span>${customer.updatedAt ? `Salvo em ${escapeHtml(formatDateTime(customer.updatedAt))}` : "Sem anotacao salva"}</span>
       </div>
       <div class="admin-customer-tag-toggle-list">
@@ -11029,9 +11029,9 @@ const renderCustomerDetails = () => {
       </div>
       <form class="admin-customer-notes-form" data-customer-notes-form>
         <input type="hidden" name="customerKey" value="${escapeHtml(customer.customerKey)}" />
-        <textarea class="admin-input admin-textarea" name="notes" rows="5" placeholder="Observacoes internas para a equipe." ${adminState.isSavingCustomerProfile ? "disabled" : ""}>${escapeHtml(customer.notes || "")}</textarea>
+        <textarea class="admin-input admin-textarea" name="notes" rows="5" placeholder="Observações internas para a equipe." ${adminState.isSavingCustomerProfile ? "disabled" : ""}>${escapeHtml(customer.notes || "")}</textarea>
         <button class="admin-button admin-button-primary" type="submit" ${adminState.isSavingCustomerProfile ? "disabled" : ""}>
-          ${adminState.isSavingCustomerProfile ? "Salvando..." : "Salvar observacao"}
+          ${adminState.isSavingCustomerProfile ? "Salvando..." : "Salvar observação"}
         </button>
       </form>
     </section>
@@ -11064,7 +11064,7 @@ const renderCustomerDetails = () => {
 
     <section class="admin-detail-card">
       <div class="admin-detail-card-head">
-        <h3>Historico de pedidos</h3>
+        <h3>Histórico de pedidos</h3>
         <span>${escapeHtml(String(customer.orders.length))} registro(s)</span>
       </div>
       <div class="admin-status-history">
@@ -11111,27 +11111,27 @@ const renderReviewDetails = () => {
 
   if (!review) {
     if (detailTitle) {
-      detailTitle.textContent = "Selecione uma avaliacao";
+      detailTitle.textContent = "Selecione uma avaliação";
     }
 
     if (detailSubtitle) {
-      detailSubtitle.textContent = "Abra um registro para ver comentario, contato e janela de publicacao.";
+      detailSubtitle.textContent = "Abra um registro para ver comentário, contato e janela de publicação.";
     }
 
     detailRoot.innerHTML = `
       <section class="admin-detail-hero">
         <div class="admin-detail-hero-main">
           <div>
-            <span class="admin-chip">Reputacao do site</span>
-            <h3>${escapeHtml(String(summary.totalReviews || 0))} avaliacoes no gestor</h3>
+            <span class="admin-chip">Reputação do site</span>
+            <h3>${escapeHtml(String(summary.totalReviews || 0))} avaliações no gestor</h3>
             <p>Use os filtros para separar feedback publicado, oculto, encerrado e o recorte recente de 60 dias.</p>
           </div>
-          <span class="admin-order-status is-confirmed">Avaliacoes</span>
+          <span class="admin-order-status is-confirmed">Avaliações</span>
         </div>
         <div class="admin-detail-hero-meta">
           <span><strong>Publicadas</strong>${escapeHtml(String(summary.publishedReviews || 0))}</span>
           <span><strong>Ocultas</strong>${escapeHtml(String(summary.hiddenReviews || 0))}</span>
-          <span><strong>Media</strong>${escapeHtml(String(Number(summary.displayAverage || 0).toFixed(1)))}</span>
+          <span><strong>Média</strong>${escapeHtml(String(Number(summary.displayAverage || 0).toFixed(1)))}</span>
         </div>
       </section>
     `;
@@ -11139,13 +11139,13 @@ const renderReviewDetails = () => {
   }
 
   if (detailTitle) {
-    detailTitle.textContent = review.customerName || "Avaliacao selecionada";
+    detailTitle.textContent = review.customerName || "Avaliação selecionada";
   }
 
   if (detailSubtitle) {
     detailSubtitle.innerHTML = `
       <span class="${getReviewStatusClassName(review.status)}">${escapeHtml(
-        review.statusLabel || "Avaliacao"
+        review.statusLabel || "Avaliação"
       )}</span>
       <span class="admin-detail-head-meta-item">
         <strong>Nota</strong>
@@ -11153,7 +11153,7 @@ const renderReviewDetails = () => {
       </span>
       <span class="admin-detail-head-meta-item">
         <strong>Janela</strong>
-        <span>${escapeHtml(review.publicationLabel || "Automatica")}</span>
+        <span>${escapeHtml(review.publicationLabel || "Automática")}</span>
       </span>
       <span class="admin-detail-head-meta-item">
         <strong>Recebida</strong>
@@ -11166,30 +11166,30 @@ const renderReviewDetails = () => {
     <section class="admin-detail-hero">
       <div class="admin-detail-hero-main">
         <div>
-          <span class="admin-chip">Avaliacao selecionada</span>
+          <span class="admin-chip">Avaliação selecionada</span>
           <h3>${escapeHtml(buildReviewStars(review.rating))}</h3>
           <p>${escapeHtml(review.remainingLabel || "Sem janela ativa")}</p>
         </div>
         <span class="${getReviewStatusClassName(review.status)}">${escapeHtml(
-          review.statusLabel || "Avaliacao"
+          review.statusLabel || "Avaliação"
         )}</span>
       </div>
 
       <div class="admin-detail-hero-meta">
         <span><strong>Nota</strong>${escapeHtml(`${review.rating || 0}/5`)}</span>
-        <span><strong>Publicacao</strong>${escapeHtml(review.publicationLabel || "Automatica")}</span>
-        <span><strong>Site</strong>${escapeHtml(review.isVisibleNow ? "Visivel" : "Fora do site")}</span>
+        <span><strong>Publicação</strong>${escapeHtml(review.publicationLabel || "Automática")}</span>
+        <span><strong>Site</strong>${escapeHtml(review.isVisibleNow ? "Visível" : "Fora do site")}</span>
       </div>
     </section>
 
     <section class="admin-detail-card">
       <div class="admin-detail-card-head">
-        <h3>Comentario</h3>
+        <h3>Comentário</h3>
         <span>${escapeHtml(formatDateTime(review.createdAt))}</span>
       </div>
       <div class="admin-detail-section">
         <div class="admin-empty-inline admin-empty-inline-review">
-          <span>${escapeHtml(review.message || "Sem comentario informado.")}</span>
+          <span>${escapeHtml(review.message || "Sem comentário informado.")}</span>
         </div>
       </div>
     </section>
@@ -11200,35 +11200,35 @@ const renderReviewDetails = () => {
         <span>${escapeHtml(review.source || "site")}</span>
       </div>
       <div class="admin-detail-fields">
-        <span><strong>Nome</strong>${escapeHtml(review.customerName || "Nao informado")}</span>
+        <span><strong>Nome</strong>${escapeHtml(review.customerName || "Não informado")}</span>
         <span><strong>Contato</strong>${escapeHtml(
-          review.customerContact || review.customerPhone || review.customerEmail || "Nao informado"
+          review.customerContact || review.customerPhone || review.customerEmail || "Não informado"
         )}</span>
-        <span><strong>Telefone</strong>${escapeHtml(review.customerPhone || "Nao informado")}</span>
-        <span><strong>E-mail</strong>${escapeHtml(review.customerEmail || "Nao informado")}</span>
-        <span><strong>Cliente vinculado</strong>${escapeHtml(review.customerKey || "Nao informado")}</span>
-        <span><strong>Perfil</strong>${escapeHtml(review.profileId || "Nao informado")}</span>
+        <span><strong>Telefone</strong>${escapeHtml(review.customerPhone || "Não informado")}</span>
+        <span><strong>E-mail</strong>${escapeHtml(review.customerEmail || "Não informado")}</span>
+        <span><strong>Cliente vinculado</strong>${escapeHtml(review.customerKey || "Não informado")}</span>
+        <span><strong>Perfil</strong>${escapeHtml(review.profileId || "Não informado")}</span>
       </div>
     </section>
 
     <section class="admin-detail-card">
       <div class="admin-detail-card-head">
-        <h3>Publicacao automatica</h3>
-        <span>${escapeHtml(review.statusLabel || "Avaliacao")}</span>
+        <h3>Publicação automática</h3>
+        <span>${escapeHtml(review.statusLabel || "Avaliação")}</span>
       </div>
       <div class="admin-detail-fields">
-        <span><strong>Status</strong>${escapeHtml(review.statusLabel || "Nao informado")}</span>
+        <span><strong>Status</strong>${escapeHtml(review.statusLabel || "Não informado")}</span>
         <span><strong>Recebida em</strong>${escapeHtml(formatDateTime(review.createdAt))}</span>
         <span><strong>Atualizada em</strong>${escapeHtml(formatDateTime(review.updatedAt))}</span>
-        <span><strong>Vai ate</strong>${escapeHtml(formatDateTime(review.publishUntil))}</span>
-        <span><strong>Regra por nota</strong>${escapeHtml(review.publicationLabel || "Nao informado")}</span>
-        <span><strong>Recente 60d</strong>${escapeHtml(review.isRecent ? "Sim" : "Nao")}</span>
+        <span><strong>Vai até</strong>${escapeHtml(formatDateTime(review.publishUntil))}</span>
+        <span><strong>Regra por nota</strong>${escapeHtml(review.publicationLabel || "Não informado")}</span>
+        <span><strong>Recente 60d</strong>${escapeHtml(review.isRecent ? "Sim" : "Não")}</span>
       </div>
     </section>
 
     <section class="admin-detail-card admin-detail-card-actions">
       <div class="admin-detail-card-head">
-        <h3>Acoes da avaliacao</h3>
+        <h3>Ações da avaliação</h3>
         <span>Controle operacional</span>
       </div>
       <section class="admin-detail-actions admin-detail-actions-final">
@@ -11240,7 +11240,7 @@ const renderReviewDetails = () => {
           ${adminState.reviewBusyId === review.id ? "disabled" : ""}
         >
           ${escapeHtml(
-            review.visibilityState === "hidden" ? "Restaurar publicacao" : "Ocultar do site"
+            review.visibilityState === "hidden" ? "Restaurar publicação" : "Ocultar do site"
           )}
         </button>
         <button
@@ -11249,7 +11249,7 @@ const renderReviewDetails = () => {
           data-review-delete="${escapeHtml(review.id)}"
           ${adminState.reviewBusyId === review.id ? "disabled" : ""}
         >
-          Remover avaliacao
+          Remover avaliação
         </button>
       </section>
     </section>
@@ -11340,7 +11340,7 @@ const renderInventoryDetails = () => {
           <input class="admin-input" name="quantity" type="number" min="0" step="0.001" value="${escapeHtml(String(draftItem.quantity || 0))}" />
         </label>
         <label class="admin-field">
-          <span>Quantidade minima</span>
+          <span>Quantidade mínima</span>
           <input class="admin-input" name="minimumQuantity" type="number" min="0" step="0.001" value="${escapeHtml(String(draftItem.minimumQuantity || 0))}" />
         </label>
         <label class="admin-field admin-field-wide">
@@ -11378,7 +11378,7 @@ const renderInventoryDetails = () => {
               <form class="admin-inventory-adjust-card is-remove" data-inventory-adjust-form data-inventory-adjust-mode="remove">
                 <input type="hidden" name="itemId" value="${escapeHtml(selectedItem.id)}" />
                 <label class="admin-field">
-                  <span>Saida</span>
+                  <span>Saída</span>
                   <input class="admin-input" name="amount" type="number" min="0.001" step="0.001" placeholder="Ex: 0.5" required />
                 </label>
                 <button class="admin-action-button is-danger" type="submit" ${isBusy ? "disabled" : ""}>
@@ -11426,7 +11426,7 @@ const renderOrderDetails = () => {
     }
 
     if (detailSubtitle) {
-      detailSubtitle.textContent = "Buscando os dados completos da operacao.";
+      detailSubtitle.textContent = "Buscando os dados completos da operação.";
     }
 
     detailRoot.innerHTML = `
@@ -11462,7 +11462,7 @@ const renderOrderDetails = () => {
         adminState.activeSection === "menu" ||
         adminState.activeSection === "promotions"
           ? sectionMeta.description
-          : "Abra um card do kanban para acompanhar a operacao.";
+          : "Abra um card do kanban para acompanhar a operação.";
     }
 
     if (adminState.activeSection === "finance") {
@@ -11475,14 +11475,14 @@ const renderOrderDetails = () => {
             <div>
               <span class="admin-chip">Fechamento</span>
               <h3>${escapeHtml(formatMoney(closing.totalExpected || overview.receivedRevenue || 0))}</h3>
-              <p>${escapeHtml(snapshot.filters?.rangeLabel || "Periodo financeiro atual")}</p>
+              <p>${escapeHtml(snapshot.filters?.rangeLabel || "Período financeiro atual")}</p>
             </div>
             <span class="admin-order-status is-finished">Financeiro</span>
           </div>
           <div class="admin-detail-hero-meta">
-            <span><strong>Liquido</strong>${escapeHtml(formatMoney(overview.netRevenue || 0))}</span>
+            <span><strong>Líquido</strong>${escapeHtml(formatMoney(overview.netRevenue || 0))}</span>
             <span><strong>Repasse</strong>${escapeHtml(formatMoney(overview.deliveryPayout || 0))}</span>
-            <span><strong>Diferenca</strong>${escapeHtml(formatMoney(closing.difference || 0))}</span>
+            <span><strong>Diferença</strong>${escapeHtml(formatMoney(closing.difference || 0))}</span>
           </div>
         </section>
       `;
@@ -11497,9 +11497,9 @@ const renderOrderDetails = () => {
             <div>
               <span class="admin-chip">Leitura do turno</span>
               <h3>${escapeHtml(String(reports.visibleOrders.length))} pedidos</h3>
-              <p>Resumo de operacao baseado no conjunto visivel do gestor.</p>
+              <p>Resumo de operação baseado no conjunto visível do gestor.</p>
             </div>
-            <span class="admin-order-status is-confirmed">Relatorios</span>
+            <span class="admin-order-status is-confirmed">Relatórios</span>
           </div>
           <div class="admin-detail-hero-meta">
             <span><strong>Entrega</strong>${escapeHtml(
@@ -11527,9 +11527,9 @@ const renderOrderDetails = () => {
             <div>
               <span class="admin-chip">Leitura gerencial</span>
               <h3>${escapeHtml(String(metricsOverview.totalOrders || 0))} pedidos no recorte</h3>
-              <p>Use os filtros do modulo para alternar periodo, admin, status e fluxo sem sair do gestor.</p>
+              <p>Use os filtros do modulo para alternar período, admin, status e fluxo sem sair do gestor.</p>
             </div>
-            <span class="admin-order-status is-confirmed">Metricas</span>
+            <span class="admin-order-status is-confirmed">Métricas</span>
           </div>
           <div class="admin-detail-hero-meta">
             <span><strong>Conclusao</strong>${escapeHtml(formatPercent(metricsOverview.completionRate || 0))}</span>
@@ -11554,9 +11554,9 @@ const renderOrderDetails = () => {
             <span class="admin-order-status is-confirmed">Auditoria</span>
           </div>
           <div class="admin-detail-hero-meta">
-            <span><strong>Usuarios</strong>${escapeHtml(String(auditOverview.uniqueAdmins))}</span>
+            <span><strong>Usuários</strong>${escapeHtml(String(auditOverview.uniqueAdmins))}</span>
             <span><strong>Pedidos</strong>${escapeHtml(String(auditOverview.uniqueOrders))}</span>
-            <span><strong>Ultimo</strong>${escapeHtml(
+            <span><strong>Último</strong>${escapeHtml(
               auditOverview.lastEventAt ? formatDateTime(auditOverview.lastEventAt) : "Sem eventos"
             )}</span>
           </div>
@@ -11573,14 +11573,14 @@ const renderOrderDetails = () => {
             <div>
               <span class="admin-chip">Agenda ativa</span>
               <h3>${escapeHtml(String(scheduledSnapshot.summary?.totalOrders || 0))} pedidos futuros</h3>
-              <p>Os pedidos agendados ficam aqui ate o horario programado e depois entram sozinhos no fluxo ativo.</p>
+              <p>Os pedidos agendados ficam aqui até o horário programado e depois entram sozinhos no fluxo ativo.</p>
             </div>
             <span class="admin-order-status is-confirmed">Agendados</span>
           </div>
           <div class="admin-detail-hero-meta">
             <span><strong>Entrega</strong>${escapeHtml(String(scheduledSnapshot.summary?.deliveryOrders || 0))}</span>
             <span><strong>Retirada</strong>${escapeHtml(String(scheduledSnapshot.summary?.pickupOrders || 0))}</span>
-            <span><strong>Proximos</strong>${escapeHtml(String(scheduledSnapshot.summary?.dueSoonOrders || 0))}</span>
+            <span><strong>Próximos</strong>${escapeHtml(String(scheduledSnapshot.summary?.dueSoonOrders || 0))}</span>
           </div>
         </section>
       `;
@@ -11593,11 +11593,11 @@ const renderOrderDetails = () => {
         <section class="admin-detail-hero">
           <div class="admin-detail-hero-main">
             <div>
-              <span class="admin-chip">Cardapio vivo</span>
+              <span class="admin-chip">Cardápio vivo</span>
               <h3>${escapeHtml(String(menuSummary.totalItems || 0))} itens gerenciados</h3>
-              <p>O painel controla categorias, fotos, destaque da home e disponibilidade do site sem editar o codigo do cardapio.</p>
+              <p>O painel controla categorias, fotos, destaque da home e disponibilidade do site sem editar o código do cardápio.</p>
             </div>
-            <span class="admin-order-status is-confirmed">Cardapio</span>
+            <span class="admin-order-status is-confirmed">Cardápio</span>
           </div>
           <div class="admin-detail-hero-meta">
             <span><strong>Ativos</strong>${escapeHtml(String(menuSummary.activeItems || 0))}</span>
@@ -11626,7 +11626,7 @@ const renderOrderDetails = () => {
           <section class="admin-detail-hero">
             <div class="admin-detail-hero-main">
               <div>
-                <span class="admin-chip">Promocao selecionada</span>
+                <span class="admin-chip">Promoção selecionada</span>
                 <h3>${escapeHtml(selectedPromotion.internalName)}</h3>
                 <p>${escapeHtml(getPromotionDateRangeLabel(selectedPromotion))}</p>
               </div>
@@ -11643,16 +11643,16 @@ const renderOrderDetails = () => {
 
           <section class="admin-detail-card">
             <div class="admin-detail-card-head">
-              <h3>Operacao da campanha</h3>
+              <h3>Operação da campanha</h3>
               <span>${escapeHtml(`${selectedPromotion.appliedItemsCount || 0} item(ns) aplicando agora`)}</span>
             </div>
             <div class="admin-detail-fields">
               <span><strong>Status</strong>${escapeHtml(selectedPromotion.statusLabel)}</span>
-              <span><strong>Periodo</strong>${escapeHtml(getPromotionDateRangeLabel(selectedPromotion))}</span>
-              <span><strong>Preco final</strong>${escapeHtml(getPromotionPricePreviewLabel(selectedPromotion))}</span>
+              <span><strong>Período</strong>${escapeHtml(getPromotionDateRangeLabel(selectedPromotion))}</span>
+              <span><strong>Preço final</strong>${escapeHtml(getPromotionPricePreviewLabel(selectedPromotion))}</span>
               <span><strong>Itens afetados</strong>${escapeHtml(String(selectedPromotion.affectedItemsCount || 0))}</span>
-              <span><strong>Habilitada</strong>${escapeHtml(selectedPromotion.isEnabled ? "Sim" : "Nao")}</span>
-              <span><strong>Ultima alteracao</strong>${escapeHtml(
+              <span><strong>Habilitada</strong>${escapeHtml(selectedPromotion.isEnabled ? "Sim" : "Não")}</span>
+              <span><strong>Última alteração</strong>${escapeHtml(
                 selectedPromotion.updatedAt ? formatDateTime(selectedPromotion.updatedAt) : "Sem registro"
               )}</span>
             </div>
@@ -11677,7 +11677,7 @@ const renderOrderDetails = () => {
                             <div class="admin-detail-item-meta">
                               <span>${escapeHtml(item.availabilityState || "active")}</span>
                               <strong>${escapeHtml(
-                                typeof item.regularPrice === "number" ? formatMoney(item.regularPrice) : "Sem preco"
+                                typeof item.regularPrice === "number" ? formatMoney(item.regularPrice) : "Sem preço"
                               )}</strong>
                             </div>
                           </article>
@@ -11686,7 +11686,7 @@ const renderOrderDetails = () => {
                       .join("")
                   : `
                     <div class="admin-empty-inline">
-                      <span>Nenhum item vinculado a esta promocao.</span>
+                      <span>Nenhum item vinculado a esta promoção.</span>
                     </div>
                   `
               }
@@ -11701,10 +11701,10 @@ const renderOrderDetails = () => {
           <div class="admin-detail-hero-main">
             <div>
               <span class="admin-chip">Campanhas ativas</span>
-              <h3>${escapeHtml(String(promotionsSummary.totalPromotions || 0))} promocoes registradas</h3>
-              <p>Crie campanhas com vigencia automatica e reflexo consistente no site e no fechamento do pedido.</p>
+              <h3>${escapeHtml(String(promotionsSummary.totalPromotions || 0))} promoções registradas</h3>
+              <p>Crie campanhas com vigência automática e reflexo consistente no site e no fechamento do pedido.</p>
             </div>
-            <span class="admin-order-status is-confirmed">Promocoes</span>
+            <span class="admin-order-status is-confirmed">Promoções</span>
           </div>
           <div class="admin-detail-hero-meta">
             <span><strong>Ativas</strong>${escapeHtml(String(promotionsSummary.activePromotions || 0))}</span>
@@ -11719,7 +11719,7 @@ const renderOrderDetails = () => {
     detailRoot.innerHTML = `
       <div class="admin-empty-state admin-empty-state-soft">
         <strong>Nenhum pedido aberto</strong>
-        <span>Escolha um card para ver endereco, itens, pagamento e historico do pedido.</span>
+        <span>Escolha um card para ver endereço, itens, pagamento e histórico do pedido.</span>
       </div>
     `;
     return;
@@ -11775,7 +11775,7 @@ const renderOrderDetails = () => {
     <section class="admin-detail-card admin-detail-card-top-summary">
       <div class="admin-detail-summary-grid admin-detail-summary-grid-top">
         <article class="admin-detail-summary-tile">
-          <strong>${escapeHtml(order.timingMode === "scheduled" ? "Agendado para" : "Horario do pedido")}</strong>
+          <strong>${escapeHtml(order.timingMode === "scheduled" ? "Agendado para" : "Horário do pedido")}</strong>
           ${escapeHtml(topScheduleLabel)}
         </article>
         <article class="admin-detail-summary-tile is-emphasis">
@@ -11807,14 +11807,14 @@ const renderOrderDetails = () => {
               ${
                 whatsappLink
                   ? `<a href="${whatsappLink}" target="_blank" rel="noreferrer">${escapeHtml(
-                      order.customerPhone || "Nao informado"
+                      order.customerPhone || "Não informado"
                     )}<span class="admin-detail-whatsapp-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none">
                         <path d="M20 11.9A8 8 0 0 1 8.4 19L4 20l1.2-4A8 8 0 1 1 20 11.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                         <path d="M9.7 9.5c.2-.4.5-.4.7-.4h.5c.2 0 .4 0 .5.4l.6 1.5c.1.3 0 .4-.1.6l-.3.4c-.1.1-.2.2-.1.4.2.4.8 1.3 1.8 2 .4.3.7.5 1 .6.2.1.3 0 .4-.1l.5-.6c.1-.1.3-.2.5-.1l1.4.6c.2.1.4.2.4.5v.4c0 .3-.2.7-.5.9-.5.3-1.1.4-1.7.3-1-.2-2-.7-3.1-1.7-1.2-1.2-2-2.4-2.2-3.6-.1-.6.1-1.2.4-1.7Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                       </svg>
                     </span></a>`
-                  : escapeHtml(order.customerPhone || "Nao informado")
+                  : escapeHtml(order.customerPhone || "Não informado")
               }
             </div>
             ${
@@ -11835,7 +11835,7 @@ const renderOrderDetails = () => {
         <span class="admin-detail-summary-item"><strong>Tipo</strong><span>${escapeHtml(getOrderTypeLabel(order))}</span></span>
         <span class="admin-detail-summary-item"><strong>Total</strong><span>${escapeHtml(formatMoney(order.totalAmount || 0))}</span></span>
         <span class="admin-detail-summary-item"><strong>Entrega</strong><span>${escapeHtml(
-          order.fulfillmentMode === "pickup" ? "Balcao" : "Delivery"
+          order.fulfillmentMode === "pickup" ? "Balcão" : "Delivery"
         )}</span></span>
         <span class="admin-detail-summary-item"><strong>Itens</strong><span>${escapeHtml(
           String(order.itemCount || 0)
@@ -11863,14 +11863,14 @@ const renderOrderDetails = () => {
 
     <section class="admin-detail-card admin-detail-card-history">
       <div class="admin-detail-card-head">
-        <h3>Historico do pedido</h3>
+        <h3>Histórico do pedido</h3>
       </div>
       <div class="admin-status-history">${renderStatusHistory(order.auditTrail)}</div>
     </section>
 
     <section class="admin-detail-card admin-detail-card-actions">
       <div class="admin-detail-card-head">
-        <h3>Acoes</h3>
+        <h3>Ações</h3>
       </div>
       ${renderOrderActionGrid(order)}
       <div
@@ -11949,7 +11949,7 @@ const loadOrderDetails = async (orderId, { showLoading = true } = {}) => {
     }
 
     adminState.isLoadingOrderDetails = false;
-    adminState.actionMessage = error.message || "Nao foi possivel carregar o pedido selecionado.";
+    adminState.actionMessage = error.message || "Não foi possível carregar o pedido selecionado.";
     adminState.actionTone = "error";
     renderOrderDetails();
   }
@@ -12016,7 +12016,7 @@ const loadAuditLog = async ({ preserveSelection = true, silent = false } = {}) =
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar a auditoria operacional.";
+    adminState.actionMessage = error.message || "Não foi possível carregar a auditoria operacional.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "audit") {
@@ -12085,7 +12085,7 @@ const loadMetrics = async ({ silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar as metricas operacionais.";
+    adminState.actionMessage = error.message || "Não foi possível carregar as métricas operacionais.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "metrics") {
@@ -12166,7 +12166,7 @@ const loadScheduledOrders = async ({ preserveSelection = true, silent = false } 
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar os pedidos agendados.";
+    adminState.actionMessage = error.message || "Não foi possível carregar os pedidos agendados.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "scheduled") {
@@ -12228,7 +12228,7 @@ const loadMenuCatalog = async ({ silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar o catalogo administrativo.";
+    adminState.actionMessage = error.message || "Não foi possível carregar o catálogo administrativo.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "menu") {
@@ -12295,7 +12295,7 @@ const loadPromotions = async ({ preserveSelection = true, silent = false, prefer
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar as promocoes administrativas.";
+    adminState.actionMessage = error.message || "Não foi possível carregar as promoções administrativas.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "promotions") {
@@ -12362,7 +12362,7 @@ const loadReviews = async ({ preserveSelection = true, silent = false, preferred
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar as avaliacoes administrativas.";
+    adminState.actionMessage = error.message || "Não foi possível carregar as avaliações administrativas.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "reviews") {
@@ -12414,7 +12414,7 @@ const loadDeliverySettings = async ({ silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar as configuracoes de entrega.";
+    adminState.actionMessage = error.message || "Não foi possível carregar as configurações de entrega.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "deliveries") {
@@ -12469,7 +12469,7 @@ const loadRestaurantSettings = async ({ silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar as configuracoes.";
+    adminState.actionMessage = error.message || "Não foi possível carregar as configurações.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "settings") {
@@ -12527,7 +12527,7 @@ const loadUsers = async ({ preserveSelection = true, silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar os usuarios.";
+    adminState.actionMessage = error.message || "Não foi possível carregar os usuários.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "users") {
@@ -12586,7 +12586,7 @@ const loadFinance = async ({ silent = false } = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar o financeiro.";
+    adminState.actionMessage = error.message || "Não foi possível carregar o financeiro.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "finance") {
@@ -12637,7 +12637,7 @@ const loadInventory = async ({ preserveSelection = true, silent = false } = {}) 
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar o estoque.";
+    adminState.actionMessage = error.message || "Não foi possível carregar o estoque.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "inventory") {
@@ -12692,7 +12692,7 @@ const loadCustomers = async ({ preserveSelection = true, silent = false } = {}) 
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel carregar o CRM de clientes.";
+    adminState.actionMessage = error.message || "Não foi possível carregar o CRM de clientes.";
     adminState.actionTone = "error";
 
     if (adminState.activeSection === "customers") {
@@ -12747,7 +12747,7 @@ const saveCustomerProfile = async ({ customerKey, notes, tags } = {}) => {
     updateSidebarMeta();
   } catch (error) {
     adminState.isSavingCustomerProfile = false;
-    adminState.actionMessage = error.message || "Nao foi possivel salvar o perfil do cliente.";
+    adminState.actionMessage = error.message || "Não foi possível salvar o perfil do cliente.";
     adminState.actionTone = "error";
 
     if (error.status === 401) {
@@ -12798,7 +12798,7 @@ const saveFinanceClosing = async (form) => {
     updateSidebarMeta();
   } catch (error) {
     adminState.isSavingFinanceClosing = false;
-    adminState.actionMessage = error.message || "Nao foi possivel salvar o fechamento financeiro.";
+    adminState.actionMessage = error.message || "Não foi possível salvar o fechamento financeiro.";
     adminState.actionTone = "error";
 
     if (error.status === 401) {
@@ -12835,7 +12835,7 @@ const saveDeliverySettings = async () => {
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.deliverySettingsSaving = false;
-    adminState.actionMessage = response.message || "Configuracoes de entrega salvas com sucesso.";
+    adminState.actionMessage = response.message || "Configurações de entrega salvas com sucesso.";
     adminState.actionTone = "success";
 
     renderModuleContent();
@@ -12843,7 +12843,7 @@ const saveDeliverySettings = async () => {
     updateSidebarMeta();
   } catch (error) {
     adminState.deliverySettingsSaving = false;
-    adminState.actionMessage = error.message || "Nao foi possivel salvar as configuracoes de entrega.";
+    adminState.actionMessage = error.message || "Não foi possível salvar as configurações de entrega.";
     adminState.actionTone = "error";
 
     if (error.status === 401) {
@@ -12884,7 +12884,7 @@ const saveRestaurantSettings = async () => {
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.restaurantSettingsSaving = false;
-    adminState.actionMessage = response.message || "Configuracoes salvas com sucesso.";
+    adminState.actionMessage = response.message || "Configurações salvas com sucesso.";
     adminState.actionTone = "success";
 
     renderSidebarNav();
@@ -12893,7 +12893,7 @@ const saveRestaurantSettings = async () => {
     updateSidebarMeta();
   } catch (error) {
     adminState.restaurantSettingsSaving = false;
-    adminState.actionMessage = error.message || "Nao foi possivel salvar as configuracoes.";
+    adminState.actionMessage = error.message || "Não foi possível salvar as configurações.";
     adminState.actionTone = "error";
 
     if (error.status === 401) {
@@ -12957,35 +12957,35 @@ const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
   const currentEmail = String(user.email || "").trim().toLowerCase();
 
   if (!user.name) {
-    return "Informe o nome do usuario.";
+    return "Informe o nome do usuário.";
   }
 
   if (!currentEmail || !isValidAdminUserEmail(currentEmail)) {
-    return "Informe um e-mail valido.";
+    return "Informe um e-mail válido.";
   }
 
   if (!user.phone || !isValidAdminUserPhone(user.phone)) {
-    return "Informe um telefone valido com DDD.";
+    return "Informe um telefone válido com DDD.";
   }
 
   if (userScope === "SYSTEM" && !SYSTEM_USER_TYPE_SET.has(userType)) {
-    return "Usuario do sistema deve usar um perfil da plataforma INOVAS.";
+    return "Usuário do sistema deve usar um perfil da plataforma INOVAS.";
   }
 
   if (userScope === "RESTAURANT" && !RESTAURANT_USER_TYPE_SET.has(userType)) {
-    return "Usuario de restaurante deve usar um perfil operacional valido.";
+    return "Usuário de restaurante deve usar um perfil operacional válido.";
   }
 
   if (userScope === "RESTAURANT" && !user.restaurantKey) {
-    return "Informe o restaurante do usuario.";
+    return "Informe o restaurante do usuário.";
   }
 
   if (!userType || !getAdminUserTypeOptions(userType, userScope).some((option) => option.key === userType)) {
-    return "Selecione um perfil valido.";
+    return "Selecione um perfil válido.";
   }
 
   if (isCreating && !user.password) {
-    return "Informe a senha inicial do usuario.";
+    return "Informe a senha inicial do usuário.";
   }
 
   if (user.password && user.password.length < 6) {
@@ -13007,7 +13007,7 @@ const validateAdminUserFormPayload = (user, { isCreating = false } = {}) => {
     );
   });
 
-  return duplicateUser ? "Ja existe um usuario com este e-mail." : "";
+  return duplicateUser ? "Já existe um usuário com este e-mail." : "";
 };
 
 const saveAdminUserSettings = async (form) => {
@@ -13042,7 +13042,7 @@ const saveAdminUserSettings = async (form) => {
     adminState.selectedUserLogin = response.user?.login || user.login || "";
     adminState.userDraft = null;
     adminState.userDialogMode = "";
-    adminState.actionMessage = response.message || "Usuario salvo com sucesso.";
+    adminState.actionMessage = response.message || "Usuário salvo com sucesso.";
     adminState.actionTone = "success";
 
     renderSidebarNav();
@@ -13057,7 +13057,7 @@ const saveAdminUserSettings = async (form) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel salvar o usuario.";
+    adminState.actionMessage = error.message || "Não foi possível salvar o usuário.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13106,7 +13106,7 @@ const updateAdminUserStatus = async ({ login, status }) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel alterar o status do usuario.";
+    adminState.actionMessage = error.message || "Não foi possível alterar o status do usuário.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13160,7 +13160,7 @@ const resetAdminUserPassword = async (form) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel redefinir a senha.";
+    adminState.actionMessage = error.message || "Não foi possível redefinir a senha.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13172,7 +13172,7 @@ const resendAdminUserInvitation = async () => {
   const user = getSelectedAdminUser();
 
   if (!user?.login || user.status !== "PENDING" || user.credentialMode !== "INVITE") {
-    adminState.actionMessage = "Este usuario nao possui um convite pendente.";
+    adminState.actionMessage = "Este usuário não possui um convite pendente.";
     adminState.actionTone = "error";
     renderModuleContent();
     return;
@@ -13214,7 +13214,7 @@ const resendAdminUserInvitation = async () => {
         await navigator.clipboard.writeText(invitationUrl);
       } catch (error) {
         adminState.actionMessage =
-          "Novo convite gerado. Nao foi possivel copiar o link automaticamente.";
+          "Novo convite gerado. Não foi possível copiar o link automaticamente.";
       }
     }
 
@@ -13230,7 +13230,7 @@ const resendAdminUserInvitation = async () => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel gerar um novo convite.";
+    adminState.actionMessage = error.message || "Não foi possível gerar um novo convite.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13245,7 +13245,7 @@ const deleteAdminUserSettings = async ({ login }) => {
   );
 
   if (!normalizedLogin || !targetUser) {
-    adminState.actionMessage = "Usuario nao encontrado para exclusao.";
+    adminState.actionMessage = "Usuário não encontrado para exclusão.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13254,7 +13254,7 @@ const deleteAdminUserSettings = async ({ login }) => {
   }
 
   const targetName = targetUser.name || targetUser.nome || targetUser.email || normalizedLogin;
-  const confirmed = window.confirm(`Excluir o usuario ${targetName}? Esta acao nao pode ser desfeita.`);
+  const confirmed = window.confirm(`Excluir o usuário ${targetName}? Esta ação não pode ser desfeita.`);
 
   if (!confirmed) {
     return;
@@ -13282,7 +13282,7 @@ const deleteAdminUserSettings = async ({ login }) => {
       "";
     adminState.userDraft = null;
     adminState.userDialogMode = "";
-    adminState.actionMessage = response.message || "Usuario excluido com sucesso.";
+    adminState.actionMessage = response.message || "Usuário excluido com sucesso.";
     adminState.actionTone = "success";
     normalizeUsersPage();
 
@@ -13298,7 +13298,7 @@ const deleteAdminUserSettings = async ({ login }) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel excluir o usuario.";
+    adminState.actionMessage = error.message || "Não foi possível excluir o usuário.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13569,7 +13569,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
     }
 
     adminState.isLoadingOrders = false;
-    adminState.actionMessage = error.message || "Nao foi possivel atualizar o painel do gestor.";
+    adminState.actionMessage = error.message || "Não foi possível atualizar o painel do gestor.";
     adminState.actionTone = "error";
     renderSectionChrome();
     renderModuleContent();
@@ -13622,7 +13622,7 @@ const updateOrderStatus = async (orderId, nextStatus, note = "", options = {}) =
     }
   } catch (error) {
     adminState.isUpdatingStatus = false;
-    adminState.actionMessage = error.message || "Nao foi possivel atualizar o status deste pedido.";
+    adminState.actionMessage = error.message || "Não foi possível atualizar o status deste pedido.";
     adminState.actionTone = "error";
 
     if (error.status === 401) {
@@ -13657,7 +13657,7 @@ const updateCatalogItemSettings = async (payload = {}) => {
     adminState.menuSavingItemId = "";
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Item do catalogo atualizado com sucesso.";
+    adminState.actionMessage = response.message || "Item do catálogo atualizado com sucesso.";
     adminState.actionTone = "success";
 
     await loadMenuCatalog({ silent: true });
@@ -13672,7 +13672,7 @@ const updateCatalogItemSettings = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel atualizar este item do catalogo.";
+    adminState.actionMessage = error.message || "Não foi possível atualizar este item do catálogo.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13684,8 +13684,8 @@ const runCatalogMutation = async ({
   action,
   payload = {},
   busyKey = "",
-  successMessage = "Catalogo atualizado com sucesso.",
-  errorMessage = "Nao foi possivel atualizar o catalogo.",
+  successMessage = "Catálogo atualizado com sucesso.",
+  errorMessage = "Não foi possível atualizar o catálogo.",
 }) => {
   adminState.menuBusyKey = busyKey;
   adminState.actionMessage = "";
@@ -13771,7 +13771,7 @@ const saveInventoryItem = async (form) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel salvar o item do estoque.";
+    adminState.actionMessage = error.message || "Não foi possível salvar o item do estoque.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13824,7 +13824,7 @@ const adjustInventoryStock = async (form) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel movimentar o estoque.";
+    adminState.actionMessage = error.message || "Não foi possível movimentar o estoque.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13841,7 +13841,7 @@ const readAdminFileAsDataUrl = (file) =>
 
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(new Error("Nao foi possivel carregar a imagem selecionada."));
+    reader.onerror = () => reject(new Error("Não foi possível carregar a imagem selecionada."));
     reader.readAsDataURL(file);
   });
 
@@ -13861,7 +13861,7 @@ const savePromotionSettings = async (payload = {}) => {
     adminState.promotionSaving = false;
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Promocao salva com sucesso.";
+    adminState.actionMessage = response.message || "Promoção salva com sucesso.";
     adminState.actionTone = "success";
     adminState.selectedPromotionId = String(response.promotionId || payload.id || "").trim();
 
@@ -13878,7 +13878,7 @@ const savePromotionSettings = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel salvar esta promocao.";
+    adminState.actionMessage = error.message || "Não foi possível salvar esta promoção.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13908,7 +13908,7 @@ const togglePromotionStatus = async (payload = {}) => {
     adminState.promotionBusyId = "";
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Status da promocao atualizado com sucesso.";
+    adminState.actionMessage = response.message || "Status da promoção atualizado com sucesso.";
     adminState.actionTone = "success";
 
     await loadPromotions({
@@ -13924,7 +13924,7 @@ const togglePromotionStatus = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel atualizar o status desta promocao.";
+    adminState.actionMessage = error.message || "Não foi possível atualizar o status desta promoção.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -13954,7 +13954,7 @@ const removePromotion = async (payload = {}) => {
     adminState.promotionBusyId = "";
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Promocao removida com sucesso.";
+    adminState.actionMessage = response.message || "Promoção removida com sucesso.";
     adminState.actionTone = "success";
 
     if (adminState.selectedPromotionId === promotionId) {
@@ -13970,7 +13970,7 @@ const removePromotion = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel remover esta promocao.";
+    adminState.actionMessage = error.message || "Não foi possível remover esta promoção.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -14000,7 +14000,7 @@ const updateReviewVisibility = async (payload = {}) => {
     adminState.reviewBusyId = "";
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Visibilidade da avaliacao atualizada com sucesso.";
+    adminState.actionMessage = response.message || "Visibilidade da avaliação atualizada com sucesso.";
     adminState.actionTone = "success";
 
     await loadReviews({
@@ -14016,7 +14016,7 @@ const updateReviewVisibility = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel atualizar esta avaliacao.";
+    adminState.actionMessage = error.message || "Não foi possível atualizar esta avaliação.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -14046,7 +14046,7 @@ const removeReview = async (payload = {}) => {
     adminState.reviewBusyId = "";
     adminState.storageMode = response.storageMode || adminState.storageMode;
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
-    adminState.actionMessage = response.message || "Avaliacao removida com sucesso.";
+    adminState.actionMessage = response.message || "Avaliação removida com sucesso.";
     adminState.actionTone = "success";
 
     if (adminState.selectedReviewId === reviewId) {
@@ -14062,7 +14062,7 @@ const removeReview = async (payload = {}) => {
       return;
     }
 
-    adminState.actionMessage = error.message || "Nao foi possivel remover esta avaliacao.";
+    adminState.actionMessage = error.message || "Não foi possível remover esta avaliação.";
     adminState.actionTone = "error";
     renderModuleContent();
     renderOrderDetails();
@@ -14826,7 +14826,7 @@ const initDashboardPage = () => {
 
         if (
           !window.confirm(
-            `Remover a promocao ${selectedPromotion?.internalName || "selecionada"}? Esta acao nao pode ser desfeita.`
+            `Remover a promoção ${selectedPromotion?.internalName || "selecionada"}? Esta ação não pode ser desfeita.`
           )
         ) {
           return;
@@ -14877,7 +14877,7 @@ const initDashboardPage = () => {
 
         if (
           !window.confirm(
-            `Remover a avaliacao de ${selectedReview?.customerName || "cliente"}? Esta acao nao pode ser desfeita.`
+            `Remover a avaliação de ${selectedReview?.customerName || "cliente"}? Esta ação não pode ser desfeita.`
           )
         ) {
           return;
@@ -15026,7 +15026,7 @@ const initDashboardPage = () => {
             menuImageForm.dataset.pendingImage = await readAdminFileAsDataUrl(selectedFile);
             imageField.value = "";
           } catch (error) {
-            adminState.actionMessage = error.message || "Nao foi possivel carregar a imagem escolhida.";
+            adminState.actionMessage = error.message || "Não foi possível carregar a imagem escolhida.";
             adminState.actionTone = "error";
             renderOrderDetails();
             updateSidebarMeta();
@@ -15266,7 +15266,7 @@ const initDashboardPage = () => {
             payload: { sectionId },
             busyKey,
             successMessage: "Categoria removida com sucesso.",
-            errorMessage: "Nao foi possivel remover esta categoria.",
+            errorMessage: "Não foi possível remover esta categoria.",
           });
           return;
         }
@@ -15281,7 +15281,7 @@ const initDashboardPage = () => {
           },
           busyKey,
           successMessage: "Categoria salva com sucesso.",
-          errorMessage: "Nao foi possivel salvar esta categoria.",
+          errorMessage: "Não foi possível salvar esta categoria.",
         });
         return;
       }
@@ -15318,7 +15318,7 @@ const initDashboardPage = () => {
           payload: { itemId },
           busyKey,
           successMessage: "Prato removido com sucesso.",
-          errorMessage: "Nao foi possivel remover este prato.",
+          errorMessage: "Não foi possível remover este prato.",
         });
         return;
       }
@@ -15340,7 +15340,7 @@ const initDashboardPage = () => {
         },
         busyKey,
         successMessage: "Prato salvo com sucesso.",
-        errorMessage: "Nao foi possivel salvar este prato.",
+        errorMessage: "Não foi possível salvar este prato.",
       });
     });
 
@@ -15657,7 +15657,7 @@ const syncAdminStaticBranding = () => {
     const loginInput = document.querySelector('[data-admin-login-form] input[name="identifier"]');
 
     if (eyebrow) {
-      eyebrow.textContent = ADMIN_BRANDING.privateAreaLabel || "Area privada";
+      eyebrow.textContent = ADMIN_BRANDING.privateAreaLabel || "Área privada";
     }
 
     if (headline) {

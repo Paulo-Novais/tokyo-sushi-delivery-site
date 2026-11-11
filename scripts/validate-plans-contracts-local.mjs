@@ -493,10 +493,10 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     );
     const startNavText = await getNavText(startPage);
 
-    ["Pedidos", "Cardapio", "Usuarios"].forEach((label) => {
+    ["Pedidos", "Cardápio", "Usuários"].forEach((label) => {
       assert.ok(startNavText.includes(label), `Menu START deveria conter ${label}.`);
     });
-    ["Financeiro", "Estoque", "Clientes", "Promocoes", "Relatorios", "Avaliacoes"].forEach((label) => {
+    ["Financeiro", "Estoque", "Clientes", "Promoções", "Relatórios", "Avaliações"].forEach((label) => {
       assert.equal(startNavText.includes(label), false, `Menu START nao deveria conter ${label}.`);
     });
     await startContext.close();
@@ -519,7 +519,7 @@ const validateBrowserMenus = async (adminApi, tempRoot) => {
     );
     const premiumNavText = await getNavText(premiumPage);
 
-    ["Financeiro", "Estoque", "Clientes", "Promocoes", "Usuarios"].forEach((label) => {
+    ["Financeiro", "Estoque", "Clientes", "Promoções", "Usuários"].forEach((label) => {
       assert.ok(premiumNavText.includes(label), `Menu PREMIUM deveria conter ${label}.`);
     });
     await premiumContext.close();

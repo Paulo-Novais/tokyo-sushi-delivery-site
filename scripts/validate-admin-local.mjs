@@ -1043,7 +1043,7 @@ const validateReports = async (page) => {
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Distribuicao por status",
+    "Distribuição por status",
     "Relatorios deveria exibir distribuicao por status."
   );
 };
@@ -1097,7 +1097,7 @@ const validateSettings = async (page) => {
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Personalizacao do restaurante",
+    "Personalização do restaurante",
     "Configuracoes deveria renderizar personalizacao do restaurante."
   );
   assert.equal(
