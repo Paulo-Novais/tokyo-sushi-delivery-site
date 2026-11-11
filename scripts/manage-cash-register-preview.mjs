@@ -9,14 +9,13 @@ import {
 } from "@neondatabase/serverless";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const migrationPath = path.join(
-  rootDir,
-  "migrations",
-  "022_cash_register_dining_room.sql"
+const migrationPaths = ["029_cash_register_shift_tables_and_occupancy.sql"].map(
+  (fileName) => path.join(rootDir, "migrations", fileName)
 );
 const expectedTables = Object.freeze([
   "dining_tables",
   "cash_register_sessions",
+  "cash_register_table_assignments",
   "dining_tabs",
   "dining_tab_items",
   "dining_order_batches",
@@ -26,6 +25,8 @@ const expectedTables = Object.freeze([
   "cash_register_audit_events",
 ]);
 const expectedForeignKeys = Object.freeze([
+  ["cash_register_table_assignments", "cash_register_sessions"],
+  ["cash_register_table_assignments", "dining_tables"],
   ["dining_tabs", "cash_register_sessions"],
   ["dining_tabs", "dining_tables"],
   ["dining_tab_items", "dining_tabs"],
@@ -43,6 +44,7 @@ const expectedForeignKeys = Object.freeze([
 const expectedUniqueIndexes = Object.freeze([
   "cash_register_sessions_one_open_uidx",
   "dining_tabs_one_active_per_table_uidx",
+  "dining_tables_scope_number_uidx",
 ]);
 const expectedPermissionKeys = Object.freeze([
   "tenant.cash_register.view",
@@ -179,11 +181,13 @@ const applyMigration = async () => {
     administrative: true,
   });
   await assertMigrationDependencies(sql);
-  const migration = await fs.readFile(migrationPath, "utf8");
+  const migration = (
+    await Promise.all(migrationPaths.map((migrationPath) => fs.readFile(migrationPath, "utf8")))
+  ).join("\n");
   const destructiveSql = migration
     .replace(/--.*$/gm, "")
     .match(/\b(?:DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i);
-  assert(!destructiveSql, "Migration 022 contem operacao destrutiva inesperada.");
+  assert(!destructiveSql, "Migration 029 contem operacao destrutiva inesperada.");
   const client = new Client({
     connectionString: databaseUrl.toString(),
   });
@@ -203,7 +207,7 @@ const applyMigration = async () => {
     await client.end();
   }
   console.log(
-    `MIGRATION_022_APPLIED;sha256=${crypto
+    `MIGRATION_029_APPLIED;sha256=${crypto
       .createHash("sha256")
       .update(migration)
       .digest("hex")}`
@@ -384,7 +388,7 @@ const validateSchema = async () => {
 
   console.log(
     [
-      "MIGRATION_022_VALID",
+      "MIGRATION_029_VALID",
       `tables=${tables.length}`,
       `policies=${policies.length}`,
       `foreign_keys=${foreignKeys.length}`,

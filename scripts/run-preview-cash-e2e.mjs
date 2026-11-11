@@ -30,9 +30,15 @@ assert(new URL(previewUrl).hostname.endsWith(".vercel.app"), "Preview URL is inv
 const pool = new Pool({ connectionString: migrationDatabaseUrl });
 const login = `preview-system-e2e-${crypto.randomUUID()}@inovas.invalid`;
 const password = `Sys${crypto.randomBytes(32).toString("base64url")}A1!`;
+const passwordHash = createPasswordHash(password);
 const identityId = `identity_${crypto
   .createHash("sha256")
   .update(login.toLowerCase())
+  .digest("hex")
+  .slice(0, 24)}`;
+const principalId = `system_principal_${crypto
+  .createHash("sha256")
+  .update(identityId)
   .digest("hex")
   .slice(0, 24)}`;
 
@@ -68,21 +74,51 @@ try {
     await pool.query(`SELECT current_setting('neon.branch_id',true) branch_id`)
   ).rows[0];
   assert(identity?.branch_id === expectedBranchId, "E2E owner URL uses another branch.");
-  await pool.query(
-    `
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `
+        INSERT INTO identities (
+          id, email, login, display_name, password_hash, credential_status,
+          created_at, updated_at
+        )
+        VALUES ($1, $2, $2, 'Preview System E2E', $3, 'ACTIVE', NOW(), NOW())
+      `,
+      [identityId, login, passwordHash]
+    );
+    await client.query(
+      `
+        INSERT INTO system_principals (
+          id, identity_id, system_role, status, created_by, created_at, updated_at
+        )
+        VALUES ($1, $2, 'VENDEDOR', 'ACTIVE', 'preview_e2e', NOW(), NOW())
+      `,
+      [principalId, identityId]
+    );
+    await client.query(
+      `
       INSERT INTO admin_users (
         id, tenant_id, restaurant_id, restaurant_key, name, login, email,
         password_hash, status, user_type, credential_mode,
-        must_change_password, source, profile_version, created_at, updated_at
+        must_change_password, source, profile_version, user_scope,
+        platform_scope, created_at, updated_at
       )
       VALUES (
         $1, '', '', '', 'Preview System E2E', $2, $2, $3, 'ACTIVE',
         'VENDEDOR', 'TEMPORARY_PASSWORD', TRUE, 'managed',
-        '2026.07.31', NOW(), NOW()
+        '2026.07.31', 'SYSTEM', TRUE, NOW(), NOW()
       )
-    `,
-    [`preview_system_e2e_${crypto.randomUUID()}`, login, createPasswordHash(password)]
-  );
+      `,
+      [`preview_system_e2e_${crypto.randomUUID()}`, login, passwordHash]
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 
   const child = spawn(
     process.execPath,
