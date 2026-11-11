@@ -1,5 +1,5 @@
 const ADMIN_DASHBOARD_REFRESH_MS = 20000;
-const BOARD_VISIBLE_CARD_LIMIT = 3;
+const BOARD_VISIBLE_CARD_LIMIT = 12;
 const SCHEDULE_DUE_SOON_WINDOW_MS = 45 * 60 * 1000;
 const ADMIN_RUNTIME_CONFIG =
   typeof window === "object" && window.TOKYO_SITE_CONFIG ? window.TOKYO_SITE_CONFIG : {};
@@ -4148,6 +4148,13 @@ const renderDashboardStats = () => {
     return;
   }
 
+  statsRoot.classList.toggle("is-stage-bar", isOrdersSection);
+  if (isOrdersSection) {
+    statsRoot.classList.add("is-orders-layout");
+    renderOrdersStageBar(statsRoot);
+    return;
+  }
+
   const renderStatIcon = (iconKey) => {
     const icons = {
       received:
@@ -4794,46 +4801,13 @@ const renderDashboardModule = () => {
 
 const renderOrdersModuleShell = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
-  const completedOrders = getCompletedOrders().length;
-  const cancelledOrders = getCancelledOrders().length;
 
   if (!moduleRoot) {
     return;
   }
 
-  moduleRoot.innerHTML = `
-    <div class="admin-board" data-admin-board></div>
-
-    <section class="admin-closed-panel">
-      <div class="admin-module-head">
-        <div>
-          <span class="admin-chip">Encerrados</span>
-          <h3>Consulta de encerrados</h3>
-          <p>Pedidos concluídos e cancelados saem do kanban ativo e ficam separados para consulta.</p>
-        </div>
-        <div class="admin-module-head-meta">
-          <span>Total encerrado</span>
-          <strong>${escapeHtml(String(getClosedOrders().length))}</strong>
-        </div>
-      </div>
-      <div class="admin-closed-groups">
-        <article class="admin-module-card">
-          <div class="admin-module-card-head">
-            <h3>Finalizados</h3>
-            <span>${escapeHtml(String(completedOrders))}</span>
-          </div>
-          <div class="admin-closed-list" data-admin-completed-orders></div>
-        </article>
-        <article class="admin-module-card">
-          <div class="admin-module-card-head">
-            <h3>Cancelados</h3>
-            <span>${escapeHtml(String(cancelledOrders))}</span>
-          </div>
-          <div class="admin-closed-list" data-admin-cancelled-orders></div>
-        </article>
-      </div>
-    </section>
-  `;
+  // Encerrados (Finalizados/Cancelados) viraram filtros no topo da tela.
+  moduleRoot.innerHTML = `<div class="admin-board gx-orders-grid" data-admin-board></div>`;
 };
 
 const renderClosedOrders = () => {
@@ -10277,14 +10251,99 @@ const renderModuleContent = () => {
   renderSystemGlobalFilters();
 };
 
+// ---------- Pedidos (esboço "INOVAS · Tela de Pedidos") ----------
+// Uma grade única de pedidos em andamento, do mais antigo para o mais novo.
+// A cor do cartão segue o tempo do pedido: até 10 min, 10–20, 20–30 e +30.
+const ORDER_AGE_TIERS = Object.freeze([
+  { key: "fresh", max: 10, label: "até 10 min" },
+  { key: "mid", max: 20, label: "10–20" },
+  { key: "warn", max: 30, label: "20–30" },
+  { key: "late", max: Infinity, label: "+30 min" },
+]);
+const ORDERS_STAGE_KEYS = Object.freeze(["all", ...BOARD_COLUMNS.map((column) => column.key), "done", "cancelled"]);
+const ORDERS_MODE_KEYS = Object.freeze(["all", "delivery", "pickup"]);
+const ORDER_STATUS_BADGES = Object.freeze({
+  Recebido: "Recebido",
+  Aceito: "Aceito",
+  "Em preparo": "Em preparo",
+  Pronto: "Pronto",
+  "Saiu para entrega": "Em rota",
+  Entregue: "Entregue",
+  "Retirada concluida": "Retirado",
+  Cancelado: "Cancelado",
+});
+
+const getOrderReferenceTime = (order) => {
+  if (order?.timingMode === "scheduled" && order.scheduledFor) {
+    return new Date(order.scheduledFor).getTime();
+  }
+  return new Date(order?.createdAt || Date.now()).getTime();
+};
+
+const isFinalOrder = (order) => FINAL_ORDER_STATUSES.has(order?.status);
+
+const getOrderSla = (order) => {
+  if (isFinalOrder(order)) {
+    const closedAt = order.updatedAt || order.createdAt;
+    return { tone: "closed", minutes: 0, label: formatTime(closedAt) };
+  }
+  const minutes = Math.floor((Date.now() - getOrderReferenceTime(order)) / 60000);
+  if (order?.timingMode === "scheduled" && minutes < 0) {
+    return { tone: "scheduled", minutes, label: `às ${formatTime(order.scheduledFor)}` };
+  }
+  const safe = Math.max(0, minutes);
+  const tier = ORDER_AGE_TIERS.find((entry) => safe < entry.max) || ORDER_AGE_TIERS[ORDER_AGE_TIERS.length - 1];
+  const label = safe >= 60 ? `${Math.floor(safe / 60)}h${String(safe % 60).padStart(2, "0")}` : `${safe} min`;
+  return { tone: tier.key, minutes: safe, label };
+};
+
+const isOrderLate = (order) => getOrderSla(order).tone === "late";
+
+const getOrderShortId = (order) => {
+  const text = String(order?.publicId || order?.id || "");
+  const parts = text.split("-");
+  return parts[parts.length - 1] || text;
+};
+
+const getOrderProductLines = (order) =>
+  Array.isArray(order?.items) ? order.items.filter((item) => item.type !== "addon" && item.name) : [];
+
+const getOrdersStage = () => (ORDERS_STAGE_KEYS.includes(adminState.ordersStage) ? adminState.ordersStage : "all");
+const getOrdersMode = () => (ORDERS_MODE_KEYS.includes(adminState.ordersMode) ? adminState.ordersMode : "all");
+const matchesOrdersMode = (order, mode = getOrdersMode()) =>
+  mode === "all" || (mode === "pickup" ? order.fulfillmentMode === "pickup" : order.fulfillmentMode !== "pickup");
+
+const getActiveOrdersForGrid = () => {
+  const visibleOrders = getVisibleOperationalOrders();
+  return BOARD_COLUMNS.flatMap((column) =>
+    getOrderedBoardColumnOrders(column.key, visibleOrders).map((order) => ({ order, stage: column.key }))
+  );
+};
+
+const getOrdersForCurrentView = () => {
+  const stage = getOrdersStage();
+  const mode = getOrdersMode();
+  if (stage === "done" || stage === "cancelled") {
+    const list = stage === "done" ? getCompletedOrders() : getCancelledOrders();
+    return list
+      .filter((order) => matchesOrdersMode(order, mode))
+      .sort((left, right) => new Date(right.updatedAt || right.createdAt) - new Date(left.updatedAt || left.createdAt));
+  }
+  return getActiveOrdersForGrid()
+    .filter((entry) => (stage === "all" || entry.stage === stage) && matchesOrdersMode(entry.order, mode))
+    .map((entry) => entry.order)
+    .sort((left, right) => getOrderReferenceTime(left) - getOrderReferenceTime(right));
+};
+
+const ORDER_CLOCK_ICON =
+  '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2.2"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
 const renderBoard = () => {
   const boardRoot = document.querySelector("[data-admin-board]");
 
   if (!boardRoot) {
     return;
   }
-
-  const visibleOrders = getVisibleOperationalOrders();
 
   if (adminState.isLoadingOrders && adminState.orders.length === 0) {
     boardRoot.innerHTML = `
@@ -10298,186 +10357,302 @@ const renderBoard = () => {
     return;
   }
 
-  boardRoot.innerHTML = BOARD_COLUMNS.map((column) => {
-    const columnOrders = getOrderedBoardColumnOrders(column.key, visibleOrders);
-    const visibleColumnOrders = columnOrders.slice(0, BOARD_VISIBLE_CARD_LIMIT);
-    const hiddenCount = Math.max(columnOrders.length - BOARD_VISIBLE_CARD_LIMIT, 0);
-    const columnTotal = columnOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
-    const columnStateClassName = columnOrders.length === 0 ? " is-empty" : "";
+  const stage = getOrdersStage();
+  const orders = getOrdersForCurrentView();
+  const column = BOARD_COLUMNS.find((entry) => entry.key === stage);
+  const heading =
+    stage === "done" ? "Finalizados" : stage === "cancelled" ? "Cancelados" : column ? column.label : "Em andamento";
+  const closedView = stage === "done" || stage === "cancelled";
 
-    return `
-      <article class="admin-board-column ${column.accentClass}${columnStateClassName}">
-        <header class="admin-board-column-head">
-          <div>
-            <strong>${escapeHtml(column.label)}</strong>
-            <p>${escapeHtml(column.helper)}</p>
-          </div>
-          <div class="admin-board-column-meta">
-            <span>${escapeHtml(String(columnOrders.length))}</span>
-            <small>${escapeHtml(formatMoney(columnTotal))}</small>
-          </div>
-        </header>
-
-        <div class="admin-board-stack">
-          ${
-            columnOrders.length === 0
-              ? `
-                <div class="admin-empty-state admin-empty-state-inline">
-                  <strong>Sem pedidos nesta etapa</strong>
-                  <span>Novas entradas aparecem aqui automaticamente.</span>
-                </div>
-              `
-              : visibleColumnOrders.map(renderOrderCard).join("")
-          }
-        </div>
-
-        ${
-          hiddenCount > 0
-            ? `
-              <div class="admin-board-overflow">
-                <p class="admin-board-overflow-count">+ ${escapeHtml(formatOrderCountLabel(hiddenCount))}</p>
-                <button
-                  class="admin-board-overflow-button"
-                  type="button"
-                  data-board-column-open="${escapeHtml(column.key)}"
-                >
-                  Ver todos (${escapeHtml(String(columnOrders.length))})
-                </button>
-              </div>
-            `
-            : ""
-        }
-      </article>
-    `;
-  }).join("");
+  boardRoot.innerHTML = `
+    <div class="gx-grid-head">
+      <h2>${escapeHtml(heading)} <span>· ${escapeHtml(formatOrderCountLabel(orders.length))}</span></h2>
+      ${
+        closedView
+          ? ""
+          : `<div class="gx-age-legend" aria-label="Cores pelo tempo do pedido">
+              <span class="gx-age-legend-title">Tempo do pedido:</span>
+              ${ORDER_AGE_TIERS.map((tier) => `<span class="gx-age-key is-${tier.key}"><i aria-hidden="true"></i>${escapeHtml(tier.label)}</span>`).join("")}
+            </div>`
+      }
+    </div>
+    ${
+      orders.length === 0
+        ? `<div class="gx-grid-empty">
+            <strong>${escapeHtml(closedView ? "Nada por aqui ainda" : "Nenhum pedido em andamento")}</strong>
+            <span>${escapeHtml(closedView ? "Os pedidos encerrados de hoje aparecem aqui." : "Novos pedidos aparecem aqui automaticamente.")}</span>
+          </div>`
+        : `<div class="gx-grid">${orders.map(renderOrderCard).join("")}</div>`
+    }
+  `;
 };
 
 const renderOrderCard = (order) => {
   const isSelected = adminState.selectedOrderId === order.id;
-  const timingValue =
-    order.timingMode === "scheduled" ? formatTime(order.scheduledFor || order.createdAt) : formatTime(order.createdAt);
-  const orderFlowLabel = order.fulfillmentMode === "pickup" ? "Retirada" : "Entrega";
-  const paymentLabel = getPaymentLabel(order.paymentMethod);
-  const primaryAction = getPrimaryAction(order);
   const isScheduled = order.timingMode === "scheduled";
-  const primaryItems = Array.isArray(order.items)
-    ? order.items.filter((item) => item.type !== "addon" && item.name)
-    : [];
-  const fallbackItems = String(order.itemPreview || "")
-    .split(",")
-    .map((entry) => entry.replace(/\+\d+\s*item\(ns\)/i, "").trim())
-    .filter(Boolean);
-  const visibleItemLimit = 2;
-  const visiblePrimaryItems = primaryItems.slice(0, visibleItemLimit);
-  const visibleFallbackItems = fallbackItems.slice(0, visibleItemLimit);
-  const displayItems =
-    visiblePrimaryItems.length > 0
-      ? visiblePrimaryItems.map((item) => ({
-          label: item.name,
-        }))
-      : visibleFallbackItems.map((label) => ({
-          label,
-        }));
-  const hiddenItemsCount =
-    primaryItems.length > 0
-      ? Math.max(primaryItems.length - visiblePrimaryItems.length, 0)
-      : Math.max(fallbackItems.length - visibleFallbackItems.length, 0);
-  const isReceived = order.status === "Recebido";
-  const secondaryLine = [getOrderTypeLabel(order), orderFlowLabel].filter(Boolean).join(" • ");
+  const isPickup = order.fulfillmentMode === "pickup";
+  const sla = getOrderSla(order);
   const statusKey = normalizeStatusKey(order.status);
-  const visibleRowsCount = displayItems.length + (hiddenItemsCount > 0 ? 1 : 0);
-  const reservedRowsCount = Math.max(visibleRowsCount, 3);
-  const placeholderRowsCount = Math.max(reservedRowsCount - visibleRowsCount, 0);
+  const itemCount = getOrderProductLines(order).reduce((sum, item) => sum + Math.max(Number(item.quantity || 1), 1), 0);
+  const itemCountLabel = itemCount > 0 ? `${itemCount} ${itemCount === 1 ? "item" : "itens"}` : "";
 
   return `
     <article
-      class="admin-order-card${isSelected ? " is-selected" : ""}"
+      class="admin-order-card gx-ticket is-age-${escapeHtml(sla.tone)}${isSelected ? " is-selected" : ""}${order.status === "Recebido" ? " is-new" : ""}"
       data-order-status-key="${escapeHtml(statusKey)}"
     >
       <button
-        class="admin-order-card-select"
+        class="gx-order-hit"
         type="button"
         data-order-select="${escapeHtml(order.id)}"
-      >
-        <div class="admin-order-card-top">
-          ${
-            isReceived
-              ? `<span class="admin-order-card-state-chip">${escapeHtml("Novo")}</span>`
-              : `<span class="admin-order-card-state-chip is-muted">${escapeHtml(isScheduled ? "Agendamento" : orderFlowLabel)}</span>`
-          }
-          <strong class="admin-order-card-time">${escapeHtml(timingValue)}</strong>
+        aria-pressed="${isSelected}"
+        aria-label="${escapeHtml(`Pedido de ${order.customerName}, ${ORDER_STATUS_BADGES[order.status] || order.status}, ${sla.label}`)}"
+      ></button>
+      <div class="gx-ticket-body">
+        <div class="gx-ticket-top">
+          <strong class="gx-ticket-name" title="${escapeHtml(order.customerName || "Cliente")}">${escapeHtml(order.customerName || "Cliente")}</strong>
         </div>
-        <div class="admin-order-card-customer">
-          <strong>${escapeHtml(`Cliente: ${order.customerName}`)}</strong>
+        <div class="gx-ticket-meta">
+          <span class="gx-tag is-${isPickup ? "pickup" : "delivery"}">${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
+          ${isScheduled ? `<span class="gx-tag is-scheduled">Agendado</span>` : ""}
+          <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}" title="Feito às ${escapeHtml(formatTime(order.createdAt))}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
         </div>
-
-        <div class="admin-order-card-copy">
-          <p class="admin-order-card-line is-soft">${escapeHtml(secondaryLine)}</p>
-          <strong class="admin-order-card-value">${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>
+        <div class="gx-ticket-foot">
+          <span class="gx-ticket-total" title="${escapeHtml(itemCountLabel)}"><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong></span>
+          <span class="gx-ticket-status is-${escapeHtml(statusKey.replace(/\s+/g, "-"))}">${escapeHtml(ORDER_STATUS_BADGES[order.status] || order.status)}</span>
         </div>
-
-        <div class="admin-order-card-meta">
-          <span>${escapeHtml(`${order.itemCount || 0} itens`)}</span>
-          <span>${escapeHtml(paymentLabel)}</span>
-        </div>
-
-        <div class="admin-order-card-items${displayItems.length > 0 ? "" : " is-empty"}">
-          ${displayItems
-            .map(
-              (item) => `
-                <div class="admin-order-card-item-row">
-                  <span>${escapeHtml(item.label)}</span>
-                </div>
-              `
-            )
-            .join("")}
-          ${
-            hiddenItemsCount > 0
-              ? `
-                <div class="admin-order-card-item-row is-more">
-                  <span>${escapeHtml(`+ ${hiddenItemsCount} outro(s) item(ns)`)}</span>
-                </div>
-              `
-              : ""
-          }
-          ${Array.from({ length: placeholderRowsCount })
-            .map(
-              () => `
-                <div class="admin-order-card-item-row is-placeholder" aria-hidden="true">
-                  <span>&nbsp;</span>
-                </div>
-              `
-            )
-            .join("")}
-        </div>
-
-        <div class="admin-order-card-footer">
-          <small>${escapeHtml(getOrderWaitLabel(order))}</small>
-          <span class="admin-order-card-action-hint">${escapeHtml(order.status)}</span>
-        </div>
-      </button>
-
-      ${
-        primaryAction
-          ? `
-            <div class="admin-order-card-actions">
-              <button
-                class="admin-action-button admin-order-card-primary-action is-${escapeHtml(primaryAction.tone)}"
-                type="button"
-                data-order-action="${escapeHtml(order.id)}"
-                data-next-status="${escapeHtml(primaryAction.status)}"
-                data-action-note="${escapeHtml(primaryAction.note)}"
-                ${adminState.isUpdatingStatus ? "disabled" : ""}
-              >
-                ${escapeHtml(primaryAction.label)}
-              </button>
-            </div>
-          `
-          : ""
-      }
+      </div>
     </article>
   `;
 };
+
+// Topo de Pedidos: Todos/Entrega/Retirada, etapas e encerrados (substitui os cartões grandes).
+const renderOrdersStageBar = (statsRoot) => {
+  const stage = getOrdersStage();
+  const mode = getOrdersMode();
+  const active = getActiveOrdersForGrid();
+  const modeCount = (key) => active.filter((entry) => matchesOrdersMode(entry.order, key)).length;
+  const stageCount = (key) => active.filter((entry) => entry.stage === key && matchesOrdersMode(entry.order, mode)).length;
+  const doneCount = getCompletedOrders().filter((order) => matchesOrdersMode(order, mode)).length;
+  const cancelledCount = getCancelledOrders().filter((order) => matchesOrdersMode(order, mode)).length;
+  const restaurantName =
+    String(document.querySelector("[data-admin-main-chip]")?.textContent || "").trim() || adminState.session?.restaurantName || "";
+  const stageLabel = (column) => (column.key === "delivery" ? "Saiu p/ entrega" : column.label);
+
+  statsRoot.innerHTML = `
+    <div class="gx-orders-top">
+      <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+      <div class="gx-mode-switch" role="tablist" aria-label="Tipo de pedido">
+        ${[
+          ["all", "Todos"],
+          ["delivery", "Entrega"],
+          ["pickup", "Retirada"],
+        ]
+          .map(
+            ([key, label]) =>
+              `<button type="button" role="tab" aria-selected="${mode === key}" class="${mode === key ? "is-active" : ""}" data-orders-mode="${key}">${escapeHtml(label)} · ${escapeHtml(String(modeCount(key)))}</button>`
+          )
+          .join("")}
+      </div>
+    </div>
+    <div class="gx-stage-bar" role="tablist" aria-label="Filtrar pedidos por etapa">
+      ${BOARD_COLUMNS.map(
+        (column) => `
+          <button type="button" role="tab" class="gx-stage is-${escapeHtml(column.key)}${stage === column.key ? " is-active" : ""}" aria-selected="${stage === column.key}" data-orders-stage="${escapeHtml(column.key)}">
+            <span class="gx-stage-dot" aria-hidden="true"></span>
+            <span>${escapeHtml(stageLabel(column))}</span>
+            <strong>${escapeHtml(String(stageCount(column.key)))}</strong>
+          </button>`
+      ).join("")}
+      <span class="gx-stage-spacer" aria-hidden="true"></span>
+      <button type="button" role="tab" class="gx-stage is-closed is-done${stage === "done" ? " is-active" : ""}" aria-selected="${stage === "done"}" data-orders-stage="done">
+        <span>Finalizados</span><strong>${escapeHtml(String(doneCount))}</strong>
+      </button>
+      <button type="button" role="tab" class="gx-stage is-closed is-cancelled${stage === "cancelled" ? " is-active" : ""}" aria-selected="${stage === "cancelled"}" data-orders-stage="cancelled">
+        <span>Cancelados</span><strong>${escapeHtml(String(cancelledCount))}</strong>
+      </button>
+    </div>`;
+};
+
+// Detalhes do pedido no lado direito (no celular, painel deslizante).
+const ORDER_AVATAR_TONES = ["is-a", "is-b", "is-c", "is-d", "is-e"];
+
+const getItemInitials = (name = "") =>
+  String(name)
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "•";
+
+const getOrderItemPhotoUrl = (item) => {
+  const direct = resolveAdminAssetUrl(item?.image || item?.metadata?.image || item?.metadata?.thumbnail || "");
+  if (direct) return direct;
+  const sections = Array.isArray(adminState.menuSnapshot?.sections) ? adminState.menuSnapshot.sections : [];
+  if (!sections.length) return "";
+  if (!(adminState.ordersMenuPhotoIndex instanceof Map) || adminState.ordersMenuPhotoSource !== adminState.menuSnapshot) {
+    const index = new Map();
+    sections.forEach((section) =>
+      (Array.isArray(section?.items) ? section.items : []).forEach((menuItem) => {
+        if (!menuItem?.image) return;
+        buildCatalogLookupKeys(menuItem).forEach((key) => {
+          if (key && !index.has(key)) index.set(key, menuItem.image);
+        });
+      })
+    );
+    adminState.ordersMenuPhotoIndex = index;
+    adminState.ordersMenuPhotoSource = adminState.menuSnapshot;
+  }
+  for (const key of buildCatalogLookupKeys(item)) {
+    const image = adminState.ordersMenuPhotoIndex.get(key);
+    if (image) return resolveAdminAssetUrl(image);
+  }
+  return "";
+};
+
+const ensureOrdersMenuPhotos = () => {
+  if (adminState.menuSnapshot || adminState.ordersMenuRequested) return;
+  // Só busca fotos se o usuário pode ver o cardápio (evita erro para atendente).
+  if (!hasAdminPermission("catalog_view") || !hasPlanFeatureForSection("menu")) return;
+  adminState.ordersMenuRequested = true;
+  void loadMenuCatalog({ silent: true }).then(() => {
+    if (adminState.activeSection === "orders") renderOrderDetails();
+  });
+};
+
+const renderOrdersDetailPanel = (detailRoot) => {
+  const selectedId = adminState.selectedOrderId;
+  const order =
+    (adminState.selectedOrder && adminState.selectedOrder.id === selectedId ? adminState.selectedOrder : null) ||
+    adminState.orders.find((entry) => entry.id === selectedId) ||
+    null;
+
+  if (!order) {
+    detailRoot.innerHTML = `
+      <div class="gx-od-empty">
+        <strong>Selecione um pedido</strong>
+        <span>Clique num cartão para ver itens, valor e avançar a etapa.</span>
+      </div>`;
+    return;
+  }
+
+  const isPickup = order.fulfillmentMode === "pickup";
+  const sla = getOrderSla(order);
+  const items = Array.isArray(order.items) ? order.items.filter((item) => item.name) : [];
+  const primaryAction = isFinalOrder(order) ? null : getPrimaryAction(order);
+  if (items.length) ensureOrdersMenuPhotos();
+  const phoneDigits = String(order.customerPhone || "").replace(/\D/g, "");
+  const address = [order.addressFull, order.addressComplement, order.addressReference].filter(Boolean).join(" · ");
+  const changeInfo =
+    order.paymentMethod === "cash" && Number(order.changeAmount || order.cashAmount || 0) > 0
+      ? `Troco para ${formatMoney(order.cashAmount || 0)}`
+      : "";
+
+  detailRoot.innerHTML = `
+    <div class="gx-od">
+      <span class="gx-od-eyebrow">Detalhes do pedido</span>
+      <div class="gx-od-head">
+        <h2>${escapeHtml(order.customerName || "Cliente")}</h2>
+        <details class="gx-od-data" open>
+          <summary>Dados do cliente</summary>
+          <dl>
+            <div><dt>Pedido</dt><dd>#${escapeHtml(getOrderShortId(order))}</dd></div>
+            ${order.customerPhone ? `<div><dt>Telefone</dt><dd>${phoneDigits ? `<a href="https://wa.me/55${escapeHtml(phoneDigits.replace(/^55/, ""))}" target="_blank" rel="noopener">${escapeHtml(order.customerPhone)}</a>` : escapeHtml(order.customerPhone)}</dd></div>` : ""}
+            ${!isPickup && address ? `<div><dt>Endereço</dt><dd>${escapeHtml(address)}</dd></div>` : ""}
+            ${order.timingMode === "scheduled" && order.scheduledFor ? `<div><dt>Agendado</dt><dd>${escapeHtml(formatDateTime(order.scheduledFor))}</dd></div>` : ""}
+            ${order.customerNotes ? `<div><dt>Observação</dt><dd>${escapeHtml(order.customerNotes)}</dd></div>` : ""}
+          </dl>
+        </details>
+      </div>
+      <div class="gx-od-meta">
+        <span class="gx-tag is-${isPickup ? "pickup" : "delivery"}">${escapeHtml(isPickup ? "Retirada" : "Entrega")}</span>
+        <span>Feito às <b>${escapeHtml(formatTime(order.createdAt))}</b></span>
+        <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
+      </div>
+      ${order.customerNotes ? `<p class="gx-od-note">${escapeHtml(order.customerNotes)}</p>` : ""}
+      <h3 class="gx-od-title">Itens (${escapeHtml(String(items.length))})</h3>
+      <ul class="gx-od-items">
+        ${items
+          .map(
+            (item, index) => `
+              <li class="${item.type === "addon" ? "is-addon" : ""}">
+                ${(() => {
+                  const photo = getOrderItemPhotoUrl(item);
+                  return photo
+                    ? `<img class="gx-od-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" decoding="async" />`
+                    : `<span class="gx-od-avatar ${ORDER_AVATAR_TONES[index % ORDER_AVATAR_TONES.length]}" aria-hidden="true">${escapeHtml(getItemInitials(item.name))}</span>`;
+                })()}
+                <span class="gx-od-item"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(`${Number(item.quantity || 1)}x · ${formatMoney(item.unitPrice || 0)}`)}</small>${
+                  item.notes || item.observation ? `<em>${escapeHtml(item.notes || item.observation)}</em>` : ""
+                }</span>
+                <span class="gx-od-price">${escapeHtml(formatMoney(item.totalPrice || 0))}</span>
+              </li>`
+          )
+          .join("")}
+      </ul>
+      <div class="gx-od-boxes">
+        <div><span>Valor do pedido</span><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>${
+          Number(order.deliveryFee || 0) > 0 ? `<small>inclui entrega de ${escapeHtml(formatMoney(order.deliveryFee))}</small>` : ""
+        }</div>
+        <div><span>Pagamento</span><strong class="is-payment">${escapeHtml(getPaymentLabel(order.paymentMethod))}</strong>${
+          changeInfo ? `<small>${escapeHtml(changeInfo)}</small>` : ""
+        }</div>
+      </div>
+      <p class="gx-od-stage">Etapa atual: <b>${escapeHtml(ORDER_STATUS_BADGES[order.status] || order.status)}</b></p>
+      ${
+        primaryAction
+          ? `<button class="gx-od-primary" type="button" data-order-action="${escapeHtml(order.id)}" data-next-status="${escapeHtml(primaryAction.status)}" data-action-note="${escapeHtml(primaryAction.note)}" ${adminState.isUpdatingStatus ? "disabled" : ""}>${escapeHtml(primaryAction.label)}</button>`
+          : `<p class="gx-od-closed">${escapeHtml(order.status === "Cancelado" ? "Pedido cancelado." : "Pedido concluído.")}</p>`
+      }
+      ${
+        isFinalOrder(order)
+          ? ""
+          : `<button class="gx-od-cancel" type="button" data-order-action="${escapeHtml(order.id)}" data-next-status="Cancelado" data-action-note="${escapeHtml(ACTION_NOTES.Cancelado)}" ${adminState.isUpdatingStatus ? "disabled" : ""}>Cancelar pedido</button>`
+      }
+    </div>`;
+};
+
+// Detalhes em painel deslizante nas telas menores.
+const syncOrdersDrawer = () => {
+  // Saiu de Pedidos: o painel fecha (e não reabre sozinho ao voltar).
+  if (adminState.activeSection !== "orders") adminState.ordersDrawerOpen = false;
+  const open = adminState.activeSection === "orders" && adminState.ordersDrawerOpen === true;
+  document.body.classList.toggle("gx-orders-drawer-open", open);
+};
+
+const closeOrdersDrawer = () => {
+  adminState.ordersDrawerOpen = false;
+  syncOrdersDrawer();
+};
+
+document.addEventListener("click", (event) => {
+  const stageButton = event.target.closest?.("[data-orders-stage]");
+  if (stageButton) {
+    const value = stageButton.dataset.ordersStage;
+    // Clicar de novo na etapa ativa volta para "todas".
+    adminState.ordersStage = getOrdersStage() === value ? "all" : value;
+    renderDashboardStats();
+    renderBoard();
+    return;
+  }
+  const modeButton = event.target.closest?.("[data-orders-mode]");
+  if (modeButton) {
+    adminState.ordersMode = modeButton.dataset.ordersMode;
+    renderDashboardStats();
+    renderBoard();
+    return;
+  }
+  if (event.target.closest?.("[data-admin-detail-close]") || event.target.matches?.("[data-orders-drawer-backdrop]")) {
+    closeOrdersDrawer();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.body.classList.contains("gx-orders-drawer-open")) {
+    closeOrdersDrawer();
+  }
+});
 
 const renderDetailActionButtons = (order, actions) =>
   actions.length > 0
@@ -11468,7 +11643,12 @@ const renderInventoryDetails = () => {
 };
 
 const renderOrderDetails = () => {
+  syncOrdersDrawer();
   const detailRoot = document.querySelector("[data-admin-order-detail]");
+  if (detailRoot && adminState.activeSection === "orders") {
+    renderOrdersDetailPanel(detailRoot);
+    return;
+  }
   const detailTitle = document.querySelector("[data-admin-detail-title]");
   const detailSubtitle = document.querySelector("[data-admin-detail-subtitle]");
   const sectionMeta = getSectionMeta();
@@ -14772,6 +14952,10 @@ const initDashboardPage = () => {
           return;
         }
 
+        if (nextStatus === "Cancelado" && !window.confirm("Cancelar este pedido? O cliente deixa de vê-lo em andamento.")) {
+          return;
+        }
+
         adminState.selectedOrderId = orderId;
         void updateOrderStatus(orderId, nextStatus, note);
         return;
@@ -14781,6 +14965,12 @@ const initDashboardPage = () => {
 
       if (selectButton) {
         const orderId = String(selectButton.dataset.orderSelect || "").trim();
+
+        // Em Pedidos, clicar no cartão abre os detalhes no painel lateral.
+        if (orderId && adminState.activeSection === "orders") {
+          adminState.ordersDrawerOpen = true;
+          syncOrdersDrawer();
+        }
 
         if (!orderId || orderId === adminState.selectedOrderId) {
           return;
@@ -15788,3 +15978,14 @@ if (currentPage === "login") {
 if (currentPage === "dashboard") {
   initDashboardPage();
 }
+
+// Lembra se a lista de encerrados estava aberta (a tela é redesenhada com frequência).
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if (event.target instanceof HTMLElement && event.target.matches("[data-orders-closed]")) {
+      adminState.ordersClosedOpen = event.target.open;
+    }
+  },
+  true
+);

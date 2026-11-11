@@ -959,9 +959,10 @@ const validateOrders = async (page) => {
   await waitForCondition(
     async () =>
       (await readBodySection(page)) === "orders" &&
-      (await page.locator(".admin-board-column").count()) === 5 &&
+      (await page.locator(".gx-grid .gx-ticket").count()) >= 5 &&
+      (await page.locator("[data-orders-stage]").count()) >= 7 &&
       (await page.locator("[data-order-select]").count()) >= 5,
-    "Pedidos deveria renderizar kanban com pedidos sinteticos."
+    "Pedidos deveria renderizar a grade com pedidos sinteticos e as etapas."
   );
   const targetOrder = await page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll("[data-order-select]")).map((button) => ({

@@ -24,7 +24,6 @@ const MIME_TYPES = new Map([
   [".xml", "application/xml; charset=utf-8"],
 ]);
 
-const BOARD_VISIBLE_CARD_LIMIT = 3;
 const PREPARING_COLUMN_LABEL = "Em preparo";
 const BASE_TIME_MS = new Date("2026-04-17T17:00:00-03:00").getTime();
 const DASHBOARD_METRIC_LABELS = [
@@ -33,13 +32,14 @@ const DASHBOARD_METRIC_LABELS = [
   "Em rota",
   "Faturamento hoje",
 ];
-const ORDERS_METRIC_LABELS = [
+const ORDERS_STAGE_LABELS = [
   "Recebidos",
   "Aceitos",
   "Em preparo",
   "Prontos",
-  "Saiu para entrega",
-  "Finalizados hoje",
+  "Saiu p/ entrega",
+  "Finalizados",
+  "Cancelados",
 ];
 
 const createStaticServer = (rootDirectory) =>
@@ -388,215 +388,87 @@ const moveOrderToStatus = (routeState, orderId, nextStatus, note) => {
 
 const readText = async (locator) => ((await locator.textContent()) || "").trim();
 
-const getBoardColumn = (page, columnLabel) =>
-  page.locator(".admin-board-column").filter({
-    has: page.locator(".admin-board-column-head strong", { hasText: columnLabel }),
-  });
+// Tela de Pedidos (grade única): a etapa "Em preparo" vira filtro.
+const PREPARING_STAGE = '[data-orders-stage="preparing"]';
 
-const getCardIdsFromColumn = async (page, columnLabel) =>
-  getBoardColumn(page, columnLabel)
-    .locator("[data-order-select]")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => {
-        const orderId = node.getAttribute("data-order-select") || "";
-        const match = /^order-prp-(\d{3})$/.exec(orderId);
-        return match ? `TKY-PRP-${match[1]}` : orderId;
-      })
-    );
+const showPreparingOnly = async (page) => {
+  const isActive = await page
+    .locator(PREPARING_STAGE)
+    .evaluate((node) => node.classList.contains("is-active"))
+    .catch(() => false);
+  if (!isActive) await page.locator(PREPARING_STAGE).click();
+};
 
-const getModalOrderIds = async (page) =>
-  page
-    .locator("[data-board-modal-order-select]")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => {
-        const orderId = node.getAttribute("data-board-modal-order-select") || "";
-        const match = /^order-prp-(\d{3})$/.exec(orderId);
-        return match ? `TKY-PRP-${match[1]}` : orderId;
-      })
-    );
+const getVisibleOrderIds = async (page) =>
+  page.locator(".gx-grid [data-order-select]").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const orderId = node.getAttribute("data-order-select") || "";
+      const match = /^order-prp-(\d{3})$/.exec(orderId);
+      return match ? `TKY-PRP-${match[1]}` : orderId;
+    })
+  );
+
+const readStageCount = async (page) => Number(await readText(page.locator(`${PREPARING_STAGE} strong`)));
 
 const getDesktopLayoutMetrics = async (page) =>
   page.evaluate(() => {
     const sidebar = document.querySelector(".admin-sidebar");
     const detailPanel = document.querySelector(".admin-detail-panel");
-    const board = document.querySelector(".admin-board");
-    const boardColumns = Array.from(document.querySelectorAll(".admin-board-column"));
+    const grid = document.querySelector(".gx-grid");
     const logo = document.querySelector(".admin-brand-logo");
-    const title = document.querySelector(".admin-main-intro h1");
-    const statCard = document.querySelector(".admin-stat-card");
-    const boardRect = board?.getBoundingClientRect();
-    const lastColumnRect = boardColumns.at(-1)?.getBoundingClientRect();
+    const firstCard = document.querySelector(".gx-ticket");
 
     return {
       sidebarWidth: sidebar?.getBoundingClientRect().width || 0,
       detailWidth: detailPanel?.getBoundingClientRect().width || 0,
-      boardClientWidth: board?.clientWidth || 0,
-      boardScrollWidth: board?.scrollWidth || 0,
-      boardGap: Number.parseFloat(window.getComputedStyle(board || document.body).columnGap || "0") || 0,
-      columnCount: boardColumns.length,
-      lastColumnRightOffset:
-        boardRect && lastColumnRect ? lastColumnRect.right - boardRect.left : 0,
-      logoCurrentSrc: logo?.currentSrc || logo?.getAttribute("src") || "",
+      detailPosition: detailPanel ? window.getComputedStyle(detailPanel).position : "",
+      gridClientWidth: grid?.clientWidth || 0,
+      gridScrollWidth: grid?.scrollWidth || 0,
+      cardWidth: firstCard?.getBoundingClientRect().width || 0,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       logoWidth: logo?.getBoundingClientRect().width || 0,
-      titleFontSize: Number.parseFloat(window.getComputedStyle(title || document.body).fontSize || "0") || 0,
-      statCardHeight: statCard?.getBoundingClientRect().height || 0,
     };
   });
 
 const validateDesktopLayout = async (page) => {
   const metrics = await getDesktopLayoutMetrics(page);
 
-  assert.equal(metrics.columnCount, 5, "O kanban deveria renderizar as cinco colunas operacionais.");
-  assert.ok(
-    metrics.boardScrollWidth <= metrics.boardClientWidth + 2,
-    "As cinco colunas deveriam caber sem corte no desktop validado."
-  );
-  assert.ok(
-    metrics.lastColumnRightOffset <= metrics.boardClientWidth + 2,
-    "A ultima coluna do kanban nao deveria ficar cortada na direita."
-  );
-  assert.ok(
-    metrics.logoCurrentSrc.includes("/assets/inovas-food-logo-oficial.png"),
-    "A sidebar deveria usar a nova logo dedicada."
-  );
+  assert.ok(metrics.gridScrollWidth <= metrics.gridClientWidth + 2, "A grade de pedidos nao deveria ter corte lateral.");
+  assert.ok(metrics.pageOverflow <= 1, "A pagina de Pedidos nao deveria rolar para o lado.");
+  assert.ok(metrics.cardWidth >= 160, "Os cartoes de pedido deveriam ter largura legivel.");
   assert.ok(metrics.logoWidth > 0, "A logo da sidebar deveria estar renderizada.");
   assert.ok(metrics.sidebarWidth > 0, "A sidebar deveria estar renderizada.");
-  assert.ok(metrics.detailWidth > 0, "O painel lateral direito deveria estar renderizado.");
+  assert.ok(metrics.detailWidth >= 290, "Os detalhes do pedido deveriam ficar fixos a direita no desktop.");
+  assert.equal(metrics.detailPosition, "sticky", "Os detalhes deveriam acompanhar a rolagem no desktop.");
 };
 
-const waitForPreparingColumn = async (page, expectedTotalCount, expectedOverflowCount) => {
+const waitForPreparingColumn = async (page, expectedTotalCount) => {
   await waitForCondition(
     async () => {
-      const column = getBoardColumn(page, PREPARING_COLUMN_LABEL);
-      const visibleCount = await column.locator("[data-order-select]").count();
-      const totalCountText = await readText(column.locator(".admin-board-column-meta span"));
-      const overflowText = expectedOverflowCount > 0
-        ? await readText(column.locator(".admin-board-overflow-count"))
-        : "";
-
+      await showPreparingOnly(page);
       return (
-        visibleCount === Math.min(BOARD_VISIBLE_CARD_LIMIT, expectedTotalCount) &&
-        totalCountText === String(expectedTotalCount) &&
-        (expectedOverflowCount === 0 || overflowText.includes(String(expectedOverflowCount)))
+        (await page.locator(".gx-grid [data-order-select]").count()) === expectedTotalCount &&
+        (await readStageCount(page)) === expectedTotalCount
       );
     },
-    `A coluna ${PREPARING_COLUMN_LABEL} nao refletiu ${expectedTotalCount} pedidos.`,
+    `A etapa ${PREPARING_COLUMN_LABEL} nao refletiu ${expectedTotalCount} pedidos.`,
     12000
   );
 };
 
 const validatePreparingColumnState = async (page, expectedTotalCount) => {
-  const expectedOverflowCount = Math.max(expectedTotalCount - BOARD_VISIBLE_CARD_LIMIT, 0);
-  const column = getBoardColumn(page, PREPARING_COLUMN_LABEL);
-  const visibleCards = column.locator("[data-order-select]");
-  const visibleIds = await getCardIdsFromColumn(page, PREPARING_COLUMN_LABEL);
-  const expectedVisibleIds = Array.from({ length: Math.min(BOARD_VISIBLE_CARD_LIMIT, expectedTotalCount) }, (_, index) =>
-    `TKY-PRP-${pad(index + 1)}`
-  );
+  await showPreparingOnly(page);
+  const visibleIds = await getVisibleOrderIds(page);
+  const sortedIds = [...visibleIds].sort();
 
-  assert.equal(
-    await visibleCards.count(),
-    Math.min(BOARD_VISIBLE_CARD_LIMIT, expectedTotalCount),
-    "A coluna deveria exibir no maximo 3 cards visiveis."
+  assert.equal(visibleIds.length, expectedTotalCount, "A grade deveria mostrar todos os pedidos em preparo.");
+  assert.deepEqual(visibleIds, sortedIds, "A grade deveria mostrar os pedidos do mais antigo para o mais recente.");
+  assert.equal(await readStageCount(page), expectedTotalCount, "O total da etapa Em preparo ficou incorreto.");
+  assert.match(
+    await readText(page.locator(".gx-grid-head h2")),
+    new RegExp(`${expectedTotalCount} pedidos?`),
+    "O titulo da grade deveria indicar o total filtrado."
   );
-  assert.deepEqual(
-    visibleIds,
-    expectedVisibleIds,
-    "A coluna de preparo deveria mostrar os pedidos mais antigos primeiro."
-  );
-  assert.equal(
-    await readText(column.locator(".admin-board-column-meta span")),
-    String(expectedTotalCount),
-    "O total da coluna de preparo ficou incorreto."
-  );
-
-  if (expectedOverflowCount > 0) {
-    assert.equal(
-      await readText(column.locator(".admin-board-overflow-count")),
-      `+ ${expectedOverflowCount} pedido${expectedOverflowCount === 1 ? "" : "s"}`,
-      "O indicador de pedidos excedentes nao ficou claro."
-    );
-    assert.equal(
-      await readText(column.locator(".admin-board-overflow-button")),
-      `Ver todos (${expectedTotalCount})`,
-      "O botao para abrir todos os pedidos ficou incorreto."
-    );
-  } else {
-    assert.equal(
-      await column.locator(".admin-board-overflow").count(),
-      0,
-      "Nao deveria existir indicador de excedente quando a coluna tem 3 pedidos ou menos."
-    );
-  }
-};
-
-const openPreparingModal = async (page, expectedTotalCount) => {
-  await getBoardColumn(page, PREPARING_COLUMN_LABEL).locator("[data-board-column-open]").click();
-  await waitForCondition(
-    async () =>
-      (await page.locator("[data-admin-board-modal]").evaluate((node) => !node.hidden).catch(() => false)) &&
-      (await page.locator(".admin-board-modal-row").count()) === expectedTotalCount,
-    "O modal de pedidos da coluna nao abriu corretamente."
-  );
-};
-
-const closePreparingModal = async (page) => {
-  await page.locator("[data-admin-board-modal-close]").first().click();
-  await waitForCondition(
-    async () => page.locator("[data-admin-board-modal]").evaluate((node) => node.hidden).catch(() => true),
-    "O modal da coluna nao foi fechado."
-  );
-};
-
-const validatePreparingModal = async (page, expectedTotalCount) => {
-  const modalTitle = await readText(page.locator("[data-admin-board-modal-title]"));
-  const modalSubtitle = await readText(page.locator("[data-admin-board-modal-subtitle]"));
-  const modalOrderIds = await getModalOrderIds(page);
-  const expectedIds = Array.from({ length: expectedTotalCount }, (_, index) => `TKY-PRP-${pad(index + 1)}`);
-
-  assert.equal(
-    modalTitle,
-    "Todos os pedidos de em preparo",
-    "O titulo do modal da coluna nao ficou consistente."
-  );
-  assert.ok(
-    modalSubtitle.includes(`${expectedTotalCount} pedido${expectedTotalCount === 1 ? "" : "s"}`),
-    "O resumo do modal nao indicou o total da coluna."
-  );
-  assert.deepEqual(
-    modalOrderIds,
-    expectedIds,
-    "O modal deveria listar todos os pedidos da coluna em ordem do mais antigo para o mais recente."
-  );
-};
-
-const validatePreparingModalScroll = async (page) => {
-  const metrics = await page.locator("[data-admin-board-modal-list]").evaluate((node) => {
-    const element = node;
-    const styles = window.getComputedStyle(element);
-    const beforeScrollTop = element.scrollTop;
-    element.scrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
-
-    return {
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-      afterScrollTop: element.scrollTop,
-      overflowY: styles.overflowY,
-      overscrollBehavior: styles.overscrollBehavior,
-      canScroll: element.scrollHeight > element.clientHeight,
-      dialogClientHeight:
-        element.closest(".admin-board-modal-dialog")?.getBoundingClientRect().height || 0,
-      beforeScrollTop,
-    };
-  });
-
-  assert.ok(metrics.dialogClientHeight > 0, "O dialogo do modal deveria ter altura definida.");
-  assert.ok(metrics.canScroll, "A lista do modal deveria ultrapassar a altura visivel neste cenario.");
-  assert.ok(
-    metrics.overflowY === "auto" || metrics.overflowY === "scroll",
-    "A lista do modal deveria manter overflow vertical interno."
-  );
-  assert.ok(metrics.afterScrollTop > metrics.beforeScrollTop, "A lista do modal nao respondeu ao scroll interno.");
 };
 
 const waitForDashboardSection = async (page) => {
@@ -612,10 +484,9 @@ const waitForOrdersSection = async (page, expectedPreparingCount) => {
   await waitForCondition(
     async () =>
       (await page.evaluate(() => document.body.dataset.adminSection).catch(() => "")) === "orders" &&
-      (await page.locator(".admin-board-column").count()) === 5 &&
-      (await getBoardColumn(page, PREPARING_COLUMN_LABEL).locator("[data-order-select]").count()) ===
-        Math.min(BOARD_VISIBLE_CARD_LIMIT, expectedPreparingCount),
-    "O gestor deveria exibir a visao Pedidos com o kanban operacional."
+      (await page.locator(".gx-grid .gx-ticket").count()) > 0 &&
+      (await readStageCount(page).catch(() => -1)) === expectedPreparingCount,
+    "O gestor deveria exibir a visao Pedidos com a grade operacional."
   );
 };
 
@@ -632,9 +503,8 @@ const waitForInitialAdminSection = async (page, expectedPreparingCount) => {
 
       if (activeSection === "orders") {
         return (
-          (await page.locator(".admin-board-column").count()) === 5 &&
-          (await getBoardColumn(page, PREPARING_COLUMN_LABEL).locator("[data-order-select]").count()) ===
-            Math.min(BOARD_VISIBLE_CARD_LIMIT, expectedPreparingCount)
+          (await page.locator(".gx-grid .gx-ticket").count()) > 0 &&
+          (await readStageCount(page).catch(() => -1)) === expectedPreparingCount
         );
       }
 
@@ -685,7 +555,7 @@ const validateDashboardExperience = async (page) => {
   assert.ok(layoutState.themeToggleVisible, "O botao de tema deveria ficar visivel ao lado da logo.");
   assert.ok(layoutState.themeToggleAligned, "O botao de tema deveria permanecer alinhado com a logo.");
   assert.equal(
-    await page.locator(".admin-board-column").count(),
+    await page.locator(".gx-grid .gx-ticket").count(),
     0,
     "O Dashboard gerencial nao deveria renderizar o kanban operacional na area principal."
   );
@@ -739,7 +609,7 @@ const openOrdersSection = async (page, expectedPreparingCount) => {
 
 const validateOrdersExperience = async (page) => {
   const metricLabels = await page
-    .locator("[data-admin-stats] .admin-stat-card span")
+    .locator("[data-admin-stats] [data-orders-stage] span:not(.gx-stage-dot)")
     .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim() || "").filter(Boolean));
   const state = await page.evaluate(() => {
     const detailPanel = document.querySelector("[data-admin-detail-panel]");
@@ -756,8 +626,8 @@ const validateOrdersExperience = async (page) => {
 
   assert.equal(state.activeSection, "orders", "A navegacao deveria levar para a area Pedidos.");
   assert.notEqual(state.detailDisplay, "none", "O painel lateral deve permanecer visivel na area Pedidos.");
-  assert.equal(state.statsDisplay, "grid", "Os indicadores operacionais deveriam aparecer na area Pedidos.");
-  assert.deepEqual(metricLabels, ORDERS_METRIC_LABELS, "A area Pedidos deveria exibir os indicadores operacionais atuais.");
+  assert.notEqual(state.statsDisplay, "none", "Os indicadores operacionais (barra de etapas) deveriam aparecer na area Pedidos.");
+  assert.deepEqual(metricLabels, ORDERS_STAGE_LABELS, "A area Pedidos deveria exibir as etapas da operacao.");
   assert.equal(state.ribbonDisplay, "none", "Os blocos do Dashboard nao deveriam aparecer na area Pedidos.");
   assert.equal(
     await page.locator(".admin-dashboard-summary-card").count(),
@@ -765,9 +635,9 @@ const validateOrdersExperience = async (page) => {
     "A area Pedidos nao deveria renderizar cards gerenciais do Dashboard."
   );
   assert.equal(
-    await page.locator(".admin-board-column").count(),
-    5,
-    "A area Pedidos deveria renderizar as cinco colunas do kanban."
+    await page.locator("[data-orders-mode]").count(),
+    3,
+    "A area Pedidos deveria ter o seletor Todos / Entrega / Retirada."
   );
 };
 
@@ -1009,53 +879,41 @@ const main = async () => {
 
     await openOrdersSection(page, 5);
     await validateOrdersExperience(page);
-    await waitForPreparingColumn(page, 5, 2);
+    await waitForPreparingColumn(page, 5);
     await validatePreparingColumnState(page, 5);
     await validateDesktopLayout(page);
 
-    await openPreparingModal(page, 5);
-    await validatePreparingModal(page, 5);
-
-    await page.locator('[data-board-modal-order-select="order-prp-004"]').click();
+    await page.locator('.gx-grid [data-order-select="order-prp-004"]').click();
     await waitForCondition(
       async () => (await readText(page.locator("[data-admin-order-detail]"))).includes("Cliente Preparo 004"),
-      "Selecionar um pedido pelo modal deveria abrir o detalhe lateral correto."
+      "Selecionar um pedido na grade deveria abrir os detalhes corretos."
     );
     const detailHeaderSummary = await readText(page.locator("[data-admin-order-detail]"));
     assert.ok(
       detailHeaderSummary.includes("Em preparo") &&
         detailHeaderSummary.includes("Entrega") &&
-        detailHeaderSummary.includes("TKY-PRP-004") &&
-        detailHeaderSummary.includes("17:15"),
-      "O painel deveria destacar codigo, status, tipo e horario relevante."
-    );
-    await waitForCondition(
-      async () => page.locator("[data-admin-board-modal]").evaluate((node) => node.hidden).catch(() => true),
-      "O modal deveria fechar apos selecionar um pedido."
+        detailHeaderSummary.includes("#004"),
+      "O painel deveria destacar codigo, etapa e tipo do pedido."
     );
 
-    await page.locator('[data-order-action="order-prp-004"][data-next-status="Pronto"]').click();
-    await waitForPreparingColumn(page, 4, 1);
+    await page.locator('[data-admin-order-detail] [data-order-action="order-prp-004"][data-next-status="Pronto"]').click();
+    await waitForPreparingColumn(page, 4);
     await validatePreparingColumnState(page, 4);
     assert.equal(
-      await readText(getBoardColumn(page, "Prontos").locator(".admin-board-column-meta span")),
+      await readText(page.locator('[data-orders-stage="ready"] strong')),
       "2",
-      "A coluna de prontos deveria receber automaticamente o pedido atualizado."
+      "A etapa Prontos deveria receber automaticamente o pedido atualizado."
     );
 
     setScenario(routeState, "ten");
-    await page.locator("[data-admin-refresh]").last().click();
-    await waitForPreparingColumn(page, 10, 7);
+    await page.evaluate(() => document.querySelector("[data-admin-refresh]")?.click());
+    await waitForPreparingColumn(page, 10);
     await validatePreparingColumnState(page, 10);
 
     setScenario(routeState, "thirteen");
-    await page.locator("[data-admin-refresh]").last().click();
-    await waitForPreparingColumn(page, 13, 10);
+    await page.evaluate(() => document.querySelector("[data-admin-refresh]")?.click());
+    await waitForPreparingColumn(page, 13);
     await validatePreparingColumnState(page, 13);
-
-    await openPreparingModal(page, 13);
-    await validatePreparingModal(page, 13);
-    await validatePreparingModalScroll(page);
     await page.screenshot({
       path: path.join(workspaceRoot, "_tmp_admin_kanban_volume_validation.png"),
       fullPage: true,
@@ -1065,11 +923,7 @@ const main = async () => {
     await page.evaluate(() => {
       document.querySelector("[data-admin-refresh]")?.click();
     });
-    await waitForPreparingColumn(page, 3, 0);
-    await waitForCondition(
-      async () => page.locator("[data-admin-board-modal]").evaluate((node) => node.hidden).catch(() => true),
-      "O modal deveria fechar quando a coluna volta a ter somente 3 pedidos."
-    );
+    await waitForPreparingColumn(page, 3);
     await validatePreparingColumnState(page, 3);
 
     assert.ok(routeState.listRequests >= 5, "O gestor deveria consultar a lista em cada atualizacao relevante.");
@@ -1080,7 +934,7 @@ const main = async () => {
     assert.deepEqual(consoleErrors, [], "O gestor nao deveria emitir erros no console durante a validacao.");
     assert.deepEqual(pageErrors, [], "O gestor nao deveria disparar erros de execucao durante a validacao.");
 
-    console.log("Dashboard, tema persistente e kanban admin validados com sucesso.");
+    console.log("Dashboard, tema persistente e tela de Pedidos (volume) validados com sucesso.");
   } finally {
     await browser.close();
     await new Promise((resolve, reject) => {

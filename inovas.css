@@ -929,14 +929,25 @@ button {
 }
 
 .if-segment-grid svg {
+  flex: none;
   width: 30px;
   height: 30px;
   color: var(--if-orange);
 }
 
+/* Cartões estreitos: o nome desce para baixo do ícone em vez de esmagá-lo. */
+.if-segment-grid a {
+  flex-wrap: wrap;
+  align-content: flex-end;
+  row-gap: 4px;
+}
+
 .if-segment-grid strong {
+  max-width: 100%;
+  overflow: hidden;
   font-size: 16px;
   font-weight: 950;
+  text-overflow: ellipsis;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
   white-space: nowrap;
 }

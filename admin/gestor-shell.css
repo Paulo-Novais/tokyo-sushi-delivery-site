@@ -1586,3 +1586,1893 @@ html body.admin-body .admin-menu-search-empty {
     display: none;
   }
 }
+
+/* =====================================================================
+   Pedidos: quadro claro para horário de pico.
+   Barra de etapas (filtro), colunas com rolagem própria, cartões curtos com
+   cronômetro colorido e detalhes num painel lateral.
+   ===================================================================== */
+html body.admin-body {
+  --gx-stage-all: #64748b;
+  --gx-stage-received: #ff6a00;
+  --gx-stage-accepted: #2563eb;
+  --gx-stage-preparing: #d97706;
+  --gx-stage-ready: #16a34a;
+  --gx-stage-delivery: #7c3aed;
+  --gx-stage-late: #dc2626;
+  --gx-sla-ok: #22c55e;
+  --gx-sla-warn: #f59e0b;
+  --gx-sla-late: #dc2626;
+  --gx-sla-scheduled: #8b5cf6;
+}
+
+/* Barra de etapas no lugar dos cartões grandes */
+html body.admin-body [data-admin-stats].is-stage-bar {
+  display: block !important;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gx-stage-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--gx-border);
+  border-radius: 14px;
+  background: var(--gx-surface);
+  box-shadow: var(--gx-shadow);
+}
+
+.gx-stage {
+  --stage-color: var(--gx-stage-all);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 8px 0 14px;
+  border: 1px solid var(--gx-border);
+  border-radius: 999px;
+  background: var(--gx-surface);
+  color: var(--gx-ink-2);
+  font: 600 13.5px/1 inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.gx-stage:hover {
+  border-color: var(--stage-color);
+}
+
+.gx-stage.is-received { --stage-color: var(--gx-stage-received); }
+.gx-stage.is-accepted { --stage-color: var(--gx-stage-accepted); }
+.gx-stage.is-preparing { --stage-color: var(--gx-stage-preparing); }
+.gx-stage.is-ready { --stage-color: var(--gx-stage-ready); }
+.gx-stage.is-delivery { --stage-color: var(--gx-stage-delivery); }
+.gx-stage.is-late { --stage-color: var(--gx-stage-late); }
+
+.gx-stage-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--stage-color);
+}
+
+.gx-stage strong {
+  min-width: 26px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.gx-stage.is-active {
+  border-color: var(--gx-ink);
+  background: var(--gx-ink);
+  color: var(--gx-surface);
+}
+
+.gx-stage.is-active strong {
+  background: var(--stage-color);
+  color: #ffffff;
+}
+
+.gx-stage.is-late.has-alert:not(.is-active) {
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #b91c1c;
+}
+
+.gx-stage.is-late.has-alert strong {
+  background: var(--gx-stage-late);
+  color: #ffffff;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-stage.is-late.has-alert:not(.is-active) {
+  color: #fca5a5;
+}
+
+.gx-stage-done {
+  margin-left: auto;
+  color: var(--gx-ink-3);
+  font-size: 13px;
+}
+
+.gx-stage-done strong {
+  color: var(--gx-ink);
+}
+
+/* Quadro: todas as colunas cabem; cada coluna rola por dentro */
+html body.admin-body[data-admin-section="orders"] .admin-workspace {
+  display: block !important;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-panel {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body[data-admin-section="orders"] [data-admin-board] {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+html body.admin-body[data-admin-section="orders"] [data-admin-board].is-focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column {
+  --stage-color: var(--gx-stage-all);
+  display: flex !important;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 210px);
+  min-height: 0;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--gx-border) !important;
+  border-top: 3px solid var(--stage-color) !important;
+  border-radius: 14px !important;
+  background: var(--gx-bg-2) !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-new-column { --stage-color: var(--gx-stage-received); }
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-accepted-column { --stage-color: var(--gx-stage-accepted); }
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-preparing-column { --stage-color: var(--gx-stage-preparing); }
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-ready-column { --stage-color: var(--gx-stage-ready); }
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-delivery-column { --stage-color: var(--gx-stage-delivery); }
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column.is-empty {
+  max-height: none;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column-head {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px !important;
+  border: 0 !important;
+  background: var(--gx-surface) !important;
+  border-bottom: 1px solid var(--gx-border) !important;
+}
+
+.gx-col-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gx-col-title strong {
+  color: var(--gx-ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.gx-col-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--stage-color);
+}
+
+.gx-col-late {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-col-late {
+  color: #fca5a5;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column-meta {
+  display: grid !important;
+  justify-items: end;
+  gap: 1px;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column-meta span {
+  min-width: 26px;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  background: var(--stage-color) !important;
+  color: #ffffff !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  text-align: center;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-column-meta small {
+  color: var(--gx-ink-3) !important;
+  font-size: 11.5px !important;
+  white-space: nowrap;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-stack {
+  display: grid !important;
+  align-content: start;
+  gap: 8px !important;
+  min-height: 0;
+  padding: 8px !important;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+html body.admin-body[data-admin-section="orders"] [data-admin-board].is-focus .admin-board-stack {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.gx-col-empty {
+  margin: 0;
+  padding: 16px 8px;
+  color: var(--gx-ink-3);
+  font-size: 13px;
+  text-align: center;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-board-overflow {
+  padding: 6px 8px 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Cartão do pedido */
+html body.admin-body .admin-order-card.gx-order {
+  --sla-color: var(--gx-sla-ok);
+  display: grid !important;
+  gap: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--gx-border) !important;
+  border-left: 4px solid var(--sla-color) !important;
+  border-radius: 12px !important;
+  background: var(--gx-surface) !important;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05) !important;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+html body.admin-body .admin-order-card.gx-order:hover {
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+html body.admin-body .admin-order-card.gx-order.is-sla-warn { --sla-color: var(--gx-sla-warn); }
+html body.admin-body .admin-order-card.gx-order.is-sla-late { --sla-color: var(--gx-sla-late); }
+html body.admin-body .admin-order-card.gx-order.is-sla-scheduled { --sla-color: var(--gx-sla-scheduled); }
+
+html body.admin-body .admin-order-card.gx-order.is-sla-late {
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.07), transparent 55%), var(--gx-surface) !important;
+}
+
+html body.admin-body .admin-order-card.gx-order.is-selected {
+  box-shadow: 0 0 0 2px var(--gx-brand), 0 6px 16px rgba(17, 24, 39, 0.1) !important;
+}
+
+html body.admin-body .admin-order-card.gx-order.is-new {
+  animation: gx-new-order 2.4s ease-in-out infinite;
+}
+
+@keyframes gx-new-order {
+  0%, 100% { box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body.admin-body .admin-order-card.gx-order.is-new {
+    animation: none;
+  }
+}
+
+html body.admin-body .gx-order-select {
+  display: grid !important;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 12px 8px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--gx-ink) !important;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gx-order-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gx-order-id {
+  color: var(--gx-ink);
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-order-new {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--gx-brand);
+  color: #111827;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gx-order-timer {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gx-order-timer.is-ok { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+.gx-order-timer.is-warn { background: rgba(245, 158, 11, 0.18); color: #92400e; }
+.gx-order-timer.is-late { background: #dc2626; color: #ffffff; }
+.gx-order-timer.is-scheduled { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }
+
+html body.admin-body[data-admin-theme="dark"] .gx-order-timer.is-ok { color: #86efac; }
+html body.admin-body[data-admin-theme="dark"] .gx-order-timer.is-warn { color: #fcd34d; }
+html body.admin-body[data-admin-theme="dark"] .gx-order-timer.is-scheduled { color: #c4b5fd; }
+
+.gx-order-customer {
+  overflow: hidden;
+  color: var(--gx-ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gx-order-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gx-tag.is-scheduled {
+  background: rgba(139, 92, 246, 0.12);
+  color: #6d28d9;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-tag.is-scheduled {
+  color: #c4b5fd;
+}
+
+.gx-order-items {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--gx-ink-3);
+  font-size: 12.5px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.gx-order-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gx-order-foot strong {
+  color: var(--gx-ink);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-order-foot small {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+html body.admin-body .admin-order-card.gx-order .gx-order-action {
+  width: calc(100% - 20px) !important;
+  min-height: 36px !important;
+  margin: 0 10px 10px !important;
+  padding: 0 12px !important;
+  border-radius: 9px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+}
+
+/* Detalhes num painel lateral */
+.gx-detail-close,
+.gx-orders-backdrop {
+  display: none;
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-detail-panel {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(460px, 100vw) !important;
+  max-width: 100vw;
+  height: 100vh;
+  margin: 0 !important;
+  overflow-y: auto;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-left: 1px solid var(--gx-border) !important;
+  background: var(--gx-surface) !important;
+  box-shadow: -18px 0 40px rgba(15, 23, 42, 0.22) !important;
+  transform: translateX(105%);
+  transition: transform 0.22s ease;
+  visibility: hidden;
+}
+
+html body.admin-body.gx-orders-drawer-open[data-admin-section="orders"] .admin-detail-panel {
+  transform: none;
+  visibility: visible;
+}
+
+html body.admin-body.gx-orders-drawer-open[data-admin-section="orders"] .gx-orders-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+html body.admin-body[data-admin-section="orders"] .admin-detail-head {
+  position: relative;
+  padding-right: 52px !important;
+}
+
+html body.admin-body[data-admin-section="orders"] .gx-detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--gx-border);
+  border-radius: 10px;
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+  cursor: pointer;
+}
+
+html body.admin-body[data-admin-section="orders"] .gx-detail-close:hover {
+  border-color: var(--gx-brand);
+  color: var(--gx-brand-ink);
+}
+
+/* Encerrados recolhidos */
+html body.admin-body .gx-closed {
+  margin-top: 14px !important;
+  padding: 0 !important;
+  border: 1px solid var(--gx-border) !important;
+  border-radius: 14px !important;
+  background: var(--gx-surface) !important;
+  box-shadow: none !important;
+}
+
+.gx-closed-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.gx-closed-summary::-webkit-details-marker {
+  display: none;
+}
+
+.gx-closed-summary strong {
+  color: var(--gx-ink);
+  font-size: 15px;
+}
+
+.gx-closed-summary span {
+  color: var(--gx-ink-3);
+  font-size: 13px;
+}
+
+.gx-closed-summary em {
+  margin-left: auto;
+  color: var(--gx-brand-ink);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.gx-closed[open] .gx-closed-summary em {
+  visibility: hidden;
+}
+
+html body.admin-body .gx-closed .admin-closed-groups {
+  padding: 0 14px 14px;
+}
+
+@media (max-width: 1180px) {
+  html body.admin-body[data-admin-section="orders"] [data-admin-board]:not(.is-focus) {
+    grid-template-columns: repeat(5, minmax(230px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .gx-stage-done {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  html body.admin-body[data-admin-section="orders"] .admin-board-column {
+    max-height: 70vh;
+  }
+}
+
+/* Pedidos: vence as regras antigas do quadro (que fixavam altura e linhas). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-workspace {
+  padding: 0 24px 24px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-panel,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-module-shell {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] [data-admin-stats].is-stage-bar {
+  margin: 0 24px 14px !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] [data-admin-board] {
+  grid-template-columns: repeat(5, minmax(180px, 1fr)) !important;
+  gap: 10px !important;
+  padding: 0 0 4px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] [data-admin-board].is-focus {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-order {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  grid-template-rows: none !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-content: start !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-order::before {
+  content: none !important;
+  display: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-select {
+  height: auto !important;
+  min-height: 0 !important;
+  grid-template-rows: none !important;
+  grid-auto-rows: auto !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 5px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-tags {
+  align-items: flex-start !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-tag,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-new,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-timer {
+  height: auto !important;
+  min-height: 0 !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-items {
+  height: auto !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-action {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-id {
+  white-space: nowrap !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-top {
+  flex-wrap: nowrap !important;
+  min-width: 0;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-new {
+  padding: 1px 6px !important;
+  font-size: 9.5px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-foot small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* O cartão não encolhe: a coluna é que rola. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack > .gx-order {
+  flex-shrink: 0 !important;
+}
+
+/* Um ancestral antigo zera a altura de linha; o cartão define a própria. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-select {
+  line-height: 1.35 !important;
+}
+
+/* Texto com reticências dentro do botão do cartão: altura mínima explícita
+   (sem isso a grade do botão encolhe a linha até zero). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-customer {
+  min-height: 1.4em !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-items {
+  min-height: 1.4em !important;
+  max-height: 2.8em;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-foot {
+  min-height: 1.4em !important;
+}
+
+/* O botão do cartão vira bloco simples; a grade fica numa camada interna
+   (o navegador calcula errado a altura de botões em grade). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-select {
+  display: block !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* Cartão clicável: conteúdo em bloco comum + botão invisível cobrindo o cartão. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-order {
+  position: relative !important;
+}
+
+html body.admin-body .gx-order-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+html body.admin-body .gx-order-hit:focus-visible {
+  outline: 3px solid var(--gx-brand);
+  outline-offset: -3px;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px 8px;
+  line-height: 1.35;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-action {
+  position: relative !important;
+  z-index: 2;
+}
+
+/* O cartão nunca fica menor que o próprio conteúdo: a coluna rola. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack > .admin-order-card.gx-order {
+  min-height: min-content !important;
+  overflow: visible !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-stack {
+  grid-template-rows: none !important;
+  grid-auto-rows: max-content !important;
+}
+
+/* Painel lateral de detalhes: vence as regras antigas do painel fixo. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+  z-index: 60 !important;
+  display: block !important;
+  width: min(460px, 100vw) !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  overflow-y: auto !important;
+  transform: translateX(105%) !important;
+  visibility: hidden !important;
+  transition: transform 0.22s ease, visibility 0s linear 0.22s !important;
+}
+
+html body.admin-body.admin-body.gx-orders-drawer-open[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
+  transform: none !important;
+  visibility: visible !important;
+  transition: transform 0.22s ease !important;
+}
+
+@media (max-width: 900px) {
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] [data-admin-stats].is-stage-bar {
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 12px 12px !important;
+  }
+
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-workspace {
+    padding: 0 12px 16px !important;
+  }
+
+  .gx-stage-bar {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .gx-stage {
+    min-height: 34px;
+    padding: 0 6px 0 10px;
+    font-size: 12.5px;
+  }
+}
+
+/* Conteúdo dos detalhes cabe na largura do painel lateral. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel > *,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-detail,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-detail > * {
+  box-sizing: border-box !important;
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Botões dos cartões: sempre com cara de botão, nos dois temas. */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-action:not(.is-primary) {
+  border: 1px solid var(--gx-border) !important;
+  background: var(--gx-surface) !important;
+  color: var(--gx-ink) !important;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06) !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-action:not(.is-primary):hover {
+  border-color: var(--sla-color, var(--gx-brand)) !important;
+}
+
+html body.admin-body.admin-body[data-admin-theme="dark"][data-admin-page="dashboard"][data-admin-section="orders"] .gx-order .gx-order-action:not(.is-primary) {
+  border-color: #3c4960 !important;
+  background: #222c3d !important;
+  color: #f1f5f9 !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-detail > *,
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-detail {
+  padding: 0 !important;
+}
+
+/* Bolhas de contagem: texto escuro nas cores claras (contraste nos dois temas). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-board-column:is(.is-new-column, .is-preparing-column, .is-ready-column) .admin-board-column-meta span,
+.gx-stage.is-active:is(.is-received, .is-preparing, .is-ready) strong {
+  color: #111827 !important;
+}
+
+.gx-stage.is-active.is-all strong {
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+}
+
+/* O fundo escurecido não cobre o menu lateral: dá para trocar de aba direto. */
+@media (min-width: 901px) {
+  html body.admin-body.gx-orders-drawer-open[data-admin-section="orders"] .gx-orders-backdrop {
+    left: 248px !important;
+  }
+}
+
+/* =====================================================================
+   Pedidos v2 (esboço "INOVAS · Tela de Pedidos"): grade única colorida pelo
+   tempo, etapas como filtro e detalhes fixos à direita.
+   ===================================================================== */
+html body.admin-body {
+  --gx-age-fresh-bg: var(--gx-surface);
+  --gx-age-fresh-line: var(--gx-border);
+  --gx-age-mid-bg: #fefce8;
+  --gx-age-mid-line: #facc15;
+  --gx-age-warn-bg: #fff7ed;
+  --gx-age-warn-line: #fb923c;
+  --gx-age-late-bg: #fef2f2;
+  --gx-age-late-line: #f87171;
+  --gx-ticket-inset: rgba(17, 24, 39, 0.045);
+}
+
+html body.admin-body[data-admin-theme="dark"] {
+  --gx-age-fresh-bg: #1a2231;
+  --gx-age-fresh-line: #2b3649;
+  --gx-age-mid-bg: #2a2614;
+  --gx-age-mid-line: #a68a1e;
+  --gx-age-warn-bg: #2d1f14;
+  --gx-age-warn-line: #b8621f;
+  --gx-age-late-bg: #2e1719;
+  --gx-age-late-line: #b23a3a;
+  --gx-ticket-inset: rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Topo ---------- */
+.gx-orders-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.gx-orders-sub {
+  margin: 0;
+  color: var(--gx-ink-3);
+  font-size: 13.5px;
+}
+
+.gx-mode-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--gx-border);
+  border-radius: 12px;
+  background: var(--gx-surface);
+}
+
+.gx-mode-switch button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gx-ink-2);
+  font: 700 13.5px/1 inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gx-mode-switch button.is-active {
+  background: var(--gx-brand);
+  color: #111827;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-stage-bar {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gx-stage-spacer {
+  flex: 1 1 auto;
+}
+
+.gx-stage strong {
+  background: var(--gx-brand);
+  color: #111827;
+}
+
+.gx-stage.is-closed {
+  border-style: dashed;
+}
+
+.gx-stage.is-done strong {
+  background: rgba(22, 163, 74, 0.16);
+  color: #15803d;
+}
+
+.gx-stage.is-cancelled strong {
+  background: rgba(220, 38, 38, 0.14);
+  color: #b91c1c;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-stage.is-done strong { color: #86efac; }
+html body.admin-body[data-admin-theme="dark"] .gx-stage.is-cancelled strong { color: #fca5a5; }
+
+.gx-stage.is-received { --stage-color: #eab308; }
+.gx-stage.is-accepted { --stage-color: #3b82f6; }
+.gx-stage.is-preparing { --stage-color: #f97316; }
+.gx-stage.is-ready { --stage-color: #22c55e; }
+.gx-stage.is-delivery { --stage-color: #a855f7; }
+
+.gx-stage.is-active strong,
+.gx-stage.is-active:is(.is-received, .is-preparing, .is-ready) strong {
+  background: var(--gx-brand);
+  color: #111827 !important;
+}
+
+/* ---------- Área: grade + detalhes fixos ---------- */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] [data-admin-board].gx-orders-grid {
+  display: block !important;
+  grid-template-columns: none !important;
+  overflow: visible !important;
+}
+
+.gx-grid-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+
+.gx-grid-head h2 {
+  margin: 0;
+  color: var(--gx-ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.gx-grid-head h2 span {
+  color: var(--gx-ink-3);
+  font-weight: 600;
+}
+
+.gx-age-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+.gx-age-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gx-age-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #94a3b8;
+}
+
+.gx-age-key.is-mid i { background: #facc15; }
+.gx-age-key.is-warn i { background: #fb923c; }
+.gx-age-key.is-late i { background: #f87171; }
+
+.gx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 12px;
+}
+
+.gx-grid-empty {
+  display: grid;
+  gap: 4px;
+  padding: 40px 16px;
+  border: 1px dashed var(--gx-border);
+  border-radius: 14px;
+  color: var(--gx-ink-3);
+  text-align: center;
+}
+
+.gx-grid-empty strong {
+  color: var(--gx-ink);
+}
+
+/* ---------- Cartão ---------- */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket {
+  position: relative !important;
+  display: block !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 1.5px solid var(--age-line) !important;
+  border-radius: 14px !important;
+  background: var(--age-bg) !important;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05) !important;
+  line-height: 1.35 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket::before {
+  content: none !important;
+}
+
+.gx-ticket { --age-bg: var(--gx-age-fresh-bg); --age-line: var(--gx-age-fresh-line); }
+.gx-ticket.is-age-mid { --age-bg: var(--gx-age-mid-bg); --age-line: var(--gx-age-mid-line); }
+.gx-ticket.is-age-warn { --age-bg: var(--gx-age-warn-bg); --age-line: var(--gx-age-warn-line); }
+.gx-ticket.is-age-late { --age-bg: var(--gx-age-late-bg); --age-line: var(--gx-age-late-line); }
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket:hover {
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-selected {
+  box-shadow: 0 0 0 2.5px var(--gx-ink), 0 8px 20px rgba(17, 24, 39, 0.14) !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket.is-new {
+  animation: none;
+}
+
+.gx-ticket-body {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.gx-ticket-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gx-ticket-name {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--gx-ink);
+  font-size: 15.5px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gx-ticket-timer {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-2);
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gx-ticket-timer.is-mid { background: #facc15; color: #111827; }
+.gx-ticket-timer.is-warn { background: #fb923c; color: #111827; }
+.gx-ticket-timer.is-late { background: #f87171; color: #111827; }
+.gx-ticket-timer.is-scheduled { background: rgba(139, 92, 246, 0.16); color: #6d28d9; }
+html body.admin-body[data-admin-theme="dark"] .gx-ticket-timer.is-scheduled { color: #c4b5fd; }
+
+.gx-ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.gx-ticket .gx-tag.is-delivery,
+.gx-od .gx-tag.is-delivery {
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+}
+
+.gx-ticket .gx-tag.is-pickup,
+.gx-od .gx-tag.is-pickup {
+  background: rgba(168, 85, 247, 0.14);
+  color: #7e22ce;
+}
+
+html body.admin-body[data-admin-theme="dark"] :is(.gx-ticket, .gx-od) .gx-tag.is-delivery { color: #93c5fd; }
+html body.admin-body[data-admin-theme="dark"] :is(.gx-ticket, .gx-od) .gx-tag.is-pickup { color: #d8b4fe; }
+
+.gx-ticket-time {
+  color: var(--gx-ink-3);
+  font-size: 12.5px;
+}
+
+.gx-ticket-time b {
+  color: var(--gx-ink-2);
+}
+
+.gx-ticket-items {
+  display: grid;
+  gap: 2px;
+  min-height: 2.2em;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--gx-ticket-inset);
+  color: var(--gx-ink);
+  font-size: 13px;
+}
+
+.gx-ticket-items span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gx-ticket-items em {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.gx-ticket-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.gx-ticket-total {
+  color: var(--gx-ink-3);
+  font-size: 12.5px;
+}
+
+.gx-ticket-total strong {
+  color: var(--gx-ink);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-ticket-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--gx-ink);
+  color: var(--gx-surface);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------- Detalhes ---------- */
+.gx-od {
+  display: grid;
+  gap: 12px;
+}
+
+.gx-od-eyebrow {
+  color: var(--gx-ink-3);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gx-od-head {
+  display: grid;
+  gap: 6px;
+}
+
+.gx-od-head h2 {
+  margin: 0;
+  color: var(--gx-ink);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.gx-od-data summary {
+  width: max-content;
+  color: var(--gx-brand-ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gx-od-data dl {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--gx-bg-2);
+}
+
+.gx-od-data dl div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 13px;
+}
+
+.gx-od-data dt {
+  color: var(--gx-ink-3);
+}
+
+.gx-od-data dd {
+  margin: 0;
+  color: var(--gx-ink);
+  overflow-wrap: anywhere;
+}
+
+.gx-od-data a {
+  color: var(--gx-brand-ink);
+  font-weight: 700;
+}
+
+.gx-od-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--gx-ink-3);
+  font-size: 13px;
+}
+
+.gx-od-meta b {
+  color: var(--gx-ink);
+}
+
+.gx-od-meta .gx-ticket-timer {
+  margin-left: 0;
+}
+
+.gx-od-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--gx-brand);
+  border-radius: 6px;
+  background: var(--gx-brand-soft);
+  color: var(--gx-ink);
+  font-size: 13px;
+}
+
+.gx-od-title {
+  margin: 4px 0 0;
+  color: var(--gx-ink-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gx-od-items {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gx-od-items li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--gx-border);
+  border-radius: 12px;
+  background: var(--gx-surface);
+}
+
+.gx-od-items li.is-addon {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  opacity: 0.85;
+}
+
+.gx-od-avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.gx-od-avatar.is-a { background: #c2410c; }
+.gx-od-avatar.is-b { background: #0f766e; }
+.gx-od-avatar.is-c { background: #7c3aed; }
+.gx-od-avatar.is-d { background: #1d4ed8; }
+.gx-od-avatar.is-e { background: #be123c; }
+
+.gx-od-item {
+  display: grid;
+  min-width: 0;
+}
+
+.gx-od-item strong {
+  color: var(--gx-ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.gx-od-item small {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+.gx-od-price {
+  color: var(--gx-ink);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gx-od-boxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gx-od-boxes > div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--gx-border);
+  border-radius: 12px;
+}
+
+.gx-od-boxes span {
+  color: var(--gx-ink-3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gx-od-boxes strong {
+  color: var(--gx-ink);
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-od-boxes strong.is-payment {
+  color: var(--gx-brand-ink);
+  font-size: 18px;
+}
+
+.gx-od-boxes small {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+}
+
+.gx-od-stage {
+  margin: 0;
+  color: var(--gx-ink-3);
+  font-size: 13px;
+}
+
+.gx-od-stage b {
+  color: var(--gx-ink);
+}
+
+.gx-od-primary,
+.gx-od-cancel {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 12px;
+  font: 800 15px/1 inherit;
+  cursor: pointer;
+}
+
+.gx-od-primary {
+  border: 0;
+  background: var(--gx-brand);
+  color: #111827;
+  box-shadow: 0 8px 20px rgba(255, 106, 0, 0.28);
+}
+
+.gx-od-primary:hover {
+  background: var(--gx-brand-hover, #f04f0c);
+}
+
+.gx-od-cancel {
+  min-height: 44px;
+  border: 1px solid var(--gx-border);
+  background: transparent;
+  color: #b91c1c;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-od-cancel {
+  color: #fca5a5;
+}
+
+.gx-od-primary:disabled,
+.gx-od-cancel:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.gx-od-closed {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-2);
+  font-size: 13px;
+}
+
+.gx-od-empty {
+  display: grid;
+  gap: 4px;
+  padding: 36px 12px;
+  color: var(--gx-ink-3);
+  text-align: center;
+}
+
+.gx-od-empty strong {
+  color: var(--gx-ink);
+}
+
+/* O cabeçalho antigo do painel some em Pedidos (o novo já tem título). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head > :not(.gx-detail-close) {
+  display: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Telas largas: detalhes fixos ao lado da grade (como no esboço). */
+@media (min-width: 1200px) {
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 380px) !important;
+    align-items: start !important;
+    gap: 20px !important;
+  }
+
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-panel {
+    position: sticky !important;
+    top: 16px !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: calc(100vh - 32px) !important;
+    padding: 18px !important;
+    border: 1px solid var(--gx-border) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--gx-shadow) !important;
+    transform: none !important;
+    visibility: visible !important;
+    transition: none !important;
+  }
+
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-detail-close,
+  html body.admin-body.admin-body.gx-orders-drawer-open[data-admin-page="dashboard"][data-admin-section="orders"] .gx-orders-backdrop {
+    display: none !important;
+  }
+}
+
+/* Telas menores: detalhes deslizam da direita (botão Fechar visível). */
+@media (max-width: 1199px) {
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-detail-head {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 3;
+  }
+
+  html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-detail-close {
+    position: static !important;
+  }
+}
+
+/* =====================================================================
+   Telas pequenas e celulares antigos (320–640 px): nada sai da tela.
+   ===================================================================== */
+@media (max-width: 1100px) {
+  html body.admin-body .admin-delivery-settings,
+  html body.admin-body .admin-report-bars {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html body.admin-body .admin-delivery-settings > *,
+  html body.admin-body .admin-report-bars > * {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  html body.admin-body .admin-menu-price-meta {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr)) !important;
+  }
+
+  html body.admin-body .admin-field,
+  html body.admin-body .admin-field > .admin-input {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html body.admin-body .admin-menu-item-footer .admin-menu-item-controls {
+    flex-wrap: wrap !important;
+    align-items: stretch !important;
+  }
+
+  html body.admin-body .admin-menu-item-footer .admin-menu-item-controls > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html body.admin-body .admin-menu-item-actions {
+    width: 100%;
+  }
+
+  html body.admin-body .admin-menu-item-actions > .admin-button {
+    flex: 1 1 140px;
+  }
+
+  html body.admin-body .admin-report-bar-row {
+    flex-wrap: wrap;
+  }
+
+  html body.admin-body .admin-report-bar-row .admin-report-bar {
+    flex: 1 1 100%;
+    order: 3;
+    min-width: 0;
+  }
+
+  html body.admin-body .admin-delivery-savebar,
+  html body.admin-body .admin-delivery-savebar-actions {
+    min-width: 0;
+  }
+
+  html body.admin-body .admin-delivery-savebar-actions > .admin-button {
+    flex: 1 1 auto;
+  }
+}
+
+/* Toque (celular/tablet): caixas de marcar maiores. */
+@media (pointer: coarse) {
+  html body.admin-body input[type="checkbox"],
+  html body.admin-body input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  html body.admin-body .admin-menu-item-form-grid,
+  html body.admin-body .admin-delivery-form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  html body.admin-body .admin-menu-item-form-grid > *,
+  html body.admin-body .admin-delivery-form-grid > *,
+  html body.admin-body .admin-delivery-card > *,
+  html body.admin-body .admin-delivery-card-head > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html body.admin-body .admin-delivery-card-head h3 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 420px) {
+  html body.admin-body.admin-body[data-admin-section="orders"] .gx-mode-switch {
+    display: flex;
+    width: 100%;
+  }
+
+  html body.admin-body.admin-body[data-admin-section="orders"] .gx-mode-switch button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 12.5px;
+  }
+}
+
+/* Pedidos: cartões compactos (4 a 5 por fileira em notebook e monitor). */
+html body.admin-body .gx-grid {
+  gap: 10px;
+}
+
+html body.admin-body .gx-ticket-body {
+  gap: 6px;
+  padding: 10px 11px;
+}
+
+html body.admin-body .gx-ticket-top {
+  gap: 6px;
+}
+
+html body.admin-body .gx-ticket-name {
+  font-size: 14px;
+}
+
+html body.admin-body .gx-ticket .gx-ticket-timer {
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 11.5px;
+}
+
+html body.admin-body .gx-ticket .gx-ticket-timer svg {
+  width: 11px;
+  height: 11px;
+}
+
+html body.admin-body .gx-ticket-meta {
+  gap: 4px 6px;
+}
+
+html body.admin-body .gx-ticket .gx-tag {
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+html body.admin-body .gx-ticket-time {
+  font-size: 11.5px;
+}
+
+html body.admin-body .gx-ticket-items {
+  min-height: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+html body.admin-body .gx-ticket-items em {
+  font-size: 11px;
+}
+
+html body.admin-body .gx-ticket-total {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html body.admin-body .gx-ticket-total strong {
+  font-size: 13.5px;
+}
+
+html body.admin-body .gx-ticket-status {
+  padding: 2px 6px;
+  font-size: 9.5px;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .admin-order-card.gx-ticket {
+  border-radius: 12px !important;
+}
+
+/* Valor e etapa na mesma linha; a forma de pagamento encolhe com reticências. */
+html body.admin-body .gx-ticket-foot {
+  flex-wrap: nowrap;
+}
+
+html body.admin-body .gx-ticket-total {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+html body.admin-body .gx-ticket-status {
+  flex: none;
+}
+
+/* Monitores grandes: cartões um pouco maiores (5 a 6 por fileira). */
+@media (min-width: 1700px) {
+  html body.admin-body .gx-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* Notebooks: etapas mais justas para caberem numa linha só. */
+@media (max-width: 1500px) {
+  html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar {
+    gap: 6px !important;
+  }
+
+  html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar .gx-stage {
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Pedidos: cartão sem lista de produtos (mais baixo). Fotos no detalhe. */
+html body.admin-body .gx-ticket-body {
+  gap: 5px;
+  padding: 9px 11px;
+}
+
+html body.admin-body .gx-od-items li {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+}
+
+html body.admin-body .gx-od-photo,
+html body.admin-body .gx-od-items .gx-od-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+}
+
+html body.admin-body .gx-od-photo {
+  display: block;
+  object-fit: cover;
+  background: var(--gx-bg-2);
+}
+
+html body.admin-body .gx-od-item em {
+  color: var(--gx-ink-2);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* O cartão segue a coluna da grade (regras antigas impunham largura mínima). */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="orders"] .gx-grid > .admin-order-card.gx-ticket {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  flex: none !important;
+}
+
+html body.admin-body .gx-ticket-body,
+html body.admin-body .gx-ticket-body > * {
+  min-width: 0;
+}
+
+html body.admin-body .gx-ticket-name {
+  flex: 1 1 auto;
+}
+
+/* Valor do pedido nunca é cortado. */
+html body.admin-body .gx-ticket-total {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+html body.admin-body .gx-ticket-total strong {
+  white-space: nowrap;
+}
+
+/* Cartão estreito: a etapa desce para baixo do valor em vez de vazar. */
+html body.admin-body .gx-ticket-foot {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+/* Nome do cliente tem prioridade: se não couber, o cronômetro desce. */
+html body.admin-body .gx-ticket-top {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+html body.admin-body .gx-ticket-name {
+  flex: 1 0 auto;
+  max-width: 100%;
+}
+
+/* Layout final do cartão: 3 linhas fixas (nome · tipo + tempo · valor + etapa). */
+html body.admin-body .gx-ticket-top {
+  flex-wrap: nowrap;
+}
+
+html body.admin-body .gx-ticket-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 14.5px;
+}
+
+html body.admin-body .gx-ticket-meta {
+  flex-wrap: nowrap;
+}
+
+html body.admin-body .gx-ticket-meta .gx-ticket-timer {
+  margin-left: auto;
+}
+
+/* Contraste mínimo 4,5:1 nos contadores de encerrados (tema claro). */
+html body.admin-body:not([data-admin-theme="dark"]) .gx-stage.is-done strong { color: #14532d; }
+html body.admin-body:not([data-admin-theme="dark"]) .gx-stage.is-cancelled strong { color: #7f1d1d; }
+
+/* Contadores das etapas: cores fixas nos dois temas (regras antigas tiravam o fundo). */
+html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar .gx-stage strong {
+  background: var(--gx-brand) !important;
+  color: #111827 !important;
+}
+
+html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar .gx-stage.is-done strong {
+  background: #dcfce7 !important;
+  color: #14532d !important;
+}
+
+html body.admin-body.admin-body[data-admin-section="orders"] .gx-stage-bar .gx-stage.is-cancelled strong {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+}
