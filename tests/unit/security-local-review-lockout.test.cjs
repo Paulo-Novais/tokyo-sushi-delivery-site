@@ -48,17 +48,67 @@ const isBlocked = async () => {
   }
 };
 
+// Fluxo real do login: o guardião avalia a requisição e, se a senha estiver
+// errada, a falha é registrada com o contexto que ele montou. O limite geral de
+// tentativas fica alto (mesmo ajuste do servidor de revisão) para provar que é o
+// bloqueio por senha errada que segura a sexta tentativa, e não o limite geral.
+const LOGIN_OPTIONS = {
+  routeType: "admin-auth",
+  action: "restaurant:login",
+  requireTenant: false,
+  rateLimitProfile: "adminLogin",
+};
+
+const withHighRateLimit = () => {
+  process.env.INOVAS_ENVIRONMENT = "preview";
+  process.env.INOVAS_ENABLE_PREVIEW_E2E_OVERRIDES = "1";
+  process.env.INOVAS_PREVIEW_ADMIN_LOGIN_RATE_LIMIT = "1000";
+};
+
+const failFiveTimesRealFlow = async () => {
+  for (let index = 0; index < 5; index += 1) {
+    const req = fakeRequest();
+    await guardian.guardSecurity(req, LOGIN_OPTIONS);
+    guardian.recordSecurityFailure(req, {
+      routeType: "admin-auth",
+      action: "restaurant:login",
+      reason: "invalid_credentials",
+      userKey: "owner@exemplo.local",
+    });
+  }
+};
+
+const isBlockedRealFlow = async () => {
+  try {
+    await guardian.guardSecurity(fakeRequest(), LOGIN_OPTIONS);
+    return false;
+  } catch (error) {
+    return error.statusCode === 429 && error.errorCode === "security_temporary_block";
+  }
+};
+
+for (const key of ["INOVAS_ENVIRONMENT", "INOVAS_ENABLE_PREVIEW_E2E_OVERRIDES", "INOVAS_PREVIEW_ADMIN_LOGIN_RATE_LIMIT"]) {
+  if (!KEYS.includes(key)) {
+    KEYS.push(key);
+    saved[key] = process.env[key];
+  }
+}
+
 test("sem a chave, 5 senhas erradas bloqueiam (comportamento de produção)", async () => {
   delete process.env.INOVAS_LOCAL_REVIEW_DISABLE_LOGIN_LOCKOUT;
   delete process.env.VERCEL;
-  failFiveTimes();
-  assert.equal(await isBlocked(), true);
+  withHighRateLimit();
+  await failFiveTimesRealFlow();
+  assert.equal(await isBlockedRealFlow(), true);
 });
 
 test("com a chave no servidor local, 5 senhas erradas não bloqueiam", async () => {
   process.env.INOVAS_LOCAL_REVIEW_DISABLE_LOGIN_LOCKOUT = "1";
   process.env.NODE_ENV = "development";
   delete process.env.VERCEL;
+  withHighRateLimit();
+  await failFiveTimesRealFlow();
+  assert.equal(await isBlockedRealFlow(), false);
   failFiveTimes();
   assert.equal(await isBlocked(), false);
 });
@@ -66,14 +116,16 @@ test("com a chave no servidor local, 5 senhas erradas não bloqueiam", async () 
 test("na Vercel a chave é ignorada e o bloqueio continua", async () => {
   process.env.INOVAS_LOCAL_REVIEW_DISABLE_LOGIN_LOCKOUT = "1";
   process.env.VERCEL = "1";
-  failFiveTimes();
-  assert.equal(await isBlocked(), true);
+  withHighRateLimit();
+  await failFiveTimesRealFlow();
+  assert.equal(await isBlockedRealFlow(), true);
 });
 
 test("com NODE_ENV=production a chave é ignorada e o bloqueio continua", async () => {
   process.env.INOVAS_LOCAL_REVIEW_DISABLE_LOGIN_LOCKOUT = "1";
   process.env.NODE_ENV = "production";
   delete process.env.VERCEL;
-  failFiveTimes();
-  assert.equal(await isBlocked(), true);
+  withHighRateLimit();
+  await failFiveTimesRealFlow();
+  assert.equal(await isBlockedRealFlow(), true);
 });
