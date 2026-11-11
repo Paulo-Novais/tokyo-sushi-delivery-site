@@ -111,6 +111,13 @@
     if (minutes < 60) return `${minutes} min`;
     return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
   };
+  /* Caminho da foto do cardápio ("./site-images/x.png" vira "/site-images/x.png"). */
+  const mediaUrl = (value) => {
+    const source = String(value || "").trim();
+    if (!source) return "";
+    if (/^(?:https?:|data:image\/|blob:|\/)/i.test(source)) return source;
+    return `/${source.replace(/^(?:\.\/)+/, "")}`;
+  };
   const normalizeSearch = (value) =>
     String(value || "")
       .normalize("NFD")
@@ -668,9 +675,16 @@
           .map(
             (item) => `
               <button type="button" class="cx-product" data-cx-product="${escapeHtml(item.id)}" ${state.busy === "add-item" ? "aria-busy=\"true\"" : ""}>
-                <span class="cx-product-code">#${escapeHtml(item.code)}</span>
-                <strong>${escapeHtml(item.name)}</strong>
-                <span class="cx-num">${escapeHtml(money(item.price))}</span>
+                ${
+                  mediaUrl(item.image)
+                    ? `<img class="cx-product-thumb" src="${escapeHtml(mediaUrl(item.image))}" alt="" loading="lazy" decoding="async" />`
+                    : `<span class="cx-product-thumb is-empty" aria-hidden="true">${escapeHtml(String(item.name || "?").charAt(0))}</span>`
+                }
+                <span class="cx-product-info">
+                  <span class="cx-product-code">#${escapeHtml(item.code)}</span>
+                  <strong>${escapeHtml(item.name)}</strong>
+                  <span class="cx-num">${escapeHtml(money(item.price))}</span>
+                </span>
               </button>`
           )
           .join("")

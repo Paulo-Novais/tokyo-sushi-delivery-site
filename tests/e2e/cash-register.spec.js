@@ -119,6 +119,16 @@ test.describe("Caixa e Salao", () => {
       await expect(pending.first().locator("output")).toHaveText("5");
       await root.locator("[data-cx-product]").nth(1).click();
       await expect(pending).toHaveCount(2);
+      // Fotos aparecem e a grade de produtos rola por dentro (no máximo 4 linhas visíveis).
+      const grid = root.locator("[data-cx-products]");
+      await expect(grid.locator("img.cx-product-thumb").first()).toBeVisible();
+      const gridBox = await grid.evaluate((node) => ({ scroll: node.scrollHeight, client: node.clientHeight }));
+      expect(gridBox.scroll).toBeGreaterThan(gridBox.client);
+      expect(gridBox.client).toBeLessThanOrEqual(4 * 100 + 3 * 10 + 8);
+      const brokenImages = await grid.locator("img.cx-product-thumb").evaluateAll((images) =>
+        images.filter((image) => image.complete && image.naturalWidth === 0).map((image) => image.getAttribute("src"))
+      );
+      expect(brokenImages).toEqual([]);
       await shot("4-pdv-1366");
       // Enviar para a cozinha com F2 (ESPEC teste 6)
       await page.keyboard.press("F2");

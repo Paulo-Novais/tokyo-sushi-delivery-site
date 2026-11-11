@@ -482,3 +482,32 @@ html body.admin-body[data-admin-page][data-admin-section][data-admin-theme] .adm
 html body.admin-body[data-admin-page][data-admin-section="orders"][data-admin-theme] .admin-main-shell .admin-stats-grid {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
 }
+
+/* Caixa: sem molduras aninhadas, para caber cardápio + pedido lado a lado em 1024 px. */
+html body.admin-body[data-admin-section="cash-register"] .admin-main-shell {
+  padding: clamp(8px, 1vw, 16px) !important;
+}
+
+html body.admin-body[data-admin-section="cash-register"] :is(.admin-board-panel, .admin-module-shell, .admin-module-card) {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body[data-admin-section="cash-register"] .admin-main-topbar {
+  display: none !important;
+}
+
+html body.admin-body .cash-v3 {
+  padding: clamp(8px, 1.2vw, 18px);
+  background: transparent;
+}
+
+html body.admin-body .cash-v3 .cx-split-main {
+  flex-basis: 400px;
+}
+
+html body.admin-body .cash-v3 .cx-split-side {
+  flex-basis: 290px;
+}

@@ -1192,3 +1192,58 @@ textarea.cx-input {
   padding-top: 8px;
   padding-bottom: 8px;
 }
+
+/* PDV: produtos com foto em miniatura e rolagem própria a partir de 4 linhas. */
+.cash-v3 .cx-grid-products {
+  --cx-product-h: 100px;
+  grid-auto-rows: var(--cx-product-h);
+  max-height: calc(4 * var(--cx-product-h) + 3 * 10px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 2px 2px;
+  scrollbar-gutter: stable;
+}
+
+.cash-v3 .cx-product {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  height: 100%;
+  padding: 8px;
+}
+
+.cx-product-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f1f3f5;
+}
+
+.cx-product-thumb.is-empty {
+  display: grid;
+  place-items: center;
+  color: var(--cx-ink-2);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.cx-product-info {
+  display: grid;
+  gap: 1px;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.cx-product-info strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cx-product-info strong {
+  overflow-wrap: anywhere;
+}
