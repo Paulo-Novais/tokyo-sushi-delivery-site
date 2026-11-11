@@ -124,58 +124,111 @@
     return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
   };
 
-  // Matriz perfil × permissão (somente leitura; a fonte é lib/access-policy.cjs via API).
-  const renderSystemMatrix = () => {
-    const roles = [...(state.policy?.roles || [])].sort(
+  // Descrição curta de cada perfil padrão, para os cartões do topo.
+  const ROLE_DESCRIPTIONS = Object.freeze({
+    MASTER: "Dono da plataforma. Tudo, inclusive perfis.",
+    ADMINISTRADOR: "Administra a plataforma, sem mexer em equipe, perfis e cobrança.",
+    SOCIO: "Visão ampla da plataforma, sem equipe e cobrança.",
+    DESENVOLVEDOR: "Saúde técnica e suporte, inclusive administrativo.",
+    SUPORTE: "Atende chamados. Suporte só em modo leitura.",
+    FINANCEIRO_INOVAS: "Faturas e cobrança da plataforma.",
+    IMPLANTACAO: "Coloca restaurantes novos no ar.",
+    CUSTOMER_SUCCESS: "Acompanha a saúde dos clientes.",
+    COMERCIAL: "Carteira e planos. Sem acesso aos restaurantes.",
+    AUDITOR: "Só consulta: auditoria, saúde e faturamento.",
+  });
+
+  // Seções da matriz, na ordem do esboço. Módulos sem seção vão para "Plataforma".
+  const MATRIX_SECTIONS = Object.freeze([
+    ["Restaurantes", ["restaurants", "domains", "health", "integrations"]],
+    ["Plano e módulos", ["plans"]],
+    ["Suporte aos restaurantes", ["support"]],
+    ["Cobrança", ["billing"]],
+    ["Equipe INOVAS e auditoria", ["users", "roles", "audit"]],
+    ["Plataforma", ["dashboard", "settings"]],
+  ]);
+
+  const sortedRoles = () =>
+    [...(state.policy?.roles || [])].sort(
       (left, right) => Number(right.authority || 0) - Number(left.authority || 0)
     );
+
+  const lockIcon = () =>
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z M7 11V7a5 5 0 0110 0v4"></path></svg>';
+
+  const renderProfileCards = () => {
+    const roles = sortedRoles();
+    if (!roles.length) return "";
+    return `
+      <section class="sys-profile-cards" aria-label="Perfis da equipe INOVAS">
+        ${roles
+          .map((role) => {
+            // Conta pela lista real da equipe quando ela está disponível.
+            const count = state.teamCounts
+              ? Number(state.teamCounts.get(role.key) || 0)
+              : Number(role.userCount || 0);
+            const active = role.key === state.selectedKey;
+            return `<button type="button" class="sys-profile-card ${active ? "is-active" : ""}" data-role-select="${escapeHtml(role.key)}" aria-pressed="${active}">
+              <span class="sys-profile-card-top"><strong>${escapeHtml(roleLabelOf(role))}</strong><span class="sys-profile-count">${count} ${count === 1 ? "pessoa" : "pessoas"}</span></span>
+              <small>${escapeHtml(ROLE_DESCRIPTIONS[role.key] || (role.custom ? `Perfil personalizado · nível ${role.authority ?? 0}` : `Nível ${role.authority ?? 0}`))}</small>
+            </button>`;
+          })
+          .join("")}
+      </section>`;
+  };
+
+  // Matriz perfil × permissão (somente leitura; a fonte é lib/access-policy.cjs via API).
+  const renderSystemMatrix = () => {
+    const roles = sortedRoles();
     const permissions = (state.policy?.permissions || []).filter(
       (permission) => permission.module !== "navigation"
     );
     if (!roles.length || !permissions.length) return "";
-    const rolesWith = (key) => roles.filter((role) => (role.permissions || []).includes(key));
-    const names = (key) => rolesWith(key).map(roleLabelOf);
-    const common = permissions.filter((permission) => rolesWith(permission.key).length === roles.length);
-    const navigation = (window.InovasSystemShell?.NAVIGATION || []).map((item) => ({
-      label: item.label,
-      permission: item.permission,
-    }));
-
-    const summary = [
-      ["Suspender restaurante", `Só ${joinNames(names("system.restaurants.suspend"))} ${names("system.restaurants.suspend").length === 1 ? "tem" : "têm"} system.restaurants.suspend.`],
-      ["Usuários e faturamento", `${joinNames(names("system.users.manage"))} administra usuários; ${joinNames(names("system.billing.manage"))} administra faturamento.`],
-      ["Suporte administrativo", `${joinNames(names("system.support.admin"))} ${names("system.support.admin").length === 1 ? "abre" : "abrem"} sessão administrativa.`],
-      ["Base comum", common.length ? `Todos os perfis têm: ${common.map((permission) => permission.description || permission.key).join(" ")}` : "Nenhuma permissão é comum a todos os perfis."],
-    ];
-
-    const headerCells = roles
-      .map((role) => `<th scope="col">${escapeHtml(roleLabelOf(role))}<small>nível ${escapeHtml(String(role.authority ?? 0))}</small></th>`)
-      .join("");
-    const cell = (granted) =>
-      `<td>${granted ? `<span class="is-granted" title="Permitido">${checkIcon()}<span class="sr-only">Sim</span></span>` : '<span class="is-denied" aria-label="Não">—</span>'}</td>`;
+    const known = new Set(MATRIX_SECTIONS.flatMap(([, modules]) => modules));
+    const sections = MATRIX_SECTIONS.map(([title, modules]) => [
+      title,
+      permissions.filter((permission) =>
+        title === "Plataforma"
+          ? modules.includes(permission.module) || !known.has(permission.module)
+          : modules.includes(permission.module)
+      ),
+    ]).filter(([, list]) => list.length);
+    const activeKey = state.selectedKey;
+    const colClass = (role) => (role.key === activeKey ? "is-col-active" : "");
+    const cell = (role, granted) =>
+      `<td class="${colClass(role)}">${granted ? `<span class="sys-yes" title="Pode">${checkIcon()}<span class="sr-only">Pode</span></span>` : '<span class="sys-no" title="Não pode" aria-label="Não pode">—</span>'}</td>`;
 
     return `
-      <section class="sys-summary-grid" aria-label="Resumo das permissões">
-        ${summary.map(([title, text]) => `<article><strong>${escapeHtml(title)}</strong><p>${escapeHtml(text)}</p></article>`).join("")}
+      <section class="sys-card sys-perm-card" aria-labelledby="matriz-permissoes">
+        <div class="sys-perm-head">
+          <h2 id="matriz-permissoes">Matriz de permissões</h2>
+          <div class="sys-perm-legend"><span><span class="sys-yes">${checkIcon()}</span>Pode</span><span><span class="sys-no">—</span>Não pode</span></div>
+        </div>
+        <div class="sys-perm-wrap">
+          <table class="sys-perm-table">
+            <thead><tr><th scope="col">Permissão</th>${roles
+              .map((role) => `<th scope="col" class="${colClass(role)}"><button type="button" data-role-select="${escapeHtml(role.key)}">${escapeHtml(roleLabelOf(role))}</button></th>`)
+              .join("")}</tr></thead>
+            <tbody>
+              ${sections
+                .map(
+                  ([title, list]) => `
+                    <tr class="sys-perm-section"><td colspan="${roles.length + 1}">${escapeHtml(title)}</td></tr>
+                    ${list
+                      .map(
+                        (permission) =>
+                          `<tr><td><strong>${escapeHtml(permission.description || permission.key)}</strong><code>${escapeHtml(permission.key)}</code></td>${roles
+                            .map((role) => cell(role, (role.permissions || []).includes(permission.key)))
+                            .join("")}</tr>`
+                      )
+                      .join("")}`
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
       </section>
-      <section class="sys-card" aria-labelledby="matriz-permissoes" style="margin-bottom:20px">
-        <div class="sys-card-head"><h2 id="matriz-permissoes">Permissões por perfil</h2><span>Perfis ordenados por nível de autoridade (maior à esquerda)</span></div>
-        <div class="sys-matrix-wrap"><table class="sys-matrix"><thead><tr><th scope="col">Permissão</th>${headerCells}</tr></thead><tbody>
-          ${permissions
-            .map((permission) => {
-              const risk = RISK_LABELS[String(permission.riskLevel || "").toUpperCase()];
-              return `<tr><td><strong>${escapeHtml(permission.description || permission.key)} ${risk ? `<span class="sys-pill is-${risk[1]}">${risk[0]}</span>` : ""}</strong><code>${escapeHtml(permission.key)}</code></td>${roles.map((role) => cell((role.permissions || []).includes(permission.key))).join("")}</tr>`;
-            })
-            .join("")}
-        </tbody></table></div>
-      </section>
-      ${navigation.length ? `
-      <section class="sys-card" aria-labelledby="matriz-menus" style="margin-bottom:20px">
-        <div class="sys-card-head"><div><h2 id="matriz-menus">Menus visíveis por perfil <span class="sys-pill is-brand">Derivado das permissões</span></h2><p>Cada menu aparece só se o perfil tiver a permissão ligada a ele. Esconder um menu não protege nada: toda rota e API continuam checando permissão no servidor.</p></div></div>
-        <div class="sys-matrix-wrap"><table class="sys-matrix"><thead><tr><th scope="col">Menu</th>${roles.map((role) => `<th scope="col">${escapeHtml(roleLabelOf(role))}</th>`).join("")}</tr></thead><tbody>
-          ${navigation.map((item) => `<tr><td><strong>${escapeHtml(item.label)}</strong><code>exige ${escapeHtml(item.permission)}</code></td>${roles.map((role) => cell((role.permissions || []).includes(item.permission))).join("")}</tr>`).join("")}
-        </tbody></table></div>
-      </section>` : ""}`;
+      <p class="sys-rules">${lockIcon()}<span><strong>Regras fixas, nenhum perfil muda:</strong> ninguém da INOVAS vê pedidos, clientes finais ou financeiro de um restaurante fora de uma sessão de suporte; toda sessão tem motivo e prazo e fica na auditoria; mudanças de perfil exigem permissão de administrar perfis e também vão para a auditoria.</span></p>`;
   };
 
   const escapeHtml = (value) =>
@@ -282,21 +335,24 @@
     const query = state.search.toLowerCase();
     const canManage = hasPermission("system.roles.manage");
     app.innerHTML = `
-      <nav class="users-breadcrumb"><a href="/system">Sistema</a><span>/</span><strong>Perfis e menus</strong></nav>
-      <header class="users-page-head">
+      <header class="sys-page-head">
         <div>
-          <span class="users-eyebrow">Equipe INOVAS · controle de acesso</span>
-          <h1>Perfis e menus</h1>
-          <p>Quais permissões cada perfil tem hoje e quais menus isso libera. Nomes de perfis e permissões vêm da política de acesso; a matriz é só de leitura e o editor abaixo exige permissão administrativa.</p>
+          <span class="sys-eyebrow">Equipe INOVAS · controle de acesso</span>
+          <h1>Perfis e permissões</h1>
+          <p>${state.domain === "SYSTEM" ? "O que cada perfil da equipe INOVAS pode fazer sobre os restaurantes. Clique num perfil para destacar a coluna." : "Perfis usados pelos restaurantes: menus visíveis e ações permitidas em cada área."}</p>
+          <div class="sys-head-buttons">
+            ${hasPermission("system.audit.view") ? '<a class="sys-btn sys-btn-secondary" href="/system#audit">Ver auditoria de mudanças</a>' : ""}
+            ${canManage ? '<button class="sys-btn sys-btn-primary" type="button" data-role-new>+ Novo perfil</button>' : ""}
+          </div>
         </div>
-        ${canManage ? '<button class="users-button users-button-primary" type="button" data-role-new>+ Novo perfil</button>' : ""}
       </header>
-      <div class="roles-domain-tabs" role="tablist" aria-label="Grupo de usuários">
-        <button type="button" data-role-domain="SYSTEM" class="${state.domain === "SYSTEM" ? "is-active" : ""}">Usuários INOVAS</button>
-        <button type="button" data-role-domain="RESTAURANT" class="${state.domain === "RESTAURANT" ? "is-active" : ""}">Usuários de restaurante</button>
+      <div class="sys-roles-tabs" role="tablist" aria-label="Grupo de usuários">
+        <button type="button" role="tab" aria-selected="${state.domain === "SYSTEM"}" data-role-domain="SYSTEM" class="${state.domain === "SYSTEM" ? "is-active" : ""}">Equipe INOVAS</button>
+        <button type="button" role="tab" aria-selected="${state.domain === "RESTAURANT"}" data-role-domain="RESTAURANT" class="${state.domain === "RESTAURANT" ? "is-active" : ""}">Usuários de restaurante</button>
       </div>
-      ${state.domain === "SYSTEM" ? renderSystemMatrix() : ""}
-      <div class="roles-layout">
+      ${state.domain === "SYSTEM" ? `${renderProfileCards()}${renderSystemMatrix()}` : ""}
+      ${state.domain === "SYSTEM" && !canManage ? "" : `
+      <div class="roles-layout ${state.domain === "SYSTEM" ? "is-system" : ""}">
         <aside class="users-panel roles-list">
           <div class="users-filter-meta"><strong>${state.domain === "SYSTEM" ? "Perfis INOVAS" : "Perfis de restaurante"}</strong><span>${state.policy?.roles?.length || 0}</span></div>
           ${(state.policy?.roles || [])
@@ -349,13 +405,27 @@
             ${canManage ? '<button class="users-button users-button-primary" type="submit">Salvar permissões</button>' : '<span class="users-security-note">Consulta permitida; alterações exigem permissão administrativa.</span>'}
           </div>
         </form>
-      </div>`;
+      </div>`}`;
   };
 
   const loadPolicy = async (domain = state.domain) => {
     state.domain = domain;
     const payload = await requestJson(`/api/system/roles?domain=${encodeURIComponent(domain)}`);
     state.policy = payload.data;
+    state.teamCounts = null;
+    if (domain === "SYSTEM" && hasPermission("system.users.view")) {
+      try {
+        const team = await requestJson("/api/system/users?page=1&pageSize=100&sort=name&direction=asc");
+        const counts = new Map();
+        for (const user of team?.data?.users || []) {
+          const key = String(user.role || "").toUpperCase();
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+        state.teamCounts = counts;
+      } catch {
+        state.teamCounts = null;
+      }
+    }
     if (!state.policy.roles.some((role) => role.key === state.selectedKey)) {
       state.selectedKey = state.policy.roles[0]?.key || "";
     }

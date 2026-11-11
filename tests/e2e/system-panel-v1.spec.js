@@ -120,8 +120,9 @@ test("Painel System redesenhado renderiza todas as áreas em português", async 
 
   // Auditoria: somente leitura, com detalhe do evento destacado
   await page.goto("/system#audit");
-  await expect(page.getByRole("heading", { name: "Auditoria", exact: true })).toBeVisible();
-  await expect(page.locator("body")).toContainText("Somente leitura");
+  await expect(page.getByRole("heading", { name: "Auditoria e sessões de suporte" })).toBeVisible();
+  await expect(page.locator("body")).toContainText("não podem ser editados nem apagados");
+  await expect(page.getByRole("heading", { name: "Sessões de suporte em andamento" })).toBeVisible();
   await page.locator("[data-audit-filter='period']").selectOption("all");
   const firstAuditRow = page.locator("[data-audit-row]").first();
   if (await firstAuditRow.count()) {
@@ -145,13 +146,14 @@ test("Painel System redesenhado renderiza todas as áreas em português", async 
   await assertNoEnglishInterfaceLabels(page);
   await page.screenshot({ path: path.join(artifactDirectory, "usuarios-inovas.png"), fullPage: true });
 
-  // Perfis e menus: matriz real + editor
+  // Perfis e permissões: cartões, matriz real e editor
   await page.goto("/system/roles");
-  await expect(page.getByRole("heading", { name: "Perfis e menus" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Permissões por perfil" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Menus visíveis por perfil/ })).toBeVisible();
-  await expect(page.locator(".sys-matrix").first()).toContainText("system.restaurants.suspend");
-  await page.getByRole("button", { name: "Usuários de restaurante" }).click();
+  await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Matriz de permissões" })).toBeVisible();
+  await expect(page.locator(".sys-perm-table")).toContainText("system.restaurants.suspend");
+  await expect(page.locator(".sys-rules")).toContainText("Regras fixas");
+  await page.screenshot({ path: path.join(artifactDirectory, "perfis-equipe.png"), fullPage: true });
+  await page.getByRole("tab", { name: "Usuários de restaurante" }).click();
   await expect(page.getByRole("heading", { name: "Menus visíveis no restaurante" })).toBeVisible();
   await expect(page.locator(".roles-navigation-grid input[type='checkbox']")).toHaveCount(25);
   await assertNoEnglishInterfaceLabels(page);
@@ -175,7 +177,14 @@ test("Painel System redesenhado renderiza todas as áreas em português", async 
   await expect(page.getByRole("heading", { name: "Restaurantes", exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.goto("/system/roles");
-  await expect(page.getByRole("heading", { name: "Perfis e menus" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.goto("/system/users");
+  await expect(page.getByRole("heading", { name: "Usuários INOVAS" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(artifactDirectory, "usuarios-inovas-mobile.png"), fullPage: true });
+  await page.goto("/system#audit");
+  await expect(page.getByRole("heading", { name: "Auditoria e sessões de suporte" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(artifactDirectory, "perfis-e-menus-mobile.png"), fullPage: true });
 

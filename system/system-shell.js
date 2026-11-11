@@ -26,10 +26,10 @@
   const NAVIGATION = Object.freeze([
     { key: "overview", group: "Plataforma", label: "Visão geral", short: "Início", href: "/system", permission: "system.dashboard.view", mobile: true },
     { key: "restaurants", group: "Plataforma", label: "Restaurantes", short: "Restaurantes", href: "/system#restaurants", permission: "system.restaurants.view", mobile: true },
-    { key: "support", group: "Operação", label: "Suporte", short: "Suporte", href: "/system#support", permission: "system.support.start", mobile: true },
-    { key: "audit", group: "Operação", label: "Auditoria", short: "Auditoria", href: "/system#audit", permission: "system.audit.view", mobile: true },
-    { key: "users", group: "Equipe INOVAS", label: "Usuários INOVAS", short: "Usuários", href: "/system/users", permission: "system.users.view", mobile: false },
-    { key: "roles", group: "Equipe INOVAS", label: "Perfis e menus", short: "Perfis", href: "/system/roles", permission: "system.roles.view", mobile: false },
+    { key: "support", group: "Comercial", label: "Suporte", short: "Suporte", href: "/system#support", permission: "system.support.start", mobile: true },
+    { key: "users", group: "Equipe INOVAS", label: "Usuários INOVAS", short: "Equipe", href: "/system/users", permission: "system.users.view", mobile: false },
+    { key: "roles", group: "Equipe INOVAS", label: "Perfis e permissões", short: "Perfis", href: "/system/roles", permission: "system.roles.view", mobile: false },
+    { key: "audit", group: "Equipe INOVAS", label: "Auditoria", short: "Auditoria", href: "/system#audit", permission: "system.audit.view", mobile: true },
   ]);
 
   const ROLE_LABELS = Object.freeze({
@@ -98,8 +98,8 @@
     const name = session?.displayName || session?.login || "Conta autenticada";
     container.innerHTML = `
       <button type="button" class="sys-icon-btn sys-sidebar-close" data-sys-menu-close aria-label="Fechar menu">${icon("close")}</button>
-      <a class="sys-brand" href="/system"><img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" /></a>
-      <div class="sys-brand-copy"><span>INOVAS Food</span><strong>Plataforma</strong></div>
+      <a class="sys-brand" href="/system"><img src="/assets/inovas-food-logo-menu.png" alt="INOVAS Food" /></a>
+      <div class="sys-brand-copy"><span>System · Console</span></div>
       <nav class="sys-nav" aria-label="Navegação principal">
         ${groups
           .map(
@@ -177,8 +177,72 @@
     });
   };
 
-  const mount = ({ session, activeKey, logoutAttribute } = {}) => {
+  // Ambiente mostrado na barra superior; deduzido do endereço, nunca de segredo.
+  const environmentLabel = () => {
+    const host = String(window.location.hostname || "").toLowerCase();
+    if (/^(localhost|127\.|0\.0\.0\.0)/.test(host)) return ["Local", "is-local"];
+    if (host.endsWith(".vercel.app")) return ["Preview", "is-preview"];
+    return ["Produção", "is-prod"];
+  };
+
+  const renderDesktopTop = ({ activeKey, crumbs } = {}) => {
+    const main = document.querySelector(".sys-main");
+    if (!main) return;
+    let bar = main.querySelector("[data-sys-desktop-top]");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "sys-desktop-top";
+      bar.setAttribute("data-sys-desktop-top", "");
+      const mobileTop = main.querySelector(".sys-topbar");
+      main.insertBefore(bar, mobileTop ? mobileTop.nextSibling : main.firstChild);
+    }
+    const item = NAVIGATION.find((entry) => entry.key === activeKey);
+    const trail = crumbs || (item ? (item.key === "overview" ? [item.label] : [item.group, item.label]) : []);
+    const [envLabel, envTone] = environmentLabel();
+    bar.innerHTML = `
+      <nav class="sys-crumbs" aria-label="Você está em"><span>System</span>${trail
+        .map((part, index) => `<span aria-hidden="true">/</span>${index === trail.length - 1 ? `<strong>${escapeHtml(part)}</strong>` : `<span>${escapeHtml(part)}</span>`}`)
+        .join("")}</nav>
+      <form class="sys-quick-search" role="search" data-sys-quick-search>
+        ${icon("search", 16)}
+        <label class="sr-only" for="sys-quick-search-input">Buscar restaurante</label>
+        <input id="sys-quick-search-input" type="search" name="q" placeholder="Buscar restaurante" autocomplete="off" />
+        <kbd>Ctrl K</kbd>
+      </form>
+      <span class="sys-env ${envTone}"><span aria-hidden="true"></span>${escapeHtml(envLabel)}</span>`;
+  };
+
+  let quickSearchBound = false;
+  const bindQuickSearch = () => {
+    if (quickSearchBound) return;
+    quickSearchBound = true;
+    document.addEventListener("submit", (event) => {
+      const form = event.target.closest("[data-sys-quick-search]");
+      if (!form) return;
+      event.preventDefault();
+      const term = String(new FormData(form).get("q") || "").trim();
+      const hash = `restaurants${term ? `?search=${encodeURIComponent(term)}` : ""}`;
+      if (window.location.pathname.replace(/\/$/, "") === "/system") {
+        window.location.hash = hash;
+      } else {
+        window.location.assign(`/system#${hash}`);
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && String(event.key).toLowerCase() === "k") {
+        const input = document.querySelector("#sys-quick-search-input");
+        if (input) {
+          event.preventDefault();
+          input.focus();
+        }
+      }
+    });
+  };
+
+  const mount = ({ session, activeKey, logoutAttribute, crumbs } = {}) => {
     renderSidebar(document.querySelector("[data-sys-sidebar]"), { session, activeKey, logoutAttribute });
+    renderDesktopTop({ activeKey, crumbs });
+    bindQuickSearch();
     renderBottomNav(document.querySelector("[data-sys-bottomnav]"), { session, activeKey });
     bindMenu();
   };
@@ -194,6 +258,7 @@
     visibleNavigation,
     renderSidebar,
     renderBottomNav,
+    renderDesktopTop,
     mount,
     setMenuOpen,
   });

@@ -11,7 +11,7 @@
   const dialog = document.querySelector("[data-system-dialog]");
   if (!shell || !app) return;
 
-  const { icon, escapeHtml, translateRole } = shell;
+  const { icon, escapeHtml, translateRole, getInitials } = shell;
 
   const ROUTES = Object.freeze({
     overview: { key: "overview", label: "Visão geral", permission: "system.dashboard.view", endpoint: "/api/system/overview" },
@@ -120,7 +120,7 @@
     selectedAuditId: "",
     filters: {
       restaurants: { search: "", status: "", plan: "", domain: "" },
-      audit: { search: "", period: "30", event: "", result: "" },
+      audit: { search: "", period: "30", event: "", result: "", scope: "all" },
     },
     support: { restaurantKey: "", mode: "VIEW", reason: "", confirmed: false },
   };
@@ -695,7 +695,38 @@
     (event.targetIdentityId ? "Usuário" : "") ||
     "Plataforma";
 
+  // Nível do evento, como no esboço: Sensível, Alteração ou Rotina.
+  const auditLevel = (event) => {
+    const type = normalize(event.eventType);
+    const result = normalize(event.result);
+    if (["DENIED", "FAILED", "FAILURE", "ERROR"].includes(result)) return ["Negado", "crit"];
+    if (/SUPPORT_SESSION_STARTED|PASSWORD|RESET|SUSPEND|BLOCK|DELETE|REMOVED|ROLE/.test(type)) return ["Sensível", "crit"];
+    if (/CREATED|UPDATED|CHANGED|INVITE|PLAN|MODULE|DUPLICATED|ACTIVATED|DEACTIVATED/.test(type)) return ["Alteração", "warn"];
+    return ["Rotina", "neutral"];
+  };
+
+  const auditRestaurant = (event) =>
+    event.restaurantName || event.metadata?.restaurantName || event.restaurantKey || event.metadata?.restaurantKey || "";
+
+  const AUDIT_SCOPES = Object.freeze([
+    ["all", "Tudo"],
+    ["support", "Sessões de suporte"],
+    ["restaurants", "Restaurantes"],
+    ["team", "Equipe INOVAS"],
+    ["sensitive", "Só sensíveis"],
+  ]);
+
+  const auditScopeMatches = (event, scope) => {
+    const type = normalize(event.eventType);
+    if (scope === "support") return type.includes("SUPPORT");
+    if (scope === "restaurants") return Boolean(auditRestaurant(event) || event.restaurantId);
+    if (scope === "team") return !auditRestaurant(event) && !event.restaurantId && !type.includes("SUPPORT");
+    if (scope === "sensitive") return auditLevel(event)[1] === "crit";
+    return true;
+  };
+
   const auditMatches = (event, filters) => {
+    if (!auditScopeMatches(event, filters.scope || "all")) return false;
     const search = filters.search.trim().toLowerCase();
     if (search && !`${translateEvent(event.eventType)} ${event.eventType} ${event.actorName || ""} ${event.actorLogin || ""} ${describeTarget(event)} ${event.reason || ""} ${event.requestId || ""}`.toLowerCase().includes(search)) return false;
     if (filters.event && normalize(event.eventType) !== filters.event) return false;
@@ -746,14 +777,15 @@
     if (!root || !state.data) return;
     const events = (state.data.events || []).filter((event) => auditMatches(event, state.filters.audit));
     if (!events.some((event) => event.id === state.selectedAuditId)) state.selectedAuditId = events[0]?.id || "";
+    state.auditVisible = events;
     root.innerHTML = events.length
-      ? `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Eventos de auditoria"><thead><tr><th>Quando</th><th>Evento</th><th>Ator</th><th>Alvo</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>
+      ? `<div class="sys-table-wrap"><table class="sys-table is-stack sys-audit-table" aria-label="Eventos de auditoria"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Restaurante</th><th>Motivo</th><th>Nível</th></tr></thead><tbody>
         ${events
           .slice(0, 100)
           .map((event) => {
-            const [resultLabel, tone] = translateResult(event.result);
+            const [levelLabel, tone] = auditLevel(event);
             const selected = event.id === state.selectedAuditId;
-            return `<tr class="is-clickable ${selected ? "is-selected" : ""}" data-audit-row="${escapeHtml(event.id)}" tabindex="0" role="button" aria-pressed="${selected}"><td data-label="Quando">${escapeHtml(formatShort(event.createdAt))}</td><td data-label="Evento"><strong>${escapeHtml(translateEvent(event.eventType))}</strong><code>${escapeHtml(event.eventType)}</code></td><td data-label="Ator">${escapeHtml(event.actorName || event.actorLogin || "Sistema")}</td><td data-label="Alvo">${escapeHtml(describeTarget(event))}</td><td data-label="Resultado">${statusPill(resultLabel, tone, { dot: false })}</td><td data-label="Motivo">${escapeHtml(event.reason || "—")}</td></tr>`;
+            return `<tr class="is-clickable ${selected ? "is-selected" : ""}" data-audit-row="${escapeHtml(event.id)}" tabindex="0" role="button" aria-pressed="${selected}"><td data-label="Quando">${escapeHtml(formatShort(event.createdAt))}</td><td data-label="Quem"><strong>${escapeHtml(event.actorName || event.actorLogin || "Sistema")}</strong></td><td data-label="Ação"><strong>${escapeHtml(translateEvent(event.eventType))}</strong><code>${escapeHtml(event.eventType)}</code></td><td data-label="Restaurante">${escapeHtml(auditRestaurant(event) || "—")}</td><td data-label="Motivo">${escapeHtml(event.reason || "—")}</td><td data-label="Nível">${statusPill(levelLabel, tone, { dot: false })}</td></tr>`;
           })
           .join("")}
         </tbody></table></div>${events.length > 100 ? `<div class="sys-table-caption">Mostrando 100 de ${events.length} eventos. Refine os filtros para ver os demais.</div>` : ""}`
@@ -765,22 +797,47 @@
     const events = data.events || [];
     if (state.query.get("event")) state.filters.audit.event = normalize(state.query.get("event"));
     const eventTypes = [...new Set(events.map((event) => normalize(event.eventType)))].sort();
+    const active = Array.isArray(data.activeSupportSessions) ? data.activeSupportSessions : [];
+    const scope = state.filters.audit.scope || "all";
     app.innerHTML = `
       ${renderHead({
-        eyebrow: "Operação · rastreabilidade",
-        title: "Auditoria",
-        description: "Quem fez o quê, em quem e por quê. Somente leitura: nenhum evento pode ser editado ou apagado por aqui.",
+        eyebrow: "Equipe INOVAS · rastreabilidade",
+        title: "Auditoria e sessões de suporte",
+        description: "Tudo o que a equipe INOVAS fez nos restaurantes e no System: quem, quando, onde e por quê. Os registros não podem ser editados nem apagados.",
+        actions: `<button class="sys-btn sys-btn-secondary" type="button" data-audit-export>${icon("audit", 16)}Exportar CSV</button>`,
       })}
-      <div class="sys-toolbar">
-        <label class="sys-search"><span class="sr-only">Buscar por ator, alvo ou request ID</span>${icon("search", 18, "#6b7280")}<input class="sys-input" type="search" data-audit-filter="search" placeholder="Buscar por ator, alvo ou request ID" value="${escapeHtml(state.filters.audit.search)}" /></label>
-        <label><span class="sr-only">Período</span><select class="sys-select" data-audit-filter="period"><option value="7">Período: 7 dias</option><option value="30">Período: 30 dias</option><option value="90">Período: 90 dias</option><option value="all">Período: tudo</option></select></label>
-        <label><span class="sr-only">Evento</span><select class="sys-select" data-audit-filter="event"><option value="">Evento: todos</option>${eventTypes.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(translateEvent(type))}</option>`).join("")}</select></label>
-        <label><span class="sr-only">Resultado</span><select class="sys-select" data-audit-filter="result"><option value="">Resultado: todos</option><option value="SUCCESS">Sucesso</option><option value="DENIED">Negado</option><option value="FAILED">Falhou</option></select></label>
-      </div>
-      <div class="sys-stack">
-        <section class="sys-card" data-audit-results aria-label="Eventos"></section>
-        <div data-audit-detail></div>
-      </div>`;
+      <section class="sys-live-sessions" aria-labelledby="sessoes-andamento">
+        <div class="sys-live-head"><h2 id="sessoes-andamento"><span class="sys-live-dot" aria-hidden="true"></span>Sessões de suporte em andamento</h2><span>Encerram sozinhas no prazo</span></div>
+        ${active.length
+          ? active
+              .map(
+                (session) => `
+                  <div class="sys-live-row">
+                    <span class="sys-avatar" aria-hidden="true">${escapeHtml(getInitials(session.displayName || session.login || "IN"))}</span>
+                    <div class="sys-live-copy"><strong>${escapeHtml(session.displayName || session.login || "Equipe INOVAS")} → ${escapeHtml(session.restaurantName || session.restaurantKey || "Restaurante")}</strong><span>Motivo: ${escapeHtml(session.reason || "registrado na auditoria")}</span></div>
+                    <span class="sys-live-mode">${escapeHtml(normalize(session.mode) === "ADMIN" ? "Administrativo" : "Somente leitura")}</span>
+                    <span class="sys-live-time">${icon("clock", 16)}termina em ${escapeHtml(String(minutesLeft(session.expiresAt)))} min</span>
+                    <button class="sys-btn sys-btn-sm sys-live-end" type="button" data-support-revoke="${escapeHtml(session.id || session.supportSessionId || "")}">Encerrar agora</button>
+                  </div>`
+              )
+              .join("")
+          : '<p class="sys-live-empty">Nenhuma sessão de suporte aberta agora.</p>'}
+      </section>
+      <section class="sys-card sys-audit-card" aria-label="Eventos">
+        <div class="sys-audit-toolbar">
+          <div class="sys-chips" role="tablist" aria-label="Filtrar eventos">
+            ${AUDIT_SCOPES.map(([key, label]) => `<button type="button" role="tab" class="sys-chip ${scope === key ? "is-active" : ""}" aria-selected="${scope === key}" data-audit-scope="${key}">${escapeHtml(label)}</button>`).join("")}
+            ${state.filters.audit.event ? `<button type="button" class="sys-chip is-filter" data-audit-clear-event>${escapeHtml(translateEvent(state.filters.audit.event))} ✕</button>` : ""}
+          </div>
+          <div class="sys-audit-tools">
+            <label class="sys-search"><span class="sr-only">Buscar por pessoa, ação ou motivo</span>${icon("search", 16, "#6b7280")}<input class="sys-input" type="search" data-audit-filter="search" placeholder="Buscar" value="${escapeHtml(state.filters.audit.search)}" /></label>
+            <label><span class="sr-only">Período</span><select class="sys-select" data-audit-filter="period"><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option></select></label>
+          </div>
+        </div>
+        <div data-audit-results></div>
+      </section>
+      <div data-audit-detail></div>`;
+    void eventTypes;
     for (const select of app.querySelectorAll("select[data-audit-filter]")) {
       select.value = state.filters.audit[select.dataset.auditFilter] || "";
       if (select.value !== (state.filters.audit[select.dataset.auditFilter] || "")) {
@@ -788,6 +845,38 @@
       }
     }
     renderAuditRows();
+  };
+
+  // Exporta só o que está filtrado na tela, gerado no navegador.
+  const exportAuditCsv = () => {
+    const events = state.auditVisible || [];
+    if (!events.length) return notify("Nenhum evento para exportar com esses filtros.");
+    const cell = (value) => {
+      let text = String(value ?? "");
+      if (/^[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    const header = ["Quando", "Quem", "Ação", "Código", "Restaurante", "Motivo", "Nível", "Resultado"];
+    const lines = events.map((event) =>
+      [
+        event.createdAt || "",
+        event.actorName || event.actorLogin || "Sistema",
+        translateEvent(event.eventType),
+        event.eventType || "",
+        auditRestaurant(event),
+        event.reason || "",
+        auditLevel(event)[0],
+        translateResult(event.result)[0],
+      ].map(cell).join(";")
+    );
+    const blob = new Blob([`﻿${header.map(cell).join(";")}\n${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `auditoria-inovas-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 
   /* ---------- roteamento ---------- */
@@ -812,6 +901,7 @@
     state.route = route.key;
     state.query = query;
     if (route.key === "restaurants" && query.get("key")) state.selectedRestaurantKey = query.get("key");
+    if (route.key === "restaurants" && query.has("search")) state.filters.restaurants.search = query.get("search") || "";
     shell.mount({ session: state.session, activeKey: route.key, logoutAttribute: "data-system-logout" });
     renderLoading(route.label);
     const payload = await requestJson(route.endpoint);
@@ -853,6 +943,24 @@
       renderRestaurantsList();
       return;
     }
+    const auditScope = event.target.closest("[data-audit-scope]");
+    if (auditScope) {
+      state.filters.audit.scope = auditScope.dataset.auditScope;
+      for (const chip of document.querySelectorAll("[data-audit-scope]")) {
+        const on = chip === auditScope;
+        chip.classList.toggle("is-active", on);
+        chip.setAttribute("aria-selected", String(on));
+      }
+      renderAuditRows();
+      return;
+    }
+    if (event.target.closest("[data-audit-clear-event]")) {
+      state.filters.audit.event = "";
+      event.target.closest("[data-audit-clear-event]").remove();
+      renderAuditRows();
+      return;
+    }
+    if (event.target.closest("[data-audit-export]")) return void exportAuditCsv();
     const auditRow = event.target.closest("[data-audit-row]");
     if (auditRow) {
       state.selectedAuditId = auditRow.dataset.auditRow;

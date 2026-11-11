@@ -7,29 +7,27 @@
     <meta http-equiv="Cache-Control" content="no-store" />
     <title>Usuários INOVAS | Painel System INOVAS</title>
     <link rel="icon" href="/assets/inovas-logo-header.png" />
-    <link rel="stylesheet" href="/admin/users/users.css" />
     <link rel="stylesheet" href="/system/system.css" />
     <script src="/system/system-shell.js" defer></script>
-    <script src="/admin/users/users.js" defer></script>
+    <script src="/system/users/team.js" defer></script>
   </head>
-  <body class="users-body sys-body" data-user-domain="SYSTEM" data-user-view=list>
-    <div class="users-shell sys-shell">
-      <aside class="users-sidebar sys-sidebar" data-users-sidebar data-sys-sidebar aria-label="Menu do Painel System"></aside>
+  <body class="sys-body" data-user-domain="SYSTEM">
+    <div class="sys-shell">
+      <aside class="sys-sidebar" data-sys-sidebar aria-label="Menu do Painel System"></aside>
       <div class="sys-backdrop" data-sys-backdrop></div>
-      <main class="users-main sys-main">
+      <main class="sys-main">
         <header class="sys-topbar">
-          <a href="/system"><img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" /></a>
+          <a href="/system"><img src="/assets/inovas-food-logo-menu.png" alt="INOVAS Food" /></a>
           <button type="button" class="sys-icon-btn" data-sys-menu-toggle aria-label="Abrir menu" aria-expanded="false">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18 M3 12h18 M3 18h18"></path></svg>
           </button>
         </header>
-        <div class="users-content" data-users-app>
-          <div class="users-loading"><span class="users-spinner" aria-hidden="true"></span><span>Carregando usuários INOVAS…</span></div>
+        <div class="sys-content" data-team-app>
+          <div class="sys-loading"><span class="sys-spinner" aria-hidden="true"></span><span>Carregando a equipe INOVAS…</span></div>
         </div>
         <nav class="sys-bottomnav" data-sys-bottomnav aria-label="Navegação rápida"></nav>
       </main>
     </div>
-    <dialog class="users-dialog" data-user-dialog></dialog>
-    <div class="users-toast" data-users-toast data-roles-toast role="status" aria-live="polite" hidden></div>
+    <div class="sys-toast" data-team-toast role="status" aria-live="polite" hidden></div>
   </body>
 </html>

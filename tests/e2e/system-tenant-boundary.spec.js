@@ -680,7 +680,7 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       expect(login.status()).toBe(200);
 
       await page.goto("/system/roles");
-      await expect(page.getByRole("heading", { name: "Perfis e menus" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toBeVisible();
       await expect(page.getByRole("button", { name: "+ Novo perfil" })).toBeVisible();
       await expect(page.getByText("Master", { exact: true }).first()).toBeVisible();
       await expect(page.locator("[data-roles-logout]").first()).toBeVisible();
@@ -697,7 +697,7 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       expect(page.url()).not.toMatch(/\/system\/roles/);
       await page.goto("/system/roles");
       await expect(page).toHaveURL(/\/system\/login\.html/);
-      await expect(page.getByRole("heading", { name: "Perfis e menus" })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Perfis e permissões" })).toHaveCount(0);
     } finally {
       await context.close();
     }
