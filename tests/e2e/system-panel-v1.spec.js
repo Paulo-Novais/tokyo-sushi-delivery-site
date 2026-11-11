@@ -94,7 +94,7 @@ test("Painel System redesenhado renderiza todas as áreas em português", async 
   await expect(page.locator("[data-restaurant-detail]")).toContainText("Restaurante selecionado");
   await expect(page.locator("[data-restaurant-detail]")).toContainText("Tokyo Sushi");
   await expect(page.locator("[data-restaurant-detail]")).toContainText("Integrações e rotinas");
-  await page.getByPlaceholder("Buscar por nome ou identificador").fill("kasulo");
+  await page.getByPlaceholder("Buscar por nome ou identificador").fill("kasulo-rocha");
   await expect(page.locator("[data-restaurant-row]")).toHaveCount(1);
   await expect(page.locator("[data-restaurant-row]").first()).toContainText("Kasulo");
   await assertNoEnglishInterfaceLabels(page);

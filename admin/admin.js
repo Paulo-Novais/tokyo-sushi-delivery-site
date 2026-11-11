@@ -57,20 +57,20 @@ const CUSTOMER_CRM_SORT_OPTIONS = [
   { key: "lapsed-desc", label: "Mais tempo sem compra" },
 ];
 const RESTAURANT_NAV_SECTIONS = Object.freeze([
-  { key: "dashboard", label: "Dashboard", helper: "Resumo do turno" },
-  { key: "users", label: "Usuarios", helper: "Equipe e acessos" },
-  { key: "cash-register", label: "Caixa", helper: "Salao e recebimentos" },
+  { key: "dashboard", label: "Painel", helper: "Resumo do turno" },
+  { key: "users", label: "Usuários", helper: "Equipe e acessos" },
+  { key: "cash-register", label: "Caixa", helper: "Salão e recebimentos" },
   { key: "orders", label: "Pedidos", helper: "Fila operacional" },
-  { key: "menu", label: "Cardapio", helper: "Produtos e combos" },
+  { key: "menu", label: "Cardápio", helper: "Produtos e combos" },
   { key: "scheduled", label: "Agendamentos", helper: "Pedidos futuros" },
   { key: "deliveries", label: "Entregas", helper: "Motoboys e rotas" },
   { key: "customers", label: "Clientes", helper: "Base recorrente" },
-  { key: "promotions", label: "Promocoes", helper: "Campanhas e cupons" },
-  { key: "metrics", label: "Metricas", helper: "Performance por admin" },
-  { key: "reports", label: "Relatorios", helper: "Indicadores" },
+  { key: "promotions", label: "Promoções", helper: "Campanhas e cupons" },
+  { key: "metrics", label: "Resultados", helper: "Performance por admin" },
+  { key: "reports", label: "Relatórios", helper: "Indicadores" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
-  { key: "reviews", label: "Avaliacoes", helper: "Feedback do cliente" },
-  { key: "settings", label: "Configuracoes", helper: "Ajustes do sistema" },
+  { key: "reviews", label: "Avaliações", helper: "Feedback do cliente" },
+  { key: "settings", label: "Configurações", helper: "Ajustes do sistema" },
   { key: "inventory", label: "Estoque", helper: "Itens e validade" },
 ]);
 const SYSTEM_NAV_SECTIONS = Object.freeze([
@@ -4111,11 +4111,10 @@ const renderSidebarNav = () => {
 
     const cashRegisterSubmenu = section.key === "cash-register" && isActive
       ? `
-        <div class="admin-nav-submenu" aria-label="Opcoes do caixa">
-          <button type="button" data-cash-register-subview="floor">Salao</button>
+        <div class="admin-nav-submenu" aria-label="Opções do caixa">
+          <button type="button" data-cash-register-subview="floor">Salão</button>
           <button type="button" data-cash-register-subview="opening">Abertura de Caixa</button>
           <button type="button" data-cash-register-subview="closing">Fechamento de Caixa</button>
-          <span aria-disabled="true">Sangrias e Suprimentos</span>
         </div>
       `
       : "";
@@ -4132,7 +4131,7 @@ const renderSidebarNav = () => {
           <strong>${escapeHtml(section.label)}</strong>
           <small>${escapeHtml(section.helper)}</small>
         </div>
-        <span class="admin-nav-badge">${escapeHtml(badgeValue)}</span>
+        <span class="admin-nav-badge"${String(badgeValue) === "0" || badgeValue === "R$0" ? " data-zero" : ""}>${escapeHtml(badgeValue)}</span>
       </button>
       ${cashRegisterSubmenu}
     `;
