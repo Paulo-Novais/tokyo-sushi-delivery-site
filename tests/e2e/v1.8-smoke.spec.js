@@ -131,7 +131,7 @@ test.describe("V1.8 public smoke", () => {
 
       if (pathname === "/" || pathname === "/inovas") {
         await expectElementVisibleAndOpaque(page.locator(".if-footer"), "rodape INOVAS");
-        await expectElementVisibleAndOpaque(page.locator(".if-newsletter"), "newsletter INOVAS");
+        await expectElementVisibleAndOpaque(page.locator(".if-footer-cta"), "contato do rodape INOVAS");
         await expectElementVisibleAndOpaque(page.locator(".if-button").first(), "CTA INOVAS");
       } else {
         await expectElementVisibleAndOpaque(page.locator("[data-site-footer]"), "rodape publico");
@@ -166,7 +166,7 @@ test.describe("V1.8 public smoke", () => {
       expect(response?.status()).toBe(200);
       await expectNoHorizontalOverflow(page);
       await expectElementVisibleAndOpaque(page.locator(".if-footer"), `rodape INOVAS ${width}`);
-      await expectElementVisibleAndOpaque(page.locator(".if-newsletter"), `newsletter INOVAS ${width}`);
+      await expectElementVisibleAndOpaque(page.locator(".if-footer-cta"), `contato do rodape INOVAS ${width}`);
     });
   }
 

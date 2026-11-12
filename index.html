@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>INOVAS Food | Plataforma de gest&atilde;o para restaurantes</title>
+    <title>INOVAS Food | Plataforma de gestão para restaurantes</title>
     <meta
       name="description"
-      content="A INOVAS Food ajuda restaurantes a vender mais e trabalhar melhor com pedidos, cardapio digital, estoque, financeiro, delivery, clientes e relatorios em uma unica plataforma."
+      content="A INOVAS Food ajuda restaurantes a vender mais e trabalhar melhor: pedidos, cardápio digital, delivery, caixa, financeiro, estoque, clientes e relatórios em uma única plataforma."
     />
     <meta
       name="keywords"
-      content="INOVAS Food, sistema para restaurante, gestao de restaurante, cardapio digital, delivery, PDV, estoque, financeiro para restaurantes"
+      content="INOVAS Food, sistema para restaurante, gestão de restaurante, cardápio digital, delivery, caixa, estoque, financeiro para restaurantes"
     />
     <meta name="robots" content="index,follow" />
     <meta name="theme-color" content="#ff4b12" />
@@ -22,21 +22,22 @@
     <meta property="og:locale" content="pt_BR" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="INOVAS Food" />
-    <meta property="og:title" content="INOVAS Food | Plataforma de gest&atilde;o para restaurantes" />
+    <meta property="og:title" content="INOVAS Food | Plataforma de gestão para restaurantes" />
     <meta
       property="og:description"
-      content="Controle pedidos, estoque, financeiro, delivery, clientes, relatorios e muito mais em uma unica plataforma."
+      content="Gestão completa e site próprio do restaurante em um só lugar. Pedidos, delivery, caixa, estoque, clientes e relatórios."
     />
     <meta property="og:url" content="https://inovasfood.com.br/" />
     <meta property="og:image" content="https://inovasfood.com.br/assets/inovas-food-logo-oficial.png" />
     <meta property="og:image:alt" content="Logotipo oficial da INOVAS Food" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="INOVAS Food | Plataforma de gest&atilde;o para restaurantes" />
-    <meta
-      name="twitter:description"
-      content="A plataforma que faz seu restaurante vender mais e trabalhar melhor."
-    />
+    <meta name="twitter:title" content="INOVAS Food | Plataforma de gestão para restaurantes" />
+    <meta name="twitter:description" content="A plataforma que faz seu restaurante vender mais e trabalhar melhor." />
     <meta name="twitter:image" content="https://inovasfood.com.br/assets/inovas-food-logo-oficial.png" />
+
+    <link rel="preload" href="./assets/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./inovas.css" />
 
     <script type="application/ld+json">
       {
@@ -46,7 +47,7 @@
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "url": "https://inovasfood.com.br/",
-        "description": "Plataforma SaaS para gestao de restaurantes, delivery, cardapio digital, pedidos, estoque, financeiro, clientes e relatorios.",
+        "description": "Plataforma de gestão para restaurantes: pedidos, cardápio digital, delivery, caixa, financeiro, estoque, clientes e relatórios.",
         "offers": [
           { "@type": "Offer", "name": "Delivery", "price": "100", "priceCurrency": "BRL" },
           { "@type": "Offer", "name": "Profissional", "price": "220", "priceCurrency": "BRL" },
@@ -67,705 +68,765 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./inovas.css" />
+    <script>
+      document.documentElement.classList.add("if-js");
+    </script>
   </head>
-  <body>
-    <svg class="if-symbols" aria-hidden="true" focusable="false">
-      <symbol id="if-icon-arrow" viewBox="0 0 24 24">
-        <path d="M5 12h13m-5-5 5 5-5 5" />
-      </symbol>
-      <symbol id="if-icon-login" viewBox="0 0 24 24">
-        <path d="M10 7V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-2" />
-        <path d="M14 12H3m4-4-4 4 4 4" />
-      </symbol>
-      <symbol id="if-icon-check" viewBox="0 0 24 24">
-        <path d="m5 12 4 4L19 6" />
-      </symbol>
-      <symbol id="if-icon-cart" viewBox="0 0 24 24">
-        <path d="M4 5h2l2.1 10.4A2 2 0 0 0 10 17h7.2a2 2 0 0 0 1.9-1.4L21 9H7" />
-        <path d="M10 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
-      </symbol>
-      <symbol id="if-icon-menu" viewBox="0 0 24 24">
-        <path d="M8 4h12v16H8zM4 6h2m-2 6h2m-2 6h2" />
-      </symbol>
-      <symbol id="if-icon-chart" viewBox="0 0 24 24">
-        <path d="M4 19V5m0 14h16" />
-        <path d="M8 16V9m4 7V5m4 11v-4" />
-      </symbol>
-      <symbol id="if-icon-box" viewBox="0 0 24 24">
-        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
-        <path d="M4 7.5 12 12l8-4.5M12 21v-9" />
-      </symbol>
-      <symbol id="if-icon-money" viewBox="0 0 24 24">
-        <path d="M12 3a9 9 0 1 0 9 9" />
-        <path d="M15 8.5c-.6-.9-1.6-1.4-3-1.4-1.7 0-3 .8-3 2.1 0 3.1 6 1.5 6 4.7 0 1.3-1.2 2.1-3 2.1-1.5 0-2.7-.6-3.3-1.6M12 5.5v13" />
-      </symbol>
-      <symbol id="if-icon-truck" viewBox="0 0 24 24">
-        <path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z" />
-        <path d="M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-      </symbol>
-      <symbol id="if-icon-users" viewBox="0 0 24 24">
-        <path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z" />
-        <path d="M4 21a8 8 0 0 1 16 0M18 7a3 3 0 0 1 2.5 4.7M2 21a6.5 6.5 0 0 1 5-6.3" />
-      </symbol>
-      <symbol id="if-icon-star" viewBox="0 0 24 24">
-        <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
-      </symbol>
-      <symbol id="if-icon-calendar" viewBox="0 0 24 24">
-        <path d="M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z" />
-        <path d="M8 2v5m8-5v5M3 10h18" />
-      </symbol>
-      <symbol id="if-icon-shield" viewBox="0 0 24 24">
-        <path d="M12 3 20 6v6c0 5-3.4 7.8-8 9-4.6-1.2-8-4-8-9V6l8-3Z" />
-        <path d="m8.5 12 2.2 2.2 4.8-5" />
-      </symbol>
-      <symbol id="if-icon-zap" viewBox="0 0 24 24">
-        <path d="m13 2-8 12h6l-1 8 9-13h-6l0-7Z" />
-      </symbol>
-      <symbol id="if-icon-lock" viewBox="0 0 24 24">
-        <path d="M6 10h12v11H6zM8 10V7a4 4 0 1 1 8 0v3" />
-      </symbol>
-      <symbol id="if-icon-refresh" viewBox="0 0 24 24">
-        <path d="M20 7v5h-5M4 17v-5h5" />
-        <path d="M6.2 8.2A7 7 0 0 1 18.8 7M17.8 15.8A7 7 0 0 1 5.2 17" />
-      </symbol>
-      <symbol id="if-icon-headset" viewBox="0 0 24 24">
-        <path d="M4 13a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-7h4M4 17a2 2 0 0 0 2 2h2v-7H4v5Z" />
-        <path d="M14 21h2a2 2 0 0 0 2-2" />
-      </symbol>
-      <symbol id="if-icon-phone" viewBox="0 0 24 24">
-        <path d="M7 2h10v20H7z" />
-        <path d="M11 18h2" />
-      </symbol>
-    </svg>
+  <body class="if-body">
+    <a class="if-skip" href="#conteudo">Pular para o conteúdo</a>
 
-    <a class="if-skip-link" href="#conteudo">Pular para o conteudo</a>
-
-    <header class="if-header" data-reveal>
-      <div class="if-container if-nav">
-        <a class="if-brand" href="/" aria-label="Pagina inicial da INOVAS Food">
-          <img
-            src="./assets/inovas-logo-header.png"
-            alt="INOVAS Food"
-            width="178"
-            height="55"
-            fetchpriority="high"
-          />
+    <header class="if-header">
+      <div class="if-header-inner">
+        <a class="if-brand" href="#inicio" data-page-link="inicio" aria-label="INOVAS Food, início">
+          <img src="./assets/inovas-logo-header.png" alt="INOVAS Food" width="178" height="55" fetchpriority="high" />
         </a>
-
-        <nav class="if-menu" aria-label="Navegacao principal">
-          <a href="#recursos">Recursos</a>
-          <a href="#planos">Planos</a>
-          <a href="#demonstracao">Demonstra&ccedil;&atilde;o</a>
-          <a href="#quem-somos">Quem Somos</a>
-          <a href="#contato">Contato</a>
+        <button class="if-menu-toggle" type="button" aria-expanded="false" aria-controls="if-menu" data-menu-toggle>
+          <span class="if-sr">Abrir menu</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <nav class="if-menu" id="if-menu" aria-label="Navegação principal">
+          <a href="#inicio" data-page-link="inicio">Início</a>
+          <a href="#recursos" data-page-link="recursos">Recursos</a>
+          <a href="#economia" data-page-link="economia">Economia</a>
+          <a href="#na-pratica" data-page-link="na-pratica">Na prática</a>
+          <a href="#planos" data-page-link="planos">Planos</a>
+          <a href="#duvidas" data-page-link="duvidas">Dúvidas</a>
+          <a href="#contato" data-page-link="contato">Fale conosco</a>
+          <div class="if-menu-actions">
+            <a class="if-button if-button-ghost" href="/gestor">
+              Entrar no Gestor
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4M3 12h11M10 8l4 4-4 4" /></svg>
+            </a>
+            <a class="if-button if-button-primary" href="#contato" data-page-link="contato">Acessar Plataforma</a>
+          </div>
         </nav>
-
-        <div class="if-nav-actions">
-          <a class="if-button if-button-ghost" href="/gestor">
-            Entrar no Gestor
-            <svg aria-hidden="true"><use href="#if-icon-login"></use></svg>
-          </a>
-          <a class="if-button if-button-primary" href="#acesso-plataforma" aria-label="Acessar Plataforma INOVAS Food em breve">Acessar Plataforma</a>
-        </div>
       </div>
     </header>
 
     <main id="conteudo">
-      <section class="if-hero" id="demonstracao" aria-labelledby="if-hero-title">
-        <div class="if-container if-hero-grid">
-          <div class="if-hero-copy" data-reveal>
-            <p class="if-eyebrow">Sistema completo para restaurantes</p>
-            <h1 id="if-hero-title">
-              A plataforma que faz seu restaurante
-              <span>vender mais e trabalhar melhor.</span>
-            </h1>
-            <p class="if-hero-text">
-              Controle pedidos, estoque, financeiro, delivery, clientes, relat&oacute;rios e muito
-              mais em uma &uacute;nica plataforma, sem depender de planilhas ou conversas espalhadas.
-            </p>
-
-            <div class="if-trust-bullets" aria-label="Beneficios principais">
-              <span><svg aria-hidden="true"><use href="#if-icon-check"></use></svg>Simples de usar</span>
-              <span><svg aria-hidden="true"><use href="#if-icon-check"></use></svg>Tudo em tempo real</span>
-              <span><svg aria-hidden="true"><use href="#if-icon-check"></use></svg>Suporte especializado</span>
-            </div>
-
-            <div class="if-hero-actions" aria-label="Acoes principais">
-              <a class="if-button if-button-primary if-button-large" href="#contato">
-                Solicitar Demonstra&ccedil;&atilde;o
-                <svg aria-hidden="true"><use href="#if-icon-arrow"></use></svg>
-              </a>
-              <a class="if-button if-button-secondary if-button-large" href="./admin/login.html">
-                Entrar no Gestor
-                <svg aria-hidden="true"><use href="#if-icon-login"></use></svg>
-              </a>
-            </div>
-
-            <div class="if-social-proof" aria-label="Restaurantes que usam a INOVAS Food">
-              <img
-                src="./assets/inovas-social-avatars.png"
-                alt="Clientes de restaurantes usando a plataforma"
-                width="147"
-                height="31"
-                loading="lazy"
-              />
-              <div>
-                <div class="if-stars" aria-label="5 estrelas">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-                <strong>Home comercial</strong>
-                <small>fluxo validado em opera&ccedil;&atilde;o piloto</small>
+      <!-- ============ INÍCIO ============ -->
+      <section class="if-page" id="inicio" data-page="inicio" aria-labelledby="if-hero-title">
+        <div class="if-hero">
+          <div class="if-wrap if-hero-grid">
+            <div class="if-hero-copy">
+              <p class="if-kicker"><span class="if-dot" aria-hidden="true"></span>Sistema completo para restaurantes</p>
+              <h1 id="if-hero-title">
+                A plataforma que faz seu restaurante
+                <em><span class="if-underline">vender mais</span> e trabalhar melhor.</em>
+              </h1>
+              <p class="if-lead">
+                Controle pedidos, estoque, financeiro, delivery, clientes, relatórios e muito mais em uma única
+                plataforma — sem depender de planilhas ou conversas espalhadas.
+              </p>
+              <ul class="if-checks">
+                <li>Simples de usar</li>
+                <li>Tudo em tempo real</li>
+                <li>Suporte especializado</li>
+              </ul>
+              <div class="if-actions">
+                <a class="if-button if-button-primary if-button-lg" href="#contato" data-page-link="contato">
+                  Solicitar Demonstração
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </a>
+                <a class="if-button if-button-outline if-button-lg" href="#economia" data-page-link="economia">Calcular minha economia</a>
+              </div>
+              <div class="if-seal">
+                <span class="if-seal-logo"><img src="./assets/tokyo-logo-premium-transparent.png" alt="" width="274" height="185" loading="lazy" /></span>
+                <span><strong>Validado na operação do Tokyo Sushi</strong><small>nascemos dentro de um delivery de verdade</small></span>
               </div>
             </div>
-          </div>
 
-          <div class="if-product-stage" aria-hidden="true" data-reveal>
-            <div class="if-laptop" aria-hidden="true">
-              <div class="if-laptop-screen">
-                <aside class="if-dashboard-sidebar">
-                  <img src="./assets/inovas-logo-header.png" alt="" width="72" height="22" />
-                  <span class="is-active">Dashboard</span>
-                  <span>Pedidos</span>
-                  <span>Card&aacute;pio</span>
-                  <span>Estoque</span>
-                  <span>Financeiro</span>
-                  <span>Clientes</span>
-                  <span>Relat&oacute;rios</span>
-                  <span>Produ&ccedil;&atilde;o</span>
-                </aside>
-                <div class="if-dashboard">
-                  <div class="if-dashboard-top">
-                    <strong>Dashboard Geral</strong>
-                    <span></span>
-                  </div>
-                  <div class="if-kpis">
-                    <article>
-                      <small>Pedidos Hoje</small>
-                      <strong data-count-to="256">256</strong>
-                      <em>+12%</em>
-                    </article>
-                    <article>
-                      <small>Faturamento Hoje</small>
-                      <strong>R$ 7.850,00</strong>
-                      <em>+15%</em>
-                    </article>
-                    <article>
-                      <small>Ticket M&eacute;dio</small>
-                      <strong>R$ 30,66</strong>
-                      <em>+8%</em>
-                    </article>
-                    <article>
-                      <small>Clientes</small>
-                      <strong data-count-to="1250">1.250</strong>
-                      <em>+11%</em>
-                    </article>
-                  </div>
-                  <div class="if-dashboard-main">
-                    <section class="if-chart-card">
-                      <strong>Faturamento (&Uacute;ltimos 7 dias)</strong>
-                      <div class="if-line-chart">
-                        <i style="--x: 0%; --y: 66%"></i>
-                        <i style="--x: 15%; --y: 39%"></i>
-                        <i style="--x: 31%; --y: 53%"></i>
-                        <i style="--x: 47%; --y: 18%"></i>
-                        <i style="--x: 63%; --y: 57%"></i>
-                        <i style="--x: 78%; --y: 34%"></i>
-                        <i style="--x: 100%; --y: 19%"></i>
-                        <span></span>
+            <div class="if-hero-visual" aria-label="Simulação do painel da INOVAS com dados ilustrativos" role="img">
+              <div class="if-laptop">
+                <div class="if-laptop-screen">
+                  <aside class="if-mock-side" aria-hidden="true">
+                    <img src="./assets/inovas-logo-header.png" alt="" width="178" height="55" />
+                    <span class="is-on">Dashboard</span><span>Pedidos</span><span>Cardápio</span><span>Estoque</span>
+                    <span>Financeiro</span><span>Clientes</span><span>Relatórios</span><span>Produção</span>
+                  </aside>
+                  <div class="if-mock-main" aria-hidden="true">
+                    <div class="if-mock-top"><strong>Dashboard Geral</strong><span class="if-live">ao vivo · <b data-mock-clock>19:42</b></span></div>
+                    <div class="if-mock-kpis">
+                      <div><small>Pedidos hoje</small><b data-mock-orders>129</b><i>+12%</i></div>
+                      <div><small>Faturamento hoje</small><b data-mock-revenue>R$ 4.235</b><i>+15%</i></div>
+                      <div><small>Ticket médio</small><b>R$ 32,83</b><i>+8%</i></div>
+                      <div><small>Na cozinha</small><b><span data-mock-kitchen>10</span> pedidos</b><i>agora</i></div>
+                    </div>
+                    <div class="if-mock-row">
+                      <div class="if-mock-card if-mock-chart">
+                        <small>Vendas em tempo real</small>
+                        <svg viewBox="0 0 300 90" preserveAspectRatio="none">
+                          <path class="if-area" d="M0 70 L25 62 L50 66 L75 55 L100 60 L125 50 L150 54 L175 44 L200 52 L225 40 L250 46 L275 30 L300 26 L300 90 L0 90Z" />
+                          <path class="if-line" d="M0 70 L25 62 L50 66 L75 55 L100 60 L125 50 L150 54 L175 44 L200 52 L225 40 L250 46 L275 30 L300 26" />
+                        </svg>
+                        <span class="if-mock-axis"><em>-10 min</em><em>-7 min</em><em>-4 min</em><em>agora</em></span>
                       </div>
-                      <div class="if-chart-days"><b>Seg</b><b>Ter</b><b>Qua</b><b>Qui</b><b>Sex</b><b>Sab</b><b>Dom</b></div>
-                    </section>
-                    <section class="if-donut-card">
-                      <strong>Pedidos por Canal</strong>
-                      <div class="if-donut-wrap">
-                        <div class="if-donut"></div>
-                        <ul>
-                          <li><span></span>Delivery <b>50%</b></li>
-                          <li><span></span>Balc&atilde;o <b>30%</b></li>
-                          <li><span></span>Retirada <b>10%</b></li>
-                          <li><span></span>Mesa <b>10%</b></li>
-                        </ul>
+                      <div class="if-mock-card if-mock-donut">
+                        <small>Pedidos por canal</small>
+                        <div class="if-donut"><span data-mock-orders-2>129</span></div>
+                        <ul><li>Delivery 50%</li><li>Balcão 29%</li><li>Retirada 10%</li><li>Mesa 11%</li></ul>
                       </div>
-                    </section>
-                    <section class="if-status-card">
-                      <strong>Pedidos por Status</strong>
-                      <p><span>Recebido</span><b>85</b></p>
-                      <p><span>Em Preparo</span><b>65</b></p>
-                      <p><span>Saiu para Entrega</span><b>40</b></p>
-                      <p><span>Entregue</span><b>66</b></p>
-                    </section>
-                    <section class="if-orders-card">
-                      <strong>&Uacute;ltimos Pedidos</strong>
-                      <p><b>#1256</b><span>Jo&atilde;o Silva</span><em>Em preparo</em></p>
-                      <p><b>#1255</b><span>Maria Santos</span><em>Saiu para entrega</em></p>
-                      <p><b>#1254</b><span>Carlos Lima</span><em>Entregue</em></p>
-                      <p><b>#1253</b><span>Ana Costa</span><em>Recebido</em></p>
-                    </section>
+                    </div>
+                    <div class="if-mock-row">
+                      <div class="if-mock-card">
+                        <small>Pedidos por status</small>
+                        <div class="if-bar"><span>Em preparo</span><b>2</b><i style="--w:30%"></i></div>
+                        <div class="if-bar"><span>Pronto</span><b>1</b><i class="is-yellow" style="--w:16%"></i></div>
+                        <div class="if-bar"><span>Saiu p/ entrega</span><b>7</b><i class="is-dark" style="--w:62%"></i></div>
+                      </div>
+                      <div class="if-mock-card">
+                        <small>Últimos pedidos</small>
+                        <div class="if-mock-order"><span>#0413 · Delivery</span><b>R$ 36,40</b><em>Novo</em></div>
+                        <div class="if-mock-order"><span>#0412 · Delivery</span><b>R$ 58,90</b><em class="is-ok">Pronto</em></div>
+                        <div class="if-mock-order"><span>#0411 · Mesa 4</span><b>R$ 96,00</b><em class="is-dark">Em rota</em></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <div class="if-laptop-base"></div>
               </div>
-              <div class="if-laptop-base"></div>
-            </div>
-
-            <div class="if-phone" aria-hidden="true">
-              <div class="if-phone-notch"></div>
-              <div class="if-phone-top">
-                <span>0:41</span>
-                <b>Dashboard</b>
-                <i></i>
+              <div class="if-phone" aria-hidden="true">
+                <div class="if-phone-notch"></div>
+                <div class="if-phone-toast" data-mock-toast><b>Novo pedido #0414</b><span>Delivery · R$ 40,60</span></div>
+                <div class="if-phone-card"><small>Faturamento hoje</small><b data-mock-revenue-2>R$ 4.235</b></div>
+                <div class="if-phone-card"><small>Pedidos hoje</small><b data-mock-orders-3>129</b></div>
+                <div class="if-phone-bars"><small>Pedidos por hora</small><span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+                <div class="if-phone-nav"><b>Início</b><span>Pedidos</span><span>Clientes</span><span>Mais</span></div>
               </div>
-              <article><small>Faturamento Hoje</small><strong>R$ 7.850,00</strong><em>+15%</em></article>
-              <article><small>Pedidos Hoje</small><strong>256</strong><em>+12%</em></article>
-              <article><small>Ticket M&eacute;dio</small><strong>R$ 30,66</strong><em>+8%</em></article>
-              <article><small>Clientes</small><strong>1.250</strong><em>+11%</em></article>
-              <nav>
-                <span>In&iacute;cio</span>
-                <span>Pedidos</span>
-                <span>Clientes</span>
-                <span>Mais</span>
-              </nav>
+              <div class="if-float-note" aria-hidden="true">
+                <span class="if-float-icon"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M5 18a2 2 0 104 0 2 2 0 10-4 0M15 18a2 2 0 104 0 2 2 0 10-4 0" /></svg></span>
+                <span><b>Pedido #0412 saiu para entrega</b><small>cliente avisado automaticamente</small></span>
+              </div>
+              <p class="if-mock-note">Simulação · dados ilustrativos</p>
             </div>
           </div>
         </div>
-      </section>
 
-      <section class="if-section if-features" id="recursos" aria-labelledby="if-recursos-title">
-        <div class="if-container">
-          <div class="if-section-title" data-reveal>
-            <h2 id="if-recursos-title">Tudo o que seu restaurante precisa em um s&oacute; lugar</h2>
+        <div class="if-marquee" aria-label="Tipos de restaurante atendidos">
+          <div class="if-marquee-track">
+            <span>Sushi</span><span>Pizzaria</span><span>Hamburgueria</span><span>Marmitaria</span><span>Cafeteria</span><span>Padaria</span><span>Açaíteria</span><span>Restaurante</span>
+            <span aria-hidden="true">Sushi</span><span aria-hidden="true">Pizzaria</span><span aria-hidden="true">Hamburgueria</span><span aria-hidden="true">Marmitaria</span><span aria-hidden="true">Cafeteria</span><span aria-hidden="true">Padaria</span><span aria-hidden="true">Açaíteria</span><span aria-hidden="true">Restaurante</span>
           </div>
+        </div>
 
-          <div class="if-feature-grid">
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-cart"></use></svg>
-              <h3>Pedidos</h3>
-              <p>Receba e acompanhe pedidos com menos ru&iacute;do na opera&ccedil;&atilde;o.</p>
+        <div class="if-wrap if-section">
+          <div class="if-saving-band">
+            <div class="if-saving-main">
+              <p class="if-eyebrow if-eyebrow-dark">Economia de verdade</p>
+              <h2>Gestão completa + site próprio por R$ 220/mês.</h2>
+              <p>
+                Juntar sistema de gestão e cardápio digital de fornecedores diferentes pode passar de R$ 355,79 por mês.
+                Com a INOVAS, tá tudo no mesmo lugar. (Domínio próprio opcional: + R$ 40/mês.)
+              </p>
+              <a class="if-link-dark" href="#economia" data-page-link="economia">Ver o comparativo completo →</a>
+            </div>
+            <div class="if-saving-side">
+              <small>Economia estimada em 12 meses</small>
+              <strong>R$ 1.629</strong>
+              <p>Comparando o plano Profissional com preços iniciais divulgados de um sistema de gestão + um cardápio digital do mercado.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="if-wrap if-section if-pains">
+          <div class="if-section-head">
+            <div>
+              <p class="if-eyebrow">Se isso parece com o seu dia…</p>
+              <h2>A gente sabe como é. A gente também já passou por isso.</h2>
+            </div>
+            <a class="if-link" href="#na-pratica" data-page-link="na-pratica">Ver na prática →</a>
+          </div>
+          <div class="if-pain-grid">
+            <article class="if-pain">
+              <p class="if-pain-before">Pedido anotado no papel e esquecido na cozinha</p>
+              <h3>Todo pedido numa fila só, com status ao vivo.</h3>
+              <p>Balcão, mesa, retirada e delivery chegam na mesma tela — ninguém precisa gritar pedido.</p>
             </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-menu"></use></svg>
-              <h3>Card&aacute;pio</h3>
-              <p>Atualize produtos, pre&ccedil;os e adicionais sem depender de retrabalho.</p>
+            <article class="if-pain">
+              <p class="if-pain-before">Fechar o caixa e a conta não bater</p>
+              <h3>Cada venda já entra no financeiro.</h3>
+              <p>Abertura, sangria e fechamento com tudo registrado. No fim do dia, é só conferir.</p>
             </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-chart"></use></svg>
-              <h3>Relat&oacute;rios</h3>
-              <p>Veja o que vende, o que trava e onde melhorar o resultado.</p>
-            </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-box"></use></svg>
-              <h3>Estoque</h3>
-              <p>Evite falta de insumos e reduza perdas com alertas claros.</p>
-            </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-money"></use></svg>
-              <h3>Financeiro</h3>
-              <p>Entenda caixa, recebimentos e despesas antes que virem problema.</p>
-            </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-truck"></use></svg>
-              <h3>Delivery</h3>
-              <p>Organize entregas e status para atender melhor em hor&aacute;rios de pico.</p>
-            </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-users"></use></svg>
-              <h3>Clientes</h3>
-              <p>Conhe&ccedil;a quem compra e transforme recorr&ecirc;ncia em faturamento.</p>
-            </article>
-            <article data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-star"></use></svg>
-              <h3>Avalia&ccedil;&otilde;es</h3>
-              <p>Acompanhe feedbacks e proteja a reputa&ccedil;&atilde;o do restaurante.</p>
+            <article class="if-pain">
+              <p class="if-pain-before">Pagar comissão em todo pedido do app</p>
+              <h3>Seu site, sua marca, seu cliente.</h3>
+              <p>O cliente pede direto de você e o relacionamento fica com o seu restaurante.</p>
             </article>
           </div>
         </div>
-      </section>
 
-      <section class="if-section if-segments" id="segmentos" aria-labelledby="if-segments-title">
-        <div class="if-container">
-          <div class="if-section-title" data-reveal>
-            <h2 id="if-segments-title">Para qualquer tipo de restaurante</h2>
-            <p>Solu&ccedil;&atilde;o completa e flex&iacute;vel para o seu neg&oacute;cio.</p>
-          </div>
-
-          <div class="if-segment-grid">
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/sushi.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-calendar"></use></svg><strong>Sushi</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/pizzaria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-calendar"></use></svg><strong>Pizzaria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/hamburgueria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-calendar"></use></svg><strong>Hamburgueria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/marmitaria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-users"></use></svg><strong>Marmitaria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/cafeteria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-lock"></use></svg><strong>Cafeteria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/padaria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-box"></use></svg><strong>Padaria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/acaiteria.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-star"></use></svg><strong>A&ccedil;a&iacute;teria</strong>
-            </a>
-            <a href="#planos" style="--bg: url('./assets/inovas-segments/restaurante.jpg')" data-reveal>
-              <svg aria-hidden="true"><use href="#if-icon-money"></use></svg><strong>Restaurante</strong>
+        <div class="if-wrap if-section">
+          <div class="if-cta-band">
+            <h2>Pronto para ver funcionando no seu restaurante?</h2>
+            <a class="if-button if-button-light if-button-lg" href="#contato" data-page-link="contato">
+              Agendar demonstração
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </a>
           </div>
         </div>
       </section>
 
-      <section class="if-plans-why" id="planos" aria-labelledby="if-planos-title">
-        <div class="if-container if-plans-layout">
-          <div class="if-plans-column">
-            <div class="if-section-title" data-reveal>
-              <h2 id="if-planos-title">Planos que acompanham o crescimento do seu restaurante</h2>
-              <p>Escolha o plano ideal e evolua conforme o seu neg&oacute;cio cresce.</p>
+      <!-- ============ RECURSOS ============ -->
+      <section class="if-page" id="recursos" data-page="recursos" aria-labelledby="if-recursos-title">
+        <div class="if-wrap if-page-pad">
+          <div class="if-page-head">
+            <div>
+              <p class="if-eyebrow">Recursos</p>
+              <h2 id="if-recursos-title" class="if-h1">Oito módulos. Uma tela. Tudo conversando entre si.</h2>
             </div>
+            <p class="if-page-aside">Clique em um módulo para ver o que ele faz pelo seu restaurante.</p>
+          </div>
 
-            <div class="if-plan-grid">
-              <article class="if-plan" data-reveal>
-                <div class="if-plan-head">
-                  <svg aria-hidden="true"><use href="#if-icon-truck"></use></svg>
-                  <h3>Delivery</h3>
-                </div>
-                <p class="if-price"><strong>R$ 100</strong><span>/m&ecirc;s</span></p>
-                <p class="if-plan-desc">Para restaurantes que precisam sair do improviso e organizar pedidos online com rapidez.</p>
-                <ul>
-                  <li>Gestor de pedidos</li>
-                  <li>Site exclusivo</li>
-                  <li>Card&aacute;pio digital</li>
-                  <li>Relat&oacute;rios b&aacute;sicos</li>
-                  <li>Painel administrativo</li>
-                  <li>Atualiza&ccedil;&otilde;es gratuitas</li>
-                  <li>Suporte via chat</li>
-                </ul>
-                <a class="if-plan-button" href="#contato">Come&ccedil;ar Agora</a>
-              </article>
-
-              <article class="if-plan is-featured" data-reveal>
-                <span class="if-badge">Mais escolhido</span>
-                <div class="if-plan-head">
-                  <svg aria-hidden="true"><use href="#if-icon-star"></use></svg>
-                  <h3>Profissional</h3>
-                </div>
-                <p class="if-price"><strong>R$ 220</strong><span>/m&ecirc;s</span></p>
-                <p class="if-plan-desc">Para quem quer acompanhar vendas, caixa, estoque e equipe com uma vis&atilde;o de gest&atilde;o.</p>
-                <strong class="if-includes">Tudo do plano Delivery, mais:</strong>
-                <ul>
-                  <li>Sistema de Caixa (PDV)</li>
-                  <li>Financeiro completo</li>
-                  <li>Controle de estoque</li>
-                  <li>Relat&oacute;rios avan&ccedil;ados</li>
-                  <li>Cadastro de clientes (CRM)</li>
-                  <li>Usu&aacute;rios adicionais</li>
-                  <li>Dashboard completo</li>
-                  <li>Indicadores de desempenho</li>
-                </ul>
-                <a class="if-plan-button" href="#contato">Come&ccedil;ar Agora</a>
-              </article>
-
-              <article class="if-plan" data-reveal>
-                <div class="if-plan-head">
-                  <svg aria-hidden="true"><use href="#if-icon-zap"></use></svg>
-                  <h3>PRO</h3>
-                </div>
-                <p class="if-price if-price-pro"><span>A partir de</span><strong>R$ 350</strong><span>/m&ecirc;s</span></p>
-                <p class="if-plan-desc">Para opera&ccedil;&otilde;es maiores que precisam padronizar processos, unidades e indicadores.</p>
-                <strong class="if-includes">Tudo do plano Profissional, mais:</strong>
-                <ul>
-                  <li>Sistema de balan&ccedil;a</li>
-                  <li>Sistema de cozinha (KDS)</li>
-                  <li>Sistema de bar</li>
-                  <li>Multiunidades</li>
-                  <li>Hist&oacute;rico mensal completo</li>
-                  <li>Auditoria</li>
-                  <li>Gest&atilde;o avan&ccedil;ada</li>
-                  <li>Integra&ccedil;&otilde;es futuras</li>
-                  <li>Intelig&ecirc;ncia Artificial (em breve)</li>
-                  <li>Recursos exclusivos</li>
-                </ul>
-                <a class="if-plan-button if-plan-button-outline" href="#contato">Solicitar Demonstra&ccedil;&atilde;o</a>
-              </article>
+          <div class="if-modules">
+            <div class="if-module-list" role="tablist" aria-label="Módulos da INOVAS">
+              <button type="button" role="tab" class="if-module" data-module="0" aria-selected="true"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg></span>Pedidos</button>
+              <button type="button" role="tab" class="if-module" data-module="1" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5" /></svg></span>Cardápio digital</button>
+              <button type="button" role="tab" class="if-module" data-module="2" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M5 18a2 2 0 104 0 2 2 0 10-4 0M15 18a2 2 0 104 0 2 2 0 10-4 0" /></svg></span>Delivery</button>
+              <button type="button" role="tab" class="if-module" data-module="3" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM9.5 12a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0" /></svg></span>Caixa e financeiro</button>
+              <button type="button" role="tab" class="if-module" data-module="4" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5zM3 8v8l9 5 9-5V8" /></svg></span>Estoque</button>
+              <button type="button" role="tab" class="if-module" data-module="5" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M5.5 8a3.5 3.5 0 107 0 3.5 3.5 0 10-7 0M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2" /></svg></span>Clientes</button>
+              <button type="button" role="tab" class="if-module" data-module="6" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg></span>Relatórios</button>
+              <button type="button" role="tab" class="if-module" data-module="7" aria-selected="false"><span class="if-ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" /></svg></span>Avaliações</button>
             </div>
-
-            <div class="if-plan-compare" aria-label="Comparativo visual dos planos" data-reveal>
-              <div class="if-compare-head">
-                <strong>Compare rapidamente</strong>
-                <span>Escolha pelo momento da sua opera&ccedil;&atilde;o</span>
+            <div class="if-module-panel" role="tabpanel" aria-live="polite" data-module-panel>
+              <span class="if-badge" data-module-plan>Todos os planos</span>
+              <h3 data-module-name>Pedidos</h3>
+              <p class="if-module-summary" data-module-summary>Uma fila única para todos os canais, do balcão ao delivery, com o status de cada pedido em tempo real.</p>
+              <ul class="if-module-items" data-module-items>
+                <li>Balcão, mesa, retirada e delivery na mesma tela</li>
+                <li>Status atualizado para a equipe e para o cliente</li>
+                <li>Impressão para cozinha e produção</li>
+                <li>Histórico completo de cada pedido</li>
+              </ul>
+              <p class="if-module-gain"><b>Na prática:</b> <span data-module-gain>o pedido é lançado uma vez só e chega certinho na cozinha — sem papel perdido nem retrabalho.</span></p>
+              <div class="if-actions">
+                <a class="if-button if-button-primary" href="#contato" data-page-link="contato">Ver funcionando numa demonstração</a>
+                <a class="if-button if-button-dark-ghost" href="#planos" data-page-link="planos">Comparar planos</a>
               </div>
-              <div class="if-compare-grid">
-                <span>Foco principal</span>
-                <b>Delivery</b>
-                <b>Profissional</b>
-                <b>PRO</b>
-                <span>Pedidos e site</span>
-                <em>Inclu&iacute;do</em>
-                <em>Inclu&iacute;do</em>
-                <em>Inclu&iacute;do</em>
-                <span>Gest&atilde;o financeira</span>
-                <em>B&aacute;sica</em>
-                <em>Completa</em>
-                <em>Completa</em>
-                <span>Estoque e relat&oacute;rios</span>
-                <em>Inicial</em>
-                <em>Avan&ccedil;ado</em>
-                <em>Avan&ccedil;ado</em>
-                <span>Opera&ccedil;&atilde;o multiunidade</span>
-                <em>-</em>
-                <em>-</em>
-                <em>Preparada</em>
-              </div>
-            </div>
-
-            <div class="if-plan-perks" aria-label="Beneficios dos planos" data-reveal>
-              <span><svg aria-hidden="true"><use href="#if-icon-calendar"></use></svg>Sem taxa de instala&ccedil;&atilde;o</span>
-              <span><svg aria-hidden="true"><use href="#if-icon-shield"></use></svg>Cancele quando quiser</span>
-              <span><svg aria-hidden="true"><use href="#if-icon-arrow"></use></svg>Atualiza&ccedil;&otilde;es gratuitas</span>
-              <span><svg aria-hidden="true"><use href="#if-icon-headset"></use></svg>Suporte especializado</span>
             </div>
           </div>
 
-          <aside class="if-why" id="quem-somos" aria-labelledby="if-why-title">
-            <h2 id="if-why-title" data-reveal>Por que escolher a <span>INOVAS Food?</span></h2>
-            <div class="if-why-list">
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-zap"></use></svg>
-                <div>
-                  <h3>Mais agilidade no dia a dia</h3>
-                  <p>Sua equipe enxerga o que precisa fazer agora, sem perder tempo procurando informa&ccedil;&otilde;es.</p>
-                </div>
-              </article>
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-chart"></use></svg>
-                <div>
-                  <h3>Mais controle, mais lucro</h3>
-                  <p>Voc&ecirc; acompanha vendas, custos e desempenho antes que pequenas perdas virem preju&iacute;zo.</p>
-                </div>
-              </article>
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-lock"></use></svg>
-                <div>
-                  <h3>Seguran&ccedil;a para o seu neg&oacute;cio</h3>
-                  <p>Permiss&otilde;es e rotinas organizadas reduzem risco operacional conforme a equipe cresce.</p>
-                </div>
-              </article>
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-refresh"></use></svg>
-                <div>
-                  <h3>Plataforma que evolui constantemente</h3>
-                  <p>A opera&ccedil;&atilde;o ganha novos recursos sem recome&ccedil;ar do zero ou trocar de ferramenta.</p>
-                </div>
-              </article>
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-headset"></use></svg>
-                <div>
-                  <h3>Suporte especializado</h3>
-                  <p>Atendimento pensado para rotina de restaurante, com linguagem pr&aacute;tica e foco em solu&ccedil;&atilde;o.</p>
-                </div>
-              </article>
-              <article data-reveal>
-                <svg aria-hidden="true"><use href="#if-icon-phone"></use></svg>
-                <div>
-                  <h3>Tudo em um &uacute;nico lugar</h3>
-                  <p>Menos abas abertas, menos retrabalho e mais clareza para tomar decis&otilde;es todos os dias.</p>
-                </div>
-              </article>
-            </div>
-          </aside>
+          <div class="if-extras">
+            <article><h3>Acesso único</h3><p>Um login para toda a equipe; cada pessoa vê só o que a permissão dela libera.</p></article>
+            <article><h3>Seu domínio</h3><p>Endereço INOVAS incluso em todos os planos. Domínio próprio do restaurante: + R$ 40/mês.</p></article>
+            <article><h3>Mesas do seu jeito</h3><p>Quantidade de mesas personalizável; pessoas informadas na abertura da comanda.</p></article>
+            <article><h3>Dados isolados</h3><p>Cada restaurante enxerga apenas os próprios dados.</p></article>
+          </div>
         </div>
       </section>
 
-      <section class="if-access" id="acesso-plataforma" aria-labelledby="if-access-title">
-        <div class="if-container if-access-inner" data-reveal>
-          <div>
-            <p class="if-access-kicker">Acessos preparados</p>
-            <h2 id="if-access-title">Gestor operacional hoje. Plataforma INOVAS em breve.</h2>
-            <p>
-              O gestor atual continua reservado para pedidos e opera&ccedil;&atilde;o di&aacute;ria. O acesso da
-              plataforma fica preparado para conta, plano, usu&aacute;rios, configura&ccedil;&otilde;es e administra&ccedil;&atilde;o
-              comercial quando essa &aacute;rea for ativada.
+      <!-- ============ ECONOMIA ============ -->
+      <section class="if-page" id="economia" data-page="economia" aria-labelledby="if-economia-title">
+        <div class="if-wrap if-page-pad">
+          <div class="if-page-head">
+            <div>
+              <p class="if-eyebrow">Economia</p>
+              <h2 id="if-economia-title" class="if-h1">Veja quanto você paga com a INOVAS — <em>e quanto deixa de gastar.</em></h2>
+            </div>
+            <p class="if-page-aside if-small">Valores de mercado = preços iniciais divulgados publicamente por fornecedores, consultados em nov/2026.</p>
+          </div>
+
+          <div class="if-builder" data-builder>
+            <div class="if-builder-form">
+              <h3>Monte o seu plano INOVAS</h3>
+              <div class="if-plan-pick" role="radiogroup" aria-label="Plano">
+                <label><input type="radio" name="if-plan" value="delivery" checked /><span><b>Delivery</b><small>R$ 100/mês</small></span></label>
+                <label><input type="radio" name="if-plan" value="profissional" /><span><b>Profissional</b><small>R$ 220/mês</small></span></label>
+                <label><input type="radio" name="if-plan" value="pro" /><span><b>PRO</b><small>a partir de R$ 350</small></span></label>
+              </div>
+              <label class="if-toggle">
+                <input type="checkbox" data-builder-domain />
+                <span class="if-toggle-ui" aria-hidden="true"></span>
+                <span><b>Domínio próprio (www.seurestaurante.com.br)</b><small>Adicional de R$ 40/mês · sem ele, o site usa um endereço INOVAS incluso</small></span>
+              </label>
+            </div>
+            <div class="if-builder-result" aria-live="polite">
+              <small>Com a INOVAS você paga só</small>
+              <strong><span data-builder-price>R$ 100</span><em>/mês</em></strong>
+              <p data-builder-desc>Plano Delivery · endereço INOVAS incluso</p>
+              <span class="if-pill-dark" data-builder-year>R$ 1.200 por ano · sem adesão · sem fidelidade</span>
+            </div>
+          </div>
+
+          <h3 class="if-h3">Comparado ao mercado</h3>
+          <div class="if-compare">
+            <div class="if-compare-row">
+              <div class="if-compare-what"><h4>Gestão completa + site de pedidos</h4><p>Mercado: sistema de gestão (a partir de R$ 240,79) + cardápio digital (a partir de R$ 115). Na INOVAS, tudo vem no plano Profissional.</p></div>
+              <div class="if-compare-market"><small>Mercado</small><s>R$ 355,79</s><span>por mês</span></div>
+              <div class="if-compare-inovas"><small>INOVAS Profissional</small><b>R$ 220</b><span>por mês</span></div>
+              <div class="if-compare-save"><small>Você economiza</small><b>R$ 1.629<em>/ano</em></b><span>R$ 135,79 por mês</span></div>
+            </div>
+            <div class="if-compare-row">
+              <div class="if-compare-what"><h4>Só pedidos online e delivery</h4><p>Mercado: automação de pedidos a partir de cerca de R$ 299,99. Na INOVAS, plano Delivery.</p></div>
+              <div class="if-compare-market"><small>Mercado</small><s>R$ 299,99</s><span>por mês</span></div>
+              <div class="if-compare-inovas"><small>INOVAS Delivery</small><b>R$ 100</b><span>por mês</span></div>
+              <div class="if-compare-save"><small>Você economiza</small><b>R$ 2.400<em>/ano</em></b><span>R$ 199,99 por mês</span></div>
+            </div>
+          </div>
+
+          <div class="if-calc" data-calc>
+            <div class="if-calc-form">
+              <p class="if-eyebrow if-eyebrow-light">Calculadora · app de delivery × INOVAS</p>
+              <h3>Quanto do seu delivery fica com o aplicativo?</h3>
+              <p class="if-calc-intro">
+                Com as taxas públicas do maior marketplace de delivery do país. Cada pedido que o cliente faz direto no
+                seu site deixa de pagar comissão — e a conta já desconta a mensalidade da INOVAS.
+              </p>
+              <fieldset class="if-calc-plan">
+                <legend>Plano que você usa no app</legend>
+                <label><input type="radio" name="if-app-plan" value="0.152" checked /><span><b>Plano Básico</b><small>12% + 3,2% online</small></span></label>
+                <label><input type="radio" name="if-app-plan" value="0.262" /><span><b>Plano Entrega</b><small>23% + 3,2% online</small></span></label>
+              </fieldset>
+              <label class="if-range">
+                <span>Quanto você vende por mês no app <b data-calc-sales-out>R$ 20.000</b></span>
+                <input type="range" min="2000" max="150000" step="1000" value="20000" data-calc-sales />
+              </label>
+              <label class="if-range">
+                <span>Quanto dessas vendas você leva para o seu site <b data-calc-share-out>30%</b></span>
+                <input type="range" min="5" max="100" step="5" value="30" data-calc-share />
+              </label>
+              <p class="if-calc-plan-line">Plano INOVAS na conta: <b data-calc-plan-name>Delivery · R$ 100/mês</b> <button type="button" class="if-link-button" data-calc-swap>trocar</button></p>
+            </div>
+            <div class="if-calc-result" aria-live="polite">
+              <div class="if-calc-app">
+                <small>No app, nesses pedidos você paga</small>
+                <strong data-calc-fee>R$ 912/mês</strong>
+                <span data-calc-fee-detail>comissão 12% + taxa online 3,2% sobre R$ 6.000 em pedidos</span>
+              </div>
+              <div class="if-calc-bars" aria-hidden="true">
+                <div><i data-calc-bar-app style="--h:100%"></i><span>App</span></div>
+                <div><i class="is-inovas" data-calc-bar-inovas style="--h:11%"></i><span>INOVAS</span></div>
+              </div>
+              <div class="if-calc-line"><span>Com a INOVAS você paga<small data-calc-inovas-desc>Plano Delivery · endereço INOVAS incluso</small></span><b data-calc-inovas>R$ 100/mês</b></div>
+              <div class="if-calc-line is-save"><span>Você economiza por mês</span><b data-calc-month>R$ 812</b></div>
+              <div class="if-calc-line is-save"><span>Você economiza em 12 meses</span><b data-calc-year>R$ 9.744</b></div>
+              <p class="if-calc-break" data-calc-break>A INOVAS se paga com R$ 658 por mês em pedidos feitos no seu site.</p>
+            </div>
+            <p class="if-calc-note">
+              Taxas públicas do marketplace (Básico: 12% + 3,2%; Entrega: 23% + 3,2%), consultadas em nov/2026. Não
+              considera custos de entrega própria nem a mensalidade do app. Na INOVAS você paga só a mensalidade do plano.
             </p>
           </div>
-          <div class="if-access-actions">
-              <a class="if-button if-button-secondary" href="/gestor">
-              Entrar no Gestor
-              <svg aria-hidden="true"><use href="#if-icon-login"></use></svg>
-            </a>
-            <a class="if-button if-button-primary" href="#contato" aria-label="Acessar Plataforma INOVAS Food em breve">
-              Acessar Plataforma
-              <svg aria-hidden="true"><use href="#if-icon-arrow"></use></svg>
-            </a>
+
+          <div class="if-trio">
+            <article><h3>Sem taxa de adesão</h3><p>Você começa sem pagar entrada. O dinheiro fica no caixa do restaurante.</p></article>
+            <article><h3>Sem fidelidade</h3><p>Cancele quando quiser. Você fica porque funciona, não por contrato.</p></article>
+            <article><h3>Menos desperdício</h3><p>Alerta de estoque baixo e de validade ajuda a comprar o que precisa — e a perder menos insumo.</p></article>
           </div>
         </div>
       </section>
 
-      <section class="if-proof" aria-labelledby="if-proof-title">
-        <div class="if-container">
-          <div class="if-section-title" data-reveal>
-            <h2 id="if-proof-title">Quem usa, recomenda</h2>
-            <p>Apresenta&ccedil;&atilde;o comercial baseada em uso piloto e perfis de restaurantes atendidos pela plataforma.</p>
-          </div>
-
-          <div class="if-proof-grid">
-            <article data-reveal>
-              <div class="if-proof-brand"><span>OP</span><strong>Opera&ccedil;&atilde;o piloto</strong></div>
-              <small>Piloto operacional</small>
-              <p>Refer&ecirc;ncia de valida&ccedil;&atilde;o para pedidos, card&aacute;pio, atendimento e rotina de delivery.</p>
-            </article>
-            <article data-reveal>
-              <div class="if-proof-brand"><span>RP</span><strong>Restaurante piloto</strong></div>
-              <small>Apresenta&ccedil;&atilde;o comercial</small>
-              <p>Exemplo visual para opera&ccedil;&otilde;es que precisam organizar pedidos, equipe e indicadores.</p>
-            </article>
-            <article data-reveal>
-              <div class="if-proof-brand"><span>DP</span><strong>Delivery parceiro</strong></div>
-              <small>Modelo de uso</small>
-              <p>Fluxo demonstrativo para restaurantes focados em venda online, retirada e entrega.</p>
-            </article>
-            <article data-reveal>
-              <div class="if-proof-brand"><span>GE</span><strong>Gest&atilde;o em evolu&ccedil;&atilde;o</strong></div>
-              <small>Roadmap comercial</small>
-              <p>Base preparada para financeiro, estoque, relat&oacute;rios, usu&aacute;rios e recursos futuros.</p>
-            </article>
-            <article data-reveal>
-              <div class="if-proof-brand"><span>IF</span><strong>INOVAS Food</strong></div>
-              <small>Plataforma SaaS</small>
-              <p>Home oficial criada para apresentar a solu&ccedil;&atilde;o p&uacute;blica sem alterar o gestor atual.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="if-final-cta" id="contato" aria-labelledby="if-cta-title">
-        <div class="if-container if-final-cta-inner" data-reveal>
-          <div class="if-final-icon" aria-hidden="true">
-            <svg><use href="#if-icon-calendar"></use></svg>
-          </div>
-          <div>
-            <h2 id="if-cta-title">Pronto para transformar a gest&atilde;o do seu restaurante?</h2>
-            <p>Veja em poucos minutos como a INOVAS Food organiza pedidos, equipe e indicadores para sua opera&ccedil;&atilde;o vender com mais controle.</p>
-            <div class="if-cta-bullets" aria-label="Beneficios da demonstracao">
-              <span>Demonstra&ccedil;&atilde;o guiada</span>
-              <span>Plano ideal indicado</span>
-              <span>Sem compromisso</span>
+      <!-- ============ NA PRÁTICA ============ -->
+      <section class="if-page" id="na-pratica" data-page="na-pratica" aria-labelledby="if-pratica-title">
+        <div class="if-wrap if-page-pad">
+          <div class="if-practice-hero">
+            <div>
+              <p class="if-eyebrow">Na prática</p>
+              <h2 id="if-pratica-title" class="if-h1">Testado todo dia num restaurante de verdade.</h2>
+              <p class="if-lead">
+                A INOVAS nasceu dentro do Tokyo Sushi, nosso primeiro restaurante. Antes de chegar até você, cada tela
+                passou pelo balcão, pela cozinha e pela entrega numa noite de movimento.
+              </p>
+            </div>
+            <div class="if-map" aria-hidden="true">
+              <div class="if-map-card"><b>Pedido #0416 a caminho</b><em>ao vivo</em><i class="if-map-progress"></i><small>O cliente acompanha cada etapa pelo celular.</small></div>
+              <svg viewBox="0 0 400 300" preserveAspectRatio="none">
+                <path class="if-map-route" d="M50 240 V160 H190 V60 H300 V160 H370" />
+                <circle class="if-map-start" cx="50" cy="240" r="12" />
+                <circle class="if-map-moto" cx="190" cy="160" r="7" />
+                <circle class="if-map-home" cx="370" cy="160" r="12" />
+              </svg>
+              <small class="if-map-note">Ilustração</small>
             </div>
           </div>
-          <a class="if-button if-button-light if-button-large" href="#footer-contato">
-            Solicitar Demonstra&ccedil;&atilde;o
-            <svg aria-hidden="true"><use href="#if-icon-arrow"></use></svg>
-          </a>
+
+          <div class="if-night">
+            <div class="if-night-head">
+              <h3 class="if-h3">Uma sexta-feira à noite com a INOVAS</h3>
+              <span class="if-chip"><span class="if-dot" aria-hidden="true"></span>Acompanhando o pedido <b>#0416</b></span>
+            </div>
+            <div class="if-night-progress" aria-hidden="true"><i data-night-progress></i></div>
+            <ol class="if-steps" data-night>
+              <li class="is-on"><b>18h</b><h4>Abre o caixa</h4><p>Caixa aberto em segundos. Cardápio do dia ajustado, itens em falta pausados.</p></li>
+              <li><b>19h30</b><h4>Chega o rush</h4><p>Site, balcão e mesas caindo na mesma fila. A cozinha vê a ordem certa.</p></li>
+              <li><b>21h</b><h4>Entregas na rua</h4><p>Entregadores com os pedidos certos e cliente acompanhando pelo celular.</p></li>
+              <li><b>23h30</b><h4>Fecha a noite</h4><p>Caixa conferido e o resumo da noite pronto no financeiro.</p></li>
+            </ol>
+          </div>
+
+          <h3 class="if-h3">Onde a eficiência aparece</h3>
+          <div class="if-eff">
+            <article><h4>Pedido digitado uma vez</h4><p>Do site ou do balcão direto para a cozinha e o caixa. Sem retrabalho e sem erro de transcrição.</p></article>
+            <article><h4>Cozinha sem papel perdido</h4><p>A produção vê o que fazer e em que ordem — o pedido não fica esquecido no balcão.</p></article>
+            <article><h4>Caixa que fecha</h4><p>Toda venda registrada no momento em que acontece. O fechamento vira conferência rápida.</p></article>
+            <article><h4>Estoque sem surpresa</h4><p>Alerta de estoque baixo e de validade antes de faltar.</p></article>
+            <article><h4>Equipe que aprende rápido</h4><p>Telas simples, pensadas para quem trabalha no ritmo de restaurante — inclusive em monitores modestos.</p></article>
+            <article><h4>Dono no controle de longe</h4><p>Vendas, pedidos e caixa em tempo real, de qualquer lugar.</p></article>
+          </div>
+
+          <h3 class="if-h3">Para começar? Quatro passos.</h3>
+          <ol class="if-start">
+            <li><b>1</b><h4>Demonstração</h4><p>Mostramos o sistema com a sua operação.</p></li>
+            <li><b>2</b><h4>Configuração</h4><p>Cadastramos cardápio, mesas, taxas e equipe.</p></li>
+            <li><b>3</b><h4>Treinamento</h4><p>Sua equipe aprende a usar no dia a dia.</p></li>
+            <li><b>4</b><h4>Vendendo</h4><p>Site no ar e pedidos entrando, com suporte por perto.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ============ PLANOS ============ -->
+      <section class="if-page" id="planos" data-page="planos" aria-labelledby="if-planos-title">
+        <div class="if-wrap if-page-pad">
+          <div class="if-page-head">
+            <div>
+              <p class="if-eyebrow">Planos</p>
+              <h2 id="if-planos-title" class="if-h1">Comece pelo essencial. Cresça quando quiser.</h2>
+            </div>
+            <ul class="if-tags"><li>Sem taxa de adesão</li><li>Sem fidelidade</li><li>Atualizações grátis</li></ul>
+          </div>
+
+          <div class="if-plans">
+            <article class="if-plan">
+              <header><h3>Delivery</h3><span class="if-badge-soft">Mais escolhido</span></header>
+              <p class="if-plan-desc">Para vender online com a sua marca, sem depender só de app.</p>
+              <p class="if-price"><b>R$ 100</b><span>/mês</span></p>
+              <ul>
+                <li>Pedidos e site do restaurante</li>
+                <li>Cardápio digital</li>
+                <li>Gestão de delivery</li>
+                <li>Clientes e avaliações</li>
+              </ul>
+              <p class="if-plan-note">Até R$ 2.400/ano a menos que automações de delivery do mercado</p>
+              <a class="if-button if-button-outline if-button-block" href="#contato" data-page-link="contato">Começar agora</a>
+            </article>
+            <article class="if-plan is-featured">
+              <header><h3>Profissional</h3><span class="if-badge">Melhor custo-benefício</span></header>
+              <p class="if-plan-desc">Gestão de ponta a ponta + site próprio num só lugar.</p>
+              <p class="if-price"><b>R$ 220</b><span>/mês</span></p>
+              <p class="if-plan-plus">Tudo do Delivery, mais:</p>
+              <ul>
+                <li>Caixa e gestão financeira</li>
+                <li>Estoque</li>
+                <li>Relatórios completos</li>
+              </ul>
+              <p class="if-plan-note">Economia de R$ 1.629/ano vs. juntar sistemas</p>
+              <a class="if-button if-button-primary if-button-block" href="#contato" data-page-link="contato">Começar agora</a>
+            </article>
+            <article class="if-plan">
+              <header><h3>PRO</h3><span class="if-badge-gray">Redes</span></header>
+              <p class="if-plan-desc">Para quem tem ou vai abrir mais de uma unidade.</p>
+              <p class="if-price"><small>a partir de</small><b>R$ 350</b><span>/mês</span></p>
+              <p class="if-plan-plus">Tudo do Profissional, mais:</p>
+              <ul>
+                <li>Operação com várias unidades</li>
+                <li>Visão consolidada da rede</li>
+              </ul>
+              <p class="if-plan-note">Um sistema para todas as unidades</p>
+              <a class="if-button if-button-outline if-button-block" href="#contato" data-page-link="contato">Solicitar demonstração</a>
+            </article>
+          </div>
+
+          <h3 class="if-h3">Compare o que vem em cada plano</h3>
+          <div class="if-table-wrap">
+            <table class="if-table">
+              <thead><tr><th scope="col">Recurso</th><th scope="col">Delivery</th><th scope="col" class="is-hl">Profissional</th><th scope="col">PRO</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Pedidos e site do restaurante</th><td>✓</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Cardápio digital</th><td>✓</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Gestão de delivery</th><td>✓</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Clientes e avaliações</th><td>✓</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Caixa e gestão financeira</th><td>—</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Estoque</th><td>—</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Relatórios completos</th><td>—</td><td class="is-hl">✓</td><td>✓</td></tr>
+                <tr><th scope="row">Operação com várias unidades</th><td>—</td><td class="is-hl">—</td><td>✓</td></tr>
+                <tr><th scope="row">Domínio próprio</th><td>+ R$ 40/mês</td><td class="is-hl">+ R$ 40/mês</td><td>+ R$ 40/mês</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="if-small if-muted">Todos os planos incluem um endereço INOVAS para o site. Domínio próprio é opcional: + R$ 40/mês.</p>
+        </div>
+      </section>
+
+      <!-- ============ DÚVIDAS ============ -->
+      <section class="if-page" id="duvidas" data-page="duvidas" aria-labelledby="if-duvidas-title">
+        <div class="if-wrap if-page-pad if-faq-grid">
+          <div class="if-faq-intro">
+            <p class="if-eyebrow">Dúvidas frequentes</p>
+            <h2 id="if-duvidas-title" class="if-h1">Tudo o que perguntam antes de começar.</h2>
+            <p class="if-lead">Não achou sua dúvida? Fale com a gente — quem responde entende de restaurante.</p>
+            <a class="if-button if-button-primary" href="#contato" data-page-link="contato">Falar com a equipe</a>
+          </div>
+          <div class="if-faq" data-faq>
+            <details open><summary>Quanto eu economizo com a INOVAS?</summary><p>Depende da sua operação. Na aba Economia você compara com sistemas do mercado e calcula quanto deixa de pagar de comissão levando pedidos para o seu site. Na demonstração, fazemos a conta com os seus números.</p></details>
+            <details><summary>Preciso instalar algum programa?</summary><p>Não. A INOVAS funciona pelo navegador. Você acessa com seu usuário e senha, de qualquer computador ou celular com internet.</p></details>
+            <details><summary>Tem taxa de adesão ou fidelidade?</summary><p>Não. Não cobramos taxa de adesão e você pode cancelar quando quiser.</p></details>
+            <details><summary>Funciona para o meu tipo de restaurante?</summary><p>Sim. Atende sushi, pizzaria, hamburgueria, marmitaria, cafeteria, padaria, açaíteria e restaurantes em geral — com delivery, balcão, retirada e mesas.</p></details>
+            <details><summary>Meu computador é simples. Vai funcionar?</summary><p>O sistema é pensado para funcionar bem em diferentes tamanhos de tela, inclusive monitores mais simples. Na demonstração, testamos no seu equipamento.</p></details>
+            <details><summary>Posso ter o site com meu próprio domínio?</summary><p>Sim. Todo plano já inclui um endereço vinculado à INOVAS. Se quiser o domínio próprio do restaurante (ex.: www.seurestaurante.com.br), é um adicional de R$ 40/mês.</p></details>
+            <details><summary>Meus dados ficam seguros?</summary><p>Cada restaurante enxerga apenas os próprios dados, e cada pessoa da equipe acessa conforme a permissão do seu usuário.</p></details>
+            <details><summary>As atualizações são cobradas?</summary><p>Não. Novidades e melhorias entram na mensalidade, sem custo extra.</p></details>
+            <details><summary>Como funciona o suporte?</summary><p>Suporte especializado, de quem entende a rotina de restaurante. Fale com a gente pelo e-mail contato@inovasfood.com.br.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FALE CONOSCO ============ -->
+      <section class="if-page" id="contato" data-page="contato" aria-labelledby="if-contato-title">
+        <div class="if-wrap if-page-pad">
+          <div class="if-contact">
+            <div class="if-contact-copy">
+              <p class="if-eyebrow if-eyebrow-light">Fale conosco</p>
+              <h2 id="if-contato-title" class="if-h1">Veja a INOVAS funcionando no seu restaurante.</h2>
+              <p>Numa conversa rápida, mostramos o sistema com o seu tipo de operação, fazemos a conta da sua economia e indicamos o plano certo.</p>
+              <ul class="if-checks if-checks-light">
+                <li>Demonstração guiada, sem compromisso</li>
+                <li>Cálculo da economia com os seus números</li>
+                <li>Sem taxa de adesão · sem fidelidade</li>
+              </ul>
+              <dl class="if-contact-info">
+                <div><dt>E-mail</dt><dd><a href="mailto:contato@inovasfood.com.br">contato@inovasfood.com.br</a></dd></div>
+                <div><dt>Onde estamos</dt><dd>São Paulo, SP</dd></div>
+              </dl>
+            </div>
+            <form class="if-contact-form" data-contact-form novalidate>
+              <h3>Solicitar demonstração</h3>
+              <label><span>Seu nome</span><input name="nome" autocomplete="name" required /></label>
+              <label><span>Nome do restaurante</span><input name="restaurante" autocomplete="organization" required /></label>
+              <label><span>WhatsApp</span><input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 90000-0000" required /></label>
+              <label><span>Tipo de restaurante</span>
+                <select name="tipo">
+                  <option>Sushi</option><option>Pizzaria</option><option>Hamburgueria</option><option>Marmitaria</option>
+                  <option>Cafeteria</option><option>Padaria</option><option>Açaíteria</option><option>Restaurante</option>
+                </select>
+              </label>
+              <p class="if-form-error" data-contact-error hidden>Preencha nome, restaurante e WhatsApp.</p>
+              <button class="if-button if-button-primary if-button-block if-button-lg" type="submit">Quero uma demonstração</button>
+              <p class="if-form-hint">Ao enviar, abrimos o seu e-mail com a mensagem pronta para contato@inovasfood.com.br.</p>
+            </form>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="if-footer">
-      <div class="if-container if-footer-grid">
+      <div class="if-wrap if-footer-grid">
         <div class="if-footer-brand">
           <img src="./assets/inovas-logo-footer.png" alt="INOVAS Food" width="150" height="49" loading="lazy" />
-          <p>A plataforma completa para restaurantes que querem crescer com tecnologia, organiza&ccedil;&atilde;o e simplicidade.</p>
-          <div class="if-footer-social" aria-label="Redes sociais">
-            <a href="https://www.instagram.com/" aria-label="Instagram ig">ig</a>
-            <a href="https://www.facebook.com/" aria-label="Facebook f">f</a>
-            <a href="https://www.linkedin.com/" aria-label="LinkedIn in">in</a>
-            <a href="https://www.youtube.com/" aria-label="YouTube yt">yt</a>
-            <a href="https://wa.me/5511999999999" aria-label="WhatsApp w">w</a>
-          </div>
+          <p>Plataforma de gestão para restaurantes. São Paulo, SP.</p>
         </div>
-
-        <nav aria-label="Navegacao da landing">
-          <strong>Navega&ccedil;&atilde;o</strong>
-          <a href="#recursos">Recursos</a>
-          <a href="#planos">Planos</a>
-          <a href="#demonstracao">Demonstra&ccedil;&atilde;o</a>
-          <a href="#quem-somos">Quem Somos</a>
-          <a href="#contato">Contato</a>
+        <nav aria-label="Produto">
+          <strong>Produto</strong>
+          <a href="#recursos" data-page-link="recursos">Recursos</a>
+          <a href="#economia" data-page-link="economia">Economia</a>
+          <a href="#planos" data-page-link="planos">Planos</a>
         </nav>
-
         <nav aria-label="Suporte">
           <strong>Suporte</strong>
-          <a href="#footer-contato">Central de Ajuda</a>
-          <a href="#planos">Perguntas Frequentes</a>
-          <a href="#contato">Termos de Uso</a>
-          <a href="#contato">Pol&iacute;tica de Privacidade</a>
-          <a href="#contato">LGPD</a>
+          <a href="#duvidas" data-page-link="duvidas">Dúvidas frequentes</a>
+          <a href="#contato" data-page-link="contato">Fale conosco</a>
+          <a href="/gestor">Entrar no Gestor</a>
         </nav>
-
-        <address id="footer-contato">
+        <div class="if-footer-cta">
           <strong>Contato</strong>
-          <a href="tel:+5511999999999">(11) 99999-9999</a>
-          <span>contato@inovasfood.com.br</span>
-          <span>S&atilde;o Paulo - SP, Brasil</span>
-        </address>
-
-        <form class="if-newsletter" action="#footer-contato" method="get">
-          <strong>Newsletter</strong>
-          <p>Receba novidades e dicas para gerir melhor seu restaurante.</p>
-          <label>
-            <span>Seu melhor email</span>
-            <input name="email" type="email" placeholder="Seu melhor email" autocomplete="email" />
-          </label>
-          <button type="submit" aria-label="Enviar newsletter">
-            <svg aria-hidden="true"><use href="#if-icon-arrow"></use></svg>
-          </button>
-        </form>
+          <a href="mailto:contato@inovasfood.com.br">contato@inovasfood.com.br</a>
+          <a class="if-button if-button-primary" href="#contato" data-page-link="contato">Agendar demonstração</a>
+        </div>
       </div>
-      <div class="if-container if-footer-bottom">
-        <small>&copy; 2026 INOVAS Food. Todos os direitos reservados.</small>
+      <div class="if-wrap if-footer-bottom">
+        <small>© 2026 INOVAS Food. Todos os direitos reservados.</small>
       </div>
     </footer>
 
     <script>
       (() => {
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const revealItems = document.querySelectorAll("[data-reveal]");
+        const pages = [...document.querySelectorAll("[data-page]")];
+        const pageIds = pages.map((page) => page.dataset.page);
+        // Âncoras antigas da home continuam funcionando.
+        const legacy = { demonstracao: "inicio", segmentos: "inicio", "acesso-plataforma": "inicio", "quem-somos": "na-pratica", "footer-contato": "contato" };
         const header = document.querySelector(".if-header");
+        const menu = document.getElementById("if-menu");
+        const toggle = document.querySelector("[data-menu-toggle]");
+        const money = (value) => "R$ " + Math.round(value).toLocaleString("pt-BR");
 
-        if (header) {
-          const updateHeaderShadow = () => {
-            header.classList.toggle("is-scrolled", window.scrollY > 8);
-          };
+        const showPage = (id, { scroll = true } = {}) => {
+          const target = pageIds.includes(id) ? id : legacy[id] || "inicio";
+          pages.forEach((page) => page.classList.toggle("is-active", page.dataset.page === target));
+          document.querySelectorAll(".if-menu [data-page-link]").forEach((link) => {
+            if (link.closest(".if-menu-actions")) return;
+            const on = link.dataset.pageLink === target;
+            link.classList.toggle("is-active", on);
+            if (on) link.setAttribute("aria-current", "page");
+            else link.removeAttribute("aria-current");
+          });
+          menu.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+          if (scroll) window.scrollTo({ top: 0, behavior: "auto" });
+        };
 
-          updateHeaderShadow();
-          window.addEventListener("scroll", updateHeaderShadow, { passive: true });
+        document.addEventListener("click", (event) => {
+          const link = event.target.closest("[data-page-link]");
+          if (!link) return;
+          event.preventDefault();
+          const id = link.dataset.pageLink;
+          if (location.hash !== "#" + id) history.pushState(null, "", "#" + id);
+          showPage(id);
+        });
+        window.addEventListener("popstate", () => showPage(location.hash.slice(1)));
+        window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
+        showPage(location.hash.slice(1), { scroll: false });
+        // As páginas são painéis: ao abrir com #endereço, começa do topo.
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+        window.addEventListener("load", () => window.scrollTo(0, 0));
+
+        toggle.addEventListener("click", () => {
+          const open = !menu.classList.contains("is-open");
+          menu.classList.toggle("is-open", open);
+          toggle.setAttribute("aria-expanded", String(open));
+        });
+        const updateShadow = () => header.classList.toggle("is-scrolled", window.scrollY > 8);
+        updateShadow();
+        window.addEventListener("scroll", updateShadow, { passive: true });
+
+        /* ---- painel ilustrativo do topo ---- */
+        const clock = document.querySelector("[data-mock-clock]");
+        const setClock = () => {
+          const now = new Date();
+          clock.textContent = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+        };
+        setClock();
+        if (!reduceMotion) {
+          let orders = 129;
+          let revenue = 4235;
+          let ticket = 414;
+          const toast = document.querySelector("[data-mock-toast]");
+          setInterval(() => {
+            orders += 1;
+            ticket += 1;
+            const value = 28 + Math.round(Math.random() * 45);
+            revenue += value;
+            document.querySelectorAll("[data-mock-orders],[data-mock-orders-2],[data-mock-orders-3]").forEach((el) => (el.textContent = orders));
+            document.querySelectorAll("[data-mock-revenue],[data-mock-revenue-2]").forEach((el) => (el.textContent = money(revenue)));
+            document.querySelector("[data-mock-kitchen]").textContent = 8 + Math.round(Math.random() * 4);
+            toast.innerHTML = "<b>Novo pedido #0" + ticket + "</b><span>Delivery · " + money(value) + ",00</span>";
+            toast.classList.remove("is-pop");
+            void toast.offsetWidth;
+            toast.classList.add("is-pop");
+            setClock();
+          }, 3200);
         }
 
-        if (!reduceMotion && "IntersectionObserver" in window) {
-          const observer = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                  entry.target.classList.add("is-visible");
-                  observer.unobserve(entry.target);
-                }
-              });
-            },
-            { threshold: 0.16 }
-          );
+        /* ---- recursos ---- */
+        const modules = [
+          { plan: "Todos os planos", name: "Pedidos", summary: "Uma fila única para todos os canais, do balcão ao delivery, com o status de cada pedido em tempo real.", items: ["Balcão, mesa, retirada e delivery na mesma tela", "Status atualizado para a equipe e para o cliente", "Impressão para cozinha e produção", "Histórico completo de cada pedido"], gain: "o pedido é lançado uma vez só e chega certinho na cozinha — sem papel perdido nem retrabalho." },
+          { plan: "Todos os planos", name: "Cardápio digital", summary: "Seu restaurante com site próprio, a sua marca e um cardápio que você muda na hora.", items: ["Site do restaurante com a sua identidade", "Fotos, adicionais e observações por item", "Pausar ou alterar produtos em segundos", "Pedido cai direto no sistema"], gain: "acabou o salmão? Você pausa o item em segundos e evita pedido cancelado." },
+          { plan: "Todos os planos", name: "Delivery", summary: "Controle das entregas do começo ao fim, sem planilha e sem grupo de WhatsApp bagunçado.", items: ["Taxas de entrega por região", "Controle de entregadores", "Cliente acompanha o pedido", "Visão de pedidos em rota"], gain: "menos ligação de cliente perguntando “cadê meu pedido?”." },
+          { plan: "Profissional e PRO", name: "Caixa e financeiro", summary: "Caixa ágil, comandas por mesa e o financeiro alimentado automaticamente pelas vendas.", items: ["Abertura, sangria e fechamento de caixa", "Comandas por mesa, com número de pessoas na abertura", "Fechamento com esperado, conferido e diferença", "Pensado para funcionar bem em telas simples"], gain: "o fechamento da noite vira conferência, não investigação." },
+          { plan: "Profissional e PRO", name: "Estoque", summary: "Saiba o que tem, o que está acabando e o que está perto de vencer.", items: ["Alerta de estoque baixo e crítico", "Controle de validade", "Entradas e ajustes registrados", "Compra mais certeira"], gain: "você descobre que o insumo está acabando na quinta, não no meio do rush de sábado." },
+          { plan: "Todos os planos", name: "Clientes", summary: "Os clientes são do seu restaurante. Conheça quem pede, o quê e com que frequência.", items: ["Histórico de pedidos por cliente", "Endereços salvos para pedir mais rápido", "Contato direto, sem intermediário", "Base pronta para ações de relacionamento"], gain: "chame de volta quem sumiu — sem pagar comissão para isso." },
+          { plan: "Profissional e PRO", name: "Relatórios", summary: "Os números do seu restaurante, prontos para decidir — sem exportar nada.", items: ["Vendas por dia, canal e horário", "Ticket médio e produtos campeões", "Desempenho do delivery", "Formas de pagamento do período"], gain: "você sabe qual dia reforçar a equipe e qual prato vale promover." },
+          { plan: "Todos os planos", name: "Avaliações", summary: "Ouça o cliente depois de cada pedido e corrija rápido o que não agradou.", items: ["Nota após cada pedido", "Comentários centralizados", "Identifique padrões de reclamação", "Responda antes que vire problema"], gain: "uma reclamação vira ajuste no mesmo dia, não estrela perdida para sempre." },
+        ];
+        const panel = document.querySelector("[data-module-panel]");
+        const escapeText = (value) => String(value).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+        document.querySelectorAll("[data-module]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const mod = modules[Number(button.dataset.module)];
+            document.querySelectorAll("[data-module]").forEach((other) => other.setAttribute("aria-selected", String(other === button)));
+            panel.querySelector("[data-module-plan]").textContent = mod.plan;
+            panel.querySelector("[data-module-name]").textContent = mod.name;
+            panel.querySelector("[data-module-summary]").textContent = mod.summary;
+            panel.querySelector("[data-module-items]").innerHTML = mod.items.map((item) => "<li>" + escapeText(item) + "</li>").join("");
+            panel.querySelector("[data-module-gain]").textContent = mod.gain;
+          });
+        });
 
-          revealItems.forEach((item) => observer.observe(item));
-        } else {
-          revealItems.forEach((item) => item.classList.add("is-visible"));
-        }
+        /* ---- economia ---- */
+        const PLANS = {
+          delivery: { name: "Delivery", price: 100, from: false },
+          profissional: { name: "Profissional", price: 220, from: false },
+          pro: { name: "PRO", price: 350, from: true },
+        };
+        const builder = document.querySelector("[data-builder]");
+        const domainBox = builder.querySelector("[data-builder-domain]");
+        const planKey = () => builder.querySelector('input[name="if-plan"]:checked').value;
+        const monthly = () => PLANS[planKey()].price + (domainBox.checked ? 40 : 0);
+        const planDesc = () => "Plano " + PLANS[planKey()].name + " · " + (domainBox.checked ? "domínio próprio incluso" : "endereço INOVAS incluso");
+        const calc = document.querySelector("[data-calc]");
+        const sales = calc.querySelector("[data-calc-sales]");
+        const share = calc.querySelector("[data-calc-share]");
+        const renderCalc = () => {
+          const rate = Number(calc.querySelector('input[name="if-app-plan"]:checked').value);
+          const moved = Number(sales.value) * (Number(share.value) / 100);
+          const fee = moved * rate;
+          const inovas = monthly();
+          const saving = fee - inovas;
+          const commission = rate > 0.2 ? "23%" : "12%";
+          calc.querySelector("[data-calc-sales-out]").textContent = money(Number(sales.value));
+          calc.querySelector("[data-calc-share-out]").textContent = share.value + "%";
+          calc.querySelector("[data-calc-fee]").textContent = money(fee) + "/mês";
+          calc.querySelector("[data-calc-fee-detail]").textContent = "comissão " + commission + " + taxa online 3,2% sobre " + money(moved) + " em pedidos";
+          calc.querySelector("[data-calc-plan-name]").textContent = PLANS[planKey()].name + " · " + money(inovas) + "/mês";
+          calc.querySelector("[data-calc-inovas]").textContent = money(inovas) + "/mês";
+          calc.querySelector("[data-calc-inovas-desc]").textContent = planDesc();
+          calc.querySelector("[data-calc-month]").textContent = saving > 0 ? money(saving) : "R$ 0";
+          calc.querySelector("[data-calc-year]").textContent = saving > 0 ? money(saving * 12) : "R$ 0";
+          calc.querySelector("[data-calc-break]").textContent = "A INOVAS se paga com " + money(inovas / rate) + " por mês em pedidos feitos no seu site.";
+          const top = Math.max(fee, inovas, 1);
+          calc.querySelector("[data-calc-bar-app]").style.setProperty("--h", Math.max(4, (fee / top) * 100) + "%");
+          calc.querySelector("[data-calc-bar-inovas]").style.setProperty("--h", Math.max(4, (inovas / top) * 100) + "%");
+        };
+        const renderBuilder = () => {
+          const plan = PLANS[planKey()];
+          builder.querySelector("[data-builder-price]").textContent = (plan.from ? "a partir de " : "") + money(monthly());
+          builder.querySelector("[data-builder-desc]").textContent = planDesc();
+          builder.querySelector("[data-builder-year]").textContent = money(monthly() * 12) + " por ano · sem adesão · sem fidelidade";
+          renderCalc();
+        };
+        builder.addEventListener("change", renderBuilder);
+        calc.addEventListener("input", renderCalc);
+        calc.addEventListener("change", renderCalc);
+        calc.querySelector("[data-calc-swap]").addEventListener("click", () => {
+          const keys = Object.keys(PLANS);
+          const next = keys[(keys.indexOf(planKey()) + 1) % keys.length];
+          builder.querySelector('input[name="if-plan"][value="' + next + '"]').checked = true;
+          renderBuilder();
+        });
+        renderBuilder();
 
-        const counters = document.querySelectorAll("[data-count-to]");
-        if (!counters.length || reduceMotion) return;
+        /* ---- na prática: a noite avança sozinha ---- */
+        const steps = [...document.querySelectorAll("[data-night] li")];
+        const nightBar = document.querySelector("[data-night-progress]");
+        let step = 0;
+        const paintNight = () => {
+          steps.forEach((li, index) => li.classList.toggle("is-on", index === step));
+          nightBar.style.width = ((step + 1) / steps.length) * 100 + "%";
+        };
+        paintNight();
+        if (!reduceMotion) setInterval(() => { step = (step + 1) % steps.length; paintNight(); }, 2600);
 
-        counters.forEach((counter) => {
-          const target = Number(counter.dataset.countTo || 0);
-          if (!target) return;
-          const prefix = counter.textContent.trim().startsWith("+") ? "+" : "";
-          const start = performance.now();
-          const duration = 900;
+        /* ---- dúvidas: uma aberta por vez ---- */
+        const faqItems = [...document.querySelectorAll("[data-faq] details")];
+        faqItems.forEach((item) => item.addEventListener("toggle", () => {
+          if (item.open) faqItems.forEach((other) => { if (other !== item) other.open = false; });
+        }));
 
-          const tick = (now) => {
-            const progress = Math.min((now - start) / duration, 1);
-            const value = Math.round(target * (1 - Math.pow(1 - progress, 3)));
-            counter.textContent = `${prefix}${value.toLocaleString("pt-BR")}`;
-            if (progress < 1) requestAnimationFrame(tick);
-          };
-
-          requestAnimationFrame(tick);
+        /* ---- contato: abre o e-mail com a mensagem pronta ---- */
+        const form = document.querySelector("[data-contact-form]");
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const data = new FormData(form);
+          const nome = String(data.get("nome") || "").trim();
+          const restaurante = String(data.get("restaurante") || "").trim();
+          const whatsapp = String(data.get("whatsapp") || "").trim();
+          const error = form.querySelector("[data-contact-error]");
+          if (!nome || !restaurante || whatsapp.replace(/\D/g, "").length < 10) {
+            error.hidden = false;
+            return;
+          }
+          error.hidden = true;
+          const body = "Nome: " + nome + "\nRestaurante: " + restaurante + "\nWhatsApp: " + whatsapp + "\nTipo: " + data.get("tipo");
+          window.location.href = "mailto:contato@inovasfood.com.br?subject=" + encodeURIComponent("Demonstração INOVAS - " + restaurante) + "&body=" + encodeURIComponent(body);
         });
       })();
     </script>
