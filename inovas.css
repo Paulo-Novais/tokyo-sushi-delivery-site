@@ -515,3 +515,22 @@ html.if-js .if-page:not(.is-active) { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Comparação de planos: incluso em verde, não incluso em vermelho. */
+.if-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+}
+.if-mark.is-yes { background: #dcfce7; color: #15803d; box-shadow: inset 0 0 0 1.5px #86efac; }
+.if-mark.is-no { background: #fee2e2; color: #b91c1c; box-shadow: inset 0 0 0 1.5px #fca5a5; }
+.if-small .if-mark { width: 20px; height: 20px; font-size: 11px; }
+.if-table td.is-addon { color: var(--if-ink); font-weight: 700; white-space: nowrap; }
+.if-table tbody tr:hover > * { background: #fafafa; }
+.if-table tbody tr:hover > td.is-hl { background: #ffefe7; }
