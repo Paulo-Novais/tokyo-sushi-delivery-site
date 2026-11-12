@@ -43,21 +43,33 @@ test("Equipe INOVAS: convite, perfis e auditoria do esboço v2", async ({ page }
   // O esboço tinha 2 etapas e escopo por restaurante; o sistema não tem, então não aparecem.
   await expect(page.locator("body")).not.toContainText("2 etapas");
 
+  // Convidar abre a janela do esboço (perfis em cartões, validade do convite)
+  await page.locator("[data-invite-focus]").click();
+  await expect(page.locator("[data-invite-dialog]")).toBeVisible();
+  await expect(page.locator("#convidar-titulo")).toHaveText("Convidar usuário");
+  await expect(page.locator(".sys-inv-role", { hasText: "Master" })).toContainText("Tudo no System");
+  await page.screenshot({ path: path.join(artifactDirectory, "convidar-usuario.png") });
+
   // Validação local antes de chamar a API
   await page.locator("[data-invite-form] button[type='submit']").click();
   await expect(page.locator("[data-invite-error]")).toHaveText("Informe o nome da pessoa.");
 
-  // Escolher o perfil atualiza "o que pode fazer"
-  await page.locator(".sys-invite-chip", { hasText: "Comercial" }).click();
-  await expect(page.locator(".sys-invite-caps")).toContainText("O que Comercial pode fazer");
-  await expect(page.locator(".sys-invite-caps .is-no").first()).toBeVisible();
+  // Escolher o perfil marca o cartão
+  await page.locator(".sys-inv-role", { hasText: "Comercial" }).click();
+  await expect(page.locator(".sys-inv-role.is-active")).toContainText("Comercial");
+  await page.locator("[data-invite-form] select[name='ttl']").selectOption("168");
 
   const suffix = Date.now().toString(36);
   const email = `convite.${suffix}@inovas.local`;
   await page.locator("[data-invite-form] input[name='name']").fill(`Convite ${suffix}`);
   await page.locator("[data-invite-form] input[name='email']").fill(email);
   await page.locator("[data-invite-form] button[type='submit']").click();
-  await expect(page.locator(".sys-invite-done")).toContainText(`Convite registrado para ${email}`);
+  await expect(page.locator(".sys-inv-done")).toContainText(`Convite registrado para ${email}`);
+  // Validade de 7 dias escolhida na janela
+  const inSevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  await expect(page.locator(".sys-inv-done")).toContainText(`Vale até ${inSevenDays}`);
+  await page.locator(".sys-inv-actions [data-invite-close]").click();
+  await expect(page.locator("[data-invite-dialog]")).toBeHidden();
   const invitedRow = page.locator(".sys-team-table tr", { hasText: email });
   await expect(invitedRow).toContainText("Comercial");
   await expect(invitedRow).toContainText("Convite pendente");
@@ -110,6 +122,12 @@ test("Equipe INOVAS: convite, perfis e auditoria do esboço v2", async ({ page }
   await expect(page.getByRole("heading", { name: "Usuários INOVAS" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(artifactDirectory, "usuarios-inovas-mobile.png"), fullPage: true });
+  await page.locator("[data-invite-focus]").click();
+  await expect(page.locator("[data-invite-dialog]")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(artifactDirectory, "convidar-usuario-mobile.png") });
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-invite-dialog]")).toBeHidden();
 
   expect(consoleErrors, consoleErrors.join(" | ")).toEqual([]);
 });

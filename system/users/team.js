@@ -202,71 +202,117 @@
 
   /* ---------- convite ---------- */
 
-  const renderCapabilities = () => {
-    const role = roleOf(state.inviteRole);
-    if (!role) return "";
-    const granted = new Set(role.permissions || []);
-    const yes = (role.permissions || [])
-      .filter((key) => !key.startsWith("tenant."))
-      .map((key) => `<li class="is-yes">${icon("check", 14)}<span>${escapeHtml(permissionText(key))}</span></li>`);
-    const no = KEY_LIMITS.filter((key) => !granted.has(key)).map(
-      (key) => `<li class="is-no">${icon("close", 14)}<span>${escapeHtml(permissionText(key))}</span></li>`
-    );
-    return `
-      <div class="sys-invite-caps" aria-live="polite">
-        <span class="sys-invite-caps-title">O que ${escapeHtml(role.label)} pode fazer</span>
-        <ul>${yes.join("")}${no.join("")}</ul>
-      </div>`;
+  // O que cada perfil faz, em uma linha (o cartão do esboço). Perfis novos caem no texto genérico.
+  const ROLE_SUMMARY = {
+    MASTER: "Tudo no System, inclusive usuários, planos e domínios.",
+    ADMINISTRADOR: "Quase tudo, sem mexer em usuários, perfis, cobrança e ajustes da plataforma.",
+    SOCIO: "Visão completa do negócio, sem gerenciar usuários, perfis e cobrança.",
+    DESENVOLVEDOR: "Suporte técnico, saúde do sistema e auditoria.",
+    SUPORTE: "Abre sessões de suporte temporárias nos restaurantes.",
+    CUSTOMER_SUCCESS: "Acompanha os restaurantes e abre suporte quando precisam.",
+    IMPLANTACAO: "Cadastra restaurantes, domínios e acompanha a implantação.",
+    FINANCEIRO_INOVAS: "Cobrança e faturas dos restaurantes.",
+    COMERCIAL: "Cadastro e plano dos restaurantes, sem dados operacionais.",
+    AUDITOR: "Só visualiza auditoria, cobrança, usuários e saúde da plataforma.",
   };
-
-  const renderInviteResult = () => {
-    const result = state.inviteResult;
-    if (!result) return "";
-    const expires = formatDateTime(result.user?.invitation?.expiresAt);
-    const link = result.access?.invitationUrl || "";
-    return `
-      <div class="sys-invite-done" role="status">
-        <strong>${icon("check", 16)}Convite registrado para ${escapeHtml(result.user?.email || "")}</strong>
-        <span>${expires ? `Vale até ${escapeHtml(expires)}.` : "O prazo segue a configuração da plataforma."} Fica na auditoria.</span>
-        ${link
-          ? `<label class="sys-invite-link"><span>Link do convite (aparece só uma vez)</span><input readonly value="${escapeHtml(link)}" data-invite-link /></label><button type="button" class="sys-btn sys-btn-sm sys-invite-copy" data-invite-copy>Copiar link</button>`
-          : "<span>O link não é exibido neste ambiente; a pessoa recebe pelo canal configurado.</span>"}
-      </div>`;
+  const roleSummary = (role) => {
+    const known = ROLE_SUMMARY[normalize(role.key)];
+    if (known) return known;
+    const count = (role.permissions || []).filter((key) => !key.startsWith("tenant.")).length;
+    return `${count} permissão(ões) no System.`;
   };
 
   // Convidar = escolher o perfil da pessoa: exclusivo do usuário Master.
   const isMaster = () => normalize(state.session?.role) === "MASTER";
 
+  const openInvite = () => {
+    const dialog = app.querySelector("[data-invite-dialog]");
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector('input[name="name"]')?.focus();
+  };
+
+  const closeInvite = () => {
+    const dialog = app.querySelector("[data-invite-dialog]");
+    if (dialog?.open) dialog.close();
+    state.inviteResult = null;
+  };
+
+  const renderInviteResult = () => {
+    const result = state.inviteResult;
+    const expires = formatDateTime(result.user?.invitation?.expiresAt);
+    const link = result.access?.invitationUrl || "";
+    return `
+      <div class="sys-inv-done" role="status">
+        <span class="sys-inv-done-icon">${icon("check", 22)}</span>
+        <strong>Convite registrado para ${escapeHtml(result.user?.email || "")}</strong>
+        <span>${expires ? `Vale até ${escapeHtml(expires)}.` : "O prazo segue a configuração da plataforma."} Fica registrado na Auditoria.</span>
+        ${
+          link
+            ? `<label class="sys-inv-link"><span>Link do convite (aparece só uma vez)</span><input readonly value="${escapeHtml(link)}" data-invite-link /></label>
+               <button type="button" class="sys-btn sys-btn-secondary" data-invite-copy>Copiar link</button>`
+            : "<span>O link não é exibido neste ambiente; a pessoa recebe pelo canal configurado.</span>"
+        }
+      </div>
+      <div class="sys-inv-actions"><button type="button" class="sys-btn sys-btn-primary" data-invite-close>Fechar</button></div>`;
+  };
+
   const renderInvite = () => {
     if (!can("system.users.manage") || !isMaster()) return "";
-    const available = roles();
+    const available = [...roles()].sort((left, right) => Number(right.authority || 0) - Number(left.authority || 0));
     if (!state.inviteRole || !roleOf(state.inviteRole)) {
-      state.inviteRole = (available.find((role) => normalize(role.key) !== "MASTER") || available[0] || {}).key || "";
+      state.inviteRole =
+        (available.find((role) => normalize(role.key) === "SUPORTE") ||
+          available.find((role) => normalize(role.key) !== "MASTER") ||
+          available[0] ||
+          {}).key || "";
     }
     return `
-      <aside class="sys-invite" aria-labelledby="convidar-membro">
-        <h2 id="convidar-membro">${icon("userPlus", 18)}Convidar membro</h2>
-        <form class="sys-invite-form" data-invite-form novalidate>
-          <label class="sys-invite-field"><span>Nome</span><input name="name" autocomplete="off" placeholder="Nome e sobrenome" required /></label>
-          <label class="sys-invite-field"><span>E-mail da equipe</span><input name="email" type="email" autocomplete="off" placeholder="nome@inovasfood.com.br" required data-invite-email /></label>
-          <fieldset class="sys-invite-roles">
-            <legend>Perfil</legend>
-            <div class="sys-invite-chips">
-              ${available
-                .map(
-                  (role) => `<label class="sys-invite-chip ${role.key === state.inviteRole ? "is-active" : ""}"><input type="radio" name="role" value="${escapeHtml(role.key)}" ${role.key === state.inviteRole ? "checked" : ""} data-invite-role />${escapeHtml(role.label)}</label>`
-                )
-                .join("")}
-            </div>
-          </fieldset>
-          <div data-invite-caps>${renderCapabilities()}</div>
-          <p class="sys-invite-rule">${icon("lock", 14)}Ninguém da equipe entra num restaurante sem sessão de suporte, com motivo e prazo.</p>
-          <p class="sys-invite-error" data-invite-error hidden></p>
-          <button class="sys-btn sys-btn-primary sys-btn-block" type="submit" ${state.sending ? "disabled" : ""}>${state.sending ? "Enviando…" : "Enviar convite"}</button>
-        </form>
-        <div data-invite-result>${renderInviteResult()}</div>
-      </aside>`;
+      <dialog class="sys-inv-dialog" data-invite-dialog aria-labelledby="convidar-titulo">
+        <header class="sys-inv-head">
+          <div>
+            <span class="sys-inv-eyebrow">Equipe INOVAS</span>
+            <h2 id="convidar-titulo">Convidar usuário</h2>
+            <p>A pessoa recebe um link e cria a própria senha.</p>
+          </div>
+          <button type="button" class="sys-inv-close" aria-label="Fechar" data-invite-close>${icon("close", 18)}</button>
+        </header>
+        ${
+          state.inviteResult
+            ? renderInviteResult()
+            : `<form class="sys-inv-form" data-invite-form novalidate>
+                <div class="sys-inv-row">
+                  <label class="sys-inv-field"><span>Nome</span><input name="name" autocomplete="off" placeholder="Nome completo" required /></label>
+                  <label class="sys-inv-field"><span>E-mail</span><input name="email" type="email" autocomplete="off" placeholder="nome@inovasfood.com.br" required data-invite-email /></label>
+                </div>
+                <fieldset class="sys-inv-roles">
+                  <legend>Perfil</legend>
+                  ${available
+                    .map(
+                      (role) => `
+                        <label class="sys-inv-role ${role.key === state.inviteRole ? "is-active" : ""}">
+                          <input type="radio" name="role" value="${escapeHtml(role.key)}" ${role.key === state.inviteRole ? "checked" : ""} data-invite-role />
+                          <span><strong>${escapeHtml(role.label)}</strong><small>${escapeHtml(roleSummary(role))}</small></span>
+                        </label>`
+                    )
+                    .join("")}
+                </fieldset>
+                <div class="sys-inv-options">
+                  <label class="sys-inv-ttl"><span>Validade do convite</span>
+                    <select name="ttl"><option value="48" selected>48 horas</option><option value="168">7 dias</option></select>
+                  </label>
+                </div>
+                <p class="sys-inv-note">O convite e o perfil escolhido ficam registrados na Auditoria. Ninguém da equipe entra num restaurante sem sessão de suporte.</p>
+                <p class="sys-invite-error" data-invite-error hidden></p>
+                <div class="sys-inv-actions">
+                  <button type="button" class="sys-btn sys-btn-secondary" data-invite-close>Cancelar</button>
+                  <button class="sys-btn sys-btn-primary" type="submit" ${state.sending ? "disabled" : ""}>${state.sending ? "Enviando…" : "Enviar convite"}</button>
+                </div>
+              </form>`
+        }
+      </dialog>`;
   };
+
 
   /* ---------- página ---------- */
 
@@ -285,7 +331,7 @@
         </div>
       </header>
       ${renderKpis()}
-      <div class="sys-team-layout ${manage ? "" : "is-single"}">
+      <div class="sys-team-layout is-single">
         <section class="sys-card sys-team-card" aria-labelledby="equipe-titulo">
           <div class="sys-team-card-head">
             <h2 id="equipe-titulo">Equipe <span class="sys-team-count">${state.users.length}</span></h2>
@@ -298,8 +344,8 @@
             </table>
           </div>
         </section>
-        ${renderInvite()}
-      </div>`;
+      </div>
+      ${renderInvite()}`;
     renderRows();
   };
 
@@ -356,13 +402,13 @@
     try {
       const payload = await requestJson("/api/system/users", {
         method: "POST",
-        body: JSON.stringify({ name, email, role, credentialMode: "INVITE" }),
+        body: JSON.stringify({ name, email, role, credentialMode: "INVITE", invitationTtlHours: Number(data.get("ttl") || 48) }),
       });
       state.inviteResult = payload.data || null;
       notify("Convite registrado e enviado para a auditoria.");
       await loadUsers();
       render();
-      app.querySelector("[data-invite-result]")?.scrollIntoView({ block: "nearest" });
+      openInvite();
     } catch (error) {
       button.disabled = false;
       button.textContent = "Enviar convite";
@@ -395,11 +441,9 @@
   document.addEventListener("change", (event) => {
     if (event.target.matches("[data-invite-role]")) {
       state.inviteRole = event.target.value;
-      for (const chip of app.querySelectorAll(".sys-invite-chip")) {
-        chip.classList.toggle("is-active", chip.querySelector("input")?.checked === true);
+      for (const card of app.querySelectorAll(".sys-inv-role")) {
+        card.classList.toggle("is-active", card.querySelector("input")?.checked === true);
       }
-      const caps = app.querySelector("[data-invite-caps]");
-      if (caps) caps.innerHTML = renderCapabilities();
     }
   });
 
@@ -413,9 +457,18 @@
   document.addEventListener("click", async (event) => {
     if (event.target.closest("[data-team-logout]")) return void logout();
     if (event.target.closest("[data-invite-focus]")) {
-      const field = app.querySelector('[data-invite-form] input[name="name"]');
-      field?.scrollIntoView({ block: "center", behavior: "smooth" });
-      field?.focus({ preventScroll: true });
+      state.inviteResult = null;
+      render();
+      openInvite();
+      return;
+    }
+    if (event.target.closest("[data-invite-close]")) {
+      closeInvite();
+      return;
+    }
+    // Clique fora da janela fecha.
+    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-invite-dialog]")) {
+      closeInvite();
       return;
     }
     if (event.target.closest("[data-invite-copy]")) {

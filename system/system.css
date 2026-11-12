@@ -3032,3 +3032,264 @@ body.sys-body .sys-live-end:hover {
 .sys-perm-table tbody tr:not(.sys-perm-section):hover td.is-col-active {
   background: #ffedd5;
 }
+
+/* =====================================================================
+   Convidar usuário (esboço "Usuários INOVAS · Convidar usuário").
+   ===================================================================== */
+dialog.sys-inv-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 26px;
+  overflow: auto;
+  border: 0;
+  border-radius: 18px;
+  background: var(--sys-surface);
+  color: var(--sys-ink);
+  font-family: var(--sys-font);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+dialog.sys-inv-dialog::backdrop {
+  background: rgba(17, 17, 17, 0.6);
+}
+
+.sys-inv-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sys-inv-eyebrow {
+  color: var(--sys-brand-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sys-inv-head h2 {
+  margin: 4px 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.sys-inv-head p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14.5px;
+}
+
+.sys-inv-close {
+  display: grid;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+}
+
+.sys-inv-close:focus-visible,
+.sys-inv-role:focus-within,
+.sys-inv-field input:focus,
+.sys-inv-ttl select:focus {
+  outline: 0;
+  box-shadow: var(--sys-focus);
+}
+
+.sys-inv-form {
+  display: grid;
+  gap: 18px;
+}
+
+.sys-inv-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sys-inv-field {
+  display: grid;
+  gap: 8px;
+}
+
+.sys-inv-field > span,
+.sys-inv-roles legend {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sys-inv-field input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--sys-ink);
+  font: 500 15px/1.2 var(--sys-font);
+}
+
+.sys-inv-roles {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sys-inv-roles legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.sys-inv-role {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--sys-border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.sys-inv-role.is-active {
+  border-color: var(--sys-brand);
+  background: var(--sys-brand-soft);
+}
+
+.sys-inv-role input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--sys-brand);
+}
+
+.sys-inv-role span {
+  display: grid;
+  gap: 3px;
+}
+
+.sys-inv-role strong {
+  font-size: 15.5px;
+}
+
+.sys-inv-role small {
+  color: #4b5563;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.sys-inv-options {
+  padding: 14px 16px;
+  border: 1px solid var(--sys-border);
+  border-radius: 12px;
+  background: #fafaf9;
+}
+
+.sys-inv-ttl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.sys-inv-ttl select {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--sys-ink);
+  font: 500 15px/1 var(--sys-font);
+}
+
+.sys-inv-note {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13.5px;
+}
+
+.sys-inv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sys-inv-actions .sys-btn {
+  min-height: 46px;
+  padding: 0 20px;
+}
+
+.sys-inv-done {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--sys-ok-bg);
+  color: var(--sys-ok-ink);
+  font-size: 14.5px;
+}
+
+.sys-inv-done strong {
+  color: var(--sys-ink);
+  font-size: 16px;
+}
+
+.sys-inv-done-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sys-ok-bar);
+  color: #ffffff;
+}
+
+.sys-inv-link {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  color: var(--sys-ink);
+  font-weight: 600;
+}
+
+.sys-inv-link input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  font: 500 13.5px/1 var(--sys-font);
+}
+
+@media (max-width: 560px) {
+  dialog.sys-inv-dialog {
+    padding: 20px 16px;
+  }
+
+  .sys-inv-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sys-inv-ttl {
+    flex-wrap: wrap;
+  }
+
+  .sys-inv-actions .sys-btn {
+    flex: 1;
+  }
+}
