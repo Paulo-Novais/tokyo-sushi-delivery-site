@@ -89,6 +89,14 @@ const handlePremiumPage = async (req, res) => {
     return sendHtml(res, 200, html);
   } catch (error) {
     const status = Number(error?.statusCode || 500);
+    if (!(status >= 400 && status < 500)) {
+      console.error("[premium-page]", {
+        page: pageKey,
+        slug: rawSlug,
+        errorCode: error?.errorCode || error?.code || "",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
     return sendHtml(res, status >= 400 && status < 500 ? 404 : 500, RESTAURANT_NOT_FOUND_HTML);
   }
 };
