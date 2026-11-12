@@ -1098,7 +1098,7 @@ const validateSettings = async (page) => {
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Personalização do restaurante",
+    "Configurações do site",
     "Configuracoes deveria renderizar personalizacao do restaurante."
   );
   assert.equal(

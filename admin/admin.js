@@ -9699,6 +9699,210 @@ const renderRestaurantAppearancePreview = () => {
   `;
 };
 
+// ===================== Configurações do site (esboço "Configurações do site") =====================
+const SITE_SETTINGS_TABS = Object.freeze([
+  { key: "identity", label: "Identidade", title: "Identidade", text: "Nome, descrição, logo e banner do seu restaurante." },
+  { key: "appearance", label: "Aparência", title: "Aparência", text: "Estilo, cores e tema do site público." },
+  { key: "address", label: "Endereço do site", title: "Endereço do site", text: "Onde seus clientes acessam o cardápio." },
+  { key: "hours", label: "Funcionamento", title: "Funcionamento", text: "Horários e regras para receber pedidos." },
+  { key: "delivery", label: "Entrega e retirada", title: "Entrega e retirada", text: "Área atendida, taxas e retirada no balcão." },
+  { key: "contact", label: "Contato e redes", title: "Contato e redes", text: "Como o cliente fala com você." },
+  { key: "seo", label: "Google e compartilhamento", title: "Google e compartilhamento", text: "Como o site aparece em buscas e links." },
+]);
+const SITE_SETTINGS_PALETTES = Object.freeze([
+  { key: "tokyo", label: "Tokyo (padrão)", colors: ["#F97316", "#0F141F", "#FBBF24"] },
+  { key: "rubi", label: "Rubi", colors: ["#E11D48", "#1A0F12", "#F59E0B"] },
+  { key: "jade", label: "Jade", colors: ["#10B981", "#0B1512", "#FDE68A"] },
+  { key: "dourado", label: "Dourado", colors: ["#C8A15A", "#14110C", "#F3E3C3"] },
+  { key: "oceano", label: "Oceano", colors: ["#3B82F6", "#0B1220", "#93C5FD"] },
+]);
+const SITE_SETTINGS_LAYOUT_INFO = Object.freeze({
+  PREMIUM: { label: "Premium", text: "Visual escuro e sofisticado, fotos grandes e acabamento de destaque." },
+  MODERN: { label: "Moderno", text: "Banner grande, categorias na horizontal e cards modernos." },
+  CATALOGO: { label: "Catálogo", text: "Menu lateral, produtos em lista e navegação rápida." },
+});
+
+const gxSetField = ({ label, field, value = "", type = "text", step = "", placeholder = "", prefix = "", suffix = "", counter = 0, disabled = false, wide = false, inputmode = "" }) => `
+  <label class="gx-set-field${wide ? " is-wide" : ""}">
+    <span class="gx-set-field-label">${escapeHtml(label)}${counter ? `<small data-gx-set-count="${escapeHtml(field)}" data-max="${counter}">${String(value || "").length}/${counter}</small>` : ""}</span>
+    <span class="gx-set-input${prefix ? " has-prefix" : ""}${suffix ? " has-suffix" : ""}">
+      ${prefix ? `<i>${escapeHtml(prefix)}</i>` : ""}
+      <input type="${escapeHtml(type)}" ${step ? `step="${escapeHtml(step)}"` : ""} ${inputmode ? `inputmode="${escapeHtml(inputmode)}"` : ""} data-restaurant-settings-field="${escapeHtml(field)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" ${disabled ? "disabled" : ""} />
+      ${suffix ? `<b>${escapeHtml(suffix)}</b>` : ""}
+    </span>
+  </label>`;
+
+const gxSetTextarea = ({ label, field, value = "", placeholder = "", counter = 0, help = "", disabled = false }) => `
+  <label class="gx-set-field is-wide">
+    <span class="gx-set-field-label">${escapeHtml(label)}${counter ? `<small data-gx-set-count="${escapeHtml(field)}" data-max="${counter}">${String(value || "").length}/${counter}</small>` : ""}</span>
+    <textarea class="gx-set-textarea" rows="3" data-restaurant-settings-field="${escapeHtml(field)}" placeholder="${escapeHtml(placeholder)}" ${disabled ? "disabled" : ""}>${escapeHtml(value)}</textarea>
+    ${help ? `<small class="gx-set-help">${escapeHtml(help)}</small>` : ""}
+  </label>`;
+
+const gxSetSwitch = ({ field, checked, disabled = false, label = "" }) => `
+  <label class="gx-set-switch" ${label ? `aria-label="${escapeHtml(label)}"` : ""}>
+    <input type="checkbox" data-restaurant-settings-field="${escapeHtml(field)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
+    <span aria-hidden="true"></span>
+  </label>`;
+
+const gxSetToggleRow = ({ title, text, field, checked, disabled }) => `
+  <div class="gx-set-toggle-row">
+    <div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span></div>
+    ${gxSetSwitch({ field, checked, disabled, label: title })}
+  </div>`;
+
+const gxSetCard = (title, text, body, extra = "") => `
+  <article class="gx-set-card">
+    <header class="gx-set-card-head">
+      <div><h3>${escapeHtml(title)}</h3>${text ? `<p>${escapeHtml(text)}</p>` : ""}</div>
+      ${extra}
+    </header>
+    ${body}
+  </article>`;
+
+const gxSetFileName = (url) => {
+  const value = String(url || "").trim();
+  if (!value) return "Nenhuma imagem";
+  if (value.startsWith("data:")) return "Imagem enviada";
+  return value.split("?")[0].split("/").filter(Boolean).pop() || value;
+};
+
+const gxSetImageRow = ({ label, field, value, hint, isBanner, disabled }) => `
+  <div class="gx-set-image-row">
+    <span class="gx-set-thumb${isBanner ? " is-banner" : ""}">
+      ${value ? `<img src="${escapeHtml(resolveAdminAssetUrl(value))}" alt="" data-gx-set-thumb="${escapeHtml(field)}" />` : `<em>${isBanner ? "16:6" : "Logo"}</em>`}
+    </span>
+    <div class="gx-set-image-copy">
+      <strong>${escapeHtml(label)}</strong>
+      <small data-gx-set-filename="${escapeHtml(field)}" data-hint="${escapeHtml(hint)}">${escapeHtml(gxSetFileName(value))} · ${escapeHtml(hint)}</small>
+    </div>
+    <button type="button" class="gx-set-btn" data-gx-set-swap="${escapeHtml(field)}" ${disabled ? "disabled" : ""}>Trocar</button>
+    <div class="gx-set-image-url" data-gx-set-url="${escapeHtml(field)}" hidden>
+      ${gxSetField({ label: "Endereço da imagem", field, value, placeholder: "https://... ou ./site-images/arquivo.png", disabled })}
+    </div>
+  </div>`;
+
+// Fundo do site escuro na prévia: usa a secundária só se ela for escura.
+const getSitePreviewDarkBg = (hex) => {
+  const match = String(hex || "").trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return "#0f141f";
+  const value = parseInt(match[1], 16);
+  const channel = (shift) => {
+    const c = ((value >> shift) & 255) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+  return luminance < 0.06 ? `#${match[1]}` : "#0f141f";
+};
+
+// Texto sobre a cor primária: branco ou escuro, o que tiver mais contraste.
+const getSitePreviewInk = (hex) => {
+  const match = String(hex || "").trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return "#ffffff";
+  const value = parseInt(match[1], 16);
+  const channel = (shift) => {
+    const c = ((value >> shift) & 255) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+  return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.0589 ? "#ffffff" : "#111827";
+};
+
+const renderSiteSettingsPreview = (draft, accessAddress) => {
+  const theme = String(draft.siteTheme || "DARK").toUpperCase();
+  return `
+    <aside class="gx-set-preview" aria-label="Pré-visualização do site">
+      <div class="gx-set-preview-head">
+        <span>Pré-visualização</span>
+        ${accessAddress.finalUrl ? `<a href="${escapeHtml(accessAddress.finalUrl)}" target="_blank" rel="noopener noreferrer">Abrir site</a>` : ""}
+      </div>
+      <div class="gx-set-phone" data-gx-set-phone data-theme="${theme === "LIGHT" ? "light" : "dark"}"
+        style="--pink:${escapeHtml(getSitePreviewInk(draft.primaryColor))};--bgd:${escapeHtml(getSitePreviewDarkBg(draft.secondaryColor))};--p:${escapeHtml(draft.primaryColor || "#F97316")};--s:${escapeHtml(draft.secondaryColor || "#0F141F")};--a:${escapeHtml(draft.accentColor || "#FBBF24")}">
+        <div class="gx-set-phone-top">
+          <span class="gx-set-phone-logo">${draft.logoUrl ? `<img src="${escapeHtml(resolveAdminAssetUrl(draft.logoUrl))}" alt="" data-gx-prev="logo" />` : ""}</span>
+          <strong data-gx-prev="name">${escapeHtml(draft.restaurantName || "Seu restaurante")}</strong>
+          <i aria-hidden="true"></i>
+        </div>
+        <div class="gx-set-phone-banner" data-gx-prev="banner" style="${draft.bannerUrl ? `background-image:url('${escapeHtml(resolveAdminAssetUrl(draft.bannerUrl))}')` : ""}">
+          <small data-gx-prev="slogan">${escapeHtml(draft.slogan || "")}</small>
+          <strong data-gx-prev="name2">${escapeHtml(draft.restaurantName || "Seu restaurante")}</strong>
+        </div>
+        <p data-gx-prev="description">${escapeHtml(draft.description || "")}</p>
+        <span class="gx-set-phone-cta">Ver cardápio</span>
+        <div class="gx-set-phone-items"><span><i></i><b></b><em>R$ —</em></span><span><i></i><b></b><em>R$ —</em></span></div>
+      </div>
+      <small class="gx-set-preview-note">Atualiza enquanto você edita. Só vai para o site depois de salvar.</small>
+    </aside>`;
+};
+
+const refreshSiteSettingsExtras = () => {
+  const root = document.querySelector(".gx-set[data-restaurant-settings-root]");
+  if (!root) return;
+  const draft = getRestaurantSettingsDraft();
+  const phone = root.querySelector("[data-gx-set-phone]");
+  if (phone) {
+    phone.style.setProperty("--p", draft.primaryColor || "#F97316");
+    phone.style.setProperty("--s", draft.secondaryColor || "#0F141F");
+    phone.style.setProperty("--bgd", getSitePreviewDarkBg(draft.secondaryColor));
+    phone.style.setProperty("--pink", getSitePreviewInk(draft.primaryColor));
+    phone.style.setProperty("--a", draft.accentColor || "#FBBF24");
+    phone.dataset.theme = String(draft.siteTheme || "").toUpperCase() === "LIGHT" ? "light" : "dark";
+    const setText = (key, value) => {
+      const el = phone.querySelector(`[data-gx-prev="${key}"]`);
+      if (el) el.textContent = value;
+    };
+    setText("name", draft.restaurantName || "Seu restaurante");
+    setText("name2", draft.restaurantName || "Seu restaurante");
+    setText("slogan", draft.slogan || "");
+    setText("description", draft.description || "");
+    const logo = phone.querySelector('[data-gx-prev="logo"]');
+    if (logo && draft.logoUrl) logo.src = resolveAdminAssetUrl(draft.logoUrl);
+    const banner = phone.querySelector('[data-gx-prev="banner"]');
+    if (banner) banner.style.backgroundImage = draft.bannerUrl ? `url("${resolveAdminAssetUrl(draft.bannerUrl)}")` : "";
+  }
+  root.querySelectorAll("[data-gx-set-hex]").forEach((el) => {
+    el.textContent = String(draft[el.dataset.gxSetHex] || "").toUpperCase();
+  });
+  root.querySelectorAll("[data-gx-set-count]").forEach((el) => {
+    const input = root.querySelector(`[data-restaurant-settings-field="${el.dataset.gxSetCount}"]`);
+    const length = String(input?.value || "").length;
+    const max = Number(el.dataset.max || 0);
+    el.textContent = `${length}/${max}`;
+    el.classList.toggle("is-over", max > 0 && length > max);
+  });
+  const paletteKey = SITE_SETTINGS_PALETTES.find(
+    (palette) =>
+      palette.colors[0].toLowerCase() === String(draft.primaryColor || "").toLowerCase() &&
+      palette.colors[1].toLowerCase() === String(draft.secondaryColor || "").toLowerCase() &&
+      palette.colors[2].toLowerCase() === String(draft.accentColor || "").toLowerCase()
+  )?.key;
+  root.querySelectorAll("[data-gx-palette]").forEach((el) => el.classList.toggle("is-active", el.dataset.gxPalette === paletteKey));
+  root.querySelectorAll("[data-gx-theme]").forEach((el) => {
+    const active = el.dataset.gxTheme === String(draft.siteTheme || "").toUpperCase();
+    el.classList.toggle("is-active", active);
+    el.setAttribute("aria-pressed", String(active));
+  });
+  const google = root.querySelector("[data-gx-google]");
+  if (google) {
+    google.querySelector("[data-gx-google-title]").textContent =
+      draft.seoTitle || [draft.restaurantName, draft.slogan].filter(Boolean).join(" | ") || "Seu restaurante";
+    google.querySelector("[data-gx-google-desc]").textContent = draft.seoDescription || draft.description || "";
+  }
+  ["logoUrl", "bannerUrl", "seoShareImage"].forEach((field) => {
+    const name = root.querySelector(`[data-gx-set-filename="${field}"]`);
+    if (name) name.textContent = `${gxSetFileName(draft[field])}${name.dataset.hint ? ` · ${name.dataset.hint}` : ""}`;
+    const thumb = root.querySelector(`[data-gx-set-thumb="${field}"]`);
+    if (thumb && draft[field]) thumb.src = resolveAdminAssetUrl(draft[field]);
+  });
+  const baseline = adminState.siteSettingsBaseline || "";
+  const dirty = Boolean(baseline) && JSON.stringify(readRestaurantSettingsDraftFromDom()) !== baseline;
+  const status = root.querySelector("[data-gx-set-status]");
+  if (status) {
+    status.classList.toggle("is-dirty", dirty);
+    status.textContent = dirty ? "Alterações não salvas" : "Tudo salvo";
+  }
+};
+
 const renderRestaurantSettingsModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -9707,330 +9911,421 @@ const renderRestaurantSettingsModule = () => {
   }
 
   const snapshot = getRestaurantSettingsSnapshot();
-  const summary = snapshot.summary || {};
   const accessAddress = snapshot.accessAddress || {};
   const draft = getRestaurantSettingsDraft();
   const isBusy = adminState.isLoadingRestaurantSettings || adminState.restaurantSettingsSaving;
-  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "Ainda não salvo";
-  const logoPreview = resolveAdminAssetUrl(draft.logoUrl || RESTAURANT_SETTINGS_DEFAULT_DRAFT.logoUrl);
-  const bannerPreview = resolveAdminAssetUrl(draft.bannerUrl || RESTAURANT_SETTINGS_DEFAULT_DRAFT.bannerUrl);
+  const updatedLabel = draft.updatedAt ? formatDateTime(draft.updatedAt) : "ainda não salvo";
   const addressFields = draft.addressFields || RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields;
   const deliveryBase = draft.deliveryBase || RESTAURANT_SETTINGS_DEFAULT_DRAFT.deliveryBase;
-  const businessSchedule =
-    draft.businessSchedule || RESTAURANT_SETTINGS_DEFAULT_DRAFT.businessSchedule;
-  const businessScheduleDays =
-    businessSchedule.days || RESTAURANT_SETTINGS_DEFAULT_DRAFT.businessSchedule.days;
-  const specialDates = Array.isArray(businessSchedule.specialDates)
-    ? businessSchedule.specialDates
-    : [];
-  const friendlyAddress =
-    draft.address ||
-    [
-      [addressFields.street, addressFields.number].filter(Boolean).join(", "),
-      addressFields.complement,
-      addressFields.neighborhood,
-      [addressFields.city, addressFields.state].filter(Boolean).join(" - "),
-      addressFields.postalCode ? `CEP ${addressFields.postalCode}` : "",
-    ]
-      .filter(Boolean)
-      .join(", ");
+  const businessSchedule = draft.businessSchedule || RESTAURANT_SETTINGS_DEFAULT_DRAFT.businessSchedule;
+  const days = businessSchedule.days || RESTAURANT_SETTINGS_DEFAULT_DRAFT.businessSchedule.days;
+  const specialDates = Array.isArray(businessSchedule.specialDates) ? businessSchedule.specialDates : [];
+  const activeTab = SITE_SETTINGS_TABS.some((tab) => tab.key === adminState.siteSettingsTab) ? adminState.siteSettingsTab : "identity";
+  const layoutKey = String(draft.siteLayout || "PREMIUM").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const layoutInfo = SITE_SETTINGS_LAYOUT_INFO[layoutKey] || { label: draft.siteLayout || "Padrão", text: "Estilo definido pela INOVAS." };
+  const theme = String(draft.siteTheme || "DARK").toUpperCase();
+  const siteUrl = accessAddress.displayUrl || "";
+  const friendlyAddress = [
+    [addressFields.street, addressFields.number].filter(Boolean).join(", "),
+    addressFields.neighborhood,
+    [addressFields.city, addressFields.state].filter(Boolean).join(" - "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const panel = (key, body) => {
+    const tab = SITE_SETTINGS_TABS.find((entry) => entry.key === key);
+    return `
+      <section class="gx-set-panel" data-gx-set-panel="${key}" ${key === activeTab ? "" : "hidden"}>
+        <header class="gx-set-panel-head"><h3>${escapeHtml(tab.title)}</h3><p>${escapeHtml(tab.text)}</p></header>
+        ${body}
+      </section>`;
+  };
 
   moduleRoot.innerHTML = `
-    <header class="admin-module-head">
-      <div>
-        <span class="admin-chip">Configurações do site público</span>
-        <h2>Personalização do restaurante</h2>
-        <p>Esses ajustes afetam somente o site do cliente. O painel administrativo mantem sua identidade visual fixa.</p>
-      </div>
-      <div class="admin-module-head-meta">
-        <span>Última atualização</span>
-        <strong>${escapeHtml(adminState.isLoadingRestaurantSettings ? "Carregando..." : updatedLabel)}</strong>
-      </div>
-    </header>
-
-    <section class="admin-module-kpis">
-      <article class="admin-mini-stat is-blue">
-        <span>Restaurante</span>
-        <strong>${escapeHtml(summary.restaurantName || draft.restaurantName || "Site")}</strong>
-      </article>
-      <article class="admin-mini-stat is-cyan">
-        <span>Chave atual</span>
-        <strong>${escapeHtml(summary.restaurantKey || draft.restaurantKey || "default")}</strong>
-      </article>
-      <article class="admin-mini-stat is-gold">
-        <span>Raio máximo</span>
-        <strong>${escapeHtml(String(deliveryBase.maxDeliveryRadiusKm || 0).replace(".", ","))} km</strong>
-      </article>
-      <article class="admin-mini-stat is-warm">
-        <span>Pedidos fora do horário</span>
-        <strong>${escapeHtml(businessSchedule.acceptOrdersOutsideHours ? "Aceita" : "Não aceita")}</strong>
-      </article>
-    </section>
-
-    <section class="admin-delivery-settings admin-restaurant-settings" data-restaurant-settings-root>
+    <div class="gx-set" data-restaurant-settings-root>
+      <header class="gx-set-head">
+        <div>
+          <span class="gx-set-crumb">Ajustes / Site do restaurante</span>
+          <h2>Configurações do site</h2>
+          <p>Tudo o que seu cliente vê${
+            siteUrl
+              ? ` em ${accessAddress.finalUrl ? `<a href="${escapeHtml(accessAddress.finalUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(siteUrl)}</a>` : escapeHtml(siteUrl)}`
+              : " no site do restaurante"
+          }. O painel do Gestor não muda.</p>
+        </div>
+        <div class="gx-set-savebar">
+          <span class="gx-set-status" data-gx-set-status>Tudo salvo</span>
+          <button type="button" class="gx-set-btn" data-restaurant-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar</button>
+          <button type="button" class="gx-set-btn is-primary" data-restaurant-settings-action="save" ${isBusy ? "disabled" : ""}>${adminState.restaurantSettingsSaving ? "Salvando..." : "Salvar alterações"}</button>
+        </div>
+      </header>
       ${
         adminState.actionMessage
           ? `<div class="admin-feedback is-${escapeHtml(adminState.actionTone || "success")}">${escapeHtml(adminState.actionMessage)}</div>`
           : ""
       }
+      ${adminState.isLoadingRestaurantSettings && !adminState.restaurantSettingsSnapshot ? `<div class="admin-empty-state admin-empty-state-loading"><strong>Carregando configurações</strong><span>Buscando os dados do site.</span></div>` : ""}
 
-      <div class="admin-delivery-savebar">
-        <div>
-          <strong>Fonte de personalização do site público</strong>
-          <span>Preparado para futura migracao: restaurant_key ${escapeHtml(draft.restaurantKey || "default")}</span>
-        </div>
-        <div class="admin-delivery-savebar-actions">
-          <button class="admin-button admin-button-secondary" type="button" data-restaurant-settings-action="reset" ${isBusy ? "disabled" : ""}>Descartar alterações</button>
-          <button class="admin-button admin-button-primary" type="button" data-restaurant-settings-action="save" ${isBusy ? "disabled" : ""}>
-            ${adminState.restaurantSettingsSaving ? "Salvando..." : "Salvar configurações"}
-          </button>
-        </div>
-      </div>
-
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Endereço de acesso</span>
-            <h3>${escapeHtml(accessAddress.displayUrl || "Não configurado")}</h3>
-            <p>${escapeHtml(accessAddress.typeLabel || "Endereço não configurado")} · ${escapeHtml(
-              accessAddress.statusLabel || "Sem status"
-            )} · ${escapeHtml(accessAddress.managementLabel || "Gerenciamento não informado")}</p>
-          </div>
-          ${
-            accessAddress.finalUrl
-              ? `<a class="admin-button admin-button-secondary" href="${escapeHtml(
-                  accessAddress.finalUrl
-                )}" target="_blank" rel="noopener noreferrer">Abrir site</a>`
-              : ""
-          }
-        </header>
-      </article>
-
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Identidade</span>
-            <h3>Marca e imagens principais</h3>
-            <p>Use caminhos locais, URLs HTTPS ou imagens hospedadas. Estes campos aparecem apenas no site público.</p>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Nome do restaurante", field: "restaurantName", value: draft.restaurantName || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.restaurantName, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Logo", field: "logoUrl", value: draft.logoUrl || "", placeholder: "./site-images/logo.png", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Banner principal", field: "bannerUrl", value: draft.bannerUrl || "", placeholder: "./site-images/banner.png", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Slogan", field: "slogan", value: draft.slogan || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.slogan, disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descrição publica", field: "description", value: draft.description || "", placeholder: "Descrição institucional exibida no site público.", disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Texto de apresentacao", field: "presentationText", value: draft.presentationText || "", placeholder: "Texto exibido na home e no rodape do site.", disabled: isBusy })}
-        </div>
-        <div class="admin-settings-preview-grid">
-          <figure class="admin-settings-media-preview">
-            <span>Logo atual</span>
-            <img src="${escapeHtml(logoPreview)}" alt="Previa do logo configurado" loading="lazy" />
-          </figure>
-          <figure class="admin-settings-media-preview is-banner">
-            <span>Banner atual</span>
-            <img src="${escapeHtml(bannerPreview)}" alt="Previa do banner configurado" loading="lazy" />
-          </figure>
-        </div>
-      </article>
-
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Aparencia do Site</span>
-            <h3>Layouts, tema e preview</h3>
-            <p>Selecione a experiência publica do restaurante. O Gestor permanece com a identidade administrativa atual.</p>
-          </div>
-        </header>
-        <div class="admin-appearance-grid">
-          <div class="admin-delivery-form-grid">
-            ${renderRestaurantSettingsSelect({ label: "Layout público", field: "siteLayout", value: draft.siteLayout || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteLayout, options: PUBLIC_SITE_LAYOUT_OPTIONS, disabled: isBusy })}
-            ${renderRestaurantSettingsSelect({ label: "Tema público", field: "siteTheme", value: draft.siteTheme || RESTAURANT_SETTINGS_DEFAULT_DRAFT.siteTheme, options: PUBLIC_SITE_THEME_OPTIONS, disabled: isBusy })}
-            <div class="admin-settings-layout-help is-wide">
-              ${PUBLIC_SITE_LAYOUT_OPTIONS.map((option) => `
-                <article>
-                  <strong>${escapeHtml(option.label)}</strong>
-                  <span>${escapeHtml(option.helper)}</span>
-                </article>
-              `).join("")}
-            </div>
-          </div>
-          ${renderRestaurantAppearancePreview()}
-        </div>
-      </article>
-
-      <article class="admin-delivery-card">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Cores do site</span>
-            <h3>Paleta publica</h3>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Cor principal", field: "primaryColor", value: draft.primaryColor || "", type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Cor secundaria", field: "secondaryColor", value: draft.secondaryColor || "", type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Cor destaque", field: "accentColor", value: draft.accentColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.accentColor, type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Gradiente início", field: "gradientStart", value: draft.gradientStart || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientStart, type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Gradiente fim", field: "gradientEnd", value: draft.gradientEnd || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientEnd, type: "color", disabled: isBusy })}
-          ${renderRestaurantSettingsToggle({ label: "Usar gradiente no destaque visual", field: "useGradient", checked: draft.useGradient !== false, disabled: isBusy })}
-          <div class="admin-settings-color-preview is-wide">
-            <span style="background:${escapeHtml(draft.primaryColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.primaryColor)}"></span>
-            <span style="background:${escapeHtml(draft.secondaryColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.secondaryColor)}"></span>
-            <span style="background:${escapeHtml(draft.accentColor || RESTAURANT_SETTINGS_DEFAULT_DRAFT.accentColor)}"></span>
-            <span style="background:linear-gradient(135deg, ${escapeHtml(draft.gradientStart || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientStart)}, ${escapeHtml(draft.gradientEnd || RESTAURANT_SETTINGS_DEFAULT_DRAFT.gradientEnd)})"></span>
-            <strong>As cores são aplicadas no site público após salvar.</strong>
-          </div>
-        </div>
-      </article>
-
-      <article class="admin-delivery-card">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Contato e local</span>
-            <h3>Atendimento e funcionamento</h3>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "WhatsApp", field: "whatsapp", value: draft.whatsapp || "", placeholder: "5516999999999", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Horário em texto (fallback)", field: "businessHours", value: draft.businessHours || "", placeholder: "18:00 as 23:00", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Instagram", field: "instagram", value: draft.instagram || "", placeholder: "https://instagram.com/restaurante", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Facebook", field: "facebook", value: draft.facebook || "", placeholder: "https://facebook.com/restaurante", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "TikTok", field: "tiktok", value: draft.tiktok || "", placeholder: "https://tiktok.com/@restaurante", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Site", field: "site", value: draft.site || "", placeholder: "https://restaurante.com.br", disabled: isBusy })}
-        </div>
-      </article>
-
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">SEO</span>
-            <h3>Título, compartilhamento e OpenGraph</h3>
-            <p>Configura metadados do site público sem alterar URLs, dominio ou rotas existentes.</p>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Título da página", field: "seoTitle", value: draft.seoTitle || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Imagem de compartilhamento", field: "seoShareImage", value: draft.seoShareImage || "", placeholder: "/site-images/combinado-imperial.png", disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "Descrição SEO", field: "seoDescription", value: draft.seoDescription || "", placeholder: "Descrição exibida em buscadores e compartilhamentos.", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Keywords", field: "seoKeywords", value: (draft.seoKeywords || []).join(", "), placeholder: "sushi, delivery, restaurante", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "OpenGraph título", field: "seoOpenGraph.title", value: draft.seoOpenGraph?.title || "", placeholder: draft.seoTitle || RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoTitle, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "OpenGraph imagem", field: "seoOpenGraph.image", value: draft.seoOpenGraph?.image || "", placeholder: draft.seoShareImage || RESTAURANT_SETTINGS_DEFAULT_DRAFT.seoShareImage, disabled: isBusy })}
-          ${renderRestaurantSettingsTextarea({ label: "OpenGraph descrição", field: "seoOpenGraph.description", value: draft.seoOpenGraph?.description || "", placeholder: "Descrição usada ao compartilhar o site.", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "OpenGraph tipo", field: "seoOpenGraph.type", value: draft.seoOpenGraph?.type || "website", placeholder: "website", disabled: isBusy })}
-        </div>
-      </article>
-
-
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Horário estruturado</span>
-            <h3>Funcionamento por dia da semana</h3>
-            <p>O site público usa esta grade para identificar loja aberta ou fechada. O texto acima continua como fallback.</p>
-          </div>
-        </header>
-        <div class="admin-settings-schedule-list">
-          ${BUSINESS_SCHEDULE_DAY_KEYS.map((dayKey) =>
-            renderRestaurantScheduleDayRow(dayKey, businessScheduleDays[dayKey], isBusy)
+      <div class="gx-set-layout" ${adminState.isLoadingRestaurantSettings && !adminState.restaurantSettingsSnapshot ? "hidden" : ""}>
+        <nav class="gx-set-nav" aria-label="Seções das configurações">
+          ${SITE_SETTINGS_TABS.map(
+            (tab) =>
+              `<button type="button" class="${tab.key === activeTab ? "is-active" : ""}" aria-current="${tab.key === activeTab ? "true" : "false"}" data-gx-set-tab="${tab.key}">${escapeHtml(tab.label)}</button>`
           ).join("")}
-        </div>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsToggle({
-            label: "Aceitar pedidos fora do horário",
-            field: "businessSchedule.acceptOrdersOutsideHours",
-            checked: businessSchedule.acceptOrdersOutsideHours === true,
-            disabled: isBusy,
-          })}
-          ${renderRestaurantSettingsField({
-            label: "Tempo extra de preparo em pico",
-            field: "businessSchedule.peakPreparationExtraMinutes",
-            value: formatAdminNumberValue(businessSchedule.peakPreparationExtraMinutes),
-            type: "number",
-            step: "1",
-            disabled: isBusy,
-          })}
-          ${renderRestaurantSettingsTextarea({
-            label: "Mensagem quando estiver fechado",
-            field: "businessSchedule.closedMessage",
-            value: businessSchedule.closedMessage || "",
-            placeholder: "Estamos fechados agora. Você pode agendar seu pedido para o próximo horário.",
-            disabled: isBusy,
-          })}
-        </div>
-      </article>
+        </nav>
 
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Datas especiais</span>
-            <h3>Exceções de funcionamento</h3>
-            <p>Estas datas tem prioridade sobre a grade semanal para feriados, eventos, folgas, manutenções ou horários especiais.</p>
-          </div>
-          <button class="admin-button admin-button-secondary" type="button" data-restaurant-settings-action="add-special-date" ${isBusy ? "disabled" : ""}>
-            Adicionar data
-          </button>
-        </header>
-        <div class="admin-settings-special-date-list">
-          ${
-            specialDates.length
-              ? specialDates
-                  .map((entry, index) => renderRestaurantSpecialDateRow(entry, index, isBusy))
-                  .join("")
-              : `
-                <div class="admin-empty-state admin-empty-state-soft">
-                  <strong>Nenhuma data especial cadastrada</strong>
-                  <span>Adicione exceções para feriados, eventos, folgas, manutenções ou atendimento em horário diferente.</span>
+        <div class="gx-set-main">
+          ${panel(
+            "identity",
+            gxSetCard(
+              "Informações básicas",
+              "Aparecem no topo do site e nos resultados de busca.",
+              `<div class="gx-set-grid">
+                ${gxSetField({ label: "Nome do restaurante", field: "restaurantName", value: draft.restaurantName || "", disabled: isBusy })}
+                ${gxSetField({ label: "Slogan", field: "slogan", value: draft.slogan || "", disabled: isBusy })}
+                ${gxSetTextarea({ label: "Descrição", field: "description", value: draft.description || "", counter: 160, help: "Uma ou duas frases sobre a casa. Aparece logo abaixo do banner.", disabled: isBusy })}
+              </div>
+              <details class="gx-set-more">
+                <summary>Texto de apresentação (rodapé e página inicial)</summary>
+                <div class="gx-set-grid">${gxSetTextarea({ label: "Texto de apresentação", field: "presentationText", value: draft.presentationText || "", disabled: isBusy })}</div>
+              </details>`
+            ) +
+              gxSetCard(
+                "Imagens",
+                "PNG, JPG ou WEBP. Cole o endereço da imagem.",
+                `${gxSetImageRow({ label: "Logo", field: "logoUrl", value: draft.logoUrl || "", hint: "fundo transparente, 512×512", disabled: isBusy })}
+                ${gxSetImageRow({ label: "Banner principal", field: "bannerUrl", value: draft.bannerUrl || "", hint: "recomendado 1600×600", isBanner: true, disabled: isBusy })}`
+              )
+          )}
+
+          ${panel(
+            "appearance",
+            gxSetCard(
+              "Estilo do site",
+              "Define layout, tipografia e acabamento.",
+              `<div class="gx-set-style">
+                <span class="gx-set-style-art" aria-hidden="true"><i></i><i></i><i></i></span>
+                <div><strong>${escapeHtml(layoutInfo.label)}</strong><span>${escapeHtml(layoutInfo.text)}</span></div>
+              </div>
+              <input type="hidden" data-restaurant-settings-field="siteLayout" value="${escapeHtml(draft.siteLayout || "")}" />
+              <p class="gx-set-help">Quer outro estilo? Fale com o suporte INOVAS.</p>`,
+              `<span class="gx-set-lock"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8"/></svg>Gerenciado pela INOVAS</span>`
+            ) +
+              gxSetCard(
+                "Paleta de cores",
+                "Escolha uma paleta pronta ou ajuste as três cores base.",
+                `<div class="gx-set-palettes">
+                  ${SITE_SETTINGS_PALETTES.map(
+                    (palette) => `
+                      <button type="button" class="gx-set-palette" data-gx-palette="${palette.key}" ${isBusy ? "disabled" : ""}>
+                        <span>${palette.colors.map((color) => `<i style="background:${color}"></i>`).join("")}</span>
+                        ${escapeHtml(palette.label)}
+                      </button>`
+                  ).join("")}
                 </div>
-              `
-          }
-        </div>
-      </article>
+                <div class="gx-set-colors">
+                  ${[
+                    ["primaryColor", "Primária"],
+                    ["secondaryColor", "Secundária"],
+                    ["accentColor", "Destaque"],
+                  ]
+                    .map(
+                      ([field, label]) => `
+                        <label class="gx-set-field">
+                          <span class="gx-set-field-label">${label}</span>
+                          <span class="gx-set-color">
+                            <input type="color" data-restaurant-settings-field="${field}" value="${escapeHtml(draft[field] || "#000000")}" ${isBusy ? "disabled" : ""} />
+                            <code data-gx-set-hex="${field}">${escapeHtml(String(draft[field] || "").toUpperCase())}</code>
+                          </span>
+                        </label>`
+                    )
+                    .join("")}
+                </div>
+                <p class="gx-set-help">Primária: botões e destaques. Secundária: fundo do site. Destaque: preços e selos.</p>
+                <details class="gx-set-more">
+                  <summary>Gradiente do destaque</summary>
+                  <div class="gx-set-grid">
+                    ${gxSetField({ label: "Gradiente início", field: "gradientStart", value: draft.gradientStart || "", type: "color", disabled: isBusy })}
+                    ${gxSetField({ label: "Gradiente fim", field: "gradientEnd", value: draft.gradientEnd || "", type: "color", disabled: isBusy })}
+                  </div>
+                  ${gxSetToggleRow({ title: "Usar gradiente", text: "Aplica o gradiente nos destaques do site.", field: "useGradient", checked: draft.useGradient !== false, disabled: isBusy })}
+                </details>`
+              ) +
+              gxSetCard(
+                "Tema",
+                "Fundo escuro ou claro no site público.",
+                `<input type="hidden" data-restaurant-settings-field="siteTheme" value="${escapeHtml(theme)}" />`,
+                `<div class="gx-set-segment" role="group" aria-label="Tema do site">
+                  <button type="button" data-gx-theme="DARK" class="${theme === "DARK" ? "is-active" : ""}" aria-pressed="${theme === "DARK"}">Escuro</button>
+                  <button type="button" data-gx-theme="LIGHT" class="${theme === "LIGHT" ? "is-active" : ""}" aria-pressed="${theme === "LIGHT"}">Claro</button>
+                  ${theme === "AUTO" ? `<button type="button" data-gx-theme="AUTO" class="is-active" aria-pressed="true">Automático</button>` : ""}
+                </div>`
+              )
+          )}
 
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Endereço estruturado</span>
-            <h3>Base física do restaurante</h3>
-            <p>O site exibe um endereço amigável a partir destes campos.</p>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "CEP", field: "addressFields.postalCode", value: addressFields.postalCode || "", placeholder: "14400-520", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Rua", field: "addressFields.street", value: addressFields.street || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields.street, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Número", field: "addressFields.number", value: addressFields.number || "", placeholder: RESTAURANT_SETTINGS_DEFAULT_DRAFT.addressFields.number, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Complemento", field: "addressFields.complement", value: addressFields.complement || "", placeholder: "Loja, sala, ponto de referência", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Bairro", field: "addressFields.neighborhood", value: addressFields.neighborhood || "", placeholder: "Centro", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Cidade", field: "addressFields.city", value: addressFields.city || "", placeholder: "Franca", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Estado", field: "addressFields.state", value: addressFields.state || "", placeholder: "SP", disabled: isBusy })}
-          <div class="admin-settings-color-preview is-wide">
-            <strong>Endereço exibido: ${escapeHtml(friendlyAddress || "Complete os campos para gerar o endereço público.")}</strong>
-          </div>
-        </div>
-      </article>
+          ${panel(
+            "address",
+            gxSetCard(
+              "Endereço INOVAS",
+              "Incluso no seu plano, gerenciado pela INOVAS Food.",
+              siteUrl
+                ? `<div class="gx-set-url">
+                    <span class="gx-set-badge">${escapeHtml(accessAddress.statusLabel || "Ativo")}</span>
+                    <code>${escapeHtml(siteUrl)}</code>
+                    <button type="button" class="gx-set-btn" data-gx-set-copy="${escapeHtml(accessAddress.finalUrl || siteUrl)}">Copiar</button>
+                    ${accessAddress.finalUrl ? `<a class="gx-set-btn" href="${escapeHtml(accessAddress.finalUrl)}" target="_blank" rel="noopener noreferrer">Abrir site</a>` : ""}
+                  </div>`
+                : `<p class="gx-set-help">O endereço ainda não foi configurado. Fale com a equipe INOVAS.</p>`
+            ) +
+              gxSetCard(
+                "Domínio próprio",
+                "Use um endereço como www.seurestaurante.com.br. Disponível nos planos pagos; a equipe INOVAS faz a configuração e o vínculo com seu site.",
+                `<p class="gx-set-help">Para ativar, fale com a equipe INOVAS.</p>`
+              )
+          )}
 
-      <article class="admin-delivery-card is-wide">
-        <header class="admin-delivery-card-head">
-          <div>
-            <span class="admin-chip">Base de entrega</span>
-            <h3>Coordenadas, raio e regras padrão</h3>
-            <p>Latitude e longitude passam a ser a origem prioritária do cálculo. Se ficarem vazias, o site usa a origem legada.</p>
-          </div>
-        </header>
-        <div class="admin-delivery-form-grid">
-          ${renderRestaurantSettingsField({ label: "Latitude", field: "deliveryBase.latitude", value: formatAdminNumberValue(deliveryBase.latitude), type: "number", step: "0.000001", placeholder: "-20.536416", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Longitude", field: "deliveryBase.longitude", value: formatAdminNumberValue(deliveryBase.longitude), type: "number", step: "0.000001", placeholder: "-47.393922", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Raio máximo de entrega (km)", field: "deliveryBase.maxDeliveryRadiusKm", value: formatAdminNumberValue(deliveryBase.maxDeliveryRadiusKm), type: "number", step: "0.1", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Taxa fixa padrão", field: "deliveryBase.fixedDeliveryFee", value: formatAdminNumberValue(deliveryBase.fixedDeliveryFee), type: "number", step: "0.01", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Valor por km", field: "deliveryBase.pricePerKm", value: formatAdminNumberValue(deliveryBase.pricePerKm), type: "number", step: "0.01", disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Pedido mínimo para entrega", field: "deliveryBase.minimumDeliveryOrder", value: formatAdminNumberValue(deliveryBase.minimumDeliveryOrder), type: "number", step: "0.01", disabled: isBusy })}
-          ${renderRestaurantSettingsToggle({ label: "Permitir retirada no local", field: "deliveryBase.pickupEnabled", checked: deliveryBase.pickupEnabled !== false, disabled: isBusy })}
-          ${renderRestaurantSettingsToggle({ label: "Permitir entrega", field: "deliveryBase.deliveryEnabled", checked: deliveryBase.deliveryEnabled !== false, disabled: isBusy })}
-          ${renderRestaurantSettingsField({ label: "Tempo médio de preparo", field: "averagePreparationTimeMinutes", value: formatAdminNumberValue(draft.averagePreparationTimeMinutes), type: "number", step: "1", disabled: isBusy })}
+          ${panel(
+            "hours",
+            gxSetCard(
+              "Horário de funcionamento",
+              "Fora destes horários o site mostra a loja como fechada.",
+              `<div class="gx-set-days">
+                ${BUSINESS_SCHEDULE_DAY_KEYS.map((dayKey) => {
+                  const day = days[dayKey] || {};
+                  const label = { monday: "Segunda", tuesday: "Terça", wednesday: "Quarta", thursday: "Quinta", friday: "Sexta", saturday: "Sábado", sunday: "Domingo" }[dayKey] || dayKey;
+                  return `
+                    <div class="gx-set-day">
+                      <strong>${escapeHtml(label)}</strong>
+                      ${gxSetSwitch({ field: `businessSchedule.days.${dayKey}.isOpen`, checked: day.isOpen !== false, disabled: isBusy, label: `${label} aberto` })}
+                      <span class="gx-set-times">
+                        <input type="time" aria-label="${escapeHtml(label)} abre" data-restaurant-settings-field="businessSchedule.days.${dayKey}.openTime" value="${escapeHtml(day.openTime || "18:00")}" ${isBusy ? "disabled" : ""} />
+                        <em>às</em>
+                        <input type="time" aria-label="${escapeHtml(label)} fecha" data-restaurant-settings-field="businessSchedule.days.${dayKey}.closeTime" value="${escapeHtml(day.closeTime || "23:00")}" ${isBusy ? "disabled" : ""} />
+                      </span>
+                    </div>`;
+                }).join("")}
+              </div>
+              <details class="gx-set-more">
+                <summary>Intervalo no meio do dia (opcional)</summary>
+                <div class="gx-set-days is-compact">
+                  ${BUSINESS_SCHEDULE_DAY_KEYS.map((dayKey) => {
+                    const day = days[dayKey] || {};
+                    const label = { monday: "Segunda", tuesday: "Terça", wednesday: "Quarta", thursday: "Quinta", friday: "Sexta", saturday: "Sábado", sunday: "Domingo" }[dayKey] || dayKey;
+                    return `
+                      <div class="gx-set-day">
+                        <strong>${escapeHtml(label)}</strong>
+                        <span class="gx-set-times">
+                          <input type="time" aria-label="${escapeHtml(label)} pausa início" data-restaurant-settings-field="businessSchedule.days.${dayKey}.pauseStart" value="${escapeHtml(day.pauseStart || "")}" ${isBusy ? "disabled" : ""} />
+                          <em>às</em>
+                          <input type="time" aria-label="${escapeHtml(label)} pausa fim" data-restaurant-settings-field="businessSchedule.days.${dayKey}.pauseEnd" value="${escapeHtml(day.pauseEnd || "")}" ${isBusy ? "disabled" : ""} />
+                        </span>
+                      </div>`;
+                  }).join("")}
+                </div>
+              </details>`
+            ) +
+              `<article class="gx-set-card">
+                ${gxSetToggleRow({ title: "Pedidos fora do horário", text: "Clientes podem agendar para o próximo horário de abertura.", field: "businessSchedule.acceptOrdersOutsideHours", checked: businessSchedule.acceptOrdersOutsideHours === true, disabled: isBusy })}
+                <details class="gx-set-more">
+                  <summary>Mais opções</summary>
+                  <div class="gx-set-grid">
+                    ${gxSetTextarea({ label: "Mensagem quando estiver fechado", field: "businessSchedule.closedMessage", value: businessSchedule.closedMessage || "", placeholder: "Estamos fechados agora. Você pode agendar seu pedido para o próximo horário.", disabled: isBusy })}
+                    ${gxSetField({ label: "Tempo extra de preparo no pico", field: "businessSchedule.peakPreparationExtraMinutes", value: formatAdminNumberValue(businessSchedule.peakPreparationExtraMinutes), type: "number", step: "1", suffix: "min", disabled: isBusy })}
+                    ${gxSetField({ label: "Horário em texto (reserva)", field: "businessHours", value: draft.businessHours || "", placeholder: "18:00 às 23:00", disabled: isBusy })}
+                  </div>
+                </details>
+              </article>` +
+              gxSetCard(
+                "Datas especiais",
+                "Feriados, folgas ou horários diferentes. Valem mais que a grade da semana.",
+                `<div class="admin-settings-special-date-list">
+                  ${
+                    specialDates.length
+                      ? specialDates.map((entry, index) => renderRestaurantSpecialDateRow(entry, index, isBusy)).join("")
+                      : `<p class="gx-set-help">Nenhuma data especial cadastrada.</p>`
+                  }
+                </div>`,
+                `<button type="button" class="gx-set-btn" data-restaurant-settings-action="add-special-date" ${isBusy ? "disabled" : ""}>Adicionar data</button>`
+              )
+          )}
+
+          ${panel(
+            "delivery",
+            gxSetCard(
+              "Área de entrega",
+              "Distância calculada a partir do endereço do restaurante.",
+              `<div class="gx-set-grid">
+                ${gxSetField({ label: "Raio máximo", field: "deliveryBase.maxDeliveryRadiusKm", value: formatAdminNumberValue(deliveryBase.maxDeliveryRadiusKm), type: "number", step: "0.1", suffix: "km", disabled: isBusy })}
+                ${gxSetField({ label: "Tempo médio de preparo", field: "averagePreparationTimeMinutes", value: formatAdminNumberValue(draft.averagePreparationTimeMinutes), type: "number", step: "1", suffix: "min", disabled: isBusy })}
+                ${gxSetField({ label: "Taxa de entrega", field: "deliveryBase.fixedDeliveryFee", value: formatAdminNumberValue(deliveryBase.fixedDeliveryFee), type: "number", step: "0.01", prefix: "R$", disabled: isBusy })}
+                ${gxSetField({ label: "Pedido mínimo", field: "deliveryBase.minimumDeliveryOrder", value: formatAdminNumberValue(deliveryBase.minimumDeliveryOrder), type: "number", step: "0.01", prefix: "R$", disabled: isBusy })}
+              </div>
+              <p class="gx-set-help">Taxas por bairro ou por faixa de distância ficam em <button type="button" class="gx-set-link" data-fin-goto="deliveries">Entregas</button>.</p>
+              <details class="gx-set-more">
+                <summary>Localização e valor por km</summary>
+                <div class="gx-set-grid">
+                  ${gxSetField({ label: "Latitude", field: "deliveryBase.latitude", value: formatAdminNumberValue(deliveryBase.latitude), type: "number", step: "0.000001", placeholder: "-20.536416", disabled: isBusy })}
+                  ${gxSetField({ label: "Longitude", field: "deliveryBase.longitude", value: formatAdminNumberValue(deliveryBase.longitude), type: "number", step: "0.000001", placeholder: "-47.393922", disabled: isBusy })}
+                  ${gxSetField({ label: "Valor por km", field: "deliveryBase.pricePerKm", value: formatAdminNumberValue(deliveryBase.pricePerKm), type: "number", step: "0.01", prefix: "R$", disabled: isBusy })}
+                </div>
+              </details>`
+            ) +
+              `<article class="gx-set-card">
+                ${gxSetToggleRow({ title: "Entrega", text: "O cliente recebe o pedido em casa.", field: "deliveryBase.deliveryEnabled", checked: deliveryBase.deliveryEnabled !== false, disabled: isBusy })}
+                ${gxSetToggleRow({ title: "Retirada no local", text: "O cliente escolhe retirar o pedido no balcão, sem taxa.", field: "deliveryBase.pickupEnabled", checked: deliveryBase.pickupEnabled !== false, disabled: isBusy })}
+              </article>`
+          )}
+
+          ${panel(
+            "contact",
+            gxSetCard(
+              "Contato",
+              "Exibido no rodapé e no botão de ajuda do site.",
+              `<div class="gx-set-grid">
+                ${gxSetField({ label: "WhatsApp", field: "whatsapp", value: draft.whatsapp || "", placeholder: "5516999999999", inputmode: "tel", disabled: isBusy })}
+              </div>`
+            ) +
+              gxSetCard(
+                "Endereço do restaurante",
+                friendlyAddress ? `Aparece no site como: ${friendlyAddress}` : "Complete os campos para mostrar o endereço no site.",
+                `<div class="gx-set-grid is-address">
+                  ${gxSetField({ label: "CEP", field: "addressFields.postalCode", value: addressFields.postalCode || "", inputmode: "numeric", disabled: isBusy })}
+                  ${gxSetField({ label: "Rua", field: "addressFields.street", value: addressFields.street || "", disabled: isBusy })}
+                  ${gxSetField({ label: "Número", field: "addressFields.number", value: addressFields.number || "", disabled: isBusy })}
+                  ${gxSetField({ label: "Complemento", field: "addressFields.complement", value: addressFields.complement || "", placeholder: "Loja, sala, referência", disabled: isBusy })}
+                  ${gxSetField({ label: "Bairro", field: "addressFields.neighborhood", value: addressFields.neighborhood || "", disabled: isBusy })}
+                  ${gxSetField({ label: "Cidade", field: "addressFields.city", value: addressFields.city || "", disabled: isBusy })}
+                  ${gxSetField({ label: "Estado", field: "addressFields.state", value: addressFields.state || "", placeholder: "SP", disabled: isBusy })}
+                </div>`
+              ) +
+              gxSetCard(
+                "Redes sociais",
+                "Deixe em branco o que não usa.",
+                `<div class="gx-set-grid">
+                  ${gxSetField({ label: "Instagram", field: "instagram", value: draft.instagram || "", placeholder: "https://instagram.com/seurestaurante", disabled: isBusy })}
+                  ${gxSetField({ label: "TikTok", field: "tiktok", value: draft.tiktok || "", placeholder: "https://tiktok.com/@seurestaurante", disabled: isBusy })}
+                  ${gxSetField({ label: "Facebook", field: "facebook", value: draft.facebook || "", placeholder: "https://facebook.com/seurestaurante", disabled: isBusy })}
+                  ${gxSetField({ label: "Outro site", field: "site", value: draft.site || "", placeholder: "https://", disabled: isBusy })}
+                </div>`
+              )
+          )}
+
+          ${panel(
+            "seo",
+            gxSetCard(
+              "Como aparece no Google",
+              "Prévia aproximada do resultado de busca.",
+              `<div class="gx-set-google" data-gx-google>
+                <small>${escapeHtml(siteUrl ? siteUrl.replace(/^https?:\/\//, "").replace("/", " › ") : "seu-site")}</small>
+                <strong data-gx-google-title>${escapeHtml(draft.seoTitle || [draft.restaurantName, draft.slogan].filter(Boolean).join(" | "))}</strong>
+                <p data-gx-google-desc>${escapeHtml(draft.seoDescription || draft.description || "")}</p>
+              </div>
+              <div class="gx-set-grid">
+                ${gxSetField({ label: "Título da página", field: "seoTitle", value: draft.seoTitle || "", counter: 60, placeholder: [draft.restaurantName, draft.slogan].filter(Boolean).join(" | "), wide: true, disabled: isBusy })}
+                ${gxSetTextarea({ label: "Descrição", field: "seoDescription", value: draft.seoDescription || "", counter: 160, placeholder: "Se ficar vazio, usamos a descrição da aba Identidade.", disabled: isBusy })}
+              </div>`
+            ) +
+              gxSetCard(
+                "Imagem de compartilhamento",
+                "Aparece quando o link é enviado no WhatsApp e redes. Por padrão, usamos o banner.",
+                `${gxSetImageRow({ label: "Imagem", field: "seoShareImage", value: draft.seoShareImage || "", hint: "1200×630", isBanner: true, disabled: isBusy })}
+                <details class="gx-set-more">
+                  <summary>Opções avançadas</summary>
+                  <div class="gx-set-grid">
+                    ${gxSetField({ label: "Palavras-chave", field: "seoKeywords", value: (draft.seoKeywords || []).join(", "), placeholder: "sushi, delivery, restaurante", wide: true, disabled: isBusy })}
+                    ${gxSetField({ label: "Título ao compartilhar", field: "seoOpenGraph.title", value: draft.seoOpenGraph?.title || "", disabled: isBusy })}
+                    ${gxSetField({ label: "Imagem ao compartilhar", field: "seoOpenGraph.image", value: draft.seoOpenGraph?.image || "", disabled: isBusy })}
+                    ${gxSetTextarea({ label: "Descrição ao compartilhar", field: "seoOpenGraph.description", value: draft.seoOpenGraph?.description || "", disabled: isBusy })}
+                    ${gxSetField({ label: "Tipo", field: "seoOpenGraph.type", value: draft.seoOpenGraph?.type || "website", disabled: isBusy })}
+                  </div>
+                </details>`
+              )
+          )}
+
+          <p class="gx-set-updated">Última atualização: ${escapeHtml(adminState.isLoadingRestaurantSettings ? "carregando..." : updatedLabel)}</p>
         </div>
-      </article>
-    </section>
+
+        ${renderSiteSettingsPreview(draft, accessAddress)}
+      </div>
+    </div>
   `;
+
+  // Ponto de comparação para "Tudo salvo": só quando o rascunho é igual ao que está salvo.
+  const savedJson = JSON.stringify(cloneRestaurantSettingsDraft(snapshot.settings || RESTAURANT_SETTINGS_DEFAULT_DRAFT));
+  if (!adminState.isLoadingRestaurantSettings && JSON.stringify(draft) === savedJson) {
+    adminState.siteSettingsBaseline = JSON.stringify(readRestaurantSettingsDraftFromDom());
+  }
+  refreshSiteSettingsExtras();
 };
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const root = target?.closest(".gx-set[data-restaurant-settings-root]");
+  if (!root) return;
+  const tabButton = target.closest("[data-gx-set-tab]");
+  if (tabButton) {
+    adminState.siteSettingsTab = tabButton.dataset.gxSetTab;
+    root.querySelectorAll("[data-gx-set-tab]").forEach((button) => {
+      const active = button === tabButton;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-current", String(active));
+    });
+    root.querySelectorAll("[data-gx-set-panel]").forEach((section) => {
+      section.hidden = section.dataset.gxSetPanel !== adminState.siteSettingsTab;
+    });
+    return;
+  }
+  const paletteButton = target.closest("[data-gx-palette]");
+  if (paletteButton) {
+    const palette = SITE_SETTINGS_PALETTES.find((entry) => entry.key === paletteButton.dataset.gxPalette);
+    if (!palette) return;
+    ["primaryColor", "secondaryColor", "accentColor"].forEach((field, index) => {
+      const input = root.querySelector(`[data-restaurant-settings-field="${field}"]`);
+      if (input) input.value = palette.colors[index].toLowerCase();
+    });
+    syncRestaurantSettingsDraftFromDom();
+    refreshSiteSettingsExtras();
+    return;
+  }
+  const themeButton = target.closest("[data-gx-theme]");
+  if (themeButton) {
+    const input = root.querySelector('[data-restaurant-settings-field="siteTheme"]');
+    if (input) input.value = themeButton.dataset.gxTheme;
+    syncRestaurantSettingsDraftFromDom();
+    refreshSiteSettingsExtras();
+    return;
+  }
+  const swapButton = target.closest("[data-gx-set-swap]");
+  if (swapButton) {
+    const box = root.querySelector(`[data-gx-set-url="${swapButton.dataset.gxSetSwap}"]`);
+    if (box) {
+      box.hidden = !box.hidden;
+      if (!box.hidden) box.querySelector("input")?.focus();
+    }
+    return;
+  }
+  const copyButton = target.closest("[data-gx-set-copy]");
+  if (copyButton) {
+    const value = copyButton.dataset.gxSetCopy || "";
+    Promise.resolve(navigator.clipboard?.writeText(value))
+      .then(() => {
+        copyButton.textContent = "Copiado";
+        window.setTimeout(() => {
+          copyButton.textContent = "Copiar";
+        }, 1600);
+      })
+      .catch(() => {});
+  }
+});
+
+["input", "change"].forEach((type) => {
+  document.addEventListener(type, (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest(".gx-set[data-restaurant-settings-root]") && target.matches("[data-restaurant-settings-field]")) {
+      refreshSiteSettingsExtras();
+    }
+  });
+});
 
 const getUsersSnapshot = () =>
   adminState.usersSnapshot || {
