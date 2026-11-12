@@ -3293,3 +3293,66 @@ dialog.sys-inv-dialog::backdrop {
     flex: 1;
   }
 }
+
+/* ---------- Restaurantes: janelas de cadastro e ações ---------- */
+
+dialog.sys-dialog:has(.sys-form-grid) {
+  width: min(760px, calc(100% - 32px));
+}
+
+dialog.sys-dialog {
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+
+.sys-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.sys-form-grid > p,
+.sys-form-grid > .sys-alert {
+  grid-column: 1 / -1;
+}
+
+.sys-alert.is-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.sys-dialog-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .sys-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sys-dialog-actions .sys-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* Barra do Health Score no detalhe: fora de um flex ela virava texto alto e
+   cobria o título seguinte. */
+.sys-detail .sys-meter {
+  display: block;
+  margin-top: 10px;
+}
+
+.sys-form-grid {
+  align-items: start;
+}
+
+.sys-form-grid .sys-field {
+  align-content: start;
+}
+
+.sys-page-actions + .sys-toolbar {
+  margin-top: 16px;
+}

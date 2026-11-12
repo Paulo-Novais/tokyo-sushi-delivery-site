@@ -39,6 +39,12 @@
     SYSTEM_USER_SESSIONS_REVOKED: "Sessões encerradas",
     SYSTEM_USER_INVITATION_REISSUED: "Convite reenviado",
     SYSTEM_ACCESS_DENIED: "Acesso negado",
+    SYSTEM_RESTAURANT_SUSPENDED: "Restaurante suspenso",
+    SYSTEM_RESTAURANT_REACTIVATED: "Restaurante reativado",
+    SYSTEM_RESTAURANT_UPDATED: "Dados do restaurante alterados",
+    SYSTEM_RESTAURANT_DOMAIN_UPDATED: "Domínio do restaurante alterado",
+    SYSTEM_RESTAURANT_SITE_PUBLISHED: "Site do restaurante publicado",
+    SYSTEM_RESTAURANT_SITE_UNPUBLISHED: "Site do restaurante tirado do ar",
     ROLE_CREATED: "Perfil criado",
     ROLE_UPDATED: "Perfil atualizado",
     ROLE_DUPLICATED: "Perfil duplicado",
@@ -408,6 +414,220 @@
     return true;
   };
 
+  const restaurantSiteIsLive = (restaurant) =>
+    restaurant.publicSiteEnabled !== false &&
+    !["SUSPENDED", "BLOCKED", "INACTIVE", "NOT_REGISTERED"].includes(normalize(restaurant.status));
+
+  const isRestaurantSuspended = (restaurant) => ["SUSPENDED", "BLOCKED"].includes(normalize(restaurant.status));
+
+  const actionButton = (label, attrs, { tone = "secondary", permission, help = "" } = {}) => {
+    const allowed = hasPermission(permission);
+    return `<button class="sys-btn sys-btn-${tone}" type="button" ${attrs} ${allowed ? "" : 'disabled aria-disabled="true"'}>${escapeHtml(label)}</button>
+          <p class="sys-action-help">${escapeHtml(allowed ? help : `Requer ${permission}`)}</p>`;
+  };
+
+  const renderRestaurantAdminActions = (restaurant) => {
+    const key = escapeHtml(restaurant.restaurantKey);
+    if (!restaurant.administrativeActions?.supportAvailable) {
+      return '<p class="sys-action-help">Restaurante ainda não cadastrado na plataforma.</p>';
+    }
+    const suspended = isRestaurantSuspended(restaurant);
+    return [
+      actionButton(
+        restaurant.publicSiteEnabled === false ? "Publicar site" : "Tirar site do ar",
+        `data-restaurant-action="site" data-key="${key}"`,
+        { permission: "system.restaurants.edit", help: restaurant.publicSiteEnabled === false ? "Coloca o endereço INOVAS no ar." : "O endereço INOVAS deixa de abrir." }
+      ),
+      actionButton("Editar dados de plataforma", `data-restaurant-action="edit" data-key="${key}"`, {
+        permission: "system.restaurants.edit",
+        help: "Nome e plano.",
+      }),
+      actionButton(restaurant.customDomain ? "Gerenciar domínio próprio" : "Vincular domínio próprio", `data-restaurant-action="domain" data-key="${key}"`, {
+        permission: "system.domains.manage",
+        help: "Opcional · + R$ 40/mês.",
+      }),
+      actionButton(suspended ? "Reativar acesso" : "Suspender acesso", `data-restaurant-action="status" data-key="${key}"`, {
+        tone: suspended ? "primary" : "danger",
+        permission: "system.restaurants.suspend",
+        help: suspended ? "Libera Gestor e site de novo." : "Ação crítica · bloqueia Gestor e site · exige motivo.",
+      }),
+    ].join("\n          ");
+  };
+
+  const findRestaurant = (key) => (state.data?.restaurants || []).find((restaurant) => restaurant.restaurantKey === key);
+
+  const slugify = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+
+  const openDialog = (html) => {
+    if (!dialog) return;
+    dialog.innerHTML = html;
+    dialog.showModal();
+  };
+
+  const dialogHead = (eyebrow, title) =>
+    `<div class="sys-dialog-head"><div><span class="sys-eyebrow">${escapeHtml(eyebrow)}</span><h2>${escapeHtml(title)}</h2></div><button class="sys-icon-btn" type="button" data-dialog-close aria-label="Fechar">${icon("close")}</button></div>`;
+
+  const field = (label, input, hint = "") =>
+    `<label class="sys-field"><span>${escapeHtml(label)}</span>${input}${hint ? `<small class="sys-hint">${escapeHtml(hint)}</small>` : ""}</label>`;
+
+  const planOptions = (selected) =>
+    ["START", "BUSINESS", "PRO", "PREMIUM"]
+      .map((plan) => `<option value="${plan}" ${normalize(selected) === plan ? "selected" : ""}>${escapeHtml(translatePlan(plan))}</option>`)
+      .join("");
+
+  const openRestaurantDialog = (action, key) => {
+    const restaurant = findRestaurant(key);
+    if (action === "create") {
+      const today = new Date().toISOString().slice(0, 10);
+      return openDialog(`
+        <form class="sys-dialog-form" data-restaurant-form="create">
+          ${dialogHead("Plataforma · cadastro", "Novo restaurante")}
+          <div class="sys-dialog-body sys-form-grid">
+            ${field("Nome do restaurante", '<input class="sys-input" name="name" required maxlength="120" data-slug-source />')}
+            ${field("Endereço INOVAS", '<input class="sys-input" name="slug" required pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" minlength="3" maxlength="60" data-slug-target />', "O site entra no ar em inovasfood.com.br/<endereço> assim que o cadastro termina.")}
+            ${field("CNPJ ou CPF (MEI)", '<input class="sys-input" name="document" required inputmode="numeric" />')}
+            ${field("Plano", `<select class="sys-select" name="plan">${planOptions("PRO")}</select>`)}
+            ${field("Nome do responsável", '<input class="sys-input" name="ownerName" required maxlength="160" />')}
+            ${field("E-mail do responsável (login do Gestor)", '<input class="sys-input" type="email" name="email" required />')}
+            ${field("Senha inicial do responsável", '<input class="sys-input" type="password" name="password" required minlength="10" autocomplete="new-password" />', "Mínimo de 10 caracteres. Peça para trocar no primeiro acesso.")}
+            ${field("WhatsApp do restaurante", '<input class="sys-input" name="whatsapp" required inputmode="tel" placeholder="16 99999-9999" />')}
+            ${field("Rua", '<input class="sys-input" name="street" required />')}
+            ${field("Número", '<input class="sys-input" name="number" required />')}
+            ${field("Bairro", '<input class="sys-input" name="neighborhood" />')}
+            ${field("Cidade", '<input class="sys-input" name="city" required />')}
+            ${field("Estado (UF)", '<input class="sys-input" name="state" required maxlength="2" />')}
+            ${field("CEP", '<input class="sys-input" name="postalCode" required inputmode="numeric" />')}
+            <input type="hidden" name="adhesionDate" value="${today}" />
+            <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+          </div>
+          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn sys-btn-primary" type="submit">Cadastrar e publicar site</button></div>
+        </form>`);
+    }
+    if (!restaurant) return;
+    const name = escapeHtml(restaurant.name);
+    if (action === "edit") {
+      return openDialog(`
+        <form class="sys-dialog-form" data-restaurant-form="edit" data-key="${escapeHtml(key)}">
+          ${dialogHead("Dados de plataforma", name)}
+          <div class="sys-dialog-body">
+            ${field("Nome do restaurante", `<input class="sys-input" name="name" required maxlength="160" value="${name}" />`)}
+            ${hasPermission("system.plans.manage") ? field("Plano", `<select class="sys-select" name="plan">${planOptions(restaurant.plan)}</select>`) : ""}
+            <p class="sys-hint">O endereço INOVAS (/${escapeHtml(restaurant.slug || key)}) não muda para não quebrar links já divulgados.</p>
+            <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+          </div>
+          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn sys-btn-primary" type="submit">Salvar</button></div>
+        </form>`);
+    }
+    if (action === "domain") {
+      const current = restaurant.customDomain;
+      const verified = normalize(current?.status) === "VERIFIED";
+      return openDialog(`
+        <form class="sys-dialog-form" data-restaurant-form="domain" data-key="${escapeHtml(key)}">
+          ${dialogHead("Domínio próprio · + R$ 40/mês", name)}
+          <div class="sys-dialog-body">
+            ${field("Domínio", `<input class="sys-input" name="customDomain" placeholder="minhapizzaria.com.br" value="${escapeHtml(current?.host || "")}" />`, "Deixe em branco e salve para desvincular.")}
+            <div class="sys-note">${icon("lock", 18)}<span>Para o domínio abrir o site: 1) adicionar o domínio no projeto da Vercel; 2) no registro do domínio (ex.: Registro.br), apontar <strong>A @ → 76.76.21.21</strong> e <strong>CNAME www → cname.vercel-dns.com</strong>; 3) quando a Vercel mostrar o domínio como válido, clicar em "Confirmar DNS". Enquanto isso o site segue no endereço INOVAS.</span></div>
+            ${current ? `<p>Situação: ${statusPill(verified ? "Ativo" : "Aguardando DNS", verified ? "ok" : "warn", { dot: false })}</p>` : ""}
+            <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+          </div>
+          <div class="sys-dialog-actions">
+            <button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button>
+            ${current && !verified ? '<button class="sys-btn sys-btn-secondary" type="button" data-domain-verify>Confirmar DNS</button>' : ""}
+            <button class="sys-btn sys-btn-primary" type="submit">Salvar domínio</button>
+          </div>
+        </form>`);
+    }
+    if (action === "site") {
+      const publish = restaurant.publicSiteEnabled === false;
+      return openDialog(`
+        <form class="sys-dialog-form" data-restaurant-form="site" data-key="${escapeHtml(key)}" data-publish="${publish}">
+          ${dialogHead(publish ? "Publicar site" : "Tirar site do ar", name)}
+          <div class="sys-dialog-body"><p style="margin:0">${publish ? `O site passa a abrir em <strong>${escapeHtml(restaurant.publicUrl || "")}</strong>.` : "O endereço INOVAS deixa de abrir até ser publicado de novo. O Gestor continua funcionando."}</p><p class="sys-alert is-error" data-dialog-error hidden role="alert"></p></div>
+          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn ${publish ? "sys-btn-primary" : "sys-btn-danger"}" type="submit">${publish ? "Publicar site" : "Tirar do ar"}</button></div>
+        </form>`);
+    }
+    if (action === "status") {
+      const suspended = isRestaurantSuspended(restaurant);
+      return openDialog(`
+        <form class="sys-dialog-form" data-restaurant-form="status" data-key="${escapeHtml(key)}" data-next="${suspended ? "ACTIVE" : "SUSPENDED"}">
+          ${dialogHead(suspended ? "Reativar acesso" : "Ação crítica", suspended ? `Reativar ${restaurant.name}` : `Suspender ${restaurant.name}`)}
+          <div class="sys-dialog-body">
+            <p style="margin:0">${suspended ? "Gestor e site voltam a funcionar." : "Enquanto suspenso, o Gestor fica bloqueado e o site sai do ar. Nenhum dado é apagado."}</p>
+            ${field("Motivo", '<textarea class="sys-input" name="reason" required minlength="10" rows="3" placeholder="Ex.: mensalidade de novembro em atraso"></textarea>', "Mínimo de 10 caracteres. Fica registrado na auditoria.")}
+            <label class="sys-check"><input type="checkbox" name="confirmed" required /> <span>Confirmo ${suspended ? "a reativação" : "a suspensão"} de ${name}.</span></label>
+            <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+          </div>
+          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn ${suspended ? "sys-btn-primary" : "sys-btn-danger"}" type="submit">${suspended ? "Reativar acesso" : "Suspender acesso"}</button></div>
+        </form>`);
+    }
+  };
+
+  const onlyDigits = (value) => String(value || "").replace(/\D/g, "");
+
+  const submitRestaurantForm = async (form, extra = {}) => {
+    const kind = form.dataset.restaurantForm;
+    const key = form.dataset.key || "";
+    const data = Object.fromEntries(new FormData(form).entries());
+    const errorNode = form.querySelector("[data-dialog-error]");
+    const buttons = form.querySelectorAll("button");
+    if (errorNode) errorNode.hidden = true;
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      let message = "Alteração salva e registrada na auditoria.";
+      if (kind === "create") {
+        const slug = slugify(data.slug);
+        const phone = onlyDigits(data.whatsapp);
+        const whatsapp = phone.startsWith("55") ? phone : `55${phone}`;
+        const payload = {
+          restaurantName: data.name, tradeName: data.name, name: data.name,
+          slug, restaurantKey: slug, document: onlyDigits(data.document),
+          ownerFullName: data.ownerName, email: data.email,
+          city: data.city, postalCode: onlyDigits(data.postalCode), establishmentNumber: data.number,
+          registration: { legalName: data.name, document: onlyDigits(data.document), city: data.city, state: data.state },
+          phone: whatsapp, whatsapp, adhesionDate: data.adhesionDate,
+          address: { street: data.street, number: data.number, neighborhood: data.neighborhood, city: data.city, state: String(data.state || "").toUpperCase(), postalCode: onlyDigits(data.postalCode) },
+          plan: data.plan, subscriptionStatus: "ACTIVE",
+          adminUser: { login: data.email, email: data.email, name: data.ownerName, password: data.password },
+        };
+        const response = await fetch("/api/admin/master/onboard-restaurant", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || body?.error?.message || "Não foi possível cadastrar o restaurante.");
+        state.selectedRestaurantKey = slug;
+        message = `Restaurante cadastrado. Site no ar em inovasfood.com.br/${slug}.`;
+      } else {
+        let payload = {};
+        if (kind === "edit") payload = { name: data.name, ...(data.plan ? { plan: data.plan } : {}) };
+        if (kind === "domain") payload = extra.verify ? { domainStatus: "VERIFIED" } : { customDomain: data.customDomain || "" };
+        if (kind === "site") payload = { publicSiteEnabled: form.dataset.publish === "true" };
+        if (kind === "status") payload = { accessStatus: form.dataset.next, reason: data.reason };
+        await requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/update`, { method: "POST", body: JSON.stringify(payload) });
+        if (kind === "status") message = form.dataset.next === "SUSPENDED" ? "Restaurante suspenso. Gestor e site bloqueados." : "Restaurante reativado.";
+        if (kind === "site") message = form.dataset.publish === "true" ? "Site publicado." : "Site tirado do ar.";
+      }
+      dialog?.close();
+      notify(message);
+      await loadRoute();
+    } catch (error) {
+      if (errorNode) {
+        errorNode.textContent = error.message;
+        errorNode.hidden = false;
+      }
+      buttons.forEach((button) => { button.disabled = false; });
+    }
+  };
+
   const renderRestaurantDetail = (restaurant) => {
     if (!restaurant) {
       return `<aside class="sys-card sys-detail">${renderEmpty("Nenhum restaurante selecionado", "Clique em uma linha da lista para ver os detalhes.")}</aside>`;
@@ -427,7 +647,8 @@
         </div>
         <dl class="sys-facts">
           <div class="sys-fact"><span>Identificador</span><strong>${escapeHtml(restaurant.restaurantKey)}</strong></div>
-          <div class="sys-fact"><span>Endereço público</span><strong>${escapeHtml(restaurant.publicUrl || `/${restaurant.slug || restaurant.restaurantKey}`)}</strong></div>
+          <div class="sys-fact"><span>Site INOVAS</span><strong>${restaurant.publicUrl ? `<a href="${escapeHtml(restaurant.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(restaurant.publicUrl.replace(/^https?:\/\//, ""))}</a>` : escapeHtml(`/${restaurant.slug || restaurant.restaurantKey}`)}<br>${restaurantSiteIsLive(restaurant) ? statusPill("No ar", "ok", { dot: false }) : statusPill(restaurant.publicSiteEnabled === false ? "Fora do ar" : "Indisponível", "crit", { dot: false })}</strong></div>
+          <div class="sys-fact"><span>Domínio próprio</span><strong>${restaurant.customDomain ? `${escapeHtml(restaurant.customDomain.host)}<br>${statusPill(normalize(restaurant.customDomain.status) === "VERIFIED" ? "Ativo" : "Aguardando DNS", normalize(restaurant.customDomain.status) === "VERIFIED" ? "ok" : "warn", { dot: false })}` : "Não vinculado <small class=\"sys-hint\">(+ R$ 40/mês)</small>"}</strong></div>
           <div class="sys-fact"><span>Plano</span><strong>${escapeHtml(translatePlan(restaurant.plan))}</strong></div>
           <div class="sys-fact"><span>Domínio</span><strong>${escapeHtml(translateDomain(health.domainStatus))}${restaurant.domain ? `<br><small class="sys-hint">${escapeHtml(restaurant.domain)}</small>` : ""}</strong></div>
           <div class="sys-fact"><span>Responsável</span><strong>${escapeHtml(restaurant.owner || "Não informado")}</strong></div>
@@ -452,10 +673,7 @@
             ? `<a class="sys-btn sys-btn-primary" href="/system#support?key=${encodeURIComponent(restaurant.restaurantKey)}">Iniciar suporte (visualização)</a>`
             : '<button class="sys-btn sys-btn-primary" type="button" disabled>Iniciar suporte (visualização)</button>'}
           <p class="sys-action-help">Requer system.support.start${restaurant.administrativeActions?.supportAvailable ? "" : " · restaurante não provisionado"}</p>
-          <button class="sys-btn sys-btn-secondary" type="button" disabled aria-disabled="true">Editar dados de plataforma</button>
-          <p class="sys-action-help">Requer system.restaurants.edit · ainda não disponível nesta versão</p>
-          <button class="sys-btn sys-btn-danger" type="button" disabled aria-disabled="true">Suspender acesso</button>
-          <p class="sys-action-help">Ação crítica · requer system.restaurants.suspend e motivo · ainda não disponível nesta versão</p>
+          ${renderRestaurantAdminActions(restaurant)}
         </div>
       </aside>`;
   };
@@ -496,6 +714,7 @@
         title: "Restaurantes",
         description: "Cadastro, plano, domínio e saúde de cada restaurante. Dados operacionais só por sessão de suporte.",
       })}
+      ${hasPermission("system.restaurants.create") ? '<div class="sys-page-actions"><button class="sys-btn sys-btn-primary" type="button" data-restaurant-action="create">+ Novo restaurante</button></div>' : ""}
       <div class="sys-toolbar">
         <label class="sys-search"><span class="sr-only">Buscar por nome ou identificador</span>${icon("search", 18, "#6b7280")}<input class="sys-input" type="search" data-restaurant-filter="search" placeholder="Buscar por nome ou identificador" value="${escapeHtml(state.filters.restaurants.search)}" /></label>
         <label><span class="sr-only">Estado</span><select class="sys-select" data-restaurant-filter="status"><option value="">Estado: todos</option>${options(restaurants.map((item) => item.health?.status), (value) => translateHealth(value)[0])}</select></label>
@@ -937,6 +1156,16 @@
     if (event.target.closest("[data-dialog-close]")) return dialog?.close();
     const revoke = event.target.closest("[data-support-revoke]");
     if (revoke) return void revokeSupport();
+    const restaurantAction = event.target.closest("[data-restaurant-action]");
+    if (restaurantAction && !restaurantAction.disabled) {
+      openRestaurantDialog(restaurantAction.dataset.restaurantAction, restaurantAction.dataset.key || "");
+      return;
+    }
+    const domainVerify = event.target.closest("[data-domain-verify]");
+    if (domainVerify) {
+      void submitRestaurantForm(domainVerify.closest("form"), { verify: true });
+      return;
+    }
     const restaurantRow = event.target.closest("[data-restaurant-row]");
     if (restaurantRow) {
       state.selectedRestaurantKey = restaurantRow.dataset.restaurantRow;
@@ -977,6 +1206,15 @@
   });
 
   document.addEventListener("input", (event) => {
+    if (event.target.matches("[data-slug-source]")) {
+      const target = event.target.form?.querySelector("[data-slug-target]");
+      if (target && !target.dataset.touched) target.value = slugify(event.target.value);
+      return;
+    }
+    if (event.target.matches("[data-slug-target]")) {
+      event.target.dataset.touched = "true";
+      return;
+    }
     const restaurantFilter = event.target.closest("[data-restaurant-filter]");
     if (restaurantFilter) {
       state.filters.restaurants[restaurantFilter.dataset.restaurantFilter] = restaurantFilter.value;
@@ -1012,6 +1250,11 @@
   });
 
   document.addEventListener("submit", (event) => {
+    if (event.target.matches("[data-restaurant-form]")) {
+      event.preventDefault();
+      void submitRestaurantForm(event.target);
+      return;
+    }
     if (!event.target.matches("[data-support-form]")) return;
     event.preventDefault();
     void startSupport(event.target);
