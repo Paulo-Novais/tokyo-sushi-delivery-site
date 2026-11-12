@@ -74,7 +74,7 @@ test("Resultados: resumo com comparação, gráfico e listas", async ({ page }) 
   await fs.mkdir(outDir, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await open(page, "light");
-  await expect(page.locator(".gx-res-head h2")).toHaveText("Resultados");
+  await expect(page.locator(".gx-res-head h2")).toHaveText("Resumo");
   await expect(page.locator(".gx-res-kpi").first()).toContainText("R$ 7.920,00");
   await expect(page.locator(".gx-res-kpi").first()).toContainText("▲ 12% vs. semana anterior");
   await expect(page.locator(".gx-res-kpi").nth(3)).toContainText("▼ 2 a menos que antes");

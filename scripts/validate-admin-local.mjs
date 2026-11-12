@@ -1074,7 +1074,7 @@ const validateFinance = async (page) => {
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Faturamento bruto",
+    "Faturamento líquido",
     "Financeiro deveria exibir indicadores de receita."
   );
 };

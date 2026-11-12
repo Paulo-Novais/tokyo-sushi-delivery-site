@@ -6765,6 +6765,98 @@ const renderCustomerModule = () => {
   `;
 };
 
+const FIN_WEEKDAY_PAST = ["domingo passado", "segunda passada", "terça passada", "quarta passada", "quinta passada", "sexta passada", "sábado passado"];
+const FIN_PAYMENT_TONES = Object.freeze({ pix: "is-orange", cartao: "is-blue", dinheiro: "is-green", online_outros: "is-purple" });
+
+const parseFinanceDateKey = (key) => {
+  const [y, m, d] = String(key || "").split("-").map(Number);
+  return y ? new Date(y, (m || 1) - 1, d || 1) : null;
+};
+
+const getFinanceSubtitle = (filters = {}) => {
+  const start = parseFinanceDateKey(filters.startDate);
+  const end = parseFinanceDateKey(filters.endDate);
+  if (!start) return "";
+  if (filters.period === "today" || filters.startDate === filters.endDate) {
+    const text = start.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    return `${text.charAt(0).toUpperCase()}${text.slice(1)} · dia operacional`;
+  }
+  const short = (date) => date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${short(start)} a ${short(end || start)}${filters.dayCount ? ` · ${filters.dayCount} dias` : ""}`;
+};
+
+const formatFinanceMoneyInput = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value.toFixed(2).replace(".", ",") : "";
+
+// Comparação do faturamento líquido: hoje x mesmo dia da semana passada; demais períodos x período anterior.
+const loadFinanceCompare = async (snapshot) => {
+  const filters = snapshot?.filters || {};
+  const key = filters.periodKey || "";
+  if (!filters.startDate || !key || adminState.financeCompare?.key === key) return;
+  let range = null;
+  let label = "período anterior";
+  if (filters.period === "today") {
+    const day = shiftDateKey(filters.startDate, -7);
+    range = { startDate: day, endDate: day };
+    label = FIN_WEEKDAY_PAST[parseFinanceDateKey(day).getDay()];
+  } else {
+    const previous = getPreviousRange(filters);
+    if (!previous) return;
+    range = { startDate: previous.startDate, endDate: previous.endDate };
+    label = filters.period === "7d" ? "semana anterior" : filters.period === "30d" ? "30 dias anteriores" : "período anterior";
+  }
+  adminState.financeCompare = { key, label, overview: null };
+  let overview = null;
+  try {
+    const payload = await fetchJson(`/api/admin/finance?${new URLSearchParams({ period: "custom", ...range }).toString()}`);
+    overview = payload?.overview || null;
+  } catch (error) {
+    overview = null;
+  }
+  if (adminState.financeCompare?.key !== key) return;
+  adminState.financeCompare = { key, label, overview };
+  const slot = document.querySelector("[data-fin-compare]");
+  if (slot && adminState.activeSection === "finance") {
+    slot.innerHTML = renderFinanceDelta(Number(getFinanceSnapshot().overview?.netRevenue || 0));
+  }
+};
+
+const renderFinanceDelta = (current) => {
+  const compare = adminState.financeCompare;
+  const snapshotKey = getFinanceSnapshot().filters?.periodKey || "";
+  if (!compare || compare.key !== snapshotKey || !compare.overview) return "";
+  const previous = Number(compare.overview.netRevenue || 0);
+  const label = escapeHtml(compare.label);
+  if (!previous) {
+    return current > 0 ? `<span class="gx-fin-delta is-up">▲ novo vs. ${label}</span>` : "";
+  }
+  const percent = ((current - previous) / previous) * 100;
+  const text = `${percent >= 0 ? "+" : "−"}${Math.abs(percent).toFixed(1).replace(".", ",")}%`;
+  return `<span class="gx-fin-delta ${percent >= 0 ? "is-up" : "is-down"}">${percent >= 0 ? "▲" : "▼"} ${text} vs. ${label}</span>`;
+};
+
+// Vendas por hora no fuso de quem está vendo (os pedidos vêm com data/hora completas).
+const getFinanceHourly = (snapshot) => {
+  const buckets = Array.from({ length: 24 }, (_, hour) => ({ hour, total: 0, count: 0 }));
+  (Array.isArray(snapshot.reportOrders) ? snapshot.reportOrders : []).forEach((order) => {
+    const date = new Date(order.createdAt);
+    if (Number.isNaN(date.getTime())) return;
+    const bucket = buckets[date.getHours()];
+    bucket.total += Number(order.total || 0);
+    bucket.count += 1;
+  });
+  const used = buckets.filter((bucket) => bucket.count > 0);
+  if (!used.length) return [];
+  let first = used[0].hour;
+  let last = used[used.length - 1].hour;
+  while (last - first < 7) {
+    if (first > 0) first -= 1;
+    if (last - first < 7 && last < 23) last += 1;
+    if (first === 0 && last === 23) break;
+  }
+  return buckets.slice(first, last + 1);
+};
+
 const renderFinanceModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -6772,386 +6864,277 @@ const renderFinanceModule = () => {
     return;
   }
 
+  const snapshot = getFinanceSnapshot();
+  const filters = snapshot.filters || {};
+  const header = renderResultsHeader("finance", { subtitle: getFinanceSubtitle(filters) });
+
   if (adminState.isLoadingFinance && !adminState.financeSnapshot) {
     moduleRoot.innerHTML = `
+      ${header}
       <div class="admin-empty-state admin-empty-state-loading">
         <strong>Carregando financeiro</strong>
-        <span>Consolidando pedidos, formas de pagamento, taxas e fechamento.</span>
+        <span>Somando pedidos, formas de pagamento, taxas e fechamento.</span>
       </div>
     `;
     return;
   }
 
-  const snapshot = getFinanceSnapshot();
   const overview = snapshot.overview || {};
   const closing = snapshot.closing || {};
   const periodOptions = Array.isArray(snapshot.periodOptions) && snapshot.periodOptions.length
     ? snapshot.periodOptions
     : FINANCE_PERIOD_FALLBACK_OPTIONS;
-  const filteredOrders = getFilteredFinanceOrders();
-  const revenueTrend = Array.isArray(snapshot.charts?.revenueTrend) ? snapshot.charts.revenueTrend : [];
-  const paymentBreakdown = Array.isArray(snapshot.paymentBreakdown) ? snapshot.paymentBreakdown : [];
-  const hourlyOrders = Array.isArray(snapshot.charts?.hourlyOrders) ? snapshot.charts.hourlyOrders : [];
-  const fulfillmentBreakdown = Array.isArray(snapshot.charts?.fulfillment) ? snapshot.charts.fulfillment : [];
-  const maxRevenue = getChartMax(revenueTrend, "total");
-  const maxPayment = getChartMax(paymentBreakdown, "total");
-  const maxHourly = getChartMax(hourlyOrders, "count");
-  const maxFulfillment = getChartMax(fulfillmentBreakdown, "count");
-  const countedCashValue =
-    typeof closing.countedCash === "number" ? String(closing.countedCash.toFixed(2)) : "";
-  const payoutRuleLabel = getFinancePayoutRuleLabel(snapshot.deliveryPayoutSettings || {});
-  const kpis = [
-    {
-      label: "Faturamento bruto",
-      value: formatMoney(overview.grossRevenue || 0),
-      helper: `${overview.validOrders || 0} pedido(s) válidos`,
-      tone: "is-green",
-    },
-    {
-      label: "Faturamento líquido",
-      value: formatMoney(overview.netRevenue || 0),
-      helper: "Bruto menos entrega e descontos",
-      tone: "is-blue",
-    },
-    {
-      label: "Valor de entrega",
-      value: formatMoney(overview.deliveryFees || 0),
-      helper: "Taxas cobradas no período",
-      tone: "is-warm",
-    },
-    {
-      label: "Repasse entregadores",
-      value: formatMoney(overview.deliveryPayout || 0),
-      helper: payoutRuleLabel,
-      tone: "is-purple",
-    },
-    {
-      label: "Ticket médio",
-      value: formatMoney(overview.averageTicket || 0),
-      helper: "Média dos pedidos válidos",
-      tone: "is-blue",
-    },
-    {
-      label: "Total de pedidos pagos",
-      value: String(overview.paidOrders || 0),
-      helper: formatMoney(overview.receivedRevenue || 0),
-      tone: "is-green",
-    },
-    {
-      label: "Cancelamentos",
-      value: String(overview.cancelledOrders || 0),
-      helper: formatMoney(overview.cancelledRevenue || 0),
-      tone: "is-danger",
-    },
-    {
-      label: "Dinheiro pendente",
-      value: formatMoney(overview.pendingAmount || 0),
-      helper: `${overview.pendingOrders || 0} pedido(s) em aberto`,
-      tone: "is-warm",
-    },
+  const gross = Number(overview.grossRevenue || 0);
+  const net = Number(overview.netRevenue || 0);
+  const fees = Number(overview.deliveryFees || 0);
+  const discounts = Number(overview.discountAmount || 0);
+  const share = (value) => (gross > 0 ? Math.max(0, Math.min(100, (value / gross) * 100)) : 0);
+  const hourly = getFinanceHourly(snapshot);
+  const maxHour = Math.max(1, ...hourly.map((bucket) => bucket.total));
+  const peak = hourly.reduce((best, bucket) => (bucket.total > (best?.total || 0) ? bucket : best), null);
+  const isSingleDay = filters.period === "today" || filters.startDate === filters.endDate;
+  const allOrders = Number(overview.validOrders || 0) + Number(overview.cancelledOrders || 0);
+  const cancelShare = allOrders > 0 ? Math.round((Number(overview.cancelledOrders || 0) / allOrders) * 100) : 0;
+  const payments = (Array.isArray(snapshot.paymentBreakdown) ? snapshot.paymentBreakdown : [])
+    .filter((entry) => Number(entry.total || 0) > 0 || Number(entry.count || 0) > 0)
+    .sort((left, right) => Number(right.total || 0) - Number(left.total || 0));
+  const receivedTotal = Number(overview.receivedRevenue || 0);
+  const counted = typeof closing.countedCash === "number" ? closing.countedCash : null;
+  const cashExpected = Number(closing.cashExpected || 0);
+  const cashDiff = counted === null ? null : Number((counted - cashExpected).toFixed(2));
+  const totalDiff = Number(closing.difference || 0);
+  const diffCell = (value) =>
+    value === null
+      ? '<span class="gx-fin-muted">—</span>'
+      : Math.abs(value) < 0.005
+        ? `<span class="gx-fin-ok">${escapeHtml(formatMoney(0))}</span>`
+        : `<span class="${value < 0 ? "gx-fin-bad" : "gx-fin-warn"}">${value < 0 ? "− " : "+ "}${escapeHtml(formatMoney(Math.abs(value)))}</span>`;
+  const closingBadge =
+    counted === null
+      ? '<span class="gx-fin-badge is-warn">Aguardando conferência</span>'
+      : Math.abs(totalDiff) < 0.005
+        ? '<span class="gx-fin-badge is-ok">Conferido</span>'
+        : '<span class="gx-fin-badge is-bad">Conferido com diferença</span>';
+  const closingRows = [
+    { label: "Dinheiro", expected: cashExpected, checked: counted, diff: cashDiff },
+    { label: "Pix", expected: Number(closing.pixReceived || 0), checked: Number(closing.pixReceived || 0), diff: 0 },
+    { label: "Cartão", expected: Number(closing.cardReceived || 0), checked: Number(closing.cardReceived || 0), diff: 0 },
   ];
+  if (Number(closing.otherReceived || 0) > 0) {
+    const other = Number(closing.otherReceived || 0);
+    closingRows.push({ label: "Vale / outros", expected: other, checked: other, diff: 0 });
+  }
+  const showNotes = (cashDiff !== null && Math.abs(cashDiff) >= 0.005) || Boolean(closing.notes);
+  const payout = Number(overview.deliveryPayout || 0);
+  const deliveryBalance = Number((fees - payout).toFixed(2));
+  const deliveryCount = Number(overview.deliveredOrders || 0);
+  const payoutRuleLabel = getFinancePayoutRuleLabel(snapshot.deliveryPayoutSettings || {});
+  const pendingOrders = Number(overview.pendingOrders || 0);
 
   moduleRoot.innerHTML = `
-    <header class="admin-module-head admin-finance-head">
-      <div class="admin-finance-head-copy">
-        <span class="admin-chip">Financeiro</span>
-        <h2>Financeiro</h2>
-        <p>Visao de faturamento, repasses, taxas e fechamento.</p>
-        <small>${escapeHtml(snapshot.filters?.rangeLabel || "Período financeiro")}</small>
-      </div>
-      <div class="admin-finance-actions" aria-label="Exportacoes financeiras">
-        <button class="admin-button admin-button-secondary" type="button" data-finance-export="csv">Exportar CSV</button>
-        <button class="admin-button admin-button-secondary" type="button" data-finance-export="closing">Exportar resumo do fechamento</button>
-      </div>
-    </header>
-
-    <section class="admin-finance-period-card" aria-label="Filtros de período financeiro">
-      <div class="admin-finance-period-tabs">
+    ${header}
+    <section class="gx-fin-toolbar" aria-label="Período e exportações">
+      <div class="gx-fin-periods" role="group" aria-label="Período">
         ${periodOptions
           .map(
-            (option) => `
-              <button
-                class="admin-finance-period-button${snapshot.filters?.period === option.key ? " is-active" : ""}"
-                type="button"
-                data-finance-period="${escapeHtml(option.key)}"
-              >
-                ${escapeHtml(option.label)}
-              </button>
-            `
+            (option) =>
+              `<button type="button" class="gx-fin-chip${filters.period === option.key ? " is-active" : ""}" aria-pressed="${filters.period === option.key}" data-finance-period="${escapeHtml(option.key)}">${escapeHtml(option.label)}</button>`
           )
           .join("")}
       </div>
-      <div class="admin-finance-custom-range${snapshot.filters?.period === "custom" ? " is-active" : ""}">
-        <label class="admin-field admin-finance-date-field">
-          <span>Início</span>
-          <input
-            class="admin-input"
-            type="date"
-            value="${escapeHtml(snapshot.filters?.startDate || adminState.financeFilters.startDate || "")}"
-            data-finance-filter="startDate"
-          />
-        </label>
-        <label class="admin-field admin-finance-date-field">
-          <span>Fim</span>
-          <input
-            class="admin-input"
-            type="date"
-            value="${escapeHtml(snapshot.filters?.endDate || adminState.financeFilters.endDate || "")}"
-            data-finance-filter="endDate"
-          />
-        </label>
+      <div class="gx-fin-actions">
+        <button type="button" class="gx-fin-chip is-ghost" data-finance-export="csv">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Exportar CSV
+        </button>
+        <button type="button" class="gx-fin-chip is-ghost" data-finance-export="closing">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l5 5v13H7z M14 3v5h5 M10 13h6 M10 17h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Resumo do fechamento
+        </button>
       </div>
     </section>
+    ${
+      filters.period === "custom"
+        ? `<section class="gx-fin-custom" aria-label="Datas do período">
+            <label>De <input type="date" value="${escapeHtml(filters.startDate || adminState.financeFilters.startDate || "")}" data-finance-filter="startDate" /></label>
+            <label>Até <input type="date" value="${escapeHtml(filters.endDate || adminState.financeFilters.endDate || "")}" data-finance-filter="endDate" /></label>
+          </section>`
+        : ""
+    }
 
-    <section class="admin-finance-kpi-grid">
-      ${kpis
-        .map(
-          (kpi) => `
-            <article class="admin-finance-kpi ${kpi.tone}">
-              <span>${escapeHtml(kpi.label)}</span>
-              <strong>${escapeHtml(kpi.value)}</strong>
-              <small>${escapeHtml(kpi.helper)}</small>
-            </article>
-          `
-        )
-        .join("")}
-    </section>
-
-    <section class="admin-finance-grid">
-      <article class="admin-module-card admin-finance-card">
-        <div class="admin-module-card-head">
-          <h3>Meios de pagamento</h3>
-          <span>Quantidade, total recebido e participacao</span>
+    <section class="gx-fin-row is-top">
+      <article class="gx-fin-card gx-fin-net">
+        <div class="gx-fin-net-head">
+          <div>
+            <span class="gx-fin-label">Faturamento líquido</span>
+            <strong class="gx-fin-big">${escapeHtml(formatMoney(net))}</strong>
+            <small class="gx-fin-help">Bruto menos taxas de entrega e descontos · ${escapeHtml(String(overview.validOrders || 0))} pedido(s) válidos</small>
+          </div>
+          <span data-fin-compare>${renderFinanceDelta(net)}</span>
         </div>
-        <div class="admin-finance-payment-list">
-          ${paymentBreakdown
-            .map(
-              (entry) => `
-                <div class="admin-finance-payment-row">
-                  <div>
-                    <strong>${escapeHtml(entry.label)}</strong>
-                    <small>${escapeHtml(String(entry.count))} pedido(s)</small>
-                  </div>
-                  <div class="admin-finance-payment-total">
-                    <strong>${escapeHtml(formatMoney(entry.total || 0))}</strong>
-                    <span>${escapeHtml(formatPercent(entry.percent || 0))}</span>
-                  </div>
-                  <div class="admin-finance-row-track" aria-hidden="true">
-                    <span style="${escapeHtml(getFinanceBarStyle(entry.total || 0, maxPayment))}"></span>
-                  </div>
-                </div>
-              `
-            )
-            .join("")}
+        <div class="gx-fin-stack" aria-hidden="true">
+          <i class="is-orange" style="width:${share(net).toFixed(2)}%"></i>
+          <i class="is-blue" style="width:${share(fees).toFixed(2)}%"></i>
+          <i class="is-purple" style="width:${share(discounts).toFixed(2)}%"></i>
+        </div>
+        <div class="gx-fin-parts">
+          <div><span>Bruto</span><strong>${escapeHtml(formatMoney(gross))}</strong></div>
+          <div><span><i class="gx-fin-dot is-blue"></i>Taxas de entrega</span><strong>− ${escapeHtml(formatMoney(fees))}</strong></div>
+          <div><span><i class="gx-fin-dot is-purple"></i>Descontos</span><strong>− ${escapeHtml(formatMoney(discounts))}</strong></div>
+          <div class="is-net"><span><i class="gx-fin-dot is-orange"></i>Líquido</span><strong>${escapeHtml(formatMoney(net))}</strong></div>
         </div>
       </article>
 
-      <article class="admin-module-card admin-finance-card">
-        <div class="admin-module-card-head">
-          <h3>Fechamento de caixa</h3>
-          <span>${closing.updatedAt ? `Salvo em ${escapeHtml(formatDateTime(closing.updatedAt))}` : "Aguardando conferencia"}</span>
+      <article class="gx-fin-card gx-fin-hours">
+        <div class="gx-fin-card-head">
+          <h3>Vendas por hora</h3>
+          <span>${peak ? `Pico às ${peak.hour}h · ${escapeHtml(formatMoney(peak.total))}` : ""}</span>
         </div>
-        <form class="admin-finance-closing" data-finance-closing-form>
-          <div class="admin-finance-closing-grid">
-            <span><strong>Total esperado</strong>${escapeHtml(formatMoney(closing.totalExpected || 0))}</span>
-            <span><strong>Total recebido</strong>${escapeHtml(formatMoney(closing.totalReceived || 0))}</span>
-            <span class="${Number(closing.difference || 0) < 0 ? "is-negative" : "is-positive"}"><strong>Diferença</strong>${escapeHtml(formatMoney(closing.difference || 0))}</span>
-            <span><strong>Dinheiro a conferir</strong>${escapeHtml(formatMoney(closing.cashExpected || 0))}</span>
-            <span><strong>Pix recebido</strong>${escapeHtml(formatMoney(closing.pixReceived || 0))}</span>
-            <span><strong>Cartão recebido</strong>${escapeHtml(formatMoney(closing.cardReceived || 0))}</span>
+        ${
+          hourly.length
+            ? `<div class="gx-fin-hour-bars" role="img" aria-label="Vendas por hora${isSingleDay ? "" : " (soma do período)"}">
+                ${hourly
+                  .map(
+                    (bucket) => `
+                      <div class="gx-fin-hour${peak && bucket.hour === peak.hour ? " is-peak" : ""}" title="${bucket.hour}h · ${escapeHtml(formatMoney(bucket.total))} · ${bucket.count} pedido(s)">
+                        <span class="gx-fin-hour-bar" style="height:${bucket.total > 0 ? Math.max(4, Math.round((bucket.total / maxHour) * 100)) : 2}%"></span>
+                        <small>${bucket.hour}</small>
+                      </div>`
+                  )
+                  .join("")}
+              </div>
+              ${isSingleDay ? "" : '<p class="gx-fin-note">Soma de todos os dias do período, por horário.</p>'}`
+            : '<p class="gx-fin-empty">Sem vendas no período.</p>'
+        }
+      </article>
+    </section>
+
+    <section class="gx-fin-kpis">
+      <article class="gx-fin-card gx-fin-kpi">
+        <span class="gx-fin-label">Ticket médio</span>
+        <strong>${escapeHtml(formatMoney(overview.averageTicket || 0))}</strong>
+        <small>Média dos pedidos válidos</small>
+      </article>
+      <article class="gx-fin-card gx-fin-kpi">
+        <span class="gx-fin-label">Pedidos pagos</span>
+        <strong>${escapeHtml(String(overview.paidOrders || 0))}</strong>
+        <small>de ${escapeHtml(String(overview.validOrders || 0))} válidos · ${escapeHtml(formatMoney(receivedTotal))}</small>
+      </article>
+      <article class="gx-fin-card gx-fin-kpi">
+        <span class="gx-fin-label"><i class="gx-fin-dot is-red"></i>Cancelamentos</span>
+        <strong>${escapeHtml(String(overview.cancelledOrders || 0))}</strong>
+        <small>${escapeHtml(formatMoney(overview.cancelledRevenue || 0))} · ${cancelShare}% dos pedidos</small>
+      </article>
+      <article class="gx-fin-card gx-fin-kpi is-pending">
+        <span class="gx-fin-label">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          A receber
+        </span>
+        <strong>${escapeHtml(formatMoney(overview.pendingAmount || 0))}</strong>
+        ${
+          pendingOrders > 0
+            ? `<button type="button" class="gx-fin-link" data-fin-goto="orders">${pendingOrders} pedido(s) em aberto · ver pedidos</button>`
+            : "<small>Nenhum pedido em aberto</small>"
+        }
+      </article>
+    </section>
+
+    <section class="gx-fin-row is-half">
+      <article class="gx-fin-card">
+        <div class="gx-fin-card-head">
+          <h3>Meios de pagamento</h3>
+          <span>${escapeHtml(formatMoney(receivedTotal))} recebidos</span>
+        </div>
+        ${
+          payments.length
+            ? `<div class="gx-fin-stack is-thin" aria-hidden="true">
+                ${payments
+                  .map((entry) => `<i class="${FIN_PAYMENT_TONES[entry.key] || "is-purple"}" style="width:${Math.max(0, Math.min(100, Number(entry.percent || 0))).toFixed(2)}%"></i>`)
+                  .join("")}
+              </div>
+              <div class="gx-fin-table gx-fin-pay-table" role="table">
+                <div class="gx-fin-tr is-head" role="row"><span>Meio</span><span>Pedidos</span><span>Total</span><span>%</span></div>
+                ${payments
+                  .map(
+                    (entry) => `
+                      <div class="gx-fin-tr" role="row">
+                        <span class="gx-fin-name"><i class="gx-fin-dot ${FIN_PAYMENT_TONES[entry.key] || "is-purple"}"></i>${escapeHtml(RESULTS_PAYMENT_LABELS[entry.key] || entry.label || "Outros")}</span>
+                        <span class="gx-fin-soft">${escapeHtml(String(entry.count || 0))}</span>
+                        <strong>${escapeHtml(formatMoney(entry.total || 0))}</strong>
+                        <span class="gx-fin-soft">${escapeHtml(formatPercent(entry.percent || 0))}</span>
+                      </div>`
+                  )
+                  .join("")}
+              </div>`
+            : '<p class="gx-fin-empty">Nenhum pagamento recebido no período.</p>'
+        }
+      </article>
+
+      <article class="gx-fin-card">
+        <div class="gx-fin-card-head">
+          <h3>Fechamento de caixa</h3>
+          ${closingBadge}
+        </div>
+        <form class="gx-fin-closing" data-finance-closing-form>
+          <div class="gx-fin-table gx-fin-close-table" role="table">
+            <div class="gx-fin-tr is-head" role="row"><span>Meio</span><span>Esperado</span><span>Conferido</span><span>Diferença</span></div>
+            ${closingRows
+              .map(
+                (row) => `
+                  <div class="gx-fin-tr" role="row">
+                    <strong>${escapeHtml(row.label)}</strong>
+                    <span class="gx-fin-soft">${escapeHtml(formatMoney(row.expected))}</span>
+                    <span>${row.checked === null ? '<span class="gx-fin-muted">a contar</span>' : escapeHtml(formatMoney(row.checked))}</span>
+                    ${diffCell(row.diff)}
+                  </div>`
+              )
+              .join("")}
+            <div class="gx-fin-tr is-total" role="row">
+              <strong>Total</strong>
+              <strong>${escapeHtml(formatMoney(closing.totalExpected || 0))}</strong>
+              <strong>${escapeHtml(formatMoney(closing.totalReceived || 0))}</strong>
+              ${diffCell(counted === null ? null : totalDiff)}
+            </div>
           </div>
-          <label class="admin-field">
-            <span>Valor contado em dinheiro</span>
-            <input
-              class="admin-input"
-              type="text"
-              inputmode="decimal"
-              name="countedCash"
-              value="${escapeHtml(countedCashValue)}"
-              placeholder="${escapeHtml(formatMoney(closing.cashExpected || 0))}"
-            />
-          </label>
-          <label class="admin-field">
-            <span>Observações internas</span>
-            <textarea class="admin-input admin-textarea" name="notes" rows="4" placeholder="Registre divergencias, sangrias, comprovantes ou contexto do fechamento.">${escapeHtml(closing.notes || "")}</textarea>
-          </label>
-          <div class="admin-finance-closing-actions">
-            <button class="admin-button admin-button-primary" type="submit" ${adminState.isSavingFinanceClosing ? "disabled" : ""}>
-              ${adminState.isSavingFinanceClosing ? "Salvando..." : "Salvar fechamento"}
-            </button>
+          ${
+            cashDiff !== null && Math.abs(cashDiff) >= 0.005
+              ? `<p class="gx-fin-alert">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4 2.5 20h19L12 4Zm0 6v4m0 3v.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  ${cashDiff < 0 ? "Faltam" : "Sobram"} ${escapeHtml(formatMoney(Math.abs(cashDiff)))} no dinheiro. Confira a gaveta ou registre o motivo abaixo.
+                </p>`
+              : ""
+          }
+          <label class="gx-fin-field-label" for="gx-fin-counted">Dinheiro contado na gaveta</label>
+          <div class="gx-fin-closing-line">
+            <input id="gx-fin-counted" class="gx-fin-input" type="text" inputmode="decimal" name="countedCash" value="${escapeHtml(formatFinanceMoneyInput(counted))}" placeholder="${escapeHtml(formatMoney(cashExpected))}" autocomplete="off" />
+            <button type="submit" class="gx-fin-primary" ${adminState.isSavingFinanceClosing ? "disabled" : ""}>${adminState.isSavingFinanceClosing ? "Salvando..." : "Conferir e salvar"}</button>
           </div>
+          ${
+            showNotes
+              ? `<label class="gx-fin-field-label" for="gx-fin-notes">Motivo / observação</label>
+                <textarea id="gx-fin-notes" class="gx-fin-input gx-fin-notes" name="notes" rows="2" placeholder="Ex.: troco a mais, sangria, vale do funcionário.">${escapeHtml(closing.notes || "")}</textarea>`
+              : `<input type="hidden" name="notes" value="${escapeHtml(closing.notes || "")}" />`
+          }
+          ${closing.updatedAt ? `<small class="gx-fin-help">Salvo em ${escapeHtml(formatDateTime(closing.updatedAt))}${closing.updatedByDisplayName ? ` por ${escapeHtml(closing.updatedByDisplayName)}` : ""}</small>` : ""}
         </form>
       </article>
     </section>
 
-    <section class="admin-finance-chart-grid">
-      <article class="admin-module-card admin-finance-chart-card">
-        <div class="admin-module-card-head">
-          <h3>Evolucao do faturamento</h3>
-          <span>Receita recebida por dia</span>
-        </div>
-        <div class="admin-finance-bars is-revenue">
-          ${
-            revenueTrend.length
-              ? revenueTrend
-                  .map(
-                    (entry) => `
-                      <div class="admin-finance-bar-row">
-                        <span>${escapeHtml(entry.label)}</span>
-                        <div class="admin-finance-bar-track"><span style="${escapeHtml(getFinanceBarStyle(entry.total || 0, maxRevenue))}"></span></div>
-                        <strong>${escapeHtml(formatMoney(entry.total || 0))}</strong>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem receita no período</strong><span>Quando houver pedidos pagos, a curva aparece aqui.</span></div>`
-          }
-        </div>
-      </article>
-
-      <article class="admin-module-card admin-finance-chart-card">
-        <div class="admin-module-card-head">
-          <h3>Pedidos por horário</h3>
-          <span>Volume de pedidos válidos</span>
-        </div>
-        <div class="admin-finance-bars">
-          ${
-            hourlyOrders.length
-              ? hourlyOrders
-                  .map(
-                    (entry) => `
-                      <div class="admin-finance-bar-row">
-                        <span>${escapeHtml(entry.label)}</span>
-                        <div class="admin-finance-bar-track"><span style="${escapeHtml(getFinanceBarStyle(entry.count || 0, maxHourly))}"></span></div>
-                        <strong>${escapeHtml(String(entry.count || 0))}</strong>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : `<div class="admin-empty-state admin-empty-state-soft"><strong>Sem pedidos no período</strong><span>O volume por horário depende dos pedidos válidos do filtro.</span></div>`
-          }
-        </div>
-      </article>
-
-      <article class="admin-module-card admin-finance-chart-card">
-        <div class="admin-module-card-head">
-          <h3>Receita por forma de pagamento</h3>
-          <span>Distribuição recebida</span>
-        </div>
-        <div class="admin-finance-donut-list">
-          ${paymentBreakdown
-            .map(
-              (entry) => `
-                <div class="admin-finance-donut-row">
-                  <span>${escapeHtml(entry.label)}</span>
-                  <strong>${escapeHtml(formatMoney(entry.total || 0))}</strong>
-                  <small>${escapeHtml(formatPercent(entry.percent || 0))}</small>
-                </div>
-              `
-            )
-            .join("")}
-        </div>
-      </article>
-
-      <article class="admin-module-card admin-finance-chart-card">
-        <div class="admin-module-card-head">
-          <h3>Entregas x retirada</h3>
-          <span>Mix operacional financeiro</span>
-        </div>
-        <div class="admin-finance-bars">
-          ${fulfillmentBreakdown
-            .map(
-              (entry) => `
-                <div class="admin-finance-bar-row">
-                  <span>${escapeHtml(entry.label)}</span>
-                  <div class="admin-finance-bar-track"><span style="${escapeHtml(getFinanceBarStyle(entry.count || 0, maxFulfillment))}"></span></div>
-                  <strong>${escapeHtml(String(entry.count || 0))}</strong>
-                </div>
-              `
-            )
-            .join("")}
-        </div>
-      </article>
-    </section>
-
-    <section class="admin-module-card admin-finance-table-card">
-      <div class="admin-finance-table-head">
-        <div>
-          <h3>Relatório por pedidos</h3>
-          <span>${escapeHtml(String(filteredOrders.length))} pedido(s) no filtro atual</span>
-        </div>
-        <div class="admin-finance-table-filters">
-          <label class="admin-field">
-            <span>Status financeiro</span>
-            <select class="admin-input" data-finance-table-filter="status">
-              ${FINANCE_STATUS_FILTER_OPTIONS.map(
-                (option) => `
-                  <option value="${escapeHtml(option.key)}" ${adminState.financeTableFilters.status === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>
-                `
-              ).join("")}
-            </select>
-          </label>
-          <label class="admin-field">
-            <span>Forma de pagamento</span>
-            <select class="admin-input" data-finance-table-filter="paymentMethod">
-              ${FINANCE_PAYMENT_FILTER_OPTIONS.map(
-                (option) => `
-                  <option value="${escapeHtml(option.key)}" ${adminState.financeTableFilters.paymentMethod === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>
-                `
-              ).join("")}
-            </select>
-          </label>
-        </div>
+    <section class="gx-fin-card gx-fin-delivery" aria-label="Entregas">
+      <div class="gx-fin-delivery-title">
+        <span class="gx-fin-delivery-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="6" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M6 17h4l3-6h3l2 6M13 11l-1-4h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div><strong>Entregas</strong><small>${deliveryCount} entrega(s) no período</small></div>
       </div>
-      <div class="admin-finance-table-wrap">
-        <table class="admin-finance-table">
-          <thead>
-            <tr>
-              <th>Pedido</th>
-              <th>Cliente</th>
-              <th>Horário</th>
-              <th>Pagamento</th>
-              <th>Produtos</th>
-              <th>Entrega</th>
-              <th>Desconto</th>
-              <th>Total</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              filteredOrders.length
-                ? filteredOrders
-                    .map(
-                      (order) => `
-                        <tr>
-                          <td><button type="button" data-order-select="${escapeHtml(order.id)}">${escapeHtml(order.publicId || order.id)}</button></td>
-                          <td>${escapeHtml(order.customerName || "Cliente")}</td>
-                          <td>${escapeHtml(formatDateTime(order.occurredAt || order.createdAt))}</td>
-                          <td>${escapeHtml(getFinancePaymentGroupLabel(order.paymentMethod))}</td>
-                          <td>${escapeHtml(formatMoney(order.subtotal || order.productRevenue || 0))}</td>
-                          <td>${escapeHtml(formatMoney(order.deliveryFee || 0))}</td>
-                          <td>${escapeHtml(formatMoney(order.discountAmount || 0))}</td>
-                          <td>${escapeHtml(formatMoney(order.totalAmount || 0))}</td>
-                          <td><span class="${escapeHtml(getFinanceStatusClassName(order.financialStatus))}">${escapeHtml(getFinanceStatusLabel(order.financialStatus))}</span></td>
-                        </tr>
-                      `
-                    )
-                    .join("")
-                : `
-                  <tr>
-                    <td colspan="9">
-                      <div class="admin-empty-state admin-empty-state-soft">
-                        <strong>Nenhum pedido no filtro</strong>
-                        <span>Ajuste período, status financeiro ou forma de pagamento.</span>
-                      </div>
-                    </td>
-                  </tr>
-                `
-            }
-          </tbody>
-        </table>
+      <div class="gx-fin-delivery-math">
+        <div><span>Taxas cobradas</span><strong>${escapeHtml(formatMoney(fees))}</strong></div>
+        <b aria-hidden="true">−</b>
+        <div title="${escapeHtml(payoutRuleLabel)}"><span>Repasse aos entregadores</span><strong>${escapeHtml(formatMoney(payout))}</strong></div>
+        <b aria-hidden="true">=</b>
+        <div><span>Saldo da entrega</span><strong class="${deliveryBalance < 0 ? "gx-fin-bad" : "gx-fin-ok"}">${deliveryBalance < 0 ? "− " : ""}${escapeHtml(formatMoney(Math.abs(deliveryBalance)))}</strong></div>
       </div>
+      <button type="button" class="gx-fin-link" data-fin-goto="deliveries">Ver entregadores</button>
     </section>
   `;
 };
@@ -8391,34 +8374,39 @@ const loadResults = async () => {
   }
 };
 
-const renderResultsHeader = (activeTab) => {
+const RESULTS_SUBTITLES = Object.freeze({
+  metrics: "Como o restaurante está indo, sem tabela gigante.",
+  reports: "Escolha um relatório para ver os detalhes.",
+});
+
+const renderResultsHeader = (activeTab, { subtitle } = {}) => {
   const filters = adminState.resultsFilters;
+  const title = (RESULTS_TABS.find(([key]) => key === activeTab) || [])[1] || "Resultados";
   return `
     <header class="gx-res-head">
-      <div>
-        <h2>Resultados</h2>
-        <p>Como o restaurante está indo, sem tabela gigante.</p>
+      <div class="gx-res-head-copy">
+        <span class="gx-res-eyebrow">Resultados</span>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(subtitle ?? RESULTS_SUBTITLES[activeTab] ?? "")}</p>
       </div>
-    </header>
-    <div class="gx-res-toolbar">
       <div class="gx-res-tabs" role="tablist" aria-label="Resultados">
         ${RESULTS_TABS.map(
           ([key, label]) =>
             `<button type="button" role="tab" aria-selected="${activeTab === key}" class="${activeTab === key ? "is-active" : ""}" data-results-tab="${key}">${escapeHtml(label)}</button>`
         ).join("")}
       </div>
-      ${
+    </header>
+    ${
         activeTab !== "finance"
-          ? `<div class="gx-res-periods" role="group" aria-label="Período">
+          ? `<div class="gx-res-toolbar"><div class="gx-res-periods" role="group" aria-label="Período">
               ${RESULTS_PERIODS.map(
                 ([key, label]) =>
                   `<button type="button" class="gx-res-chip${filters.period === key ? " is-active" : ""}" aria-pressed="${filters.period === key}" data-results-period="${key}">${escapeHtml(label)}</button>`
               ).join("")}
               <button type="button" class="gx-res-chip is-download" data-results-download>Baixar planilha</button>
-            </div>`
+            </div></div>`
           : ""
       }
-    </div>
     ${
       activeTab !== "finance" && filters.period === "custom"
         ? `<form class="gx-res-custom" data-results-custom>
@@ -8660,6 +8648,14 @@ document.addEventListener("click", (event) => {
     if (adminState.activeSection === "reports") downloadReportCsv();
     else downloadResultsCsv();
   }
+});
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target.closest("[data-fin-goto]") : null;
+  if (!target) return;
+  const section = target.dataset.finGoto;
+  const navButton = document.querySelector(`.admin-nav [data-admin-section="${section}"]`);
+  if (navButton) navButton.click();
 });
 
 document.addEventListener("submit", (event) => {
@@ -11068,7 +11064,6 @@ const renderModuleContentBody = () => {
 
   if (adminState.activeSection === "finance") {
     renderFinanceModule();
-    document.querySelector("[data-admin-module-content]")?.insertAdjacentHTML("afterbegin", renderResultsHeader("finance"));
     return;
   }
 
@@ -14098,6 +14093,7 @@ const loadFinance = async ({ silent = false } = {}) => {
     const payload = await fetchJson(`/api/admin/finance?${query.toString()}`);
 
     adminState.financeSnapshot = payload;
+    void loadFinanceCompare(payload);
     adminState.financeFilters = {
       period: payload.filters?.period || adminState.financeFilters.period || "today",
       startDate: payload.filters?.startDate || "",
