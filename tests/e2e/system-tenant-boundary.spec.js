@@ -650,7 +650,7 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       await page.goto("/admin/users");
       await expect(page.locator("[data-users-logout]").first()).toBeVisible();
       await page.locator("[data-users-logout]").first().click();
-      await expect(page).toHaveURL(/\/admin\/login\.html$/);
+      await expect(page).toHaveURL(/\/login$/);
 
       const session = await page.request.get("/api/auth/restaurant/session");
       expect([200, 401]).toContain(session.status());
@@ -659,7 +659,7 @@ test.describe("SYSTEM × RESTAURANT security boundary", () => {
       }
 
       await page.goBack();
-      await expect(page).toHaveURL(/\/admin\/login\.html/);
+      await expect(page).toHaveURL(/\/login(\?|$)/);
       await expect(page.getByRole("heading", { name: "Usuários", exact: true })).toHaveCount(0);
     } finally {
       await context.close();

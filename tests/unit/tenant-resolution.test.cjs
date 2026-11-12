@@ -161,6 +161,7 @@ test("does not let legacy or restaurant URL configuration redefine the canonical
 
 test("keeps administrative surfaces on the platform and storefront APIs public", () => {
   [
+    "/login",
     "/admin/",
     "/admin/caixa/salao",
     "/master/",

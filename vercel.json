@@ -48,6 +48,10 @@
       "destination": "/inovas.html"
     },
     {
+      "source": "/login",
+      "destination": "/admin/login.html"
+    },
+    {
       "source": "/admin/usuarios/novo",
       "destination": "/admin/usuarios/novo.html"
     },

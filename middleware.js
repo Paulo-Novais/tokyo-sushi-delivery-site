@@ -373,6 +373,16 @@ const resolveRestaurantHostRewrite = (
   return null;
 };
 
+// /login, com ?next só quando o destino não é o início do Gestor.
+const buildLoginUrl = (requestUrl, nextPath = "") => {
+  const loginUrl = new URL("/login", requestUrl);
+  const destination = String(nextPath || "");
+  if (destination.startsWith("/admin") && destination !== "/admin/" && destination !== "/admin") {
+    loginUrl.searchParams.set("next", destination);
+  }
+  return loginUrl;
+};
+
 const buildGestorRedirectUrl = (requestUrl) => {
   const url = new URL(requestUrl);
   const suffix = url.pathname.replace(/^\/gestor\/?/, "");
@@ -542,6 +552,17 @@ export default async function middleware(request) {
   );
   const validSupportContext = Boolean(systemSession && supportSession);
 
+  // Endereço oficial do login: /login (o vercel.json serve /admin/login.html nele).
+  if (pathname === "/login") {
+    if (restaurantSession) {
+      return Response.redirect(new URL("/admin/", request.url), 307);
+    }
+    if (systemSession) {
+      return Response.redirect(new URL("/system", request.url), 307);
+    }
+    return next();
+  }
+
   if (PUBLIC_SYSTEM_PATHS.has(pathname) || SYSTEM_ASSET_PATTERN.test(pathname)) {
     if (pathname === "/system/login.html" && systemSession) {
       return Response.redirect(new URL("/system", request.url), 307);
@@ -585,7 +606,9 @@ export default async function middleware(request) {
     if (systemSession) {
       return Response.redirect(new URL("/system", request.url), 307);
     }
-    return next();
+    // Endereço antigo: leva para /login mantendo o destino. 307 (não permanente) para
+    // um rollback não deixar navegadores presos num redirecionamento guardado.
+    return Response.redirect(buildLoginUrl(request.url, url.searchParams.get("next")), 307);
   }
 
   if (isPublicAdminPath(pathname)) {
@@ -600,8 +623,7 @@ export default async function middleware(request) {
     return systemSession ? next() : buildUnauthorizedApiResponse();
   }
 
-  const loginUrl = new URL("/admin/login.html", request.url);
-  loginUrl.searchParams.set("next", `${pathname}${url.search}`);
+  const loginUrl = buildLoginUrl(request.url, `${pathname}${url.search}`);
 
   if (!restaurantSession && !validSupportContext) {
     if (pathname.startsWith("/api/admin/")) {

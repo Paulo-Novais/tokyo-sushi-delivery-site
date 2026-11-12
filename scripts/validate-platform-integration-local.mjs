@@ -233,7 +233,7 @@ const createStaticServer = (rootDirectory, adminApi, authContext) =>
         const access = await resolveMasterHtmlAccess(req.headers.cookie || "", authContext);
 
         if (access === "unauthenticated") {
-          const loginUrl = new URL("/admin/login.html", `http://${req.headers.host || "127.0.0.1"}`);
+          const loginUrl = new URL("/login", `http://${req.headers.host || "127.0.0.1"}`);
           loginUrl.searchParams.set("next", `${pathname}${requestUrl.search}`);
           res.writeHead(307, {
             "Cache-Control": "no-store",
@@ -596,7 +596,7 @@ const validateMasterHtmlServerAccess = async (baseURL, authCookies) => {
   const noSession = await fetch(`${baseURL}/admin/master.html`, { redirect: "manual" });
   assert.equal(noSession.status, 307, "Usuario sem sessao deve ser redirecionado para login.");
   assert.ok(
-    String(noSession.headers.get("location") || "").startsWith("/admin/login.html"),
+    String(noSession.headers.get("location") || "").startsWith("/login"),
     "Redirecionamento sem sessao deve apontar para login."
   );
 

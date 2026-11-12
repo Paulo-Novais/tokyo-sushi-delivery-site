@@ -209,7 +209,7 @@ const protectAdminHtml = async (req, res, pathname) => {
     const next = encodeURIComponent(pathname);
     setSecurityHeaders(res);
     res.writeHead(302, {
-      Location: `/admin/login.html?next=${next}`,
+      Location: pathname === "/admin/" || pathname === "/admin" ? "/login" : `/login?next=${next}`,
       "Cache-Control": "no-store, max-age=0",
     });
     res.end();
@@ -254,6 +254,7 @@ const protectSystemHtml = async (req, res, pathname) => {
 const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
+  if (pathname === "/login") return "/admin/login.html";
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
   if (
     pathname === "/admin/caixa/salao" ||
@@ -284,6 +285,13 @@ const resolveLocalRedirect = (pathname, search) => {
 
   if (pathname.startsWith("/gestor/")) {
     return `/admin/${pathname.slice("/gestor/".length)}${search}`;
+  }
+
+  // Igual ao middleware de produção: o login antigo leva para /login mantendo o destino.
+  if (pathname === "/admin/login.html") {
+    const nextPath = new URLSearchParams(search).get("next") || "";
+    const keep = nextPath.startsWith("/admin") && nextPath !== "/admin/" && nextPath !== "/admin";
+    return keep ? `/login?next=${encodeURIComponent(nextPath)}` : "/login";
   }
 
   return null;

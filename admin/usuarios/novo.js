@@ -836,7 +836,7 @@
     } catch (error) {
       setSubmitting(false);
       if (error.status === 401) {
-        window.location.href = `/admin/login.html?next=${encodeURIComponent(
+        window.location.href = `/login?next=${encodeURIComponent(
           window.location.pathname
         )}`;
         return;
@@ -1108,7 +1108,7 @@
       initializeForm();
     } catch (error) {
       if (error.status === 401) {
-        window.location.href = `/admin/login.html?next=${encodeURIComponent(
+        window.location.href = `/login?next=${encodeURIComponent(
           window.location.pathname
         )}`;
         return;

@@ -397,7 +397,7 @@
 
   const redirectToLogin = () => {
     const next = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `/admin/login.html?next=${encodeURIComponent(next)}`;
+    window.location.href = `/login?next=${encodeURIComponent(next)}`;
   };
 
   const renderStatus = (status) => {
@@ -4028,7 +4028,7 @@
           // A saida local deve voltar para o login mesmo se a API responder tarde.
         }
 
-        window.location.href = "/admin/login.html";
+        window.location.href = "/login";
       });
     }
 

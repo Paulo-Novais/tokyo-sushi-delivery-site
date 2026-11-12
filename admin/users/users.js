@@ -501,7 +501,7 @@
       // A limpeza local e a troca de página continuam mesmo se a rede falhar.
     }
     clearAuthenticationState();
-    window.location.replace(isSystem ? "/system/login.html" : "/admin/login.html");
+    window.location.replace(isSystem ? "/system/login.html" : "/login");
   };
 
   const redirectWrongAudience = async (error) => {
@@ -575,7 +575,7 @@
           <h2>Não foi possível abrir esta área</h2>
           <p>${escapeHtml(error?.message || "Tente novamente em instantes.")}</p>
           <a class="users-button users-button-primary" href="${
-            error?.status === 401 ? (isSystem ? "/system/login.html" : "/admin/login.html") : window.location.href
+            error?.status === 401 ? (isSystem ? "/system/login.html" : "/login") : window.location.href
           }">${error?.status === 401 ? "Entrar novamente" : "Tentar novamente"}</a>
         </div>
       </section>

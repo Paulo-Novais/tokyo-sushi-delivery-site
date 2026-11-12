@@ -1649,7 +1649,8 @@ const getSafeAdminRedirect = () => {
 
 const redirectToLogin = () => {
   const next = `${window.location.pathname}${window.location.search}`;
-  window.location.href = `/admin/login.html?next=${encodeURIComponent(next)}`;
+  window.location.href =
+    next === "/admin/" || next === "/admin" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
 };
 
 const buildStorageLabel = (storageMode) => {
@@ -15952,7 +15953,7 @@ const initDashboardPage = () => {
         // Mesmo que o logout falhe, seguimos para a tela de login.
       }
 
-      window.location.href = "/admin/login.html";
+      window.location.href = "/login";
     });
   }
 

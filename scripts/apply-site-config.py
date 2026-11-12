@@ -718,7 +718,7 @@ def sync_admin_html_files(runtime_config: dict) -> None:
         absolute_path = ROOT_DIR / file_name
         html = absolute_path.read_text(encoding="utf-8")
 
-        if "../site-config.js" not in html:
+        if "site-config.js" not in html:
             html = replace_or_raise(
                 html,
                 r'(\s+)<script src="\./admin\.js" defer></script>',

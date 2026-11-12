@@ -10,9 +10,38 @@ const masterPassword = process.env.E2E_ADMIN_PASSWORD;
 
 const openLogin = async (page) => {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `127.91.${Math.floor(Math.random() * 200)}.7` });
-  await page.goto("/admin/login.html?next=%2Fadmin%2F");
+  await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Bem-vindo de volta" })).toBeVisible();
 };
+
+test("Login: endereço oficial é /login e os antigos levam até ele", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await openLogin(page);
+  expect(new URL(page.url()).pathname).toBe("/login");
+  // Estilo e fontes carregam no endereço novo (caminhos absolutos).
+  const bg = await page.locator(".lg-side").evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(bg).toContain("gradient");
+
+  // Endereço antigo com o destino padrão vira /login limpo.
+  await page.goto("/admin/login.html?next=%2Fadmin%2F");
+  expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe("/login");
+
+  // Destino diferente do início é mantido.
+  await page.goto("/admin/login.html?next=%2Fadmin%2Fusers");
+  const kept = new URL(page.url());
+  expect(kept.pathname).toBe("/login");
+  expect(kept.searchParams.get("next")).toBe("/admin/users");
+
+  // Sem sessão, o Gestor manda para /login.
+  await page.goto("/admin/");
+  expect(new URL(page.url()).pathname).toBe("/login");
+
+  // "Acessar Plataforma" da home aponta para /login.
+  await page.goto("/inovas");
+  await expect(page.locator(".if-menu-actions a", { hasText: "Acessar Plataforma" })).toHaveAttribute("href", "/login");
+  expect(errors).toEqual([]);
+});
 
 test("Login: visual, mostrar senha, ajuda e erro sem revelar o e-mail", async ({ page }) => {
   await fs.mkdir(outDir, { recursive: true });
@@ -53,7 +82,7 @@ test("Login: visual, mostrar senha, ajuda e erro sem revelar o e-mail", async ({
   await expect(page.locator("[data-admin-login-feedback]")).toBeVisible();
   await expect(page.locator("[data-admin-login-submit]")).toHaveText("Entrar");
   await expect(page.locator("[data-admin-login-submit] svg")).toHaveCount(1);
-  await expect(page).toHaveURL(/\/admin\/login\.html/);
+  await expect(page).toHaveURL(/\/login$/);
   expect(errors).toEqual([]);
 });
 
@@ -71,6 +100,17 @@ test("Login: dono vai para o Gestor e equipe INOVAS vai para o System", async ({
   await ownerPage.locator("[data-admin-login-submit]").click();
   await expect(ownerPage).toHaveURL(/\/admin\/(index\.html)?(\?.*)?$/);
   await owner.close();
+
+  // Com ?next, depois de entrar vai para a página pedida.
+  const ownerNext = await browser.newContext();
+  const ownerNextPage = await ownerNext.newPage();
+  await ownerNextPage.setExtraHTTPHeaders({ "x-forwarded-for": `127.92.${Math.floor(Math.random() * 200)}.7` });
+  await ownerNextPage.goto("/login?next=%2Fadmin%2Fusers");
+  await ownerNextPage.locator('input[name="identifier"]').fill(restaurant.ownerLogin);
+  await ownerNextPage.locator('input[name="password"]').fill(restaurant.ownerPassword);
+  await ownerNextPage.locator("[data-admin-login-submit]").click();
+  await expect(ownerNextPage).toHaveURL(/\/admin\/users\/?$/);
+  await ownerNext.close();
 
   const staff = await browser.newContext();
   const staffPage = await staff.newPage();

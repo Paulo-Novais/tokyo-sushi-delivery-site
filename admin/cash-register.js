@@ -240,7 +240,7 @@
       return payload;
     } catch (error) {
       if (error.status === 401) {
-        window.location.href = "/admin/login.html";
+        window.location.href = "/login";
         return null;
       }
       setMessage(error.message, "error");
@@ -269,7 +269,7 @@
         };
       } catch (error) {
         if (error.status === 401) {
-          window.location.href = "/admin/login.html";
+          window.location.href = "/login";
           return;
         }
         setMessage(error.message, "error");
@@ -2019,7 +2019,7 @@
       applySnapshot(payload);
       return payload;
     } catch (error) {
-      if (error.status === 401) window.location.href = "/admin/login.html";
+      if (error.status === 401) window.location.href = "/login";
       throw error;
     }
   };
