@@ -8631,3 +8631,7 @@ body.has-tracking-order .tracking-section {
     animation: none;
   }
 }
+
+.hero-metrics article[hidden] {
+  display: none !important;
+}

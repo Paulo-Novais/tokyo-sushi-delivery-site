@@ -713,7 +713,7 @@ const MENU_SECTIONS = [
     items: [
       {
         id: "hot-roll-8",
-        name: "Hot Holl",
+        name: "Hot Roll",
         category: "HOT HOLLS (8 unidades)",
         detail: "8 unidades",
         description: "Porcao com 8 unidades de hot holl.",
@@ -1150,7 +1150,7 @@ const MENU_SECTIONS = [
         name: "Combo Yume",
         category: "Categoria Sakura",
         detail: "24 peças",
-        description: "08x Hot Holl, 08x Hot Couve e 08x Hot Temperado.",
+        description: "08x Hot Roll, 08x Hot Couve e 08x Hot Temperado.",
         image: "./menu_pdf_images/page_08.jpg",
         price: 54.99,
         badge: "Consulte",
@@ -1161,7 +1161,7 @@ const MENU_SECTIONS = [
         category: "Categoria Sakura",
         detail: "18 peças",
         unitsLabel: "16 unid + 2 Temakis",
-        description: "08x Uramaki Skin, 08x Hot Holl e 02x Temaki Skin.",
+        description: "08x Uramaki Skin, 08x Hot Roll e 02x Temaki Skin.",
         image: "./menu_pdf_images/page_08.jpg",
         price: 59.99,
         badge: "Consulte",
@@ -1172,7 +1172,7 @@ const MENU_SECTIONS = [
         category: "Categoria Sakura",
         detail: "35 peças",
         description:
-          "10x Hot Temperado, 10x Hot Holl, 10x Hot Poro e 5x Hot Couve.",
+          "10x Hot Temperado, 10x Hot Roll, 10x Hot Poro e 5x Hot Couve.",
         image: "./menu_pdf_images/catalog/combinado-kumo.png",
         price: 71.99,
         badge: "Consulte",
@@ -1194,7 +1194,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "36 peças",
         description:
-          "8x Uramaki Salmão, 8x Hot Holl, 8x Hot Couve, 6x Nigiri Salmão e 6x Sashimi Salmão.",
+          "8x Uramaki Salmão, 8x Hot Roll, 8x Hot Couve, 6x Nigiri Salmão e 6x Sashimi Salmão.",
         image: "./menu_pdf_images/catalog/combinado-fuji.png",
         price: 107.99,
         badge: "Consulte",
@@ -1205,7 +1205,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "29 peças",
         description:
-          "4x Hot Holl, 4x Hot Camarão, 4x Hakusai Camarão, 4x Joe Eby, 4x Fusion, 4x Eby Especial e 5x Hakusai Grelhado.",
+          "4x Hot Roll, 4x Hot Camarão, 4x Hakusai Camarão, 4x Joe Eby, 4x Fusion, 4x Eby Especial e 5x Hakusai Grelhado.",
         image: "./menu_pdf_images/catalog/combinado-sora.png",
         price: 116.99,
         badge: "Consulte",
@@ -1216,7 +1216,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "33 peças",
         description:
-          "8x Uramaki Salmão, 4x Hakusai Salmão, 4x Hot Holl, 4x Hot Couve, 5x Joe Mostarda e 4x Hakusai Camarão.",
+          "8x Uramaki Salmão, 4x Hakusai Salmão, 4x Hot Roll, 4x Hot Couve, 5x Joe Mostarda e 4x Hakusai Camarão.",
         image: "./menu_pdf_images/catalog/combinado-kaito.png",
         price: 94.99,
         badge: "Consulte",
@@ -1238,7 +1238,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "28 peças",
         description:
-          "4x Hot Holl, 4x Hot Couve, 4x Nigiri Salmão, 4x Joe Poró, 4x Joe Geleia, 4x Joe Tartar e 4x Fusion.",
+          "4x Hot Roll, 4x Hot Couve, 4x Nigiri Salmão, 4x Joe Poró, 4x Joe Geleia, 4x Joe Tartar e 4x Fusion.",
         image: "./menu_pdf_images/catalog/combinado-kaigun.png",
         price: 79.99,
         badge: "Consulte",
@@ -1249,7 +1249,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "25 peças",
         description:
-          "8x Hot Holl, 6x Eby Especial, 6x Joe Flanbado e 5x Camarão Recheado.",
+          "8x Hot Roll, 6x Eby Especial, 6x Joe Flanbado e 5x Camarão Recheado.",
         image: "./menu_pdf_images/combinado-imperial.png",
         price: 98.99,
         badge: "Consulte",
@@ -1260,7 +1260,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "32 peças",
         description:
-          "10x Hot Holl, 10x Hot Couve, 6x Nigiri Salmão e 6x Camarão Recheado.",
+          "10x Hot Roll, 10x Hot Couve, 6x Nigiri Salmão e 6x Camarão Recheado.",
         image: "./menu_pdf_images/catalog/combinado-samurai.png",
         price: 89.99,
         badge: "Consulte",
@@ -1271,7 +1271,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "30 peças",
         description:
-          "12x Hot Holl, 8x Hot Temperado, 6x Hot Camarão e 4x Camarão Recheado.",
+          "12x Hot Roll, 8x Hot Temperado, 6x Hot Camarão e 4x Camarão Recheado.",
         image: "./menu_pdf_images/catalog/combinado-shogun.png",
         price: 79.99,
         badge: "Consulte",
@@ -1293,7 +1293,7 @@ const MENU_SECTIONS = [
         category: "Categoria Família",
         detail: "70 peças",
         description:
-          "8x Uramaki Salmão, 8x Uramaki Skin, 8x Hossomaki Salmão, 8x Hot Holl, 8x Hot Couve, 4x Nigiri Salmão, 4x Nigiri Skin, 5x Hakusai Salmão, 5x Hakusai Grelhado e 12x Sashimi Salmão.",
+          "8x Uramaki Salmão, 8x Uramaki Skin, 8x Hossomaki Salmão, 8x Hot Roll, 8x Hot Couve, 4x Nigiri Salmão, 4x Nigiri Skin, 5x Hakusai Salmão, 5x Hakusai Grelhado e 12x Sashimi Salmão.",
         image: "./menu_pdf_images/catalog/combinado-kazoku.png",
         price: 179.99,
         badge: "Consulte",
@@ -1304,7 +1304,7 @@ const MENU_SECTIONS = [
         category: "Categoria Família",
         detail: "64 peças",
         description:
-          "6x Joe Rucula, 6x Joe Tartar, 6x Joe Especial, 6x Joe Poró, 6x Joe Salmão, 6x Joe Eby, 6x Joe Camarão Especial, 6x Eby Especial, 8x Hot Holl e 8x Hot Couve.",
+          "6x Joe Rucula, 6x Joe Tartar, 6x Joe Especial, 6x Joe Poró, 6x Joe Salmão, 6x Joe Eby, 6x Joe Camarão Especial, 6x Eby Especial, 8x Hot Roll e 8x Hot Couve.",
         image: "./menu_pdf_images/catalog/combinado-tomodachi.png",
         price: 224.99,
         badge: "Consulte",
@@ -1863,6 +1863,7 @@ const applyRuntimeCatalogSections = (sections = []) => {
 };
 
 let catalogRuntimeHydrationPromise;
+let catalogHydratedFromApi = false;
 let publicReviewsHydrationPromise;
 let runtimeFeaturedCatalogItem = null;
 let runtimeFeaturedCatalogItems = [];
@@ -1910,9 +1911,11 @@ const hydrateCatalogRuntimeState = async () => {
         runtimeFeaturedCatalogItems[0] ||
         (payload?.featuredItem && typeof payload.featuredItem === "object" ? payload.featuredItem : null);
       saveCart(loadCart());
+      catalogHydratedFromApi = true;
       renderCatalog();
       renderCart();
       initComboHeroImages();
+      renderHomeHeroMetrics();
     } catch (error) {
       catalogRuntimeHydrationPromise = null;
     }
@@ -7763,6 +7766,7 @@ const applyRestaurantSettingsToPublicSite = () => {
   syncPlatformFooter(settings);
   syncPublicLayoutNavigation();
   refreshStoreStatusUi({ rerenderCartUi: false });
+  renderHomeHeroMetrics();
 };
 
 const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
@@ -7784,6 +7788,8 @@ const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
     );
 
     restaurantSettingsState.summary = payload.summary || null;
+    // Número exatamente como o restaurante configurou (o normalizador cai no padrão quando vazio).
+    restaurantSettingsState.configuredWhatsapp = String(payload.settings?.whatsapp || "").replace(/\D/g, "");
     restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(payload.settings || {});
     restaurantSettingsState.loaded = true;
   } catch (error) {
@@ -8374,6 +8380,7 @@ const loadPublicDeliverySettings = async ({ force = false } = {}) => {
     reconcileCartFulfillmentSelection();
     renderDeliveryHistory();
     renderCart();
+    renderHomeHeroMetrics();
   }
 };
 
@@ -12309,6 +12316,45 @@ const clearPublicReviewRotation = () => {
   }
 };
 
+// Indicadores da home: só aparecem com dado real do restaurante (avaliações publicadas,
+// tempo configurado no Gestor e itens contados do cardápio vindo da API).
+
+// "Tempo médio de preparo" configurado pelo restaurante no Gestor (Configurações do site).
+const getPublicConfiguredTimeMinutes = () => {
+  const minutes = Number(restaurantSettingsState.loaded ? getRestaurantSettings().averagePreparationTimeMinutes : 0);
+  return minutes > 0 ? Math.round(minutes) : 0;
+};
+
+const getPublicCatalogItemCount = () =>
+  MENU_SECTIONS.reduce(
+    (total, section) =>
+      total + (Array.isArray(section?.items) ? section.items.filter((item) => getCatalogAvailabilityState(item) !== "unavailable").length : 0),
+    0
+  );
+
+const renderHomeHeroMetrics = () => {
+  const reviewsMetric = document.querySelector('[data-home-metric="reviews"]');
+  if (reviewsMetric) {
+    reviewsMetric.hidden = !reviewPageState.loaded;
+  }
+
+  const timeMetric = document.querySelector('[data-home-metric="time"]');
+  if (timeMetric) {
+    const minutes = getPublicConfiguredTimeMinutes();
+    timeMetric.hidden = minutes <= 0;
+    const value = timeMetric.querySelector("[data-home-delivery-time]");
+    if (value) value.textContent = minutes > 0 ? `${minutes} min` : "";
+  }
+
+  const itemsMetric = document.querySelector('[data-home-metric="items"]');
+  if (itemsMetric) {
+    const count = catalogHydratedFromApi ? getPublicCatalogItemCount() : 0;
+    itemsMetric.hidden = count <= 0;
+    const value = itemsMetric.querySelector("[data-home-item-count]");
+    if (value) value.textContent = count > 0 ? String(count) : "";
+  }
+};
+
 const renderHomeSocialProof = () => {
   const root = document.querySelector("[data-home-social-proof]");
   const reviewListNode = document.querySelector("[data-home-review-list]");
@@ -12317,13 +12363,16 @@ const renderHomeSocialProof = () => {
   const averageLabel = getPublicReviewAverageLabel();
   const countLabel = getPublicReviewCountLabel();
 
+  // Sem avaliações publicadas: "Novo" (nunca uma nota inventada).
   document.querySelectorAll("[data-home-review-average]").forEach((node) => {
-    node.textContent = reviewCount > 0 ? averageLabel : "--";
+    node.textContent = reviewCount > 0 ? averageLabel : "Novo";
   });
 
   document.querySelectorAll("[data-home-review-count]").forEach((node) => {
-    node.textContent = reviewCount > 0 ? countLabel : "Avaliacoes reais";
+    node.textContent = reviewCount > 0 ? countLabel : "Ainda sem avaliações";
   });
+
+  renderHomeHeroMetrics();
 
   if (!root || !reviewListNode) {
     clearPublicReviewRotation();
@@ -12426,7 +12475,7 @@ const renderReviewPage = () => {
 
   if (averageNode) {
     averageNode.textContent =
-      publicReviewCount > 0 ? getPublicReviewAverageLabel() : "Sem avaliacoes";
+      publicReviewCount > 0 ? getPublicReviewAverageLabel() : "Ainda sem avaliações";
   }
 
   if (averageCopyNode) {
@@ -12661,26 +12710,48 @@ const submitCareerForm = (form) => {
     return;
   }
 
-  const applications = loadStoredCollection(CAREER_STORAGE_KEY);
-  applications.unshift({
-    id: `career_${Date.now()}`,
-    name,
-    phone,
-    email,
-    area,
-    experience,
-    schedule,
-    link,
+  // A candidatura vai para o WhatsApp do próprio restaurante (configurado no Gestor).
+  // Sem número configurado, avisa — nunca usa o número de outro restaurante nem finge que enviou.
+  const restaurantWhatsapp = restaurantSettingsState.loaded ? String(restaurantSettingsState.configuredWhatsapp || "") : "";
+
+  if (restaurantWhatsapp.length < 10) {
+    setResultCardState(feedbackNode, "error");
+
+    if (feedbackNode) {
+      feedbackNode.innerHTML =
+        "<p>O restaurante ainda não configurou o WhatsApp para receber candidaturas. Tente novamente mais tarde.</p>";
+    }
+
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  const restaurantName = getRestaurantSettings().restaurantName || "restaurante";
+  const careerMessage = [
+    `Olá! Quero me candidatar para trabalhar no ${restaurantName}.`,
+    "",
+    `Nome: ${name}`,
+    `Telefone: ${formatPhoneDisplay(phone)}`,
+    `E-mail: ${email}`,
+    `Área: ${area}`,
+    `Experiência: ${experience}`,
+    `Disponibilidade: ${schedule}`,
+    link ? `Currículo: ${link}` : "",
+    "",
     message,
-    createdAt: new Date().toISOString(),
-  });
-  saveStoredCollection(CAREER_STORAGE_KEY, applications.slice(0, 20));
+  ]
+    .filter((line, index, lines) => line !== "" || (lines[index - 1] !== "" && index > 0))
+    .join("\n");
+  const careerHref = `https://wa.me/${restaurantWhatsapp.startsWith("55") ? restaurantWhatsapp : `55${restaurantWhatsapp}`}?text=${encodeURIComponent(careerMessage)}`;
+  window.open(careerHref, "_blank", "noopener");
   setResultCardState(feedbackNode, "success");
 
   if (feedbackNode) {
     feedbackNode.innerHTML = `
       <p>
-        Candidatura enviada com sucesso para a area de ${escapeHtml(area)}. A equipe ja pode revisar seus dados neste aparelho.
+        Abrimos o WhatsApp do ${escapeHtml(restaurantName)} com a sua candidatura para ${escapeHtml(area)}.
+        Confira a mensagem e toque em enviar. Se o WhatsApp não abriu,
+        <a href="${escapeHtml(careerHref)}" target="_blank" rel="noopener" data-whatsapp-keep>clique aqui</a>.
       </p>
     `;
   }

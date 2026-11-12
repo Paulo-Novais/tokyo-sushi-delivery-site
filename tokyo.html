@@ -156,17 +156,18 @@
             </div>
 
             <div class="hero-metrics reveal">
-              <article>
-                <strong data-home-review-average>--</strong>
-                <span data-home-review-count>Avaliacoes reais</span>
+              <!-- Indicadores reais: começam escondidos e só aparecem com dado do restaurante. -->
+              <article data-home-metric="reviews" hidden>
+                <strong data-home-review-average>Novo</strong>
+                <span data-home-review-count>Ainda sem avaliações</span>
               </article>
-              <article>
-                <strong>25min</strong>
-                <span>Entrega ágil</span>
+              <article data-home-metric="time" hidden>
+                <strong data-home-delivery-time></strong>
+                <span>Tempo médio de preparo</span>
               </article>
-              <article>
-                <strong>+40</strong>
-                <span>Combos e especialidades</span>
+              <article data-home-metric="items" hidden>
+                <strong data-home-item-count></strong>
+                <span>Itens no cardápio</span>
               </article>
             </div>
           </div>
@@ -200,7 +201,7 @@
               </div>
 
               <div class="hero-order-list">
-                <span>8 Hot Holl</span>
+                <span>8 Hot Roll</span>
                 <span>6 Eby Especial</span>
                 <span>6 Joe Flambado</span>
                 <span>5 Camarão Recheado</span>
