@@ -4689,3 +4689,69 @@ html body.admin-body .gx-od-pill svg {
     overflow-wrap: anywhere;
   }
 }
+
+/* ---------- Painel: ícones dos indicadores em tamanho normal ---------- */
+html body.admin-body.admin-body[data-admin-page="dashboard"] .admin-stat-card-icon {
+  display: inline-grid !important;
+  flex: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  place-items: center !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"] .admin-stat-card-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"] .admin-dashboard-summary-card-icon {
+  flex: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"] .admin-dashboard-summary-card-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* ---------- Usuários: botão "+ Novo usuário" e ícones no tema escuro ---------- */
+html body.admin-body.admin-body .admin-users-new-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+}
+
+html body.admin-body.admin-body .admin-users-page-head {
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+html body.admin-body.admin-body[data-admin-theme="dark"] .admin-users-summary-icon {
+  background: rgba(249, 115, 22, 0.14) !important;
+  color: #fb923c !important;
+}
+
+/* ---------- Caixa no mesmo azul-marinho do Gestor ---------- */
+html body.admin-body[data-admin-theme="dark"] .cx-root {
+  --cx-bg: #0b111b;
+  --cx-surface: #131a26;
+  --cx-fill: #1a2333;
+  --cx-fill-2: #172030;
+  --cx-border: #253043;
+  --cx-border-soft: #1f293a;
+  --cx-ink: #f1f5f9;
+  --cx-ink-2: #cbd5e1;
+  --cx-ink-3: #8d9aae;
+  --cx-accent: #f97316;
+  --cx-accent-hover: #fb8a3c;
+  --cx-brand: #f97316;
+  --cx-hero-bg: #0b111b;
+}
