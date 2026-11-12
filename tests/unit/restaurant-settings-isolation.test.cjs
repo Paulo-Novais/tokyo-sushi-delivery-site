@@ -121,3 +121,14 @@ test("salvar pelo Gestor sem premiumContent mantém os textos do Modelo Premium"
     assert.deepEqual(settings.premiumContent.cartAddons.map((addon) => addon.id), ["borda-catupiry"]);
   });
 });
+
+test("padrão do Tokyo sem linha no banco já traz o conteúdo do Modelo Premium", async () => {
+  await withIsolatedSettings(async ({ store }) => {
+    const defaults = store.getDefaultRestaurantSettings();
+    assert.ok(defaults.premiumContent, "premiumContent ausente no padrão (quebrava a página no Preview)");
+    assert.deepEqual(
+      defaults.premiumContent.cartAddons.map((addon) => addon.id),
+      ["hashi", "adaptador", "shoyu", "tare"]
+    );
+  });
+});
