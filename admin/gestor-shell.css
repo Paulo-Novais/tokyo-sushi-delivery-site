@@ -5635,3 +5635,497 @@ html body.admin-body.admin-body .gx-inv-amount input {
   font-size: 20px !important;
   font-weight: 800 !important;
 }
+
+/* =====================================================================
+   Resultados (esboço "Resultados claro e escuro"): Resumo + abas.
+   ===================================================================== */
+html body.admin-body.admin-body[data-admin-page="dashboard"]:is([data-admin-section="metrics"], [data-admin-section="finance"], [data-admin-section="reports"]) .admin-main-intro {
+  display: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"]:is([data-admin-section="metrics"], [data-admin-section="finance"], [data-admin-section="reports"]) .admin-main-topbar {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="metrics"] .admin-workspace {
+  display: block !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="metrics"] .admin-detail-panel {
+  display: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="metrics"] :is(.admin-board-panel, .admin-module-shell) {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gx-res-head h2 {
+  margin: 0;
+  color: var(--gx-ink);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.gx-res-head p {
+  margin: 4px 0 0;
+  color: var(--gx-ink-3);
+  font-size: 15px;
+}
+
+.gx-res-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.gx-res-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--gx-bg-2);
+}
+
+.gx-res-tabs button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gx-ink-2);
+  font: 600 15px/1 inherit;
+  cursor: pointer;
+}
+
+.gx-res-tabs button.is-active {
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.gx-res-periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gx-res-chip {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--gx-border);
+  border-radius: 999px;
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+  font: 600 14.5px/1 inherit;
+  cursor: pointer;
+}
+
+.gx-res-chip.is-active {
+  border-color: var(--gx-ink);
+  background: var(--gx-ink);
+  color: var(--gx-surface);
+}
+
+.gx-res-chip.is-download {
+  border-radius: 10px;
+}
+
+.gx-res-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 18px;
+  color: var(--gx-ink-2);
+  font-size: 14px;
+}
+
+.gx-res-custom input {
+  min-height: 40px;
+  margin-left: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--gx-border);
+  border-radius: 10px;
+  background: var(--gx-surface);
+  color: var(--gx-ink);
+  font: inherit;
+  color-scheme: light dark;
+}
+
+.gx-res-card {
+  padding: 20px;
+  border: 1px solid var(--gx-border);
+  border-radius: 16px;
+  background: var(--gx-surface);
+}
+
+.gx-res-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.gx-res-kpi {
+  display: grid;
+  gap: 4px;
+}
+
+.gx-res-kpi > span {
+  color: var(--gx-ink-2);
+  font-size: 14px;
+}
+
+.gx-res-kpi strong {
+  color: var(--gx-ink);
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-res-delta {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.gx-res-delta.is-up { color: #15803d; }
+.gx-res-delta.is-down { color: #b91c1c; }
+.gx-res-delta.is-flat { color: var(--gx-ink-3); font-weight: 500; }
+html body.admin-body[data-admin-theme="dark"] .gx-res-delta.is-up { color: #4ade80; }
+html body.admin-body[data-admin-theme="dark"] .gx-res-delta.is-down { color: #f87171; }
+
+.gx-res-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gx-res-row.is-wide {
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+}
+
+.gx-res-row.is-thirds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gx-res-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.gx-res-card-head h3 {
+  margin: 0;
+  color: var(--gx-ink);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.gx-res-card-head span {
+  color: var(--gx-ink-3);
+  font-size: 13.5px;
+}
+
+/* Vendas por dia */
+.gx-res-bars {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 18px;
+  height: 230px;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--gx-border);
+}
+
+.gx-res-bars.is-dense {
+  gap: 4px;
+}
+
+.gx-res-bar-col {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-items: end;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+.gx-res-bar-value {
+  align-self: end;
+  color: var(--gx-ink-2);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gx-res-bars.is-dense .gx-res-bar-value {
+  display: none;
+}
+
+.gx-res-bar {
+  align-self: end;
+  width: min(56px, 100%);
+  border-radius: 6px 6px 0 0;
+  background: #cbd5e1;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-res-bar {
+  background: #374151;
+}
+
+.gx-res-bar-col.is-today .gx-res-bar {
+  background: #ea580c;
+}
+
+html body.admin-body[data-admin-theme="dark"] .gx-res-bar-col.is-today .gx-res-bar {
+  background: #f97316;
+}
+
+.gx-res-bar-col.is-today .gx-res-bar-value {
+  color: #ea580c;
+}
+
+.gx-res-bar-label {
+  position: absolute;
+  bottom: -28px;
+  color: var(--gx-ink-2);
+  font-size: 13.5px;
+}
+
+.gx-res-bars.is-dense .gx-res-bar-label {
+  font-size: 11px;
+}
+
+.gx-res-note {
+  margin: 40px 0 0;
+  color: var(--gx-ink-2);
+  font-size: 14px;
+}
+
+/* Como pagaram */
+.gx-res-pay {
+  display: grid;
+  gap: 16px;
+}
+
+.gx-res-pay-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 14.5px;
+}
+
+.gx-res-pay-row strong {
+  color: var(--gx-ink);
+}
+
+.gx-res-pay-row span {
+  color: var(--gx-ink-2);
+}
+
+.gx-res-pay-bar {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--gx-bg-2);
+}
+
+.gx-res-pay-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.gx-res-pay-bar.is-pix i { background: #16a34a; }
+.gx-res-pay-bar.is-card i { background: #2563eb; }
+.gx-res-pay-bar.is-cash i { background: #ea580c; }
+.gx-res-pay-bar.is-other i { background: #6b7280; }
+
+/* Listas */
+.gx-res-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gx-res-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 0;
+  border-top: 1px solid var(--gx-border);
+}
+
+.gx-res-list li > strong {
+  margin-left: auto;
+  color: var(--gx-ink);
+  font-size: 15px;
+}
+
+.gx-res-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gx-res-pill.is-ok { background: #dcfce7; color: #15803d; }
+.gx-res-pill.is-info { background: #dbeafe; color: #1d4ed8; }
+.gx-res-pill.is-bad { background: #fee2e2; color: #b91c1c; }
+.gx-res-pill.is-warn { background: #fef3c7; color: #a16207; }
+.gx-res-pill.is-muted { background: var(--gx-bg-2); color: var(--gx-ink-3); }
+html body.admin-body[data-admin-theme="dark"] .gx-res-pill.is-ok { background: rgba(34, 197, 94, 0.16); color: #4ade80; }
+html body.admin-body[data-admin-theme="dark"] .gx-res-pill.is-info { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+html body.admin-body[data-admin-theme="dark"] .gx-res-pill.is-bad { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+html body.admin-body[data-admin-theme="dark"] .gx-res-pill.is-warn { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+
+.gx-res-rank {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(234, 88, 12, 0.12);
+  color: #ea580c;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.gx-res-product {
+  overflow: hidden;
+  color: var(--gx-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gx-res-qty {
+  margin-left: auto;
+  color: var(--gx-ink-2);
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+
+.gx-res-closing {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.gx-res-closing strong {
+  color: var(--gx-ink);
+  font-size: 15px;
+}
+
+.gx-res-closing small {
+  color: var(--gx-ink-2);
+  font-size: 13.5px;
+}
+
+.gx-res-empty {
+  margin: 0;
+  color: var(--gx-ink-3);
+  font-size: 14px;
+}
+
+@media (max-width: 1100px) {
+  .gx-res-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gx-res-row.is-wide,
+  .gx-res-row.is-thirds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .gx-res-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gx-res-bars {
+    gap: 6px;
+  }
+
+  .gx-res-bar-value {
+    font-size: 10px;
+  }
+}
+
+/* Resultados: períodos lado a lado; a barra mais alta não cobre o valor. */
+html body.admin-body.admin-body .gx-res-toolbar {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+html body.admin-body.admin-body .gx-res-periods,
+html body.admin-body.admin-body .gx-res-tabs {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+}
+
+html body.admin-body.admin-body .gx-res-chip {
+  width: auto !important;
+  white-space: nowrap !important;
+}
+
+.gx-res-bar-col {
+  grid-template-rows: 1fr !important;
+  align-content: end;
+}
+
+.gx-res-bar-value {
+  grid-row: 1;
+  align-self: end;
+  margin-bottom: calc(var(--h, 0%) + 6px);
+}
+
+.gx-res-bar {
+  grid-row: 1;
+}
+
+/* Gráfico de vendas por dia: valor logo acima da barra. */
+html body.admin-body.admin-body .gx-res-bar-col {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+html body.admin-body.admin-body .gx-res-bar-value {
+  margin: 0 !important;
+}
+
+html body.admin-body.admin-body .gx-res-bars .gx-res-bar {
+  flex: none !important;
+  width: min(56px, 100%) !important;
+  height: var(--h) !important;
+}

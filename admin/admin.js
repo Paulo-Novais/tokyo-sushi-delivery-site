@@ -797,6 +797,10 @@ const adminState = {
   },
   // Estoque v2: lista ou grade, painel lateral ("edit" ou "move") e movimentação em edição.
   inventoryView: "list",
+  // Resultados (Resumo): período escolhido e dados carregados do Financeiro.
+  resultsFilters: { period: "7d", startDate: "", endDate: "" },
+  resultsData: null,
+  isLoadingResults: false,
   inventoryDrawer: "",
   inventoryMove: null,
   selectedInventoryItemId: "",
@@ -8317,6 +8321,358 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+// ===================== Resultados (esboço "Resultados claro e escuro") =====================
+const RESULTS_PERIODS = Object.freeze([
+  ["today", "Hoje"],
+  ["7d", "7 dias"],
+  ["30d", "30 dias"],
+  ["custom", "Personalizado"],
+]);
+const RESULTS_TABS = Object.freeze([
+  ["metrics", "Resumo"],
+  ["finance", "Financeiro"],
+  ["reports", "Relatórios"],
+]);
+const RESULTS_WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const RESULTS_PAYMENT_TONES = Object.freeze({ pix: "is-pix", cartao: "is-card", dinheiro: "is-cash", online_outros: "is-other" });
+const RESULTS_PAYMENT_LABELS = Object.freeze({ pix: "Pix", cartao: "Cartão", dinheiro: "Dinheiro", online_outros: "Vale / outros" });
+
+const toLocalDateKey = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const shiftDateKey = (key, days) => {
+  const [y, m, d] = String(key).split("-").map(Number);
+  const date = new Date(y, (m || 1) - 1, d || 1);
+  date.setDate(date.getDate() + days);
+  return toLocalDateKey(date);
+};
+
+const getPreviousRange = (filters = {}) => {
+  const start = String(filters.startDate || "").trim();
+  const end = String(filters.endDate || "").trim();
+  if (!start || !end) return null;
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const days = Math.max(1, Math.round((new Date(ey, em - 1, ed) - new Date(sy, sm - 1, sd)) / 86400000) + 1);
+  return { startDate: shiftDateKey(start, -days), endDate: shiftDateKey(start, -1), days };
+};
+
+const loadResults = async () => {
+  const filters = adminState.resultsFilters;
+  const query = new URLSearchParams({ period: filters.period });
+  if (filters.period === "custom") {
+    if (!filters.startDate || !filters.endDate) return;
+    query.set("startDate", filters.startDate);
+    query.set("endDate", filters.endDate);
+  }
+  adminState.isLoadingResults = true;
+  if (adminState.activeSection === "metrics") renderModuleContent();
+  try {
+    const current = await fetchJson(`/api/admin/finance?${query.toString()}`);
+    const previousRange = getPreviousRange(current.filters);
+    const [previous, week] = await Promise.all([
+      previousRange
+        ? fetchJson(`/api/admin/finance?${new URLSearchParams({ period: "custom", ...previousRange }).toString()}`).catch(() => null)
+        : Promise.resolve(null),
+      // "Hoje" sozinho vira uma barra só: o gráfico mostra os últimos 7 dias.
+      filters.period === "today" ? fetchJson("/api/admin/finance?period=7d").catch(() => null) : Promise.resolve(null),
+    ]);
+    adminState.resultsData = { current, previous, week, previousDays: previousRange?.days || 0 };
+  } catch (error) {
+    if (error.status === 401) {
+      redirectToLogin();
+      return;
+    }
+    adminState.resultsData = { error: error.message || "Não foi possível carregar os resultados." };
+  } finally {
+    adminState.isLoadingResults = false;
+    if (adminState.activeSection === "metrics") renderModuleContent();
+  }
+};
+
+const renderResultsHeader = (activeTab) => {
+  const filters = adminState.resultsFilters;
+  return `
+    <header class="gx-res-head">
+      <div>
+        <h2>Resultados</h2>
+        <p>Como o restaurante está indo, sem tabela gigante.</p>
+      </div>
+    </header>
+    <div class="gx-res-toolbar">
+      <div class="gx-res-tabs" role="tablist" aria-label="Resultados">
+        ${RESULTS_TABS.map(
+          ([key, label]) =>
+            `<button type="button" role="tab" aria-selected="${activeTab === key}" class="${activeTab === key ? "is-active" : ""}" data-results-tab="${key}">${escapeHtml(label)}</button>`
+        ).join("")}
+      </div>
+      ${
+        activeTab === "metrics"
+          ? `<div class="gx-res-periods" role="group" aria-label="Período">
+              ${RESULTS_PERIODS.map(
+                ([key, label]) =>
+                  `<button type="button" class="gx-res-chip${filters.period === key ? " is-active" : ""}" aria-pressed="${filters.period === key}" data-results-period="${key}">${escapeHtml(label)}</button>`
+              ).join("")}
+              <button type="button" class="gx-res-chip is-download" data-results-download>Baixar planilha</button>
+            </div>`
+          : ""
+      }
+    </div>
+    ${
+      activeTab === "metrics" && filters.period === "custom"
+        ? `<form class="gx-res-custom" data-results-custom>
+            <label>De <input type="date" name="startDate" value="${escapeHtml(filters.startDate)}" required /></label>
+            <label>Até <input type="date" name="endDate" value="${escapeHtml(filters.endDate)}" required /></label>
+            <button type="submit" class="gx-res-chip is-active">Aplicar</button>
+          </form>`
+        : ""
+    }`;
+};
+
+const formatResultsChange = (current, previous, { money = false, lowerIsBetter = false, label = "" } = {}) => {
+  if (previous === null || previous === undefined) return `<span class="gx-res-delta is-flat">Sem comparação</span>`;
+  if (lowerIsBetter) {
+    const diff = Math.round(current - previous);
+    if (diff === 0) return `<span class="gx-res-delta is-flat">Igual ao período anterior</span>`;
+    const better = diff < 0;
+    return `<span class="gx-res-delta ${better ? "is-up" : "is-down"}">${diff < 0 ? "▼" : "▲"} ${Math.abs(diff)} a ${diff < 0 ? "menos" : "mais"} que antes</span>`;
+  }
+  if (!previous) return current > 0 ? `<span class="gx-res-delta is-up">▲ novo no período</span>` : `<span class="gx-res-delta is-flat">Sem movimento</span>`;
+  const percent = Math.round(((current - previous) / previous) * 100);
+  if (percent === 0) return `<span class="gx-res-delta is-flat">Igual ${escapeHtml(label)}</span>`;
+  return `<span class="gx-res-delta ${percent > 0 ? "is-up" : "is-down"}">${percent > 0 ? "▲" : "▼"} ${Math.abs(percent)}% vs. ${escapeHtml(label)}</span>`;
+};
+
+const getResultsTrend = (data) => {
+  const source = adminState.resultsFilters.period === "today" && data.week ? data.week : data.current;
+  const buckets = Array.isArray(source?.charts?.revenueTrend) ? source.charts.revenueTrend : [];
+  const todayKey = toLocalDateKey(new Date());
+  return buckets.map((bucket) => {
+    const [y, m, d] = String(bucket.key || "").split("-").map(Number);
+    const date = new Date(y, (m || 1) - 1, d || 1);
+    const isToday = bucket.key === todayKey;
+    return {
+      key: bucket.key,
+      total: Number(bucket.total || 0),
+      isToday,
+      label: isToday ? "Hoje" : buckets.length > 10 ? String(d).padStart(2, "0") : RESULTS_WEEKDAYS[date.getDay()],
+      longLabel: isToday ? "hoje" : ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"][date.getDay()],
+    };
+  });
+};
+
+const formatCompactMoney = (value) => {
+  const amount = Math.round(Number(value || 0));
+  return `R$ ${amount.toLocaleString("pt-BR")}`;
+};
+
+const renderResultsModule = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  if (!moduleRoot) return;
+  const data = adminState.resultsData;
+  const header = renderResultsHeader("metrics");
+
+  if (!data || (adminState.isLoadingResults && !data.current)) {
+    moduleRoot.innerHTML = `${header}<div class="admin-empty-state admin-empty-state-soft admin-empty-state-loading"><strong>Carregando resultados</strong><span>Somando vendas, pedidos e pagamentos do período.</span></div>`;
+    if (!data && !adminState.isLoadingResults) void loadResults();
+    return;
+  }
+  if (data.error) {
+    moduleRoot.innerHTML = `${header}<div class="admin-feedback is-error">${escapeHtml(data.error)}</div>`;
+    return;
+  }
+
+  const overview = data.current.overview || {};
+  const previous = data.previous?.overview || null;
+  const period = adminState.resultsFilters.period;
+  const compareLabel = period === "today" ? "ontem" : period === "7d" ? "semana anterior" : period === "30d" ? "30 dias anteriores" : "período anterior";
+  const trend = getResultsTrend(data);
+  const maxTotal = Math.max(1, ...trend.map((entry) => entry.total));
+  const bestDays = [...trend].filter((entry) => entry.total > 0 && !entry.isToday).sort((a, b) => b.total - a.total).slice(0, 2);
+  const payments = (data.current.paymentBreakdown || []).filter((entry) => entry.key);
+  const statusSummary = data.current.statusSummary || {};
+  const topProducts = data.current.topProducts || [];
+  const closings = data.current.recentCashClosings || [];
+  const trendTitle = period === "30d" ? "Últimos 30 dias" : period === "custom" ? "Período escolhido" : "Últimos 7 dias";
+
+  const kpi = (label, value, change) => `
+    <article class="gx-res-card gx-res-kpi"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${change}</article>`;
+
+  moduleRoot.innerHTML = `
+    ${header}
+    <section class="gx-res-kpis">
+      ${kpi("Vendas", formatMoney(overview.grossRevenue || 0), formatResultsChange(overview.grossRevenue || 0, previous ? previous.grossRevenue || 0 : null, { label: compareLabel }))}
+      ${kpi("Pedidos", String(overview.validOrders || 0), formatResultsChange(overview.validOrders || 0, previous ? previous.validOrders || 0 : null, { label: compareLabel }))}
+      ${kpi("Ticket médio", formatMoney(overview.averageTicket || 0), formatResultsChange(overview.averageTicket || 0, previous ? previous.averageTicket || 0 : null, { label: compareLabel }))}
+      ${kpi("Cancelados", String(overview.cancelledOrders || 0), formatResultsChange(overview.cancelledOrders || 0, previous ? previous.cancelledOrders || 0 : null, { lowerIsBetter: true }))}
+    </section>
+
+    <section class="gx-res-row is-wide">
+      <article class="gx-res-card gx-res-chart">
+        <div class="gx-res-card-head"><h3>Vendas por dia</h3><span>${escapeHtml(trendTitle)}</span></div>
+        <div class="gx-res-bars${trend.length > 10 ? " is-dense" : ""}" role="img" aria-label="Vendas por dia">
+          ${trend
+            .map(
+              (entry) => `
+                <div class="gx-res-bar-col${entry.isToday ? " is-today" : ""}" style="--h:${Math.max(2, Math.round((entry.total / maxTotal) * 82))}%">
+                  <span class="gx-res-bar-value">${entry.total > 0 ? escapeHtml(formatCompactMoney(entry.total)) : ""}</span>
+                  <span class="gx-res-bar" style="height:var(--h)"></span>
+                  <span class="gx-res-bar-label">${escapeHtml(entry.label)}</span>
+                </div>`
+            )
+            .join("")}
+        </div>
+        <p class="gx-res-note">${
+          trend.some((entry) => entry.isToday) ? "Hoje está destacado em laranja. " : ""
+        }${
+          bestDays.length === 2
+            ? `${escapeHtml(bestDays[0].longLabel.charAt(0).toUpperCase() + bestDays[0].longLabel.slice(1))} e ${escapeHtml(bestDays[1].longLabel)} foram os melhores dias do período.`
+            : bestDays.length === 1
+              ? `${escapeHtml(bestDays[0].longLabel.charAt(0).toUpperCase() + bestDays[0].longLabel.slice(1))} foi o melhor dia do período.`
+              : "Ainda sem vendas finalizadas no período."
+        }</p>
+      </article>
+
+      <article class="gx-res-card">
+        <div class="gx-res-card-head"><h3>Como pagaram</h3></div>
+        <div class="gx-res-pay">
+          ${payments
+            .map(
+              (entry) => `
+                <div class="gx-res-pay-row">
+                  <div><strong>${escapeHtml(RESULTS_PAYMENT_LABELS[entry.key] || entry.label)}</strong><span>${escapeHtml(formatMoney(entry.total || 0))} · ${escapeHtml(String(Math.round(entry.percent || 0)))}%</span></div>
+                  <span class="gx-res-pay-bar ${RESULTS_PAYMENT_TONES[entry.key] || "is-other"}"><i style="width:${Math.max(0, Math.min(100, Number(entry.percent || 0)))}%"></i></span>
+                </div>`
+            )
+            .join("")}
+        </div>
+      </article>
+    </section>
+
+    <section class="gx-res-row is-thirds">
+      <article class="gx-res-card">
+        <div class="gx-res-card-head"><h3>Pedidos por situação</h3></div>
+        <ul class="gx-res-list">
+          <li><span class="gx-res-pill is-ok">Entregues</span><strong>${escapeHtml(String(statusSummary.delivered || 0))}</strong></li>
+          <li><span class="gx-res-pill is-info">Em andamento</span><strong>${escapeHtml(String(statusSummary.inProgress || 0))}</strong></li>
+          <li><span class="gx-res-pill is-bad">Cancelados</span><strong>${escapeHtml(String(statusSummary.cancelled || 0))}</strong></li>
+        </ul>
+      </article>
+      <article class="gx-res-card">
+        <div class="gx-res-card-head"><h3>Mais vendidos</h3></div>
+        ${
+          topProducts.length
+            ? `<ul class="gx-res-list">${topProducts
+                .map(
+                  (product, index) =>
+                    `<li><span class="gx-res-rank">${index + 1}</span><span class="gx-res-product">${escapeHtml(product.name)}</span><span class="gx-res-qty">${escapeHtml(formatInventoryQuantity(product.quantity))} un.</span></li>`
+                )
+                .join("")}</ul>`
+            : `<p class="gx-res-empty">Nenhuma venda finalizada no período.</p>`
+        }
+      </article>
+      <article class="gx-res-card">
+        <div class="gx-res-card-head"><h3>Últimos fechamentos de caixa</h3></div>
+        ${
+          closings.length
+            ? `<ul class="gx-res-list">${closings
+                .map((closing) => {
+                  const counted = closing.countedCash;
+                  const diff = Number(closing.differenceAmount || 0);
+                  const badge =
+                    counted === null || counted === undefined
+                      ? '<span class="gx-res-pill is-muted">Sem contagem</span>'
+                      : Math.abs(diff) < 0.005
+                        ? '<span class="gx-res-pill is-ok">Confere</span>'
+                        : diff > 0
+                          ? `<span class="gx-res-pill is-warn">Sobrou ${escapeHtml(formatMoney(diff))}</span>`
+                          : `<span class="gx-res-pill is-bad">Faltou ${escapeHtml(formatMoney(Math.abs(diff)))}</span>`;
+                  return `<li><span class="gx-res-closing"><strong>${escapeHtml(closing.closedAt ? new Date(closing.closedAt).toLocaleDateString("pt-BR") : "--")}</strong><small>Contado ${escapeHtml(formatMoney(counted || 0))}</small></span>${badge}</li>`;
+                })
+                .join("")}</ul>`
+            : `<p class="gx-res-empty">Nenhum caixa fechado ainda.</p>`
+        }
+      </article>
+    </section>
+  `;
+};
+
+const downloadResultsCsv = () => {
+  const data = adminState.resultsData;
+  if (!data?.current) return;
+  const quote = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const money = (value) => Number(value || 0).toFixed(2).replace(".", ",");
+  const overview = data.current.overview || {};
+  const lines = [
+    ["Resultados", data.current.filters?.startDate || "", data.current.filters?.endDate || ""].map(quote).join(";"),
+    "",
+    ["Indicador", "Valor"].map(quote).join(";"),
+    ["Vendas", money(overview.grossRevenue)].map(quote).join(";"),
+    ["Pedidos", overview.validOrders || 0].map(quote).join(";"),
+    ["Ticket médio", money(overview.averageTicket)].map(quote).join(";"),
+    ["Cancelados", overview.cancelledOrders || 0].map(quote).join(";"),
+    "",
+    ["Dia", "Vendas"].map(quote).join(";"),
+    ...getResultsTrend(data).map((entry) => [entry.key, money(entry.total)].map(quote).join(";")),
+    "",
+    ["Pagamento", "Total", "%"].map(quote).join(";"),
+    ...(data.current.paymentBreakdown || []).map((entry) =>
+      [RESULTS_PAYMENT_LABELS[entry.key] || entry.label, money(entry.total), Math.round(entry.percent || 0)].map(quote).join(";")
+    ),
+    "",
+    ["Mais vendidos", "Quantidade"].map(quote).join(";"),
+    ...(data.current.topProducts || []).map((product) => [product.name, product.quantity].map(quote).join(";")),
+  ];
+  const blob = new Blob([`\ufeff${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `resultados-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  const tab = target.closest("[data-results-tab]");
+  if (tab) {
+    const key = tab.dataset.resultsTab;
+    if (key && key !== adminState.activeSection) {
+      document.querySelector(`.admin-nav [data-admin-section="${key}"]`)?.click();
+    }
+    return;
+  }
+  const periodButton = target.closest("[data-results-period]");
+  if (periodButton) {
+    const period = periodButton.dataset.resultsPeriod;
+    adminState.resultsFilters = { ...adminState.resultsFilters, period };
+    if (period === "custom") {
+      renderModuleContent();
+      return;
+    }
+    void loadResults();
+    return;
+  }
+  if (target.closest("[data-results-download]")) {
+    downloadResultsCsv();
+  }
+});
+
+document.addEventListener("submit", (event) => {
+  const form = event.target instanceof HTMLFormElement && event.target.matches("[data-results-custom]") ? event.target : null;
+  if (!form) return;
+  event.preventDefault();
+  const data = new FormData(form);
+  adminState.resultsFilters = {
+    period: "custom",
+    startDate: String(data.get("startDate") || ""),
+    endDate: String(data.get("endDate") || ""),
+  };
+  void loadResults();
+});
+
 const renderAuditModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
   const auditOverview = getAuditOverview();
@@ -10446,16 +10802,18 @@ const renderModuleContentBody = () => {
 
   if (adminState.activeSection === "finance") {
     renderFinanceModule();
+    document.querySelector("[data-admin-module-content]")?.insertAdjacentHTML("afterbegin", renderResultsHeader("finance"));
     return;
   }
 
   if (adminState.activeSection === "metrics") {
-    renderMetricsModule();
+    renderResultsModule();
     return;
   }
 
   if (adminState.activeSection === "reports") {
     renderReportsModule();
+    document.querySelector("[data-admin-module-content]")?.insertAdjacentHTML("afterbegin", renderResultsHeader("reports"));
     return;
   }
 
@@ -14310,6 +14668,7 @@ const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
   }
 
   if (adminState.activeSection === "metrics") {
+    void loadResults();
     await loadMetrics();
     return;
   }
