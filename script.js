@@ -5805,10 +5805,11 @@ const applyHeroFeaturedItem = (item) => {
   }
 
   heroImage.src = item.image;
-  heroImage.alt = (TOKYO_PUBLIC_TEXT.menuItemAltTemplate || "{itemName} do Tokyo Sushi Delivery").replace(
-    "{itemName}",
-    item.name
-  );
+  heroImage.alt = (
+    IS_TENANT_ROUTE
+      ? `{itemName} - ${getRestaurantSettings().restaurantName || ""}`
+      : TOKYO_PUBLIC_TEXT.menuItemAltTemplate || "{itemName} do Tokyo Sushi Delivery"
+  ).replace("{itemName}", item.name);
   heroCategory.textContent = item.category || "Destaque do cardapio";
   heroTitle.innerHTML = portionLabel
     ? `${item.name} <span class="portion-label">(${portionLabel})</span>`
@@ -5983,7 +5984,7 @@ const getAuthProviderLabel = (provider) => {
     return "Instagram";
   }
 
-  return TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo";
+  return getPublicAuthAccessLabel();
 };
 
 const getDisplayEmail = (profile) => {
@@ -7380,6 +7381,9 @@ const getPublicBusinessHoursLabel = (fallback = "18:00 as 23:00") => {
 
   return settings.businessHours || fallback;
 };
+// Texto do topo do login: no Tokyo continua "Acesso Tokyo".
+const getPublicAuthAccessLabel = () =>
+  IS_TENANT_ROUTE ? "Acesso do cliente" : TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo";
 const getPublicWhatsappNumber = () => getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER;
 // Mensagem do WhatsApp por página (Modelo Premium: pedido, entrega, histórico, avaliação, vagas).
 const PUBLIC_PAGE_WHATSAPP_MESSAGE = Object.freeze({
@@ -8725,10 +8729,10 @@ const createAuthShell = () => {
         <div class="auth-backdrop" data-auth-close></div>
         <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
           <button class="auth-close" type="button" data-auth-close aria-label="Fechar login">&times;</button>
-          <figure class="auth-media">
+          <figure class="auth-media"${IS_TENANT_ROUTE ? " hidden" : ""}>
             <img
-              src="${escapeHtml(TOKYO_ASSETS.loginCover || "./site-images/login-cover-floating.png")}"
-              alt="${escapeHtml(TOKYO_PUBLIC_TEXT.loginCoverAlt || "Arte de login Tokyo Sushi com cerejeiras, logo e combinado de sushi")}"
+              src="${escapeHtml(IS_TENANT_ROUTE ? "" : TOKYO_ASSETS.loginCover || "./site-images/login-cover-floating.png")}"
+              alt="${escapeHtml(IS_TENANT_ROUTE ? "" : TOKYO_PUBLIC_TEXT.loginCoverAlt || "Arte de login Tokyo Sushi com cerejeiras, logo e combinado de sushi")}"
             />
           </figure>
           <div class="auth-panel" data-auth-panel></div>
@@ -9043,7 +9047,7 @@ const renderAuthPanel = () => {
 
   panel.innerHTML = `
     <div class="auth-panel-head">
-      <p class="section-tag">${authState.editing ? "Editar dados" : TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo"}</p>
+      <p class="section-tag">${authState.editing ? "Editar dados" : getPublicAuthAccessLabel()}</p>
       <h2 id="auth-title">${
         authState.editing ? "Atualize seu nome e telefone" : "Bem-vindo de volta!"
       }</h2>
@@ -10085,15 +10089,21 @@ const createSiteFooter = () => {
   const restaurantName = getPublicRestaurantName();
   const publicAddress = getPublicStoreAddress();
   const publicAddressFields = restaurantSettings.addressFields || RESTAURANT_SETTINGS_DEFAULTS.addressFields;
+  // Linhas de endereço escritas à mão só existem para o Tokyo.
+  const brandingAddress = IS_TENANT_ROUTE ? {} : TOKYO_APP_BRANDING.defaultAddress || {};
   const footerStreetLine =
-    TOKYO_APP_BRANDING.defaultAddress?.footerStreetLine ||
+    brandingAddress.footerStreetLine ||
     [publicAddressFields.street, publicAddressFields.number].filter(Boolean).join(", ");
   const footerCityLine =
-    TOKYO_APP_BRANDING.defaultAddress?.footerCityLine ||
-    `${publicAddressFields.city} - ${publicAddressFields.state}, CEP ${publicAddressFields.postalCode}`;
+    brandingAddress.footerCityLine ||
+    (publicAddressFields.city
+      ? `${publicAddressFields.city} - ${publicAddressFields.state}, CEP ${publicAddressFields.postalCode}`
+      : "");
   const footerBottomAddress =
-    TOKYO_APP_BRANDING.defaultAddress?.footerBottomLine ||
-    `${footerStreetLine} - ${publicAddressFields.city} - ${publicAddressFields.state}.`;
+    brandingAddress.footerBottomLine ||
+    (publicAddressFields.city
+      ? `${footerStreetLine} - ${publicAddressFields.city} - ${publicAddressFields.state}.`
+      : "");
   const logoUrl = resolvePublicAssetUrl(restaurantSettings.logoUrl);
   const presentationText =
     restaurantSettings.presentationText || RESTAURANT_SETTINGS_DEFAULTS.presentationText;
@@ -10197,8 +10207,8 @@ const createSiteFooter = () => {
             <section class="site-footer-column" aria-labelledby="footer-location-title">
               <p class="site-footer-title" id="footer-location-title">Endereco</p>
               <div class="site-footer-info-list">
-                <p class="site-footer-info">${escapeHtml(footerStreetLine || "Rua General Osório, 2165")}</p>
-                <p class="site-footer-info">${escapeHtml(footerCityLine || "Franca - SP, CEP 14400-520")}</p>
+                <p class="site-footer-info">${escapeHtml(footerStreetLine || (IS_TENANT_ROUTE ? "" : "Rua General Osório, 2165"))}</p>
+                <p class="site-footer-info">${escapeHtml(footerCityLine || (IS_TENANT_ROUTE ? "" : "Franca - SP, CEP 14400-520"))}</p>
                 <p class="site-footer-info">Origem fixa usada no calculo da entrega.</p>
                 <a class="site-footer-link" href="${mapsHref}" target="_blank" rel="noreferrer">
                   Abrir localizacao no Google Maps
@@ -10215,8 +10225,8 @@ const createSiteFooter = () => {
           </div>
 
           <div class="site-footer-bottom">
-            <span>&copy; ${new Date().getFullYear()} ${escapeHtml(TOKYO_APP_BRANDING.footerPoweredBy || "Tokyo Sushi Delivery Premium")}.</span>
-            <span>${escapeHtml(footerBottomAddress || "Rua General Osório, 2165 - Franca - SP.")}</span>
+            <span>&copy; ${new Date().getFullYear()} ${escapeHtml(IS_TENANT_ROUTE ? getRestaurantSettings().restaurantName || "" : TOKYO_APP_BRANDING.footerPoweredBy || "Tokyo Sushi Delivery Premium")}.</span>
+            <span>${escapeHtml(footerBottomAddress || (IS_TENANT_ROUTE ? "" : "Rua General Osório, 2165 - Franca - SP."))}</span>
           </div>
           <div class="inovas-platform-footer" data-platform-branding>
             <a class="inovas-platform-brand" href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://inovasfood.com.br"))}" target="_blank" rel="noopener" aria-label="Conhecer a INOVAS Food" data-platform-branding-brand>
