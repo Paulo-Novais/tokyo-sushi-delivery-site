@@ -12318,11 +12318,11 @@ const renderHomeSocialProof = () => {
   const countLabel = getPublicReviewCountLabel();
 
   document.querySelectorAll("[data-home-review-average]").forEach((node) => {
-    node.textContent = reviewCount > 0 ? averageLabel : "--";
+    node.textContent = reviewCount > 0 ? averageLabel : "Novo";
   });
 
   document.querySelectorAll("[data-home-review-count]").forEach((node) => {
-    node.textContent = reviewCount > 0 ? countLabel : "Avaliacoes reais";
+    node.textContent = reviewCount > 0 ? countLabel : "Ainda sem avaliações";
   });
 
   if (!root || !reviewListNode) {
@@ -12426,7 +12426,7 @@ const renderReviewPage = () => {
 
   if (averageNode) {
     averageNode.textContent =
-      publicReviewCount > 0 ? getPublicReviewAverageLabel() : "Sem avaliacoes";
+      publicReviewCount > 0 ? getPublicReviewAverageLabel() : "Ainda sem avaliações";
   }
 
   if (averageCopyNode) {

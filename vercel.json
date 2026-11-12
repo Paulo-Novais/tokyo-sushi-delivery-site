@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "node scripts/build-public.mjs",
   "outputDirectory": "public",
+  "functions": {
+    "api/catalog.js": {
+      "includeFiles": "{tokyo,cardapio,entrega,historico,avaliar,trabalhe-conosco,acompanhar}.html"
+    }
+  },
   "rewrites": [
     {
       "source": "/robots.txt",

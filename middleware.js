@@ -9,6 +9,7 @@ import domainTopology from "./lib/domain-topology.cjs";
 import identityDomainStore from "./lib/identity-domain-store.cjs";
 import tenantSql from "./lib/tenant-sql.cjs";
 import publicSurfacePolicy from "./lib/public-surface-policy.cjs";
+import premiumSiteRoutes from "./lib/premium-site-routes.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -65,22 +66,8 @@ const {
   resolveRestaurantByHost,
   resolveRestaurantBySlug,
 } = tenantResolution;
-const PUBLIC_RESTAURANT_PAGES = new Set([
-  "acompanhar.html",
-  "avaliar.html",
-  "cardapio.html",
-  "entrega.html",
-  "historico.html",
-  "trabalhe-conosco.html",
-]);
-const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
-  "maps-config.js",
-  "script.js",
-  "site-config.js",
-  "store-hours.js",
-  "styles.css",
-  "tokyo.webmanifest",
-]);
+const { isRootPremiumTemplatePath, resolvePremiumSuffix } = premiumSiteRoutes;
+const REFERENCE_RESTAURANT_KEY = "default"; // Tokyo: domínio próprio continua com o HTML estático.
 
 const normalizePolicyHost = normalizeTenantHost;
 const RESTAURANT_PRIMARY_HOST = normalizeTenantHost(DOMAIN_CONFIG.primaryDomain);
@@ -221,15 +208,10 @@ const buildPermanentRestaurantRedirect = (requestUrl, pathname, slug) => {
   return attachRestaurantRouteCookie(response, requestUrl, slug);
 };
 
-const isPublicRestaurantAssetPath = (suffix = "") => {
-  const normalizedSuffix = String(suffix || "").replace(/^\/+/, "");
-
-  return (
-    PUBLIC_RESTAURANT_PAGES.has(normalizedSuffix) ||
-    PUBLIC_RESTAURANT_ROOT_ASSETS.has(normalizedSuffix) ||
-    normalizedSuffix.startsWith("assets/") ||
-    normalizedSuffix.startsWith("site-images/")
-  );
+const buildPremiumPageDestination = (pageKey, slug = "") => {
+  const params = new URLSearchParams({ publicView: "premium-page", page: pageKey });
+  if (slug) params.set("slug", slug);
+  return `/api/catalog?${params.toString()}`;
 };
 
 const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
@@ -266,29 +248,29 @@ const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
     );
   }
 
-  if (suffix === "/" || suffix === "/index.html") {
+  const target = resolvePremiumSuffix(suffix);
+
+  if (target.kind === "redirect") {
     return buildPermanentRestaurantRedirect(
       request.url,
-      `/${canonicalSlug}`,
+      `/${canonicalSlug}${target.pagePath}`,
       canonicalSlug
     );
   }
 
-  const destination = suffix
-    ? isPublicRestaurantAssetPath(suffix)
-      ? `/${suffix.replace(/^\/+/, "")}`
-      : ""
-    : "/tokyo.html";
-
-  if (!destination) {
-    return buildRestaurantNotFoundResponse();
+  if (target.kind === "page") {
+    return attachRestaurantRouteCookie(
+      buildRewriteResponse(request.url, buildPremiumPageDestination(target.pageKey, canonicalSlug)),
+      request.url,
+      canonicalSlug
+    );
   }
 
-  return attachRestaurantRouteCookie(
-    buildRewriteResponse(request.url, destination),
-    request.url,
-    canonicalSlug
-  );
+  if (target.kind === "asset") {
+    return buildRewriteResponse(request.url, target.path);
+  }
+
+  return buildRestaurantNotFoundResponse();
 };
 
 const resolvePublicAppCanonicalRedirect = (request, rawHost) => {
@@ -354,6 +336,20 @@ const resolveRestaurantHostRewrite = (
 
   if (policyHost === RESTAURANT_PRIMARY_HOST && pathname === "/sitemap.xml") {
     return buildRewriteResponse(request.url, "/tokyo-sitemap.xml");
+  }
+
+  // Domínio próprio de outro restaurante: mesmo Modelo Premium, montado no servidor.
+  if (hostResolution.restaurantKey !== REFERENCE_RESTAURANT_KEY) {
+    const target = resolvePremiumSuffix(pathname === "/" ? "" : pathname);
+    if (target.kind === "page") {
+      return buildRewriteResponse(request.url, buildPremiumPageDestination(target.pageKey));
+    }
+    if (target.kind === "redirect") {
+      const destination = new URL(request.url);
+      destination.pathname = target.pagePath || "/";
+      return Response.redirect(destination, 308);
+    }
+    return null;
   }
 
   if (pathname === "/" || pathname === "/index.html") {
@@ -507,6 +503,15 @@ export default async function middleware(request) {
 
   if (platformSurfaceBoundary) {
     return platformSurfaceBoundary;
+  }
+
+  // Página de restaurante na raiz do INOVAS sem restaurante identificado: falha.
+  // Nunca servir o site do Tokyo como padrão (o Tokyo tem o próprio domínio).
+  if (
+    isRootPremiumTemplatePath(pathname) &&
+    (hostKind === HOST_KINDS.PLATFORM || hostKind === HOST_KINDS.VERCEL_PREVIEW)
+  ) {
+    return buildRestaurantNotFoundResponse();
   }
 
   const publicRestaurantPath = await resolvePublicRestaurantPath(

@@ -140,6 +140,11 @@ const createApiResponse = (res) => ({
     res.statusCode = code;
     return this;
   },
+  send(body) {
+    setSecurityHeaders(res);
+    res.end(body);
+    return body;
+  },
   json(payload) {
     setSecurityHeaders(res);
     if (!res.hasHeader("Content-Type")) {
@@ -297,23 +302,9 @@ const resolveLocalRedirect = (pathname, search) => {
   return null;
 };
 
-const PUBLIC_RESTAURANT_PAGES = new Set([
-  "acompanhar.html",
-  "avaliar.html",
-  "cardapio.html",
-  "entrega.html",
-  "historico.html",
-  "trabalhe-conosco.html",
-]);
-const PUBLIC_RESTAURANT_ROOT_ASSETS = new Set([
-  "maps-config.js",
-  "script.js",
-  "site-config.js",
-  "store-hours.js",
-  "styles.css",
-  "tokyo.webmanifest",
-]);
+const { resolvePremiumSuffix } = require(path.join(workspaceRoot, "lib", "premium-site-routes.cjs"));
 
+// Mesmas regras do middleware.js (lib/premium-site-routes.cjs).
 const resolveLocalRestaurantRequest = async (pathname, search) => {
   const route = parsePublicRestaurantPath(pathname);
 
@@ -343,27 +334,21 @@ const resolveLocalRestaurantRequest = async (pathname, search) => {
     };
   }
 
-  if (suffix === "/" || suffix === "/index.html") {
-    return {
-      redirect: `/${canonicalSlug}${search}`,
-      slug: canonicalSlug,
-    };
+  const target = resolvePremiumSuffix(suffix);
+
+  if (target.kind === "redirect") {
+    return { redirect: `/${canonicalSlug}${target.pagePath}${search}`, slug: canonicalSlug };
   }
 
-  if (!suffix) {
-    return { staticPathname: "/tokyo.html", slug: canonicalSlug };
+  if (target.kind === "page") {
+    return { premiumPage: target.pageKey, slug: canonicalSlug };
   }
 
-  const relativePath = suffix.replace(/^\/+/, "");
-  const isAllowed =
-    PUBLIC_RESTAURANT_PAGES.has(relativePath) ||
-    PUBLIC_RESTAURANT_ROOT_ASSETS.has(relativePath) ||
-    relativePath.startsWith("assets/") ||
-    relativePath.startsWith("site-images/");
+  if (target.kind === "asset") {
+    return { staticPathname: target.path, slug: canonicalSlug };
+  }
 
-  return isAllowed
-    ? { staticPathname: `/${relativePath}`, slug: canonicalSlug }
-    : { notFound: true };
+  return { notFound: true };
 };
 
 const serveStatic = async (req, res, pathname) => {
@@ -460,6 +445,18 @@ const server = http.createServer(async (req, res) => {
     if (restaurantRoute?.redirect) {
       setRestaurantRouteCookie(res, restaurantRoute.slug);
       sendRedirect(res, 308, restaurantRoute.redirect);
+      return;
+    }
+
+    if (restaurantRoute?.premiumPage) {
+      setRestaurantRouteCookie(res, restaurantRoute.slug);
+      const params = new URLSearchParams({
+        publicView: "premium-page",
+        page: restaurantRoute.premiumPage,
+        slug: restaurantRoute.slug,
+      });
+      req.url = `/api/catalog?${params.toString()}`;
+      await runApi(catalogApi, req, res);
       return;
     }
 

@@ -16,6 +16,82 @@ const {
 } = require("../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../lib/security-guardian.cjs");
 const { runWithDatabaseScope } = require("../lib/tenant-sql.cjs");
+const { PREMIUM_PAGES } = require("../lib/premium-model.cjs");
+const { renderPremiumPage } = require("../lib/premium-site-renderer.cjs");
+const { getPublicAppUrl, validateRestaurantSlug } = require("../lib/restaurant-public-url.cjs");
+const { getRequestHost, isPathTenantHost } = require("../lib/tenant-resolution.cjs");
+
+const sendHtml = (res, statusCode, html) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  return res.status(statusCode).send(html);
+};
+
+const RESTAURANT_NOT_FOUND_HTML = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Restaurante não encontrado | INOVAS Food</title>
+  </head>
+  <body>
+    <main>
+      <h1>Restaurante não encontrado</h1>
+      <p>Confira o endereço informado ou volte para o INOVAS Food.</p>
+      <a href="/">Voltar ao início</a>
+    </main>
+  </body>
+</html>`;
+
+// Página do Modelo Premium montada no servidor para o restaurante da rota.
+// Sem restaurante identificado (slug ou domínio próprio) a página falha.
+const handlePremiumPage = async (req, res) => {
+  if (!["GET", "HEAD"].includes(String(req.method || "GET").toUpperCase())) {
+    res.setHeader("Allow", "GET, HEAD");
+    return sendHtml(res, 405, RESTAURANT_NOT_FOUND_HTML);
+  }
+
+  const requestUrl = new URL(String(req.url || ""), "http://localhost");
+  const pageKey = String(requestUrl.searchParams.get("page") || "inicio");
+  const rawSlug = String(requestUrl.searchParams.get("slug") || "");
+  const host = getRequestHost(req);
+  const usesPath = isPathTenantHost(host);
+  const slugValidation = rawSlug ? validateRestaurantSlug(rawSlug) : null;
+
+  if (
+    !Object.prototype.hasOwnProperty.call(PREMIUM_PAGES, pageKey) ||
+    (usesPath && !slugValidation?.ok)
+  ) {
+    return sendHtml(res, 404, RESTAURANT_NOT_FOUND_HTML);
+  }
+
+  try {
+    const slug = usesPath ? slugValidation.slug : "";
+    const tenantContext = await getRequestTenantContext(req, {
+      source: "public:premium-page",
+      ...(slug ? { slug } : {}),
+    });
+    const { settings, catalog } = await runAsPublicTenant(tenantContext, async () => ({
+      settings: (await getPublicRestaurantSettings({ tenantContext })).settings,
+      catalog: await getPublicCatalogState({ tenantContext }).catch(() => ({ sections: [] })),
+    }));
+    const html = renderPremiumPage({
+      pageKey,
+      basePath: slug ? `/${slug}` : "",
+      origin: slug ? getPublicAppUrl() : `https://${host}`,
+      slug: slug || tenantContext.restaurantKey,
+      settings,
+      catalog,
+    });
+
+    return sendHtml(res, 200, html);
+  } catch (error) {
+    const status = Number(error?.statusCode || 500);
+    return sendHtml(res, status >= 400 && status < 500 ? 404 : 500, RESTAURANT_NOT_FOUND_HTML);
+  }
+};
 
 const runAsPublicTenant = (tenantContext, callback) =>
   runWithDatabaseScope(
@@ -71,6 +147,10 @@ const assertPublicReviewTenantCanOperate = async (tenantContext) => {
 
 module.exports = async (req, res) => {
   const action = resolvePublicAction(req);
+
+  if (action === "premium-page") {
+    return handlePremiumPage(req, res);
+  }
 
   if (action === "reviews") {
     if (req.method === "GET") {
