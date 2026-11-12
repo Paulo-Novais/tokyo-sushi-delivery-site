@@ -226,6 +226,7 @@ module.exports = async (req, res) => {
       const sessionToken = createCustomerSessionToken({
         customerKey: normalizedOrder.customer.key,
         clientToken: customerClientToken,
+        restaurantKey: tenantContext.restaurantKey,
       });
       responseHeaders["Set-Cookie"] = serializeCustomerSessionCookie(sessionToken, req);
     }
