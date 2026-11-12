@@ -27,6 +27,22 @@ const snapshot = (scale) => ({
     { name: "Temaki Salmão", quantity: 31 },
     { name: "Guioza", quantity: 27 },
   ],
+  productRanking: [
+    { name: "Combo Sushi 20 peças", quantity: 38, total: 1938 },
+    { name: "Temaki Salmão", quantity: 31, total: 1240 },
+    { name: "Hot Roll", quantity: 22, total: 990 },
+    { name: "Guioza", quantity: 27, total: 810 },
+    { name: "Carpaccio de Salmão", quantity: 14, total: 560 },
+    { name: "Yakisoba", quantity: 9, total: 430 },
+    { name: "Sunomono", quantity: 6, total: 180 },
+    { name: "Missoshiru", quantity: 8, total: 120 },
+  ],
+  reportOrders: Array.from({ length: 40 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (index % 7));
+    date.setHours(index % 3 === 0 ? 20 : index % 3 === 1 ? 12 : 19, 15, 0, 0);
+    return { createdAt: date.toISOString(), total: 50 + index, channel: ["site", "salao", "retirada", "balcao"][index % 4], returningCustomer: index % 5 !== 0 };
+  }),
   recentCashClosings: [
     { closedAt: `${day(-1)}T23:30:00`, countedCash: 1164, differenceAmount: 0 },
     { closedAt: `${day(-2)}T23:30:00`, countedCash: 1538.5, differenceAmount: 3 },
@@ -81,6 +97,27 @@ test("Resultados: resumo com comparação, gráfico e listas", async ({ page }) 
   await expect(page.locator('[data-results-tab="finance"]')).toHaveClass(/is-active/);
   await page.locator('[data-results-tab="reports"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-admin-section", "reports");
+
+  // Relatórios: pico (mapa de calor), ABC, canais, clientes; os que dependem de dados novos ficam "em breve".
+  await expect(page.locator(".gx-rep-card")).toHaveCount(6);
+  await expect(page.locator(".gx-rep-heat .gx-rep-cell").first()).toBeVisible();
+  await expect(page.locator(".gx-rep-view-head p")).toContainText("Os horários com mais pedidos");
+  await page.screenshot({ path: path.join(outDir, "relatorios-pico.png"), fullPage: true });
+  await page.locator('[data-report-key="abc"]').click();
+  await expect(page.locator(".gx-rep-tr:not(.is-head)")).toHaveCount(8);
+  await expect(page.locator(".gx-rep-tr:not(.is-head)").first()).toContainText("A");
+  await expect(page.locator(".gx-rep-tr:not(.is-head)").last()).toContainText("C");
+  await page.screenshot({ path: path.join(outDir, "relatorios-abc.png"), fullPage: true });
+  await page.locator('[data-report-key="channels"]').click();
+  await expect(page.locator(".gx-rep-bars .gx-res-pay-row")).toHaveCount(4);
+  await expect(page.locator(".gx-rep-bars")).toContainText("Site próprio");
+  await page.locator('[data-report-key="customers"]').click();
+  await expect(page.locator(".gx-rep-view-head p")).toContainText("% dos pedidos vieram de clientes que já tinham comprado antes");
+  const reportCsv = page.waitForEvent("download");
+  await page.locator("[data-report-csv]").click();
+  expect((await reportCsv).suggestedFilename()).toMatch(/^relatorio-customers-/);
+  await page.locator('[data-report-key="dre"]').click();
+  await expect(page.locator(".gx-rep-soon")).toContainText("despesas");
 });
 
 test("Resultados: tema escuro e celular", async ({ page }) => {

@@ -6129,3 +6129,274 @@ html body.admin-body.admin-body .gx-res-bars .gx-res-bar {
   width: min(56px, 100%) !important;
   height: var(--h) !important;
 }
+
+/* =====================================================================
+   Relatórios (esboço "Resultados" v2).
+   ===================================================================== */
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="reports"] .admin-workspace {
+  display: block !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="reports"] .admin-detail-panel {
+  display: none !important;
+}
+
+html body.admin-body.admin-body[data-admin-page="dashboard"][data-admin-section="reports"] :is(.admin-board-panel, .admin-module-shell) {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.gx-rep-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+html body.admin-body.admin-body .gx-rep-card {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 12px !important;
+  min-height: 0 !important;
+  padding: 16px !important;
+  border: 1.5px solid var(--gx-border) !important;
+  border-radius: 14px !important;
+  background: var(--gx-surface) !important;
+  color: var(--gx-ink) !important;
+  text-align: left !important;
+  cursor: pointer;
+}
+
+html body.admin-body.admin-body .gx-rep-card.is-active {
+  border-color: #f97316 !important;
+  background: color-mix(in srgb, #f97316 9%, var(--gx-surface)) !important;
+}
+
+html body.admin-body.admin-body .gx-rep-card.is-soon {
+  opacity: 0.75;
+}
+
+.gx-rep-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.gx-rep-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.gx-rep-icon.is-orange { background: rgba(249, 115, 22, 0.14); color: #ea580c; }
+.gx-rep-icon.is-blue { background: rgba(59, 130, 246, 0.14); color: #2563eb; }
+.gx-rep-icon.is-green { background: rgba(34, 197, 94, 0.14); color: #16a34a; }
+.gx-rep-icon.is-red { background: rgba(239, 68, 68, 0.14); color: #dc2626; }
+.gx-rep-icon.is-purple { background: rgba(168, 85, 247, 0.14); color: #9333ea; }
+
+.gx-rep-card-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.gx-rep-card-copy strong {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.gx-rep-card-copy em {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-3);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.gx-rep-card-copy small {
+  color: var(--gx-ink-2);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.gx-rep-view-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.gx-rep-view-head h3 {
+  margin: 0;
+  color: var(--gx-ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.gx-rep-view-head p {
+  margin: 6px 0 0;
+  color: var(--gx-ink-2);
+  font-size: 14.5px;
+}
+
+.gx-rep-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Mapa de calor */
+.gx-rep-heat {
+  display: grid;
+  grid-template-columns: 44px repeat(var(--cols), minmax(30px, 1fr));
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.gx-rep-hour {
+  color: var(--gx-ink-3);
+  font-size: 12px;
+  text-align: center;
+}
+
+.gx-rep-day {
+  align-self: center;
+  color: var(--gx-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.gx-rep-cell {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, #f97316 calc(var(--level) * 85% + 12%), var(--gx-surface));
+  color: var(--gx-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.gx-rep-cell.is-strong {
+  color: #111827;
+  font-weight: 800;
+}
+
+.gx-rep-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0 48px;
+  color: var(--gx-ink-3);
+  font-size: 12.5px;
+}
+
+.gx-rep-legend i {
+  width: 140px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, #f97316 12%, var(--gx-surface)), #f97316);
+}
+
+/* Tabela ABC */
+.gx-rep-table {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.gx-rep-tr {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) repeat(3, minmax(90px, 1fr)) 70px;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--gx-border);
+  color: var(--gx-ink);
+  font-size: 14.5px;
+}
+
+.gx-rep-tr > span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-rep-tr > span:last-child {
+  text-align: center;
+}
+
+.gx-rep-tr.is-head {
+  min-height: 40px;
+  border-bottom: 0;
+  background: var(--gx-bg-2);
+  color: var(--gx-ink-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gx-rep-class {
+  display: inline-grid;
+  width: 26px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.gx-rep-class.is-a { background: #dcfce7; color: #15803d; }
+.gx-rep-class.is-b { background: #fef3c7; color: #a16207; }
+.gx-rep-class.is-c { background: #fee2e2; color: #b91c1c; }
+html body.admin-body[data-admin-theme="dark"] .gx-rep-class.is-a { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+html body.admin-body[data-admin-theme="dark"] .gx-rep-class.is-b { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+html body.admin-body[data-admin-theme="dark"] .gx-rep-class.is-c { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+
+.gx-rep-soon {
+  display: grid;
+  gap: 6px;
+  padding: 24px;
+  border: 1px dashed var(--gx-border);
+  border-radius: 12px;
+  color: var(--gx-ink-2);
+  font-size: 14.5px;
+}
+
+.gx-rep-soon strong {
+  color: var(--gx-ink);
+  font-size: 16px;
+}
+
+@media (max-width: 700px) {
+  .gx-rep-tr {
+    grid-template-columns: minmax(0, 1.6fr) minmax(80px, 1fr) 54px 54px 44px;
+    gap: 6px;
+    font-size: 13px;
+  }
+}
+
+/* "Baixar PDF": imprime só o relatório aberto. */
+@media print {
+  body.gx-printing-report .admin-sidebar,
+  body.gx-printing-report .gx-res-head,
+  body.gx-printing-report .gx-res-toolbar,
+  body.gx-printing-report .gx-res-custom,
+  body.gx-printing-report .gx-rep-picker,
+  body.gx-printing-report .gx-rep-actions,
+  body.gx-printing-report .gx-alert-toasts,
+  body.gx-printing-report .gx-alert-unlock {
+    display: none !important;
+  }
+
+  body.gx-printing-report .gx-rep-view {
+    border: 0 !important;
+  }
+}

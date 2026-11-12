@@ -801,6 +801,7 @@ const adminState = {
   resultsFilters: { period: "7d", startDate: "", endDate: "" },
   resultsData: null,
   isLoadingResults: false,
+  reportKey: "peak",
   inventoryDrawer: "",
   inventoryMove: null,
   selectedInventoryItemId: "",
@@ -8366,7 +8367,7 @@ const loadResults = async () => {
     query.set("endDate", filters.endDate);
   }
   adminState.isLoadingResults = true;
-  if (adminState.activeSection === "metrics") renderModuleContent();
+  if (["metrics", "reports"].includes(adminState.activeSection)) renderModuleContent();
   try {
     const current = await fetchJson(`/api/admin/finance?${query.toString()}`);
     const previousRange = getPreviousRange(current.filters);
@@ -8386,7 +8387,7 @@ const loadResults = async () => {
     adminState.resultsData = { error: error.message || "Não foi possível carregar os resultados." };
   } finally {
     adminState.isLoadingResults = false;
-    if (adminState.activeSection === "metrics") renderModuleContent();
+    if (["metrics", "reports"].includes(adminState.activeSection)) renderModuleContent();
   }
 };
 
@@ -8407,7 +8408,7 @@ const renderResultsHeader = (activeTab) => {
         ).join("")}
       </div>
       ${
-        activeTab === "metrics"
+        activeTab !== "finance"
           ? `<div class="gx-res-periods" role="group" aria-label="Período">
               ${RESULTS_PERIODS.map(
                 ([key, label]) =>
@@ -8419,7 +8420,7 @@ const renderResultsHeader = (activeTab) => {
       }
     </div>
     ${
-      activeTab === "metrics" && filters.period === "custom"
+      activeTab !== "finance" && filters.period === "custom"
         ? `<form class="gx-res-custom" data-results-custom>
             <label>De <input type="date" name="startDate" value="${escapeHtml(filters.startDate)}" required /></label>
             <label>Até <input type="date" name="endDate" value="${escapeHtml(filters.endDate)}" required /></label>
@@ -8656,7 +8657,8 @@ document.addEventListener("click", (event) => {
     return;
   }
   if (target.closest("[data-results-download]")) {
-    downloadResultsCsv();
+    if (adminState.activeSection === "reports") downloadReportCsv();
+    else downloadResultsCsv();
   }
 });
 
@@ -8671,6 +8673,270 @@ document.addEventListener("submit", (event) => {
     endDate: String(data.get("endDate") || ""),
   };
   void loadResults();
+});
+
+// ===================== Relatórios (esboço "Resultados" v2) =====================
+const REPORT_CHANNELS = Object.freeze([
+  ["site", "Site próprio"],
+  ["salao", "Salão (mesas)"],
+  ["retirada", "Retirada"],
+  ["balcao", "Balcão"],
+]);
+const REPORT_DEFS = Object.freeze([
+  { key: "peak", title: "Horários de pico", text: "Que dia e hora mais vende. Ajuda a montar a escala.", icon: "clock", tone: "is-orange" },
+  { key: "abc", title: "Curva ABC dos pratos", text: "Quais pratos trazem o dinheiro e quais só ocupam o cardápio.", icon: "bars", tone: "is-blue" },
+  { key: "channels", title: "Vendas por canal", text: "Site, salão, retirada e balcão comparados.", icon: "pulse", tone: "is-green" },
+  { key: "cancel", title: "Cancelamentos e motivos", text: "Por que os pedidos são cancelados.", icon: "x", tone: "is-red", soon: "Para mostrar os motivos, o cancelamento precisa pedir o motivo. Hoje o sistema não registra." },
+  { key: "customers", title: "Clientes novos e que voltam", text: "Quem é primeira vez e quem já é da casa.", icon: "user", tone: "is-purple" },
+  { key: "dre", title: "Lucro do período (DRE)", text: "Vendas, custos e o que sobrou, em linhas simples.", icon: "money", tone: "is-green", soon: "O lucro depende do cadastro de despesas (insumos, equipe, aluguel), que ainda não existe no sistema." },
+]);
+const REPORT_ICONS = Object.freeze({
+  clock: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  bars: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 20h14M7 16v-5M11 16V7M15 16v-3M19 16V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  pulse: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="9" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  money: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v16M16 8.5c0-1.4-1.8-2.5-4-2.5s-4 1.1-4 2.5 1.8 2.3 4 2.5 4 1.1 4 2.5-1.8 2.5-4 2.5-4-1.1-4-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+});
+const REPORT_WEEK = [
+  [1, "Seg"], [2, "Ter"], [3, "Qua"], [4, "Qui"], [5, "Sex"], [6, "Sáb"], [0, "Dom"],
+];
+
+const getReportData = () => {
+  const current = adminState.resultsData?.current || {};
+  return {
+    orders: Array.isArray(current.reportOrders) ? current.reportOrders : [],
+    ranking: Array.isArray(current.productRanking) ? current.productRanking : [],
+  };
+};
+
+const buildPeakReport = (orders) => {
+  const grid = new Map();
+  let minHour = 11;
+  let maxHour = 23;
+  orders.forEach((order) => {
+    const date = new Date(order.createdAt);
+    if (Number.isNaN(date.getTime())) return;
+    const key = `${date.getDay()}-${date.getHours()}`;
+    grid.set(key, (grid.get(key) || 0) + 1);
+    minHour = Math.min(minHour, date.getHours());
+    maxHour = Math.max(maxHour, date.getHours());
+  });
+  const hours = Array.from({ length: maxHour - minHour + 1 }, (_, index) => minHour + index);
+  const max = Math.max(0, ...grid.values());
+  const cells = [];
+  REPORT_WEEK.forEach(([day, label]) => hours.forEach((hour) => cells.push({ day, label, hour, count: grid.get(`${day}-${hour}`) || 0 })));
+  const ranked = cells.filter((cell) => cell.count > 0).sort((a, b) => b.count - a.count);
+  const insight = ranked.length
+    ? `Os horários com mais pedidos: ${ranked
+        .slice(0, 3)
+        .map((cell) => `${cell.label} às ${cell.hour}h (${cell.count})`)
+        .join(", ")}.`
+    : "Sem pedidos no período escolhido.";
+  return { hours, max, cells, insight };
+};
+
+const buildAbcReport = (ranking) => {
+  const total = ranking.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  let accumulated = 0;
+  const rows = ranking.map((item) => {
+    const share = total > 0 ? (Number(item.total || 0) / total) * 100 : 0;
+    const before = accumulated;
+    accumulated += share;
+    const klass = before < 70 ? "A" : before < 90 ? "B" : "C";
+    return { ...item, share, accumulated, klass };
+  });
+  const aRows = rows.filter((row) => row.klass === "A");
+  const aShare = aRows.reduce((sum, row) => sum + row.share, 0);
+  const insight = rows.length
+    ? `${aRows.length} ${aRows.length === 1 ? "prato" : "pratos"} (classe A) ${aRows.length === 1 ? "faz" : "fazem"} ${Math.round(aShare)}% das vendas. Os de classe C são candidatos a sair do cardápio.`
+    : "Sem vendas finalizadas no período escolhido.";
+  return { rows, insight };
+};
+
+const buildChannelReport = (orders) => {
+  const totals = new Map(REPORT_CHANNELS.map(([key]) => [key, { total: 0, count: 0 }]));
+  orders.forEach((order) => {
+    const entry = totals.get(order.channel) || totals.get("site");
+    entry.total += Number(order.total || 0);
+    entry.count += 1;
+  });
+  const grand = Array.from(totals.values()).reduce((sum, entry) => sum + entry.total, 0);
+  const rows = REPORT_CHANNELS.map(([key, label]) => ({
+    key,
+    label,
+    ...totals.get(key),
+    share: grand > 0 ? (totals.get(key).total / grand) * 100 : 0,
+  }));
+  const best = [...rows].sort((a, b) => b.total - a.total)[0];
+  const insight = grand > 0 ? `${best.label} é o maior canal do período, com ${Math.round(best.share)}% das vendas.` : "Sem vendas no período escolhido.";
+  return { rows, insight };
+};
+
+const buildCustomerReport = (orders) => {
+  const returning = orders.filter((order) => order.returningCustomer).length;
+  const first = orders.length - returning;
+  const share = orders.length ? Math.round((returning / orders.length) * 100) : 0;
+  return {
+    rows: [
+      { key: "returning", label: "Já compraram antes", count: returning, share },
+      { key: "first", label: "Primeira compra", count: first, share: orders.length ? 100 - share : 0 },
+    ],
+    insight: orders.length ? `${share}% dos pedidos vieram de clientes que já tinham comprado antes.` : "Sem pedidos no período escolhido.",
+  };
+};
+
+const renderReportBody = (key) => {
+  const { orders, ranking } = getReportData();
+  const def = REPORT_DEFS.find((entry) => entry.key === key) || REPORT_DEFS[0];
+  if (def.soon) {
+    return { insight: def.soon, body: `<div class="gx-rep-soon"><strong>Em breve</strong><span>${escapeHtml(def.soon)}</span></div>`, exportable: false };
+  }
+  if (key === "abc") {
+    const report = buildAbcReport(ranking);
+    return {
+      insight: report.insight,
+      exportable: report.rows.length > 0,
+      body: report.rows.length
+        ? `<div class="gx-rep-table" role="table">
+            <div class="gx-rep-tr is-head" role="row"><span>Prato</span><span>Vendas</span><span>% do total</span><span>Acumulado</span><span>Classe</span></div>
+            ${report.rows
+              .map(
+                (row) =>
+                  `<div class="gx-rep-tr" role="row"><span>${escapeHtml(row.name)}</span><span>${escapeHtml(formatMoney(row.total))}</span><span>${Math.round(row.share)}%</span><span>${Math.round(row.accumulated)}%</span><span><b class="gx-rep-class is-${row.klass.toLowerCase()}">${row.klass}</b></span></div>`
+              )
+              .join("")}
+          </div>`
+        : `<p class="gx-res-empty">Sem vendas finalizadas no período.</p>`,
+    };
+  }
+  if (key === "channels" || key === "customers") {
+    const report = key === "channels" ? buildChannelReport(orders) : buildCustomerReport(orders);
+    return {
+      insight: report.insight,
+      exportable: orders.length > 0,
+      body: `<div class="gx-res-pay gx-rep-bars">${report.rows
+        .map(
+          (row, index) => `
+            <div class="gx-res-pay-row">
+              <div><strong>${escapeHtml(row.label)}</strong><span>${
+                key === "channels"
+                  ? `${escapeHtml(formatMoney(row.total))} · ${Math.round(row.share)}%`
+                  : `${row.count} ${row.count === 1 ? "pedido" : "pedidos"} · ${Math.round(row.share)}%`
+              }</span></div>
+              <span class="gx-res-pay-bar ${["is-cash", "is-card", "is-pix", "is-other"][index % 4]}"><i style="width:${Math.max(0, Math.min(100, row.share))}%"></i></span>
+            </div>`
+        )
+        .join("")}</div>`,
+    };
+  }
+  const report = buildPeakReport(orders);
+  return {
+    insight: report.insight,
+    exportable: orders.length > 0,
+    body: `
+      <div class="gx-rep-heat" style="--cols:${report.hours.length}">
+        <span></span>${report.hours.map((hour) => `<span class="gx-rep-hour">${hour}h</span>`).join("")}
+        ${REPORT_WEEK.map(
+          ([day, label]) =>
+            `<span class="gx-rep-day">${label}</span>${report.hours
+              .map((hour) => {
+                const cell = report.cells.find((entry) => entry.day === day && entry.hour === hour);
+                const level = report.max > 0 ? cell.count / report.max : 0;
+                return `<span class="gx-rep-cell${level > 0.6 ? " is-strong" : ""}" style="--level:${level.toFixed(3)}" title="${label} ${hour}h: ${cell.count} pedido(s)">${cell.count || ""}</span>`;
+              })
+              .join("")}`
+        ).join("")}
+      </div>
+      <div class="gx-rep-legend"><span>menos pedidos</span><i aria-hidden="true"></i><span>mais pedidos</span></div>`,
+  };
+};
+
+const renderReportsV2 = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  if (!moduleRoot) return;
+  const header = renderResultsHeader("reports");
+  const data = adminState.resultsData;
+  if (!data || (adminState.isLoadingResults && !data.current)) {
+    moduleRoot.innerHTML = `${header}<div class="admin-empty-state admin-empty-state-soft admin-empty-state-loading"><strong>Carregando relatórios</strong><span>Somando os pedidos do período.</span></div>`;
+    if (!data && !adminState.isLoadingResults) void loadResults();
+    return;
+  }
+  if (data.error) {
+    moduleRoot.innerHTML = `${header}<div class="admin-feedback is-error">${escapeHtml(data.error)}</div>`;
+    return;
+  }
+  const active = REPORT_DEFS.find((entry) => entry.key === adminState.reportKey) || REPORT_DEFS[0];
+  const view = renderReportBody(active.key);
+  moduleRoot.innerHTML = `
+    ${header}
+    <section class="gx-rep-picker" aria-label="Relatórios">
+      ${REPORT_DEFS.map(
+        (def) => `
+          <button type="button" class="gx-rep-card${def.key === active.key ? " is-active" : ""}${def.soon ? " is-soon" : ""}" data-report-key="${def.key}" aria-pressed="${def.key === active.key}">
+            <span class="gx-rep-icon ${def.tone}">${REPORT_ICONS[def.icon]}</span>
+            <span class="gx-rep-card-copy"><strong>${escapeHtml(def.title)}${def.soon ? ' <em>em breve</em>' : ""}</strong><small>${escapeHtml(def.text)}</small></span>
+          </button>`
+      ).join("")}
+    </section>
+    <article class="gx-res-card gx-rep-view" data-report-view>
+      <div class="gx-rep-view-head">
+        <div><h3>${escapeHtml(active.title)}</h3><p>${escapeHtml(view.insight)}</p></div>
+        ${
+          view.exportable
+            ? `<div class="gx-rep-actions"><button type="button" class="gx-res-chip is-download" data-report-print>Baixar PDF</button><button type="button" class="gx-res-chip is-download" data-report-csv>Baixar planilha</button></div>`
+            : ""
+        }
+      </div>
+      ${view.body}
+    </article>`;
+};
+
+const downloadReportCsv = () => {
+  const { orders, ranking } = getReportData();
+  const key = adminState.reportKey;
+  const quote = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const money = (value) => Number(value || 0).toFixed(2).replace(".", ",");
+  let lines = [];
+  if (key === "abc") {
+    lines = [["Prato", "Vendas", "% do total", "Acumulado", "Classe"], ...buildAbcReport(ranking).rows.map((row) => [row.name, money(row.total), Math.round(row.share), Math.round(row.accumulated), row.klass])];
+  } else if (key === "channels") {
+    lines = [["Canal", "Vendas", "Pedidos", "%"], ...buildChannelReport(orders).rows.map((row) => [row.label, money(row.total), row.count, Math.round(row.share)])];
+  } else if (key === "customers") {
+    lines = [["Grupo", "Pedidos", "%"], ...buildCustomerReport(orders).rows.map((row) => [row.label, row.count, row.share])];
+  } else {
+    const report = buildPeakReport(orders);
+    lines = [["Dia", ...report.hours.map((hour) => `${hour}h`)], ...REPORT_WEEK.map(([day, label]) => [label, ...report.hours.map((hour) => report.cells.find((cell) => cell.day === day && cell.hour === hour)?.count || 0)])];
+  }
+  const csv = lines.map((row) => row.map(quote).join(";")).join("\r\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `relatorio-${key}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || adminState.activeSection !== "reports") return;
+  const card = target.closest("[data-report-key]");
+  if (card) {
+    adminState.reportKey = card.dataset.reportKey;
+    renderModuleContent();
+    return;
+  }
+  if (target.closest("[data-report-csv]")) {
+    downloadReportCsv();
+    return;
+  }
+  if (target.closest("[data-report-print]")) {
+    document.body.classList.add("gx-printing-report");
+    window.print();
+    window.setTimeout(() => document.body.classList.remove("gx-printing-report"), 500);
+  }
 });
 
 const renderAuditModule = () => {
@@ -10812,8 +11078,7 @@ const renderModuleContentBody = () => {
   }
 
   if (adminState.activeSection === "reports") {
-    renderReportsModule();
-    document.querySelector("[data-admin-module-content]")?.insertAdjacentHTML("afterbegin", renderResultsHeader("reports"));
+    renderReportsV2();
     return;
   }
 

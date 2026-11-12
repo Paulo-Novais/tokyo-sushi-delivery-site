@@ -1038,14 +1038,14 @@ const validateReports = async (page) => {
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Performance do turno e gargalos",
-    "Relatorios deveria renderizar o panorama operacional."
+    "Horários de pico",
+    "Relatorios deveria abrir com o relatorio de horarios de pico."
   );
   await waitForVisibleText(
     page,
     "[data-admin-module-content]",
-    "Distribuição por status",
-    "Relatorios deveria exibir distribuicao por status."
+    "Curva ABC dos pratos",
+    "Relatorios deveria listar os relatorios disponiveis."
   );
 };
 
