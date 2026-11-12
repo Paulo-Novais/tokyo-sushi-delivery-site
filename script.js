@@ -7620,7 +7620,8 @@ const syncRestaurantCopy = (settings) => {
 const syncRestaurantWhatsappLinks = (settings) => {
   const href = getPublicWhatsappSupportHref();
 
-  document.querySelectorAll('a[href*="wa.me"]').forEach((link) => {
+  // Links com mensagem própria (ex.: "Falar com a loja" sobre o pedido) mantêm o texto.
+  document.querySelectorAll('a[href*="wa.me"]:not([data-whatsapp-keep])').forEach((link) => {
     link.href = href;
     link.dataset.baseHref = href;
   });
@@ -9494,6 +9495,7 @@ const renderTrackingPage = () => {
   const order = customerTrackingState.activeOrder;
 
   if (!order) {
+    document.body.classList.remove("has-tracking-order");
     if (trackingSummary) {
       trackingSummary.textContent = `Nenhum pedido em andamento encontrado para ${getFirstName(profile.name)} neste aparelho.`;
     }
@@ -9512,7 +9514,6 @@ const renderTrackingPage = () => {
     return;
   }
 
-  const progressSteps = buildTrackingProgressSteps(order);
   const latestHistory = Array.isArray(order.statusHistory) ? order.statusHistory[0] : null;
 
   if (trackingSummary) {
@@ -9521,161 +9522,228 @@ const renderTrackingPage = () => {
     )}.`;
   }
 
-  trackingRoot.innerHTML = `
-    <div class="tracking-page-grid">
-      <section class="tracking-hero-card glass-card">
-        <div class="tracking-hero-top">
-          <div>
-            <p class="section-tag">Pedido em andamento</p>
-            <h2>${escapeHtml(order.publicId)}</h2>
-            <p>${escapeHtml(getTrackingStatusLead(order))}</p>
-          </div>
-          <span class="tracking-status-pill is-${escapeHtml(
-            order.status.toLowerCase().replace(/\s+/g, "-")
-          )}">
-            ${escapeHtml(order.status)}
-          </span>
-        </div>
+  document.body.classList.add("has-tracking-order");
+  trackingRoot.innerHTML = renderTrackingOrderView(order);
+  syncTrackingCountdown();
+  schedulePortugueseUiRefresh();
+};
 
-        <div class="tracking-progress" role="list" aria-label="Linha de progresso do pedido">
-          ${progressSteps
+// Acompanhamento do pedido (novo): atualiza sozinho a cada 10 s, com contador.
+const TRACKING_PAGE_REFRESH_SECONDS = 10;
+const trackingCountdown = { nextAt: 0, timerId: 0 };
+
+const TRACKING_ICONS = Object.freeze({
+  received:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10l1 3v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7l1-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 11h5M9.5 15h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  accepted:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 12 2.4 2.4L15.5 9.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  preparing:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3c.6 2.6 3.5 4.3 3.5 7.6A3.5 3.5 0 0 1 12 14a3.5 3.5 0 0 1-3.5-3.4c0-1.4.7-2.4 1.5-3.3.2 1.1.8 1.8 1.6 2.1C11.2 7.6 11 5.3 12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 18h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  ready:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 8h14l-1.2 11.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m9.5 14 1.8 1.8 3.2-3.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  delivery:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="17" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M6 17l4-7h5l3 7M14 6h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  done:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  cancelled:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  chat:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19.5 5.3 16A7.5 7.5 0 1 1 8 18.7L4 19.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+  refresh:
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+});
+
+const getTrackingHero = (order) => {
+  const isPickup = order.fulfillmentMode === "pickup";
+  switch (order.status) {
+    case "Recebido":
+      return { icon: "received", title: "Pedido recebido", text: "A loja já recebeu seu pedido e vai confirmar em instantes." };
+    case "Aceito":
+      return { icon: "accepted", title: "Pedido confirmado", text: "A loja aceitou seu pedido. Já já começa o preparo." };
+    case "Em preparo":
+      return { icon: "preparing", title: "Preparando com capricho", text: "Seu pedido está sendo montado agora, peça por peça." };
+    case "Pronto":
+      return isPickup
+        ? { icon: "ready", title: "Pronto para retirar", text: "Pode vir buscar! Seu pedido está te esperando no balcão." }
+        : { icon: "ready", title: "Pronto, saindo já já", text: "Seu pedido está pronto e aguarda o entregador." };
+    case "Saiu para entrega":
+      return { icon: "delivery", title: "A caminho", text: "O entregador está levando seu pedido até você." };
+    case "Entregue":
+      return { icon: "done", title: "Pedido entregue", text: "Bom apetite! Obrigado por pedir com a gente.", final: true };
+    case "Retirada concluida":
+      return { icon: "done", title: "Pedido retirado", text: "Bom apetite! Obrigado por pedir com a gente.", final: true };
+    case "Cancelado":
+      return { icon: "cancelled", title: "Pedido cancelado", text: "Se tiver alguma dúvida, fale com a loja pelo WhatsApp.", cancelled: true };
+    default:
+      return { icon: "received", title: "Acompanhando seu pedido", text: getTrackingStatusLead(order) };
+  }
+};
+
+const TRACKING_STEP_LABELS = Object.freeze({
+  "Saiu para entrega": "Saiu para entrega",
+  "Retirada concluida": "Retirado",
+});
+
+const getTrackingStepTime = (order, status) => {
+  const entries = (Array.isArray(order.statusHistory) ? order.statusHistory : []).filter((entry) => entry.status === status);
+  const first = entries[entries.length - 1];
+  if (!first?.createdAt) {
+    return status === "Recebido" && order.createdAt ? formatTrackingClock(order.createdAt) : "";
+  }
+  return formatTrackingClock(first.createdAt);
+};
+
+const formatTrackingClock = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+};
+
+const formatTrackingDayTime = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const day = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${day}, ${formatTrackingClock(value)}`;
+};
+
+const renderTrackingOrderView = (order) => {
+  const isPickup = order.fulfillmentMode === "pickup";
+  const hero = getTrackingHero(order);
+  const steps = buildTrackingProgressSteps(order);
+  const statusLabel = TRACKING_STEP_LABELS[order.status] || order.status;
+  const whatsappHref = `https://wa.me/${getPublicWhatsappNumber()}?text=${encodeURIComponent(
+    `Olá! Quero falar sobre o meu pedido ${order.publicId}.`
+  )}`;
+  const items = Array.isArray(order.items) ? order.items : [];
+  const paymentLabel = getCartPaymentMethodLabel(order.paymentMethod);
+  const paymentLine = [isPickup ? "Pagamento na retirada" : "Pagamento na entrega", paymentLabel].filter(Boolean).join(" · ");
+  const estimate =
+    order.deliveryEstimateText || (isPickup ? `~${PICKUP_ESTIMATE_MINUTES} min` : "A loja informa em instantes");
+
+  return `
+    <div class="tk-track${hero.cancelled ? " is-cancelled" : ""}${hero.final ? " is-final" : ""}">
+      <header class="tk-track-head">
+        <div>
+          <p class="tk-track-eyebrow">Acompanhar pedido</p>
+          <h2 class="tk-track-code">${escapeHtml(order.publicId)}</h2>
+        </div>
+        <div class="tk-track-live">
+          ${
+            hero.final || hero.cancelled
+              ? ""
+              : `<span class="tk-track-timer" data-tracking-countdown-wrap><span class="tk-track-ring" aria-hidden="true"></span><span data-tracking-countdown>Atualiza em ${TRACKING_PAGE_REFRESH_SECONDS}s</span></span>`
+          }
+          <span class="tk-track-badge"><span aria-hidden="true"></span>${escapeHtml(statusLabel)}</span>
+        </div>
+      </header>
+
+      <section class="tk-track-card tk-track-hero">
+        <div class="tk-track-hero-main">
+          <span class="tk-track-icon is-${escapeHtml(hero.icon)}" aria-hidden="true">${TRACKING_ICONS[hero.icon] || ""}</span>
+          <div class="tk-track-hero-copy">
+            <h3>${escapeHtml(hero.title)}</h3>
+            <p>${escapeHtml(hero.text)}</p>
+            <div class="tk-track-actions">
+              <a class="tk-track-btn is-whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noreferrer" data-whatsapp-keep>${TRACKING_ICONS.chat}Falar com a loja</a>
+              ${hero.final || hero.cancelled ? "" : `<button class="tk-track-btn" type="button" data-tracking-refresh>${TRACKING_ICONS.refresh}Atualizar agora</button>`}
+            </div>
+          </div>
+        </div>
+        ${
+          hero.cancelled
+            ? ""
+            : `<ol class="tk-track-steps" aria-label="Andamento do pedido">
+                ${steps
+                  .map((step, index) => {
+                    const time = step.isDone || step.isCurrent ? getTrackingStepTime(order, step.status) : "";
+                    return `<li class="tk-track-step${step.isDone ? " is-done" : ""}${step.isCurrent ? " is-current" : ""}"${step.isCurrent ? ' aria-current="step"' : ""}>
+                      <span class="tk-track-dot">${step.isDone || (step.isCurrent && hero.final) ? TRACKING_ICONS.done : index + 1}</span>
+                      <span class="tk-track-step-copy"><strong>${escapeHtml(TRACKING_STEP_LABELS[step.status] || step.status)}</strong>${time ? `<small>${escapeHtml(time)}</small>` : ""}</span>
+                    </li>`;
+                  })
+                  .join("")}
+              </ol>`
+        }
+      </section>
+
+      <section class="tk-track-facts">
+        <article class="tk-track-card"><span>Horário do pedido</span><strong>${escapeHtml(formatTrackingDayTime(order.createdAt))}</strong></article>
+        <article class="tk-track-card"><span>Tipo</span><strong>${escapeHtml(isPickup ? "Retirada na loja" : "Entrega")}</strong></article>
+        <article class="tk-track-card"><span>Solicitado para</span><strong>${escapeHtml(order.scheduledLabel || "Agora (imediato)")}</strong></article>
+        <article class="tk-track-card"><span>Previsão</span><strong>${escapeHtml(estimate)}</strong></article>
+      </section>
+
+      <section class="tk-track-card tk-track-summary">
+        <div class="tk-track-summary-head">
+          <h3>Resumo do pedido</h3>
+          <small>${escapeHtml(paymentLine)}</small>
+        </div>
+        ${
+          !isPickup && order.addressFull
+            ? `<p class="tk-track-address"><span>Entregar em</span>${escapeHtml(
+                [order.addressFull, order.addressComplement, order.addressReference].filter(Boolean).join(" · ")
+              )}</p>`
+            : ""
+        }
+        <ul class="tk-track-items">
+          ${items
             .map(
-              (step) => `
-                <div
-                  class="tracking-progress-step${step.isDone ? " is-done" : ""}${
-                    step.isCurrent ? " is-current" : ""
-                  }${order.status === "Cancelado" ? " is-disabled" : ""}"
-                  role="listitem"
-                >
-                  <span class="tracking-progress-dot" aria-hidden="true"></span>
-                  <strong>${escapeHtml(step.status)}</strong>
-                </div>
-              `
+              (item) => `<li><span><b>${escapeHtml(String(Number(item.quantity || 1)))}×</b> ${escapeHtml(item.name || "Item")}${
+                item.type === "addon" ? ' <em>adicional</em>' : ""
+              }</span><span>${escapeHtml(formatPrice(Number(item.totalPrice || 0)))}</span></li>`
             )
             .join("")}
-        </div>
-
-        <div class="tracking-meta-grid">
-          <article>
-            <span>Horario do pedido</span>
-            <strong>${escapeHtml(formatDateTime(order.createdAt))}</strong>
-          </article>
-          <article>
-            <span>Tipo do pedido</span>
-            <strong>${escapeHtml(
-              order.orderType === "scheduled"
-                ? "Agendamento"
-                : order.fulfillmentMode === "pickup"
-                  ? "Retirada"
-                  : "Entrega"
-            )}</strong>
-          </article>
-          <article>
-            <span>Horario solicitado</span>
-            <strong>${escapeHtml(order.scheduledLabel || "Pedido imediato")}</strong>
-          </article>
-          <article>
-            <span>Previsao estimada</span>
-            <strong>${escapeHtml(order.deliveryEstimateText || "Acompanhando pela loja")}</strong>
-          </article>
-        </div>
+        </ul>
+        ${
+          Number(order.deliveryFee || 0) > 0
+            ? `<div class="tk-track-line"><span>Taxa de entrega</span><span>${escapeHtml(formatPrice(Number(order.deliveryFee || 0)))}</span></div>`
+            : ""
+        }
+        <div class="tk-track-total"><span>Total</span><strong>${escapeHtml(formatPrice(Number(order.totalAmount || 0)))}</strong></div>
+        ${order.customerNotes ? `<p class="tk-track-note"><span>Observação</span>${escapeHtml(order.customerNotes)}</p>` : ""}
       </section>
 
-      <section class="tracking-detail-card glass-card">
-        <div class="tracking-detail-head">
-          <div>
-            <p class="section-tag">Resumo do pedido</p>
-            <h3>Informacoes principais</h3>
-          </div>
-          <small>${escapeHtml(order.latestStatusNote || "Atualizacao operacional registrada pela loja.")}</small>
-        </div>
-
-        <div class="tracking-info-list">
-          <div>
-            <span>Forma de pagamento</span>
-            <strong>${escapeHtml(getCartPaymentMethodLabel(order.paymentMethod))}</strong>
-          </div>
-          <div>
-            <span>Valor total</span>
-            <strong>${escapeHtml(formatPrice(Number(order.totalAmount || 0)))}</strong>
-          </div>
-          <div>
-            <span>Endereco de entrega</span>
-            <strong>${escapeHtml(order.addressFull || "Retirada no local")}</strong>
-          </div>
-          <div>
-            <span>Complemento e referencia</span>
-            <strong>${escapeHtml(
-              [order.addressComplement, order.addressReference].filter(Boolean).join(" | ") ||
-                "Sem complemento informado"
-            )}</strong>
-          </div>
-          <div>
-            <span>Observacoes</span>
-            <strong>${escapeHtml(order.customerNotes || "Sem observacoes relevantes.")}</strong>
-          </div>
-          <div>
-            <span>Mensagem util</span>
-            <strong>${escapeHtml(getTrackingStatusLead(order))}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="tracking-detail-card glass-card">
-        <div class="tracking-detail-head">
-          <div>
-            <p class="section-tag">Itens</p>
-            <h3>Seu pedido</h3>
-          </div>
-          <small>${escapeHtml(`${order.itemCount || 0} item(ns) registrados`)}</small>
-        </div>
-
-        <div class="tracking-item-section">
-          <h4>Itens principais</h4>
-          <div class="tracking-item-list">${renderTrackingItems(order.items, "product")}</div>
-        </div>
-
-        <div class="tracking-item-section">
-          <h4>Complementos e adicionais</h4>
-          <div class="tracking-item-list">${renderTrackingItems(order.items, "addon")}</div>
-        </div>
-
-        <div class="tracking-total-strip">
-          <span>Subtotal: ${escapeHtml(formatPrice(Number(order.subtotal || 0)))}</span>
-          <span>Taxa de entrega: ${escapeHtml(formatPrice(Number(order.deliveryFee || 0)))}</span>
-          <strong>Total: ${escapeHtml(formatPrice(Number(order.totalAmount || 0)))}</strong>
-        </div>
-      </section>
-
-      <section class="tracking-detail-card glass-card">
-        <div class="tracking-detail-head">
-          <div>
-            <p class="section-tag">Atualizacoes</p>
-            <h3>Historico do andamento</h3>
-          </div>
-          <small>Sincronizado com o painel do gestor</small>
-        </div>
-
-        <div class="tracking-update-list">
-          ${(Array.isArray(order.statusHistory) ? order.statusHistory : [])
-            .map(
-              (entry) => `
-                <article class="tracking-update-card">
-                  <div class="tracking-update-top">
-                    <strong>${escapeHtml(entry.status)}</strong>
-                    <span>${escapeHtml(formatDateTime(entry.createdAt))}</span>
-                  </div>
-                  <p>${escapeHtml(entry.note || "Atualizacao registrada no sistema.")}</p>
-                </article>
-              `
-            )
-            .join("")}
-        </div>
-      </section>
+      <p class="tk-track-foot">${hero.final || hero.cancelled ? "Pedido encerrado." : "Esta página se atualiza sozinha. Pode deixar aberta."}</p>
     </div>
   `;
+};
 
-  schedulePortugueseUiRefresh();
+const syncTrackingCountdown = () => {
+  if (!document.querySelector("[data-tracking-root]")) return;
+  if (!trackingCountdown.nextAt) trackingCountdown.nextAt = Date.now() + TRACKING_PAGE_REFRESH_SECONDS * 1000;
+  const remaining = Math.max(0, Math.ceil((trackingCountdown.nextAt - Date.now()) / 1000));
+  const label = document.querySelector("[data-tracking-countdown]");
+  const wrap = document.querySelector("[data-tracking-countdown-wrap]");
+  if (label) label.textContent = remaining > 0 ? `Atualiza em ${remaining}s` : "Atualizando…";
+  if (wrap) wrap.style.setProperty("--tk-progress", String(1 - remaining / TRACKING_PAGE_REFRESH_SECONDS));
+};
+
+const refreshTrackingNow = () => {
+  trackingCountdown.nextAt = Date.now() + TRACKING_PAGE_REFRESH_SECONDS * 1000;
+  syncTrackingCountdown();
+  void refreshCustomerTrackingState({ renderPage: true });
+};
+
+const startTrackingCountdown = () => {
+  if (trackingCountdown.timerId || !document.querySelector("[data-tracking-root]")) return;
+  trackingCountdown.nextAt = Date.now() + TRACKING_PAGE_REFRESH_SECONDS * 1000;
+  trackingCountdown.timerId = window.setInterval(() => {
+    if (document.hidden) return;
+    if (Date.now() >= trackingCountdown.nextAt) {
+      refreshTrackingNow();
+      return;
+    }
+    syncTrackingCountdown();
+  }, 1000);
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest("[data-tracking-refresh]")) {
+      refreshTrackingNow();
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() >= trackingCountdown.nextAt) refreshTrackingNow();
+  });
 };
 
 const refreshCustomerTrackingState = async ({ renderPage = true } = {}) => {
@@ -13464,10 +13532,10 @@ updateHeaderState();
 refreshPortugueseUi(document.body);
 setupWhatsappBubble();
 startStoreStatusRefresh();
+startTrackingCountdown();
 window.setInterval(() => {
-  void refreshCustomerTrackingState({
-    renderPage: Boolean(document.querySelector("[data-tracking-root]")),
-  });
+  if (document.querySelector("[data-tracking-root]")) return;
+  void refreshCustomerTrackingState({ renderPage: false });
 }, CUSTOMER_TRACKING_REFRESH_INTERVAL_MS);
 window.addEventListener("scroll", updateHeaderState, { passive: true });
 window.addEventListener(
