@@ -73,9 +73,13 @@ const handlePremiumPage = async (req, res) => {
       source: "public:premium-page",
       ...(slug ? { slug } : {}),
     });
-    const { settings, catalog } = await runAsPublicTenant(tenantContext, async () => ({
+    const { settings, catalog, deliverySettings } = await runAsPublicTenant(tenantContext, async () => ({
       settings: (await getPublicRestaurantSettings({ tenantContext })).settings,
       catalog: await getPublicCatalogState({ tenantContext }).catch(() => ({ sections: [] })),
+      deliverySettings:
+        pageKey === "entrega"
+          ? (await getPublicDeliverySettings({ tenantContext }).catch(() => ({}))).settings || {}
+          : {},
     }));
     const html = renderPremiumPage({
       pageKey,
@@ -84,6 +88,7 @@ const handlePremiumPage = async (req, res) => {
       slug: slug || tenantContext.restaurantKey,
       settings,
       catalog,
+      deliverySettings,
     });
 
     return sendHtml(res, 200, html);

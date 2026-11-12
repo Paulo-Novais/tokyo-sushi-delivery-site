@@ -71,6 +71,7 @@ test("nenhum texto visível nem WhatsApp do Tokyo na página da Kasulo", () => {
     const text = visibleText(html);
     assert.doesNotMatch(text, /tokyo|sushi|japon|hashi|shoyu|samurai/i, `${pageKey}: ${text.match(/.{0,40}(tokyo|sushi|japon|hashi|shoyu|samurai).{0,40}/i)?.[0]}`);
     assert.doesNotMatch(html, /5516990507398/, `${pageKey}: WhatsApp do Tokyo`);
+    assert.doesNotMatch(html, /General Os[oó]rio|14400-520/, `${pageKey}: endereço do Tokyo`);
     assert.doesNotMatch(html, /alt="[^"]*Tokyo/i, `${pageKey}: alt com Tokyo`);
   }
 });
@@ -113,4 +114,29 @@ test("valores da configuração são escapados", () => {
   const html = render("inicio", { settings: { ...KASULO, restaurantName: '<script>alert(1)</script>"' } });
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;&quot;/);
+});
+
+test("Entrega usa endereço e faixas do restaurante, nunca os do Tokyo", () => {
+  const html = render("entrega", {
+    settings: {
+      ...KASULO,
+      address: "Rua Batatais, 1106 - Centro, Franca - SP",
+      deliveryBase: { pricePerKm: 2 },
+    },
+    deliverySettings: {
+      distanceBands: [
+        { minKm: 0, maxKm: 3, customerFee: 7, isActive: true },
+        { minKm: 3, maxKm: 8, customerFee: 11.5, isActive: true },
+        { minKm: 8, maxKm: 12, customerFee: 99, isActive: false },
+      ],
+      serviceArea: { maxRadiusKm: 8 },
+    },
+  });
+  assert.doesNotMatch(html, /General Os[oó]rio|14400-520/, "endereço do Tokyo na Entrega");
+  assert.match(html, /Rua Batatais, 1106/);
+  assert.match(html, /R\$ 7,00 até 3 km/);
+  assert.match(html, /R\$ 11,50 até 8 km/);
+  assert.doesNotMatch(html, /R\$ 99,00/, "faixa inativa não aparece");
+  assert.doesNotMatch(html, /R\$ 9,00 até 1,9 km/, "faixa do Tokyo");
+  assert.match(html, /acréscimo de R\$ 2,00 por km adicional/);
 });

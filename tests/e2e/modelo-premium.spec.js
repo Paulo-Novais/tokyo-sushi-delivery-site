@@ -120,7 +120,7 @@ test.describe("Modelo Premium por slug", () => {
         clone.querySelectorAll("#catalogo, [data-catalog-root], [data-mobile-catalog-sheet], .catalog-mobile-block, [data-premium-quick-links], .hero-visual, script").forEach((node) => node.remove());
         return clone.innerText || clone.textContent || "";
       });
-      const tokyoText = bodyText.match(/.{0,60}(tokyo|sushi|japon|hashi|shoyu).{0,40}/i)?.[0] || "";
+      const tokyoText = bodyText.match(/.{0,60}(tokyo|sushi|japon|hashi|shoyu|general os[oó]rio|14400-520).{0,40}/i)?.[0] || "";
       expect(tokyoText, `texto do Tokyo em ${suffix}`).toBe("");
       const whatsappHrefs = await page.locator('a[href*="wa.me"]').evaluateAll((links) => links.map((link) => link.href));
       for (const href of whatsappHrefs) {
