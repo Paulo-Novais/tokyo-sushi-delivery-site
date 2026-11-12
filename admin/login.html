@@ -8,83 +8,140 @@
     <link rel="icon" type="image/png" href="../assets/inovas-logo-header.png" />
     <link rel="apple-touch-icon" href="../assets/inovas-logo-header.png" />
     <link rel="manifest" href="../site.webmanifest" />
-    <link rel="stylesheet" href="./admin.css" />
-    <link rel="stylesheet" href="./design-system.css" />
+    <link rel="preload" href="../assets/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./login.css" />
     <script src="../site-config.js" defer></script>
     <script src="./admin.js" defer></script>
   </head>
-  <body class="admin-body admin-login-page" data-admin-page="login" data-admin-theme="light">
-    <main class="admin-login-layout">
-      <section class="admin-login-hero">
-        <div class="admin-login-brand">
-          <img class="admin-login-brand-logo" src="../assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
+  <body class="admin-login-page lg-body" data-admin-page="login">
+    <main class="lg-layout">
+      <section class="lg-side" aria-label="INOVAS Food">
+        <a class="lg-logo" href="/" aria-label="INOVAS Food, voltar para o site">
+          <img src="../assets/inovas-food-logo-menu.png" alt="INOVAS Food" width="640" height="273" />
+        </a>
+        <div class="lg-side-copy">
+          <h2>Seu restaurante inteiro, <em>numa tela só.</em></h2>
+          <p>Pedidos, caixa, estoque e financeiro acompanhando você em tempo real — do balcão ao delivery.</p>
         </div>
-        <span class="admin-eyebrow">Área privada</span>
-        <h1>Gestor web administrativo INOVAS Food</h1>
-        <p>
-          Esta área e exclusiva para operação interna da plataforma. Restaurantes clientes
-          continuam separados por escopo e permissão.
+        <div class="lg-mock" aria-hidden="true">
+          <div class="lg-mock-card">
+            <strong>Hoje no restaurante</strong>
+            <div class="lg-mock-kpis">
+              <div><small>Pedidos</small><b>129</b></div>
+              <div><small>Faturamento</small><b>R$ 4.305</b></div>
+            </div>
+            <div class="lg-mock-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <small class="lg-mock-note">Simulação · dados ilustrativos</small>
+          </div>
+          <div class="lg-mock-toast">
+            <span class="lg-bell"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4zM10 20a2 2 0 004 0" /></svg></span>
+            <span><b>Novo pedido #0414</b><small>Mesa 2 · R$ 94,60</small></span>
+          </div>
+          <div class="lg-mock-status">
+            <b>Pedido #0414</b>
+            <span class="lg-steps"><i class="is-on"></i><i class="is-on"></i><i></i><i></i></span>
+            <small>Em preparo</small>
+          </div>
+        </div>
+        <p class="lg-side-foot">
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z" /></svg>Conexão segura</span>
+          <span>Cada restaurante vê só os próprios dados</span>
         </p>
-
-        <div class="admin-hero-points">
-          <article>
-            <strong>Site público</strong>
-            <span>Cardápio, carrinho e checkout continuam do lado do cliente.</span>
-          </article>
-          <article>
-            <strong>Painel privado</strong>
-            <span>Login administrativo, visao interna e controle operacional.</span>
-          </article>
-          <article>
-            <strong>Base escalavel</strong>
-            <span>Pedidos estruturados para evoluir status, cardápio e horários.</span>
-          </article>
-        </div>
       </section>
 
-      <section class="admin-panel-card">
-        <div class="admin-panel-head">
-          <span class="admin-chip">Etapa 1</span>
-          <h2>Entrar no gestor</h2>
-          <p>Use o login administrativo configurado nas variáveis do projeto.</p>
+      <section class="lg-main">
+        <header class="lg-top">
+          <a class="lg-back" href="/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+            Voltar para o site
+          </a>
+          <p>Ainda não é cliente? <a href="/#contato">Solicitar demonstração</a></p>
+        </header>
+
+        <div class="lg-box">
+          <span class="lg-chip">Acesso à plataforma</span>
+          <h1>Bem-vindo de volta</h1>
+          <p class="lg-intro">
+            Entre com seu e-mail e senha. Restaurantes e equipe INOVAS usam o mesmo acesso — o que você vê depende da
+            sua permissão.
+          </p>
+
+          <form class="lg-form" data-admin-login-form novalidate>
+            <label class="lg-field">
+              <span>E-mail ou usuário</span>
+              <span class="lg-input">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM3 7l9 6 9-6" /></svg>
+                <input
+                  type="text"
+                  name="identifier"
+                  autocomplete="username"
+                  inputmode="email"
+                  placeholder="voce@seurestaurante.com.br"
+                  data-placeholder-fixed
+                  required
+                />
+              </span>
+            </label>
+
+            <label class="lg-field">
+              <span>Senha</span>
+              <span class="lg-input">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z" /></svg>
+                <input type="password" name="password" autocomplete="current-password" placeholder="Sua senha" required data-login-password />
+                <button class="lg-eye" type="button" aria-label="Mostrar senha" aria-pressed="false" data-login-eye>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM9 12a3 3 0 106 0 3 3 0 10-6 0" /></svg>
+                </button>
+              </span>
+            </label>
+
+            <div class="lg-row">
+              <button class="lg-link" type="button" aria-expanded="false" aria-controls="lg-forgot" data-login-forgot>Esqueci minha senha</button>
+            </div>
+            <p class="lg-forgot" id="lg-forgot" hidden>
+              Peça ao responsável do seu restaurante para redefinir a senha em <b>Usuários</b>, no Gestor. Equipe INOVAS
+              ou dono do restaurante: fale com o suporte pelo e-mail
+              <a href="mailto:contato@inovasfood.com.br">contato@inovasfood.com.br</a>.
+            </p>
+
+            <input type="hidden" name="next" value="/admin/" />
+
+            <div class="admin-restaurant-selection lg-select" data-restaurant-selection hidden></div>
+
+            <div class="admin-feedback lg-feedback" data-admin-login-feedback role="alert" hidden></div>
+
+            <button class="lg-submit" type="submit" data-admin-login-submit>
+              Entrar
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
+          </form>
+
+          <div class="lg-help">
+            <span class="lg-help-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z" /></svg></span>
+            <p><b>Problemas para entrar?</b> Fale com o suporte INOVAS pelo e-mail <a href="mailto:contato@inovasfood.com.br">contato@inovasfood.com.br</a></p>
+          </div>
         </div>
 
-        <form class="admin-form" data-admin-login-form>
-          <label class="admin-field">
-            <span>Login do administrador</span>
-            <input
-              class="admin-input"
-              type="text"
-              name="identifier"
-              autocomplete="username"
-              placeholder="seuemail@exemplo.com"
-              required
-            />
-          </label>
-
-          <label class="admin-field">
-            <span>Senha</span>
-            <input
-              class="admin-input"
-              type="password"
-              name="password"
-              autocomplete="current-password"
-              placeholder="Sua senha"
-              required
-            />
-          </label>
-
-          <input type="hidden" name="next" value="/admin/" />
-
-          <div class="admin-restaurant-selection" data-restaurant-selection hidden></div>
-
-          <button class="admin-button admin-button-primary" type="submit" data-admin-login-submit>
-            Entrar no gestor
-          </button>
-        </form>
-
-        <div class="admin-feedback" data-admin-login-feedback hidden></div>
+        <footer class="lg-foot">© 2026 INOVAS Food</footer>
       </section>
     </main>
+    <script>
+      (() => {
+        const eye = document.querySelector("[data-login-eye]");
+        const password = document.querySelector("[data-login-password]");
+        eye.addEventListener("click", () => {
+          const show = password.type === "password";
+          password.type = show ? "text" : "password";
+          eye.setAttribute("aria-pressed", String(show));
+          eye.setAttribute("aria-label", show ? "Esconder senha" : "Mostrar senha");
+          password.focus();
+        });
+        const forgot = document.querySelector("[data-login-forgot]");
+        const note = document.getElementById("lg-forgot");
+        forgot.addEventListener("click", () => {
+          note.hidden = !note.hidden;
+          forgot.setAttribute("aria-expanded", String(!note.hidden));
+        });
+      })();
+    </script>
   </body>
 </html>

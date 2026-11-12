@@ -17412,6 +17412,8 @@ const initLoginPage = async () => {
   }
 
   const nextField = form.elements.namedItem("next");
+  // Guarda o rótulo original (pode ter ícone) para restaurar depois de "Entrando...".
+  const submitLabel = submitButton ? submitButton.innerHTML : "";
 
   if (nextField) {
     nextField.value = getSafeAdminRedirect();
@@ -17481,7 +17483,7 @@ const initLoginPage = async () => {
     } finally {
       if (submitButton) {
         submitButton.disabled = false;
-        submitButton.textContent = "Entrar no gestor";
+        submitButton.innerHTML = submitLabel;
       }
     }
   };
@@ -17531,7 +17533,7 @@ const syncAdminStaticBranding = () => {
         ADMIN_BRANDING.loginHeadline || "Gestor web administrativo INOVAS Food";
     }
 
-    if (loginInput) {
+    if (loginInput && !loginInput.hasAttribute("data-placeholder-fixed")) {
       loginInput.placeholder =
         ADMIN_BRANDING.loginPlaceholder || "seuemail@exemplo.com";
     }
