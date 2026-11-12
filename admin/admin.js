@@ -66,7 +66,7 @@ const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "deliveries", label: "Entregas", helper: "Motoboys e rotas" },
   { key: "customers", label: "Clientes", helper: "Base recorrente" },
   { key: "promotions", label: "Promoções", helper: "Campanhas e cupons" },
-  { key: "metrics", label: "Resultados", helper: "Performance por admin" },
+  { key: "metrics", label: "Métricas", helper: "Performance por admin" },
   { key: "reports", label: "Relatórios", helper: "Indicadores" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
   { key: "reviews", label: "Avaliações", helper: "Feedback do cliente" },
@@ -793,7 +793,12 @@ const adminState = {
   inventoryFilters: {
     category: "",
     status: "",
+    query: "",
   },
+  // Estoque v2: lista ou grade, painel lateral ("edit" ou "move") e movimentação em edição.
+  inventoryView: "list",
+  inventoryDrawer: "",
+  inventoryMove: null,
   selectedInventoryItemId: "",
   generatedAt: "",
   storageMode: "",
@@ -2002,7 +2007,7 @@ const formatInventoryQuantity = (value) =>
 
 const getVisibleInventoryItems = () => {
   const snapshot = getInventorySnapshot();
-  const query = normalizeInventorySearchValue(adminState.searchQuery);
+  const query = normalizeInventorySearchValue(adminState.inventoryFilters.query || adminState.searchQuery);
   const categoryFilter = normalizeInventorySearchValue(adminState.inventoryFilters.category);
   const statusFilter = String(adminState.inventoryFilters.status || "").trim().toLowerCase();
 
@@ -2013,7 +2018,11 @@ const getVisibleInventoryItems = () => {
     const matchesQuery = !query || itemSearchValue.includes(query);
     const matchesCategory =
       !categoryFilter || normalizeInventorySearchValue(item.category) === categoryFilter;
-    const matchesStatus = !statusFilter || item.status.key === statusFilter;
+    const matchesStatus =
+      !statusFilter ||
+      (statusFilter === "expiring"
+        ? Boolean(item.expiration?.isExpiringSoon || item.expiration?.isExpired)
+        : item.status.key === statusFilter);
 
     return matchesQuery && matchesCategory && matchesStatus;
   });
@@ -4128,7 +4137,9 @@ const renderSidebarNav = () => {
       }
 
       if (section.key === "inventory") {
-        return String(getInventorySnapshot().summary.totalItems || 0);
+        const summary = getInventorySnapshot().summary || {};
+        const alerts = Number(summary.criticalItems || 0) + Number(summary.lowItems || 0);
+        return alerts > 0 ? `${alerts} ${alerts === 1 ? "alerta" : "alertas"}` : "0";
       }
 
       if (section.key === "settings") {
@@ -4168,11 +4179,34 @@ const renderSidebarNav = () => {
           <strong>${escapeHtml(section.label)}</strong>
           <small>${escapeHtml(section.helper)}</small>
         </div>
-        <span class="admin-nav-badge"${String(badgeValue) === "0" || badgeValue === "R$0" ? " data-zero" : ""}>${escapeHtml(badgeValue)}</span>
+        ${
+          (section.key === "inventory" && String(badgeValue) !== "0") || section.key === "settings"
+            ? `<span class="admin-nav-badge${section.key === "inventory" ? " is-alert" : ""}">${escapeHtml(badgeValue)}</span>`
+            : ""
+        }
       </button>
       ${cashRegisterSubmenu}
     `;
   }).join("");
+  appendNavGroupHeadings(navRoot);
+};
+
+const NAV_GROUPS = Object.freeze([
+  { key: "operacao", label: "Operação", sections: ["orders", "scheduled", "deliveries"] },
+  { key: "cardapio", label: "Cardápio", sections: ["menu", "inventory"] },
+  { key: "clientes", label: "Clientes", sections: ["customers", "promotions", "reviews"] },
+  { key: "resultados", label: "Resultados", sections: ["metrics", "finance", "reports"] },
+  { key: "ajustes", label: "Ajustes", sections: ["settings", "users", "audit"] },
+]);
+
+const appendNavGroupHeadings = (navRoot) => {
+  const visibleKeys = new Set(getVisibleNavSections().map((section) => section.key));
+  navRoot.insertAdjacentHTML(
+    "beforeend",
+    NAV_GROUPS.filter((group) => group.sections.some((key) => visibleKeys.has(key)))
+      .map((group) => `<span class="gx-nav-heading" data-nav-group="${group.key}" role="presentation">${escapeHtml(group.label)}</span>`)
+      .join("")
+  );
 };
 
 const renderDashboardStats = () => {
@@ -7979,104 +8013,309 @@ const renderInventoryGroups = () => {
     .join("");
 };
 
+const getInventoryStockPercent = (item) => {
+  const quantity = Number(item.quantity || 0);
+  const minimum = Number(item.minimumQuantity || 0);
+  if (minimum <= 0) return quantity > 0 ? 100 : 0;
+  return Math.max(quantity > 0 ? 4 : 2, Math.min(100, Math.round((quantity / (minimum * 2)) * 100)));
+};
+
+const renderInventoryRow = (item) => {
+  const statusMeta = getInventoryStatusMeta(item.status);
+  const isSelected = adminState.selectedInventoryItemId === item.id;
+  return `
+    <div class="gx-inv-row ${escapeHtml(statusMeta.className)}${isSelected ? " is-selected" : ""}" role="row">
+      <div class="gx-inv-cell gx-inv-item" role="cell">
+        <button type="button" class="gx-inv-name" data-inventory-select="${escapeHtml(item.id)}">${escapeHtml(item.name)}</button>
+        <small>${escapeHtml([item.category, item.source === "docx" ? "Importado do checklist" : "Manual"].filter(Boolean).join(" · "))}</small>
+      </div>
+      <div class="gx-inv-cell gx-inv-stock" role="cell">
+        <span><b>${escapeHtml(formatInventoryQuantity(item.quantity))}</b> ${escapeHtml(item.unit)}</span>
+        <span class="gx-inv-bar ${escapeHtml(statusMeta.className)}" aria-hidden="true"><i style="width:${getInventoryStockPercent(item)}%"></i></span>
+      </div>
+      <div class="gx-inv-cell gx-inv-min" role="cell"><span class="gx-inv-label">Mínimo</span>${escapeHtml(formatInventoryQuantity(item.minimumQuantity))} ${escapeHtml(item.unit)}</div>
+      <div class="gx-inv-cell" role="cell">${renderInventoryValidity(item)}</div>
+      <div class="gx-inv-cell" role="cell">${renderInventoryStatusBadge(item)}</div>
+      <div class="gx-inv-cell gx-inv-actions" role="cell">
+        <button type="button" class="gx-inv-move-btn" data-inventory-adjust-start="${escapeHtml(item.id)}" data-inventory-adjust-intent="add">+ Entrada</button>
+        <button type="button" class="gx-inv-move-btn" data-inventory-adjust-start="${escapeHtml(item.id)}" data-inventory-adjust-intent="remove">− Baixa</button>
+      </div>
+    </div>`;
+};
+
+const renderInventoryListContent = () => {
+  const items = getVisibleInventoryItems().sort((left, right) => {
+    const rank = { critical: 0, low: 1, ok: 2 };
+    const byStatus = (rank[left.status?.key] ?? 3) - (rank[right.status?.key] ?? 3);
+    return byStatus || left.name.localeCompare(right.name, "pt-BR");
+  });
+  const filters = adminState.inventoryFilters;
+  const statusTitles = { ok: "Itens OK", low: "Itens com estoque baixo", critical: "Itens críticos", expiring: "Validade próxima" };
+  const title = filters.category || statusTitles[filters.status] || "Todos os itens";
+
+  if (adminState.isLoadingInventory && getInventorySnapshot().items.length === 0) {
+    return `<div class="admin-empty-state admin-empty-state-soft admin-empty-state-loading"><strong>Carregando estoque</strong><span>Sincronizando itens, quantidades e validade.</span></div>`;
+  }
+
+  return `
+    <h3 class="gx-inv-title">${escapeHtml(title)} <span>· ${escapeHtml(String(items.length))} ${items.length === 1 ? "item" : "itens"}</span></h3>
+    ${
+      items.length === 0
+        ? `<div class="admin-empty-state admin-empty-state-soft"><strong>Nenhum item encontrado</strong><span>Ajuste a busca, a categoria ou o filtro de situação.</span></div>`
+        : adminState.inventoryView === "grid"
+          ? `<div class="admin-inventory-grid gx-inv-grid">${items.map(renderInventoryItemCard).join("")}</div>`
+          : `<div class="gx-inv-table" role="table" aria-label="Itens do estoque">
+              <div class="gx-inv-row gx-inv-row-head" role="row">
+                <div role="columnheader">Item</div><div role="columnheader">Em estoque</div><div role="columnheader">Mínimo</div>
+                <div role="columnheader">Validade</div><div role="columnheader">Situação</div><div role="columnheader" class="gx-inv-actions">Movimentar</div>
+              </div>
+              ${items.map(renderInventoryRow).join("")}
+            </div>`
+    }`;
+};
+
 const renderInventoryModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
   const snapshot = getInventorySnapshot();
   const summary = snapshot.summary || {};
+  const filters = adminState.inventoryFilters;
+  const allItems = snapshot.items || [];
 
   if (!moduleRoot) {
     return;
   }
 
+  const categoryCounts = new Map();
+  allItems.forEach((item) => {
+    const category = item.category || "Sem categoria";
+    categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+  });
+  const stat = (key, label, value, tone) => `
+    <button type="button" class="gx-inv-stat is-${tone}${filters.status === key ? " is-active" : ""}" data-inventory-status="${key}" aria-pressed="${filters.status === key}">
+      <span><i aria-hidden="true"></i>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value || 0))}</strong>
+    </button>`;
+  const seedCount = snapshot.seedSummary?.items || 0;
+
   moduleRoot.innerHTML = `
-    <header class="admin-module-head admin-inventory-head">
+    <header class="gx-inv-head">
       <div>
-        <span class="admin-chip">Estoque</span>
+        <p class="gx-inv-crumb">Cardápio / Estoque</p>
         <h2>Controle diário de insumos</h2>
-        <p>Entradas, baixas manuais, mínimo por item e validade em leitura rápida.</p>
+        <p class="gx-inv-sub">Entradas, baixas, mínimo por item e validade${
+          seedCount ? ` · base inicial: ${escapeHtml(String(seedCount))} produtos do ${escapeHtml(snapshot.sourceDocument || "checklist")}` : ""
+        }</p>
       </div>
-      <button
-        class="admin-button admin-button-primary"
-        type="button"
-        data-inventory-new
-      >
-        Novo item
-      </button>
+      <div class="gx-inv-head-actions">
+        <button type="button" class="gx-inv-btn" data-inventory-export>Exportar</button>
+        <button type="button" class="gx-inv-btn is-primary" data-inventory-new>+ Novo item</button>
+      </div>
     </header>
 
-    <section class="admin-module-kpis admin-module-kpis-wide">
-      <article class="admin-mini-stat is-blue">
-        <span>Total de itens</span>
-        <strong>${escapeHtml(String(summary.totalItems || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-green">
-        <span>OK</span>
-        <strong>${escapeHtml(String(summary.okItems || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-gold">
-        <span>Baixo</span>
-        <strong>${escapeHtml(String(summary.lowItems || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-danger">
-        <span>Critico</span>
-        <strong>${escapeHtml(String(summary.criticalItems || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-warm">
-        <span>Validade próxima</span>
-        <strong>${escapeHtml(String(summary.expiringSoonItems || 0))}</strong>
-      </article>
+    <section class="gx-inv-stats" aria-label="Resumo do estoque">
+      ${stat("", "Total de itens", summary.totalItems, "total")}
+      ${stat("ok", "OK", summary.okItems, "ok")}
+      ${stat("low", "Baixo", summary.lowItems, "low")}
+      ${stat("critical", "Crítico", summary.criticalItems, "critical")}
+      ${stat("expiring", "Validade próxima", summary.expiringSoonItems, "expiring")}
     </section>
 
-    <section class="admin-inventory-toolbar">
-      <label class="admin-field">
-        <span>Categoria</span>
-        <select class="admin-input" data-inventory-filter="category">
-          <option value="">Todas as categorias</option>
-          ${snapshot.categories
-            .map(
-              (category) => `
-                <option
-                  value="${escapeHtml(category)}"
-                  ${category === adminState.inventoryFilters.category ? "selected" : ""}
-                >
-                  ${escapeHtml(category)}
-                </option>
-              `
-            )
-            .join("")}
-        </select>
+    <section class="gx-inv-toolbar">
+      <label class="gx-inv-search">
+        <span class="admin-sr-only">Buscar item</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" placeholder="Buscar item" value="${escapeHtml(filters.query || "")}" data-inventory-search autocomplete="off" />
       </label>
-
-      <label class="admin-field">
-        <span>Status</span>
-        <select class="admin-input" data-inventory-filter="status">
-          ${INVENTORY_STATUS_OPTIONS.map(
-            (option) => `
-              <option
-                value="${escapeHtml(option.key)}"
-                ${option.key === adminState.inventoryFilters.status ? "selected" : ""}
-              >
-                ${escapeHtml(option.label)}
-              </option>
-            `
-          ).join("")}
-        </select>
-      </label>
-
-      <article class="admin-inventory-seed-note">
-        <span>Base inicial</span>
-        <strong>${escapeHtml(String(snapshot.seedSummary?.items || 0))} produtos do DOCX</strong>
-        <small>${escapeHtml(snapshot.sourceDocument || "Checklist importado")}</small>
-      </article>
+      <div class="gx-inv-chips" role="group" aria-label="Categorias">
+        <button type="button" class="gx-inv-chip${!filters.category ? " is-active" : ""}" data-inventory-category="">Todas <span>${escapeHtml(String(allItems.length))}</span></button>
+        ${Array.from(categoryCounts.entries())
+          .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "pt-BR"))
+          .map(
+            ([category, count]) =>
+              `<button type="button" class="gx-inv-chip${filters.category === category ? " is-active" : ""}" data-inventory-category="${escapeHtml(category)}">${escapeHtml(category)} <span>${escapeHtml(String(count))}</span></button>`
+          )
+          .join("")}
+      </div>
+      <div class="gx-inv-view" role="group" aria-label="Exibição">
+        <button type="button" data-inventory-view="list" aria-pressed="${adminState.inventoryView !== "grid"}" aria-label="Lista"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button type="button" data-inventory-view="grid" aria-pressed="${adminState.inventoryView === "grid"}" aria-label="Grade"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></button>
+      </div>
     </section>
 
     ${adminState.actionMessage ? `<div class="admin-feedback is-${escapeHtml(adminState.actionTone || "success")}">${escapeHtml(adminState.actionMessage)}</div>` : ""}
 
-    <section class="admin-inventory-list">
-      ${renderInventoryGroups()}
-    </section>
+    <section class="gx-inv-list" data-inventory-list>${renderInventoryListContent()}</section>
+    <div class="gx-inv-backdrop" data-inventory-drawer-backdrop aria-hidden="true"></div>
   `;
 };
+
+// Exporta os itens visíveis como planilha (CSV com ; para abrir direto no Excel).
+const exportInventoryCsv = () => {
+  const rows = getVisibleInventoryItems();
+  const quote = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = [
+    ["Item", "Categoria", "Em estoque", "Unidade", "Mínimo", "Validade", "Situação"].map(quote).join(";"),
+    ...rows.map((item) =>
+      [
+        item.name,
+        item.category,
+        formatInventoryQuantity(item.quantity),
+        item.unit,
+        formatInventoryQuantity(item.minimumQuantity),
+        item.expiration?.label || "Sem validade",
+        getInventoryStatusMeta(item.status).label,
+      ]
+        .map(quote)
+        .join(";")
+    ),
+  ];
+  const blob = new Blob([`\ufeff${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `estoque-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
+// Painel lateral do Estoque (entrada/baixa ou cadastro).
+const syncInventoryDrawer = () => {
+  const open = adminState.activeSection === "inventory" && Boolean(adminState.inventoryDrawer);
+  document.body.classList.toggle("gx-inv-drawer-open", open);
+};
+
+const closeInventoryDrawer = () => {
+  adminState.inventoryDrawer = "";
+  adminState.inventoryMove = null;
+  syncInventoryDrawer();
+};
+
+const getInventoryMovePreview = (item, move) => {
+  const amount = Math.max(0, Number(normalizeDecimalInput(move.amount)) || 0);
+  const next = move.mode === "add" ? Number(item.quantity || 0) + amount : Math.max(0, Number(item.quantity || 0) - amount);
+  return `Fica com <b>${escapeHtml(formatInventoryQuantity(next))} ${escapeHtml(item.unit)}</b> depois de confirmar`;
+};
+
+const renderInventoryMovePanel = (detailRoot, item) => {
+  const move = adminState.inventoryMove;
+  const isAdd = move.mode === "add";
+  const isBusy = Boolean(adminState.inventoryBusyKey);
+  detailRoot.innerHTML = `
+    <div class="gx-inv-move">
+      <header class="gx-inv-move-head">
+        <div>
+          <small>${isAdd ? "Entrada de estoque" : "Baixa de estoque"}</small>
+          <h2>${escapeHtml(item.name)}</h2>
+          <p>Em estoque agora: <b>${escapeHtml(formatInventoryQuantity(item.quantity))} ${escapeHtml(item.unit)}</b></p>
+        </div>
+        <button type="button" class="gx-inv-close" data-inventory-drawer-close aria-label="Fechar">×</button>
+      </header>
+      <div class="gx-inv-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="${isAdd}" data-inv-move-mode="add">Entrada</button>
+        <button type="button" role="tab" aria-selected="${!isAdd}" data-inv-move-mode="remove">Baixa</button>
+      </div>
+      <form class="gx-inv-move-form" data-inventory-adjust-form data-inventory-adjust-mode="${isAdd ? "add" : "remove"}">
+        <input type="hidden" name="itemId" value="${escapeHtml(item.id)}" />
+        <span class="gx-inv-field-label">Quantidade</span>
+        <div class="gx-inv-stepper">
+          <button type="button" data-inv-step="-1" aria-label="Menos">−</button>
+          <label class="gx-inv-amount"><input name="amount" inputmode="decimal" value="${escapeHtml(String(move.amount))}" data-inv-amount aria-label="Quantidade" /><span>${escapeHtml(item.unit)}</span></label>
+          <button type="button" data-inv-step="1" aria-label="Mais">+</button>
+        </div>
+        ${
+          isAdd
+            ? `<label class="gx-inv-field"><span class="gx-inv-field-label">Validade do lote (opcional)</span><input type="date" name="expirationDate" value="${escapeHtml(move.expirationDate || "")}" data-inv-expiration /></label>`
+            : ""
+        }
+        <p class="gx-inv-preview" data-inv-preview>${getInventoryMovePreview(item, move)}</p>
+        <button type="submit" class="gx-inv-btn is-primary gx-inv-confirm" ${isBusy ? "disabled" : ""}>${isAdd ? "Confirmar entrada" : "Confirmar baixa"}</button>
+      </form>
+      ${adminState.actionMessage && adminState.actionTone === "error" ? `<div class="admin-feedback is-error">${escapeHtml(adminState.actionMessage)}</div>` : ""}
+    </div>`;
+};
+
+const refreshInventoryMovePreview = () => {
+  const move = adminState.inventoryMove;
+  const item = move && (getInventorySnapshot().items || []).find((entry) => entry.id === move.itemId);
+  const preview = document.querySelector("[data-inv-preview]");
+  if (item && preview) preview.innerHTML = getInventoryMovePreview(item, move);
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || adminState.activeSection !== "inventory") return;
+  if (target.closest("[data-inventory-drawer-close]") || target.closest("[data-inventory-drawer-backdrop]")) {
+    closeInventoryDrawer();
+    renderModuleContent();
+    return;
+  }
+  const modeButton = target.closest("[data-inv-move-mode]");
+  if (modeButton && adminState.inventoryMove) {
+    adminState.inventoryMove.mode = modeButton.dataset.invMoveMode === "remove" ? "remove" : "add";
+    renderOrderDetails();
+    return;
+  }
+  const stepButton = target.closest("[data-inv-step]");
+  if (stepButton && adminState.inventoryMove) {
+    const current = Number(normalizeDecimalInput(adminState.inventoryMove.amount)) || 0;
+    const next = Math.max(1, Math.round((current + Number(stepButton.dataset.invStep)) * 1000) / 1000);
+    adminState.inventoryMove.amount = String(next);
+    const input = document.querySelector("[data-inv-amount]");
+    if (input) input.value = formatInventoryQuantity(next);
+    refreshInventoryMovePreview();
+    return;
+  }
+  const exportButton = target.closest("[data-inventory-export]");
+  if (exportButton) {
+    exportInventoryCsv();
+    return;
+  }
+  const statusButton = target.closest("[data-inventory-status]");
+  if (statusButton) {
+    const value = statusButton.dataset.inventoryStatus || "";
+    adminState.inventoryFilters = { ...adminState.inventoryFilters, status: adminState.inventoryFilters.status === value ? "" : value };
+    renderModuleContent();
+    return;
+  }
+  const categoryButton = target.closest("[data-inventory-category]");
+  if (categoryButton) {
+    adminState.inventoryFilters = { ...adminState.inventoryFilters, category: categoryButton.dataset.inventoryCategory || "" };
+    renderModuleContent();
+    return;
+  }
+  const viewButton = target.closest("[data-inventory-view]");
+  if (viewButton) {
+    adminState.inventoryView = viewButton.dataset.inventoryView === "grid" ? "grid" : "list";
+    renderModuleContent();
+  }
+});
+
+document.addEventListener("input", (event) => {
+  const target = event.target instanceof HTMLInputElement ? event.target : null;
+  if (!target || adminState.activeSection !== "inventory") return;
+  if (target.matches("[data-inventory-search]")) {
+    adminState.inventoryFilters = { ...adminState.inventoryFilters, query: target.value };
+    const list = document.querySelector("[data-inventory-list]");
+    if (list) list.innerHTML = renderInventoryListContent();
+    return;
+  }
+  if (target.matches("[data-inv-amount]") && adminState.inventoryMove) {
+    adminState.inventoryMove.amount = target.value;
+    refreshInventoryMovePreview();
+    return;
+  }
+  if (target.matches("[data-inv-expiration]") && adminState.inventoryMove) {
+    adminState.inventoryMove.expirationDate = target.value;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && adminState.inventoryDrawer && adminState.activeSection === "inventory") {
+    closeInventoryDrawer();
+    renderModuleContent();
+  }
+});
 
 const renderAuditModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
@@ -11900,6 +12139,16 @@ const renderReviewDetails = () => {
 };
 
 const renderInventoryDetails = () => {
+  syncInventoryDrawer();
+  const moveItem =
+    adminState.inventoryDrawer === "move" && adminState.inventoryMove
+      ? (getInventorySnapshot().items || []).find((entry) => entry.id === adminState.inventoryMove.itemId)
+      : null;
+  if (moveItem) {
+    const moveRoot = document.querySelector("[data-admin-order-detail]");
+    if (moveRoot) renderInventoryMovePanel(moveRoot, moveItem);
+    return;
+  }
   const detailRoot = document.querySelector("[data-admin-order-detail]");
   const detailTitle = document.querySelector("[data-admin-detail-title]");
   const detailSubtitle = document.querySelector("[data-admin-detail-subtitle]");
@@ -11935,6 +12184,13 @@ const renderInventoryDetails = () => {
   }
 
   detailRoot.innerHTML = `
+    <header class="gx-inv-move-head gx-inv-edit-head">
+      <div>
+        <small>${escapeHtml(isNewItem ? "Novo item" : "Editar item")}</small>
+        <h2>${escapeHtml(isNewItem ? "Cadastrar insumo" : draftItem.name)}</h2>
+      </div>
+      <button type="button" class="gx-inv-close" data-inventory-drawer-close aria-label="Fechar">×</button>
+    </header>
     <section class="admin-detail-hero admin-inventory-detail-hero">
       <div class="admin-detail-hero-main">
         <div>
@@ -14468,6 +14724,7 @@ const adjustInventoryStock = async (form) => {
         itemId,
         mode,
         amount: normalizeDecimalInput(formData.get("amount")),
+        expirationDate: mode === "add" ? String(formData.get("expirationDate") || "").trim() : "",
       }),
     });
 
@@ -14477,6 +14734,7 @@ const adjustInventoryStock = async (form) => {
     adminState.generatedAt = response.generatedAt || adminState.generatedAt;
     adminState.actionMessage = response.message || "Estoque movimentado com sucesso.";
     adminState.actionTone = "success";
+    closeInventoryDrawer();
 
     await loadInventory({ preserveSelection: true, silent: true });
     renderModuleContent();
@@ -15430,6 +15688,8 @@ const initDashboardPage = () => {
 
       if (inventoryNewButton) {
         adminState.selectedInventoryItemId = INVENTORY_NEW_ITEM_ID;
+        adminState.inventoryDrawer = "edit";
+        adminState.inventoryMove = null;
         adminState.actionMessage = "";
         renderModuleContent();
         renderOrderDetails();
@@ -15441,6 +15701,8 @@ const initDashboardPage = () => {
 
       if (inventorySelectButton) {
         adminState.selectedInventoryItemId = String(inventorySelectButton.dataset.inventorySelect || "").trim();
+        adminState.inventoryDrawer = "edit";
+        adminState.inventoryMove = null;
         adminState.actionMessage = "";
         renderModuleContent();
         renderOrderDetails();
@@ -15460,13 +15722,13 @@ const initDashboardPage = () => {
 
         adminState.selectedInventoryItemId = itemId;
         adminState.actionMessage = "";
+        adminState.inventoryDrawer = "move";
+        adminState.inventoryMove = { itemId, mode: intent === "remove" ? "remove" : "add", amount: "1", expirationDate: "" };
         renderModuleContent();
         renderOrderDetails();
         updateSidebarMeta();
         window.setTimeout(() => {
-          document
-            .querySelector(`[data-inventory-adjust-mode="${intent}"] input[name="amount"]`)
-            ?.focus();
+          document.querySelector("[data-inv-amount]")?.select();
         }, 0);
         return;
       }
