@@ -78,7 +78,38 @@
     var route = createRoute(readMeta(doc, "inovas-restaurant-slug"), readMeta(doc, "inovas-base-path"));
     win.INOVAS_PUBLIC_ROUTE = route;
 
-    if (!route.slug || typeof win.fetch !== "function") return route;
+    if (!route.slug) return route;
+
+    // Links montados pelo script (./cardapio.html, ./acompanhar.html...) ficam sob o slug.
+    var fixLinks = function (scope) {
+      if (!scope || !scope.querySelectorAll) return;
+      var anchors = scope.matches && scope.matches("a[href]") ? [scope] : [];
+      anchors = anchors.concat(Array.prototype.slice.call(scope.querySelectorAll("a[href]")));
+      anchors.forEach(function (anchor) {
+        var href = anchor.getAttribute("href");
+        var next = route.resolveHref(href);
+        if (next !== href) anchor.setAttribute("href", next);
+      });
+    };
+    var startObserver = function () {
+      fixLinks(doc.body);
+      if (typeof win.MutationObserver !== "function") return;
+      new win.MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          if (mutation.type === "attributes") {
+            fixLinks(mutation.target);
+          } else {
+            Array.prototype.forEach.call(mutation.addedNodes, function (node) {
+              if (node.nodeType === 1) fixLinks(node);
+            });
+          }
+        });
+      }).observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+    };
+    if (doc.body) startObserver();
+    else doc.addEventListener("DOMContentLoaded", startObserver);
+
+    if (typeof win.fetch !== "function") return route;
 
     var originalFetch = win.fetch.bind(win);
     win.fetch = function (input, init) {

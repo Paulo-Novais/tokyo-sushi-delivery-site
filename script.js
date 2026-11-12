@@ -11,10 +11,22 @@ const TOKYO_GLOBAL_NAMES = Object.freeze(TOKYO_IDENTIFIERS.globalNames || {});
 const TOKYO_WHATSAPP_TEMPLATES = Object.freeze(TOKYO_RUNTIME_CONFIG.whatsappTemplates || {});
 const TOKYO_PUBLIC_TEXT = Object.freeze(TOKYO_RUNTIME_CONFIG.publicText || {});
 const TOKYO_SITE_APPEARANCE = Object.freeze(TOKYO_RUNTIME_CONFIG.siteAppearance || {});
-const FALLBACK_WHATSAPP_NUMBER = TOKYO_APP_BRANDING.defaultWhatsapp || "5516990507398";
-const CART_STORAGE_KEY = TOKYO_STORAGE_KEYS.cart || "tokyo_sushi_delivery_cart";
-const AUTH_PROFILE_KEY = TOKYO_STORAGE_KEYS.authProfile || "tokyo_sushi_profile";
-const AUTH_ACCOUNTS_KEY = TOKYO_STORAGE_KEYS.authAccounts || "tokyo_sushi_accounts";
+// Modelo Premium: página servida em /<slug> no domínio INOVAS (premium-route.js).
+// Nesses sites nada pode cair nos dados do Tokyo e o que fica salvo no aparelho
+// (login, sacola, histórico) é separado por restaurante.
+const INOVAS_PUBLIC_ROUTE =
+  typeof window === "object" && window.INOVAS_PUBLIC_ROUTE ? window.INOVAS_PUBLIC_ROUTE : null;
+const IS_TENANT_ROUTE = Boolean(INOVAS_PUBLIC_ROUTE?.slug);
+const scopePublicStorageKey = (key) =>
+  IS_TENANT_ROUTE ? INOVAS_PUBLIC_ROUTE.scopeStorageKey(key) : key;
+const resolvePublicPageHref = (href) =>
+  IS_TENANT_ROUTE ? INOVAS_PUBLIC_ROUTE.resolveHref(href) : href;
+const FALLBACK_WHATSAPP_NUMBER = IS_TENANT_ROUTE
+  ? ""
+  : TOKYO_APP_BRANDING.defaultWhatsapp || "5516990507398";
+const CART_STORAGE_KEY = scopePublicStorageKey(TOKYO_STORAGE_KEYS.cart || "tokyo_sushi_delivery_cart");
+const AUTH_PROFILE_KEY = scopePublicStorageKey(TOKYO_STORAGE_KEYS.authProfile || "tokyo_sushi_profile");
+const AUTH_ACCOUNTS_KEY = scopePublicStorageKey(TOKYO_STORAGE_KEYS.authAccounts || "tokyo_sushi_accounts");
 const PHONE_VERIFICATION_CODE_LENGTH = 6;
 const CUSTOMER_AUTH_START_ENDPOINT = "/api/customer/auth/start";
 const CUSTOMER_AUTH_VERIFY_ENDPOINT = "/api/customer/auth/verify";
@@ -30,25 +42,34 @@ const PUBLIC_RESTAURANT_SETTINGS_ENDPOINT = "/api/restaurant-settings";
 const PUBLIC_REVIEW_ROTATION_INTERVAL_MS = 6200;
 const PUBLIC_REVIEW_HOME_VISIBLE_COUNT = 2;
 const PUBLIC_REVIEW_SHORT_COMMENT_LENGTH = 118;
-const CUSTOMER_CLIENT_TOKEN_KEY =
-  TOKYO_STORAGE_KEYS.customerClientToken || "tokyo_customer_client_token";
-const ORDER_HISTORY_STORAGE_KEY = TOKYO_STORAGE_KEYS.orderHistory || "tokyo_sushi_order_history";
-const CART_ADDONS_STORAGE_KEY =
-  TOKYO_STORAGE_KEYS.cartAddons || "tokyo_sushi_delivery_cart_addons";
-const CART_CHECKOUT_STORAGE_KEY =
-  TOKYO_STORAGE_KEYS.cartCheckout || "tokyo_sushi_cart_checkout";
-const DELIVERY_HISTORY_STORAGE_KEY =
-  TOKYO_STORAGE_KEYS.deliveryHistory || "tokyo_sushi_delivery_quotes";
-const CAREER_STORAGE_KEY = TOKYO_STORAGE_KEYS.careerForms || "tokyo_sushi_career_forms";
-const CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY =
-  TOKYO_STORAGE_KEYS.catalogCollapsedSections || "tokyo_sushi_catalog_collapsed_sections";
+const CUSTOMER_CLIENT_TOKEN_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.customerClientToken || "tokyo_customer_client_token"
+);
+const ORDER_HISTORY_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.orderHistory || "tokyo_sushi_order_history"
+);
+const CART_ADDONS_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.cartAddons || "tokyo_sushi_delivery_cart_addons"
+);
+const CART_CHECKOUT_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.cartCheckout || "tokyo_sushi_cart_checkout"
+);
+const DELIVERY_HISTORY_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.deliveryHistory || "tokyo_sushi_delivery_quotes"
+);
+const CAREER_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.careerForms || "tokyo_sushi_career_forms"
+);
+const CATALOG_COLLAPSED_SECTIONS_STORAGE_KEY = scopePublicStorageKey(
+  TOKYO_STORAGE_KEYS.catalogCollapsedSections || "tokyo_sushi_catalog_collapsed_sections"
+);
 const CUSTOMER_CLIENT_TOKEN_HEADER =
   TOKYO_HEADER_NAMES.customerClientToken || "x-tokyo-customer-client-token";
 const CUSTOMER_KEY_HEADER = TOKYO_HEADER_NAMES.customerKey || "x-tokyo-customer-key";
 const SOCIAL_EMAIL_DOMAIN = TOKYO_IDENTIFIERS.socialEmailDomain || "social.tokyo";
 const ORDER_HISTORY_WINDOW_DAYS = 30;
 const CUSTOMER_TRACKING_REFRESH_INTERVAL_MS = 25000;
-const CUSTOMER_TRACKING_PAGE_PATH = "./acompanhar.html";
+const CUSTOMER_TRACKING_PAGE_PATH = resolvePublicPageHref("./acompanhar.html");
 const CUSTOMER_TRACKING_BASE_STATUSES = Object.freeze([
   "Recebido",
   "Aceito",
@@ -71,7 +92,7 @@ const CART_FULFILLMENT_OPTIONS = Object.freeze([
   { id: "delivery", label: "Entrega" },
   { id: "pickup", label: "Retirada" },
 ]);
-const CART_REQUIRED_ADDONS = Object.freeze([
+const TOKYO_CART_ADDONS = Object.freeze([
   {
     id: "hashi",
     name: "Hashi",
@@ -101,15 +122,22 @@ const CART_REQUIRED_ADDONS = Object.freeze([
     defaultQuantity: 0,
   },
 ]);
-const DELIVERY_STORE_ADDRESS =
-  TOKYO_APP_BRANDING.defaultAddress?.full ||
-  "Rua General Osório, 2165, Franca - SP, 14400-520, Brasil";
-const DELIVERY_STORE_LABEL =
-  TOKYO_APP_BRANDING.defaultAddress?.label || "R. General Osório, 2165 - CEP 14400-520";
-const DELIVERY_STORE_COORDINATES = {
-  lat: -20.536416983482,
-  lng: -47.393922026918,
-};
+// Complementos do pedido: os do Tokyo só no Tokyo; os demais vêm da configuração
+// (premiumContent.cartAddons) assim que o restaurante carrega.
+let CART_REQUIRED_ADDONS = IS_TENANT_ROUTE ? [] : TOKYO_CART_ADDONS;
+const DELIVERY_STORE_ADDRESS = IS_TENANT_ROUTE
+  ? ""
+  : TOKYO_APP_BRANDING.defaultAddress?.full ||
+    "Rua General Osório, 2165, Franca - SP, 14400-520, Brasil";
+const DELIVERY_STORE_LABEL = IS_TENANT_ROUTE
+  ? ""
+  : TOKYO_APP_BRANDING.defaultAddress?.label || "R. General Osório, 2165 - CEP 14400-520";
+const DELIVERY_STORE_COORDINATES = IS_TENANT_ROUTE
+  ? null
+  : {
+      lat: -20.536416983482,
+      lng: -47.393922026918,
+    };
 const normalizeStatusKey = (value) =>
   String(value || "")
     .normalize("NFD")
@@ -301,7 +329,7 @@ const createDefaultBusinessScheduleDays = () =>
 
     return days;
   }, {});
-const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
+const TOKYO_RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
   restaurantKey: "default",
   restaurantName: TOKYO_RESTAURANT_BRAND.name || "Tokyo Sushi Delivery",
   logoUrl:
@@ -407,8 +435,39 @@ const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
   averagePreparationTimeMinutes: PICKUP_ESTIMATE_MINUTES,
   presentationText:
     "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
+  premiumContent: { cartAddons: TOKYO_CART_ADDONS },
   updatedAt: "",
 });
+const RESTAURANT_SETTINGS_DEFAULTS = IS_TENANT_ROUTE
+  ? Object.freeze({
+      ...TOKYO_RESTAURANT_SETTINGS_DEFAULTS,
+      restaurantKey: "",
+      restaurantName: "",
+      logoUrl: "",
+      bannerUrl: "",
+      slogan: "Delivery Premium",
+      description: "",
+      site: "",
+      seoTitle: "",
+      seoDescription: "",
+      seoShareImage: "",
+      seoKeywords: [],
+      seoOpenGraph: { title: "", description: "", image: "", type: "website" },
+      whatsapp: "",
+      address: "",
+      addressFields: {
+        postalCode: "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: "",
+      },
+      presentationText: "",
+      premiumContent: { cartAddons: [] },
+    })
+  : TOKYO_RESTAURANT_SETTINGS_DEFAULTS;
 const DELIVERY_MANUAL_FALLBACK_FEE = DELIVERY_FEE_RULES[0]?.fee || 9;
 const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
 const DELIVERY_MANUAL_TIME_TEXT = "Confirmar com a loja";
@@ -1903,6 +1962,9 @@ const hydrateCatalogRuntimeState = async () => {
       normalizeMenuSectionDisplayOrder(payload?.sectionDisplayOrder);
       applyRuntimeCatalogSections(payload?.sections);
       applyRuntimeCatalogState(payload?.items);
+      if (typeof syncPremiumCatalogMetrics === "function") {
+        syncPremiumCatalogMetrics(payload?.sections);
+      }
       runtimeFeaturedCatalogItems = Array.isArray(payload?.featuredItems)
         ? payload.featuredItems.filter((item) => item && typeof item === "object")
         : [];
@@ -1922,6 +1984,10 @@ const hydrateCatalogRuntimeState = async () => {
 };
 
 const groupMediaControllers = new Map();
+// Site por slug: começa sem o cardápio do Tokyo; o do restaurante vem de /api/catalog.
+if (IS_TENANT_ROUTE) {
+  MENU_SECTIONS.length = 0;
+}
 let collapsedCatalogSections = new Set();
 let revealObserver;
 const PLACEHOLDER_PRICE_LABEL = "R$: 00,00";
@@ -7234,7 +7300,7 @@ const normalizePublicRestaurantSettingsPayload = (settings = {}) => {
   const appearance = normalizePublicAppearance(source, defaults);
 
   return {
-    restaurantKey: "default",
+    restaurantKey: normalizePublicSettingsText(source.restaurantKey, defaults.restaurantKey || "default", 120),
     restaurantName: normalizePublicSettingsText(source.restaurantName, defaults.restaurantName, 120),
     logoUrl: normalizePublicAssetUrl(source.logoUrl, defaults.logoUrl),
     bannerUrl: normalizePublicAssetUrl(source.bannerUrl, defaults.bannerUrl),
@@ -7290,6 +7356,10 @@ const normalizePublicRestaurantSettingsPayload = (settings = {}) => {
       .replace(/\n{3,}/g, "\n\n")
       .trim()
       .slice(0, 900),
+    premiumContent:
+      source.premiumContent && typeof source.premiumContent === "object"
+        ? source.premiumContent
+        : defaults.premiumContent,
     updatedAt: normalizePublicSettingsText(source.updatedAt, "", 80),
   };
 };
@@ -7311,14 +7381,29 @@ const getPublicBusinessHoursLabel = (fallback = "18:00 as 23:00") => {
   return settings.businessHours || fallback;
 };
 const getPublicWhatsappNumber = () => getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER;
+// Mensagem do WhatsApp por página (Modelo Premium: pedido, entrega, histórico, avaliação, vagas).
+const PUBLIC_PAGE_WHATSAPP_MESSAGE = Object.freeze({
+  inicio: "pedido",
+  cardapio: "pedido",
+  entrega: "entrega",
+  historico: "historico",
+  acompanhar: "historico",
+  avaliar: "avaliar",
+  trabalhe: "vagas",
+});
 const getPublicWhatsappSupportHref = () => {
   const settings = getRestaurantSettings();
+  const messages = settings.premiumContent?.whatsappMessages || {};
+  const pageKey = PUBLIC_PAGE_WHATSAPP_MESSAGE[document.body?.dataset.page || ""] || "pedido";
   const template =
+    messages[pageKey] ||
+    messages.pedido ||
     TOKYO_WHATSAPP_TEMPLATES.orderSupport ||
     "Ola, quero fazer um pedido no {restaurantName}.";
-  const message = template.replace("{restaurantName}", settings.restaurantName);
+  const message = template.split("{restaurantName}").join(settings.restaurantName);
+  const number = getPublicWhatsappNumber();
 
-  return `https://wa.me/${getPublicWhatsappNumber()}?text=${encodeURIComponent(message)}`;
+  return number ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : "";
 };
 const getPublicDefaultDeliveryFee = () =>
   Number(
@@ -7357,8 +7442,14 @@ const getConfiguredPublicStoreCoordinates = () => {
 
   return null;
 };
-const getPublicStoreCoordinates = () =>
-  getConfiguredPublicStoreCoordinates() || DELIVERY_STORE_COORDINATES;
+const getPublicStoreCoordinates = () => {
+  const coordinates = getConfiguredPublicStoreCoordinates() || DELIVERY_STORE_COORDINATES;
+  if (!coordinates) {
+    // Sem origem configurada: o cálculo cai na taxa provisória (confirmar com a loja).
+    throw new Error("Endereco da loja ainda sem localizacao configurada.");
+  }
+  return coordinates;
+};
 
 const hexToRgba = (hexColor, alpha = 1) => {
   const normalizedColor = normalizePublicHexColor(hexColor, "#000000").slice(1);
@@ -7620,6 +7711,15 @@ const syncRestaurantCopy = (settings) => {
 const syncRestaurantWhatsappLinks = (settings) => {
   const href = getPublicWhatsappSupportHref();
 
+  // Sem WhatsApp configurado: sem botão (nunca o número de outro restaurante).
+  document.querySelectorAll(".whatsapp-widget").forEach((widget) => {
+    widget.hidden = !href;
+  });
+
+  if (!href) {
+    return;
+  }
+
   // Links com mensagem própria (ex.: "Falar com a loja" sobre o pedido) mantêm o texto.
   document.querySelectorAll('a[href*="wa.me"]:not([data-whatsapp-keep])').forEach((link) => {
     link.href = href;
@@ -7750,9 +7850,42 @@ const syncPublicLayoutNavigation = () => {
   ).join("");
 };
 
+const syncPremiumModelContent = (settings) => {
+  const configuredAddons = settings.premiumContent?.cartAddons;
+  if (Array.isArray(configuredAddons)) {
+    CART_REQUIRED_ADDONS = configuredAddons;
+  }
+  document.querySelectorAll(".catalog-addons-panel").forEach((panel) => {
+    panel.hidden = CART_REQUIRED_ADDONS.length === 0;
+  });
+  setNodeText(
+    "[data-premium-metric-time]",
+    `${Number(settings.averagePreparationTimeMinutes) || PICKUP_ESTIMATE_MINUTES}min`
+  );
+};
+
+// Indicador de itens contado do cardápio publicado (nunca número digitado).
+const syncPremiumCatalogMetrics = (sections = []) => {
+  const count = (Array.isArray(sections) ? sections : []).reduce(
+    (total, section) => total + (Array.isArray(section?.items) ? section.items.length : 0),
+    0
+  );
+  if (!count) {
+    return;
+  }
+  setNodeText("[data-premium-metric-items]", count < 10 ? String(count) : `+${Math.floor(count / 10) * 10}`);
+};
+
 const applyRestaurantSettingsToPublicSite = () => {
+  // Site por slug: a página já vem montada pelo servidor com os dados do
+  // restaurante; não sobrescrever com padrões antes de carregar.
+  if (IS_TENANT_ROUTE && !restaurantSettingsState.loaded) {
+    return;
+  }
+
   const settings = getRestaurantSettings();
 
+  syncPremiumModelContent(settings);
   applyPublicSiteAppearance(settings);
   applyRestaurantMetaTags(settings);
   syncRestaurantBranding(settings);
