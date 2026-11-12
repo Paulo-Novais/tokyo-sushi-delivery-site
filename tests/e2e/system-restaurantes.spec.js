@@ -99,3 +99,53 @@ test("Master cadastra, suspende, reativa e vincula domínio pela tela Restaurant
 
   expect(pageErrors).toEqual([]);
 });
+
+test("Suporte com acesso total: Gestor do restaurante como proprietário, gravado com o usuário do System", async ({ page }) => {
+  const { loginMaster, onboardRestaurant, uniqueKey } = require("./helpers/v1.9-fixtures.cjs");
+  const master = await loginMaster();
+  const restaurant = await onboardRestaurant(master.api, { key: uniqueKey("suporte-total") });
+  await master.api.dispose();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.goto("/system/login.html");
+  await page.getByLabel("E-mail").fill(login);
+  await page.getByLabel("Senha").fill(password);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/system\/?$/);
+
+  await page.goto(`/system#support?key=${restaurant.key}`);
+  await expect(page.locator("body")).toContainText("Acesso total ao restaurante");
+  await expect(page.locator("[data-support-mode]")).toHaveCount(0);
+  await page.locator("[data-support-field=restaurantKey]").selectOption(restaurant.key);
+  await page.locator("[data-support-field=reason]").fill("Ajuste de cardápio pedido pelo dono por telefone.");
+  await page.locator("[data-support-field=confirmed]").check();
+  await page.getByRole("button", { name: "Entrar no restaurante — 60 min" }).click();
+  await page.getByRole("link", { name: "Abrir restaurante em suporte" }).click();
+
+  await expect(page.locator("[data-support-access-banner]")).toContainText("acesso total");
+  await expect(page.locator("[data-support-access-banner]")).toContainText("gravado com o seu usuário");
+
+  const session = await (await page.request.get("/api/admin/session")).json();
+  expect(session.admin.support.mode).toBe("ADMIN");
+  expect(session.admin.tenantContext?.restaurantKey || session.admin.restaurantKey).toBe(restaurant.key);
+
+  const current = await (await page.request.get("/api/admin/settings/list")).json().catch(() => ({}));
+  const save = await page.request.post("/api/admin/settings/save", {
+    data: { settings: { ...(current.settings || {}), restaurantName: "Alterado pelo suporte" } },
+  });
+  expect(save.status(), await save.text()).toBe(200);
+  const saved = await save.json();
+  expect(saved.settings.updatedByLogin).toBe(String(login).toLowerCase());
+  expect(saved.settings.restaurantName).toBe("Alterado pelo suporte");
+
+  await page.goto("/system#audit");
+  await expect(page.locator("body")).toContainText("Ação no restaurante em suporte");
+
+  await page.request.post("/api/support/revoke", { data: {} });
+  const afterRevoke = await page.request.post("/api/admin/settings/save", {
+    data: { settings: { restaurantName: "Depois de encerrar" } },
+  });
+  expect(afterRevoke.status()).not.toBe(200);
+  expect(pageErrors).toEqual([]);
+});

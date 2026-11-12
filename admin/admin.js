@@ -15599,6 +15599,42 @@ const getRequestedCashRegisterView = () => {
   );
 };
 
+// Suporte INOVAS com acesso total: faixa fixa avisando que tudo é gravado com o
+// usuário do System, com o horário de término e o botão para encerrar.
+const renderSupportAccessBanner = (support) => {
+  document.querySelector("[data-support-access-banner]")?.remove();
+  document.body.classList.toggle("has-support-banner", Boolean(support));
+  if (!support) {
+    return;
+  }
+  const endsAt = support.expiresAt ? new Date(support.expiresAt) : null;
+  const endsLabel =
+    endsAt && !Number.isNaN(endsAt.getTime())
+      ? endsAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      : "";
+  const banner = document.createElement("div");
+  banner.className = "support-access-banner";
+  banner.dataset.supportAccessBanner = "true";
+  banner.setAttribute("role", "status");
+  const text = document.createElement("span");
+  text.textContent = `Suporte INOVAS · acesso total a ${support.restaurantName || "este restaurante"}. Tudo o que você alterar fica gravado com o seu usuário e na auditoria.${endsLabel ? ` Termina às ${endsLabel}.` : ""}`;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Encerrar suporte";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    await fetch("/api/support/revoke", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => {});
+    window.location.assign("/system#support");
+  });
+  banner.append(text, button);
+  document.body.prepend(banner);
+};
+
 const loadInitialAdminSession = async () => {
   const session = await fetchJson("/api/admin/session");
 
@@ -15608,6 +15644,7 @@ const loadInitialAdminSession = async () => {
   }
 
   syncAdminAccessFromPayload(session.admin);
+  renderSupportAccessBanner(session.admin?.support || null);
   if (
     getRequestedCashRegisterView() &&
     IMPLEMENTED_SECTIONS.has("cash-register") &&

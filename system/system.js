@@ -31,6 +31,7 @@
   const EVENT_LABELS = Object.freeze({
     SUPPORT_SESSION_STARTED: "Sessão de suporte iniciada",
     SUPPORT_SESSION_REVOKED: "Sessão de suporte encerrada",
+    SUPPORT_ACTION_PERFORMED: "Ação no restaurante em suporte",
     SYSTEM_USER_CREATED: "Usuário criado",
     SYSTEM_USER_UPDATED: "Usuário atualizado",
     SYSTEM_USER_BLOCKED: "Usuário bloqueado",
@@ -128,7 +129,7 @@
       restaurants: { search: "", status: "", plan: "", domain: "" },
       audit: { search: "", period: "30", event: "", result: "", scope: "all" },
     },
-    support: { restaurantKey: "", mode: "VIEW", reason: "", confirmed: false },
+    support: { restaurantKey: "", mode: "ADMIN", reason: "", confirmed: false },
   };
 
   /* ---------- utilidades ---------- */
@@ -147,7 +148,7 @@
   const translatePlan = (value) => PLAN_LABELS[normalize(value)] || (value ? humanize(value) : "Sem plano");
   const translateEvent = (value) => EVENT_LABELS[normalize(value)] || "Evento administrativo";
   const translateResult = (value) => RESULT_LABELS[normalize(value)] || [humanize(value), "neutral"];
-  const translateMode = (value) => (normalize(value) === "ADMIN" ? "Administrativo" : "Visualização");
+  const translateMode = (value) => (normalize(value) === "ADMIN" ? "Acesso total" : "Visualização");
 
   const scoreTone = (score) => {
     const value = Number(score);
@@ -637,7 +638,7 @@
     const failed = Number(health.failedIntegrations || 0);
     const pendingJobs = Number(health.pendingJobs || 0);
     const backup = normalize(health.backupStatus);
-    const canSupport = hasPermission("system.support.start") && restaurant.administrativeActions?.supportAvailable;
+    const canSupport = hasPermission("system.support.admin") && restaurant.administrativeActions?.supportAvailable;
     return `
       <aside class="sys-card sys-detail" aria-label="Restaurante selecionado">
         <div>
@@ -670,9 +671,9 @@
         <div class="sys-note">${icon("lock", 18)}<span>Pedidos, clientes e financeiro deste restaurante não aparecem aqui. Para ver, abra uma sessão de suporte; o motivo fica registrado.</span></div>
         <div class="sys-action-stack">
           ${canSupport
-            ? `<a class="sys-btn sys-btn-primary" href="/system#support?key=${encodeURIComponent(restaurant.restaurantKey)}">Iniciar suporte (visualização)</a>`
-            : '<button class="sys-btn sys-btn-primary" type="button" disabled>Iniciar suporte (visualização)</button>'}
-          <p class="sys-action-help">Requer system.support.start${restaurant.administrativeActions?.supportAvailable ? "" : " · restaurante não provisionado"}</p>
+            ? `<a class="sys-btn sys-btn-primary" href="/system#support?key=${encodeURIComponent(restaurant.restaurantKey)}">Entrar no restaurante (suporte)</a>`
+            : '<button class="sys-btn sys-btn-primary" type="button" disabled>Entrar no restaurante (suporte)</button>'}
+          <p class="sys-action-help">Acesso total como proprietário · 60 min · alterações gravadas com o seu usuário${restaurant.administrativeActions?.supportAvailable ? "" : " · restaurante não provisionado"}</p>
           ${renderRestaurantAdminActions(restaurant)}
         </div>
       </aside>`;
@@ -735,7 +736,7 @@
 
   const supportIsValid = () => {
     const support = state.support;
-    return Boolean(support.restaurantKey) && support.reason.trim().length >= 10 && support.confirmed && (support.mode !== "ADMIN" || hasPermission("system.support.admin"));
+    return Boolean(support.restaurantKey) && support.reason.trim().length >= 10 && support.confirmed && hasPermission("system.support.admin");
   };
 
   const syncSupportForm = () => {
@@ -756,7 +757,7 @@
     const submit = form.querySelector("[data-support-submit]");
     if (submit) {
       submit.disabled = !supportIsValid();
-      submit.textContent = `Iniciar sessão — ${support.mode === "ADMIN" ? "15" : "30"} min`;
+      submit.textContent = "Entrar no restaurante — 60 min";
     }
   };
 
@@ -769,7 +770,7 @@
       state.support.restaurantKey = requested && restaurants.some((restaurant) => restaurant.restaurantKey === requested) ? requested : restaurants[0]?.restaurantKey || "";
     }
     const canAdmin = hasPermission("system.support.admin");
-    if (!canAdmin && state.support.mode === "ADMIN") state.support.mode = "VIEW";
+    state.support.mode = "ADMIN";
 
     app.innerHTML = `
       ${renderHead({
@@ -788,20 +789,7 @@
                   ${restaurants.length ? restaurants.map((restaurant) => `<option value="${escapeHtml(restaurant.restaurantKey)}" ${restaurant.restaurantKey === state.support.restaurantKey ? "selected" : ""}>${escapeHtml(restaurant.name)}</option>`).join("") : '<option value="">Nenhum restaurante disponível</option>'}
                 </select>
               </label>
-              <fieldset class="sys-field" style="border:0;padding:0;margin:0">
-                <legend style="font-weight:600;padding:0;margin-bottom:6px">Modo de acesso</legend>
-                <div class="sys-choices">
-                  <label class="sys-choice ${state.support.mode === "VIEW" ? "is-selected" : ""}" data-support-mode="VIEW">
-                    <input class="sr-only" type="radio" name="mode" value="VIEW" ${state.support.mode === "VIEW" ? "checked" : ""} />
-                    <strong>Visualização</strong><span>Leitura dos dados do restaurante, sem alterar nada.</span><small>30 min · requer system.support.start</small>
-                  </label>
-                  <label class="sys-choice ${state.support.mode === "ADMIN" ? "is-selected" : ""} ${canAdmin ? "" : "is-disabled"}" data-support-mode="ADMIN">
-                    <input class="sr-only" type="radio" name="mode" value="ADMIN" ${state.support.mode === "ADMIN" ? "checked" : ""} ${canAdmin ? "" : "disabled"} />
-                    <strong>Administrativo</strong><span>Permite ajustes controlados, com mais rastreio.</span><small>15 min · requer system.support.admin · crítico${canAdmin ? "" : " · seu perfil não tem esta permissão"}</small>
-                  </label>
-                </div>
-              </fieldset>
-              <div class="sys-banner is-warn is-compact" data-support-admin-warning ${state.support.mode === "ADMIN" ? "" : "hidden"}>${icon("warning", 18)}<span>O modo administrativo permite alterar dados do restaurante. Use só quando a visualização não resolver; a sessão dura menos.</span></div>
+              <div class="sys-banner is-warn is-compact">${icon("warning", 18)}<span><strong>Acesso total ao restaurante</strong>, como o proprietário: pedidos, cardápio, caixa, clientes e configurações. Tudo o que você alterar fica gravado com <strong>o seu usuário</strong> (não o do dono) e na auditoria. A sessão dura 60 minutos.</span></div>
               <label class="sys-field">
                 <span>Motivo do acesso</span>
                 <textarea class="sys-textarea" name="reason" data-support-field="reason" minlength="10" maxlength="500" placeholder="Descreva o que precisa verificar ou ajustar">${escapeHtml(state.support.reason)}</textarea>
@@ -812,7 +800,7 @@
                 <span>Confirmo que este acesso é necessário e que ele será registrado na auditoria.</span>
               </label>
               <div class="sys-banner is-crit is-compact" data-support-error hidden></div>
-              <button class="sys-btn sys-btn-primary sys-btn-block" type="submit" data-support-submit disabled>Iniciar sessão — 30 min</button>
+              <button class="sys-btn sys-btn-primary sys-btn-block" type="submit" data-support-submit disabled>Entrar no restaurante — 60 min</button>
             </form>
           </div>
         </section>
@@ -872,7 +860,7 @@
         }),
       });
       const session = payload.data?.supportSession || {};
-      state.support = { restaurantKey: state.support.restaurantKey, mode: "VIEW", reason: "", confirmed: false };
+      state.support = { restaurantKey: state.support.restaurantKey, mode: "ADMIN", reason: "", confirmed: false };
       notify("Sessão de suporte criada e registrada na auditoria.");
       if (dialog) {
         dialog.innerHTML = `

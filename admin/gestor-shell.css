@@ -8554,3 +8554,36 @@ html body.admin-body.admin-body .gx-crm-campaign-list small { color: var(--gx-in
   html body.admin-body.admin-body .gx-crm-kpis { grid-template-columns: 1fr; }
   html body.admin-body.admin-body .gx-crm-table tbody tr { grid-template-columns: 1fr; }
 }
+
+/* Faixa do suporte INOVAS (acesso total, auditado). */
+.support-access-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+  padding: 10px 16px;
+  background: #7c2d12;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.support-access-banner button {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.support-access-banner button:hover,
+.support-access-banner button:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}

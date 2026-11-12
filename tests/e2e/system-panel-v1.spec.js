@@ -111,10 +111,11 @@ test("Painel System redesenhado renderiza todas as áreas em português", async 
   await expect(page.locator("[data-support-counter]")).toHaveText("5 de 10 caracteres no mínimo");
   await page.locator("[data-support-field='reason']").fill("Verificar falha na integração do WhatsApp");
   await expect(submit).toBeEnabled();
-  await expect(submit).toHaveText("Iniciar sessão — 30 min");
-  await page.locator("[data-support-mode='ADMIN']").click();
-  await expect(submit).toHaveText("Iniciar sessão — 15 min");
-  await expect(page.locator("[data-support-admin-warning]")).toBeVisible();
+  // Pedido do Paulo: um único modo, acesso total como proprietário, 60 min,
+  // alterações gravadas com o usuário do System.
+  await expect(submit).toHaveText("Entrar no restaurante — 60 min");
+  await expect(page.locator("[data-support-mode]")).toHaveCount(0);
+  await expect(page.locator("body")).toContainText("Acesso total ao restaurante");
   await assertNoEnglishInterfaceLabels(page);
   await page.screenshot({ path: path.join(artifactDirectory, "suporte.png"), fullPage: true });
 
