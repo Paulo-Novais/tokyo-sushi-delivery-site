@@ -80,7 +80,11 @@ test("Caixa lança pedido de mesa, retirada e entrega; Pedidos mostra o tipo cer
   await expect(root.locator(".cx-totals")).toContainText("Taxa de entrega");
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(shots, "3-entrega.png") });
+  const created = page.waitForResponse((response) => response.url().includes("/cash-register/counter-order"));
   await page.keyboard.press("F2");
+  const createdPayload = await (await created).json();
+  // Código do pedido curto: 5 dígitos.
+  expect(createdPayload.counterOrder.publicId).toMatch(/^[0-9]{5}$/);
   await expect(root).toContainText("entrega enviado");
 
   // Gestor > Pedidos: cada um com o tipo certo.

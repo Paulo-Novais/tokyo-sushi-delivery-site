@@ -9530,6 +9530,11 @@ const renderTrackingPage = () => {
 
 // Acompanhamento do pedido (novo): atualiza sozinho a cada 10 s, com contador.
 const TRACKING_PAGE_REFRESH_SECONDS = 10;
+// Código curto (só números) aparece como "#48213"; códigos antigos ficam como estão.
+const formatOrderCode = (publicId) => {
+  const code = String(publicId || "").trim();
+  return /^\d+$/.test(code) ? `#${code}` : code;
+};
 const trackingCountdown = { nextAt: 0, timerId: 0 };
 
 const TRACKING_ICONS = Object.freeze({
@@ -9613,7 +9618,7 @@ const renderTrackingOrderView = (order) => {
   const steps = buildTrackingProgressSteps(order);
   const statusLabel = TRACKING_STEP_LABELS[order.status] || order.status;
   const whatsappHref = `https://wa.me/${getPublicWhatsappNumber()}?text=${encodeURIComponent(
-    `Olá! Quero falar sobre o meu pedido ${order.publicId}.`
+    `Olá! Quero falar sobre o meu pedido ${formatOrderCode(order.publicId)}.`
   )}`;
   const items = Array.isArray(order.items) ? order.items : [];
   const paymentLabel = getCartPaymentMethodLabel(order.paymentMethod);
@@ -9626,7 +9631,7 @@ const renderTrackingOrderView = (order) => {
       <header class="tk-track-head">
         <div>
           <p class="tk-track-eyebrow">Acompanhar pedido</p>
-          <h2 class="tk-track-code">${escapeHtml(order.publicId)}</h2>
+          <h2 class="tk-track-code">${escapeHtml(formatOrderCode(order.publicId))}</h2>
         </div>
         <div class="tk-track-live">
           ${
@@ -11505,8 +11510,8 @@ const submitCartOrder = async () => {
 
     setCartOrderNotice(
       response.created
-        ? `Pedido ${response.order.publicId} enviado para o gestor.`
-        : `Pedido ${response.order.publicId} ja estava registrado e segue em processamento.`,
+        ? `Pedido ${formatOrderCode(response.order.publicId)} enviado para o gestor.`
+        : `Pedido ${formatOrderCode(response.order.publicId)} já estava registrado e segue em processamento.`,
       "success"
     );
     await refreshCustomerTrackingState({ renderPage: true });

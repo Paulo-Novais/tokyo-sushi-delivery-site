@@ -45,6 +45,9 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 7rem;
+  /* Ao puxar a página além do limite, aparece a cor do site e não branco. */
+  background: var(--bg);
+  color-scheme: dark;
 }
 
 body {

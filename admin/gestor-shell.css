@@ -4755,3 +4755,15 @@ html body.admin-body[data-admin-theme="dark"] .cx-root {
   --cx-brand: #f97316;
   --cx-hero-bg: #0b111b;
 }
+
+/* Puxar a página além do limite não mostra mais faixa branca:
+   o fundo do documento acompanha o tema (o gesto de atualizar continua). */
+html:has(body.admin-body) {
+  background: #f3f4f6;
+}
+
+html:has(body.admin-body[data-admin-theme="dark"]) {
+  background: #0b111b !important;
+  color-scheme: dark;
+}
+

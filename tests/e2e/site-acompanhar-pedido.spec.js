@@ -7,7 +7,7 @@ const minutesAgo = (minutes) => new Date(Date.now() - minutes * 60000).toISOStri
 
 const buildOrder = (status, fulfillmentMode = "pickup") => ({
   id: "order-acomp-1",
-  publicId: "TKY-20261111-0E0AAD",
+  publicId: "48213",
   status,
   fulfillmentMode,
   orderType: "immediate",
@@ -52,7 +52,7 @@ test("Acompanhar pedido: etapa, contador de 10 s, WhatsApp e resumo", async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await openTracking(page, state);
 
-  await expect(page.locator(".tk-track-code")).toHaveText("TKY-20261111-0E0AAD");
+  await expect(page.locator(".tk-track-code")).toHaveText("#48213");
   await expect(page.locator(".tk-track-hero h3")).toHaveText("Preparando com capricho");
   await expect(page.locator(".tk-track-badge")).toContainText(/em preparo/i);
   await expect(page.locator(".tk-track-step")).toHaveCount(5);
@@ -64,7 +64,7 @@ test("Acompanhar pedido: etapa, contador de 10 s, WhatsApp e resumo", async ({ p
   await page.screenshot({ path: path.join(outDir, "celular-tela.png") });
   await expect(page.locator(".tk-track-total")).toContainText("112,50");
   const whatsapp = await page.locator(".tk-track-btn.is-whatsapp").getAttribute("href");
-  expect(whatsapp).toMatch(/^https:\/\/wa\.me\/\d+\?text=.*TKY-20261111-0E0AAD/);
+  expect(whatsapp).toMatch(/^https:\/\/wa\.me\/\d+\?text=.*48213/);
   // A apresentação antiga some quando há pedido ativo.
   await expect(page.locator(".tracking-hero-section")).toBeHidden();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
