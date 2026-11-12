@@ -757,6 +757,8 @@ const adminState = {
     tag: "",
     inactiveDays: "",
     sortBy: "recent",
+    segment: "",
+    query: "",
   },
   stats: null,
   metricsSnapshot: null,
@@ -1359,6 +1361,7 @@ const normalizeCustomerCrmRecord = (customer = {}) => ({
   isRecurring: Boolean(customer.isRecurring || Number(customer.ordersCount || 0) >= 2),
   isLapsed: Boolean(customer.isLapsed),
   suggestedAction: String(customer.suggestedAction || "Mandar mensagem no WhatsApp").trim(),
+  segment: String(customer.segment || "").trim() || "novo",
 });
 
 const normalizeCustomerCrmSnapshot = (payload = {}) => ({
@@ -1373,6 +1376,12 @@ const normalizeCustomerCrmSnapshot = (payload = {}) => ({
     totalSpent: Number(payload.summary?.totalSpent || 0),
     averageTicket: Number(payload.summary?.averageTicket || 0),
     inactiveDays: Number(payload.summary?.inactiveDays || 30),
+    returnRate: Number(payload.summary?.returnRate || 0),
+    segments: payload.summary?.segments && typeof payload.summary.segments === "object" ? payload.summary.segments : {},
+    unidentifiedDining: {
+      orders: Number(payload.summary?.unidentifiedDining?.orders || 0),
+      total: Number(payload.summary?.unidentifiedDining?.total || 0),
+    },
   },
   tagOptions: Array.isArray(payload.tagOptions) && payload.tagOptions.length > 0
     ? payload.tagOptions
@@ -2571,6 +2580,7 @@ const customerMatchesCrmSearch = (customer, query) => {
     [
       customer.customerName,
       customer.customerPhone,
+      String(customer.customerPhone || "").replace(/\D/g, ""),
       customer.customerEmail,
       customer.mostUsedAddress,
       customer.lastOrderPublicId,
@@ -2618,10 +2628,20 @@ const getVisibleCustomerCrmRecords = () => {
   const query = normalizeInventorySearchValue(adminState.searchQuery);
   const tagFilter = String(adminState.customerFilters.tag || "").trim().toLowerCase();
   const inactiveDays = Number.parseInt(String(adminState.customerFilters.inactiveDays || ""), 10);
+  const segmentFilter = String(adminState.customerFilters.segment || "").trim();
+  const localQuery = normalizeInventorySearchValue(adminState.customerFilters.query || "");
 
   return sortCustomerCrmRecords(
     snapshot.customers.filter((customer) => {
       if (!customerMatchesCrmSearch(customer, query)) {
+        return false;
+      }
+
+      if (localQuery && !customerMatchesCrmSearch(customer, localQuery)) {
+        return false;
+      }
+
+      if (segmentFilter && customer.segment !== segmentFilter) {
         return false;
       }
 
@@ -6639,6 +6659,300 @@ const renderDeliveriesModule = () => {
   `;
 };
 
+// ---------- Clientes (esboço "Nova tela de Clientes") ----------
+const CRM_SEGMENTS = Object.freeze([
+  { key: "", label: "Todos" },
+  { key: "novo", label: "Novos", badge: "Novo", tone: "is-blue" },
+  { key: "recorrente", label: "Recorrentes", badge: "Recorrente", tone: "is-orange" },
+  { key: "vip", label: "VIP", badge: "VIP", tone: "is-gold" },
+  { key: "em-risco", label: "Em risco", badge: "Em risco", tone: "is-red" },
+  { key: "sumido", label: "Sumidos", badge: "Sumido", tone: "is-gray" },
+]);
+const CRM_SORTS = Object.freeze([
+  { key: "recent", label: "Última compra" },
+  { key: "spend-desc", label: "Mais gasto" },
+  { key: "orders-desc", label: "Mais pedidos" },
+]);
+const CRM_CHANNEL_LABELS = Object.freeze({ delivery: "Delivery", pickup: "Retirada", retirada: "Retirada", dining: "Salão" });
+
+const getCrmSegmentMeta = (key) => CRM_SEGMENTS.find((segment) => segment.key === key) || CRM_SEGMENTS[1];
+const getCrmFirstName = (name) => String(name || "").trim().split(/\s+/)[0] || "tudo bem";
+const getCrmInitials = (name) =>
+  String(name || "?")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "?";
+
+const getCrmChannelLabel = (order) => {
+  const mode = String(order?.fulfillmentMode || "").toLowerCase();
+  if (CRM_CHANNEL_LABELS[mode]) return CRM_CHANNEL_LABELS[mode];
+  const type = String(order?.orderType || "").trim();
+  return type || "Pedido";
+};
+
+const getCrmMainChannel = (customer) => {
+  const counts = new Map();
+  (customer.orders || []).forEach((order) => {
+    const label = getCrmChannelLabel(order);
+    counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+};
+
+// "Hoje, 19:26", "Ontem", "Há 3 dias", "Há 4 meses".
+const formatCrmWhen = (value) => {
+  const date = new Date(value || 0);
+  if (!value || Number.isNaN(date.getTime())) return "—";
+  const today = new Date();
+  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(today) - startOf(date)) / 86400000);
+  const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (days <= 0) return `Hoje, ${time}`;
+  if (days === 1) return `Ontem, ${time}`;
+  if (days < 60) return `Há ${days} dias`;
+  const months = Math.floor(days / 30);
+  return `Há ${months} meses`;
+};
+
+const formatCrmOrderDate = (value) => {
+  const date = new Date(value || 0);
+  if (!value || Number.isNaN(date.getTime())) return "—";
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) {
+    return `Hoje, ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}, ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+// Próxima ação e mensagem sugerida, por segmento. A mensagem é só um ponto de partida: dá para editar.
+const getCrmNextAction = (customer) => {
+  const name = getCrmFirstName(customer.customerName);
+  const days = typeof customer.daysSinceLastPurchase === "number" ? customer.daysSinceLastPurchase : null;
+  if (customer.tags.includes("bloqueado")) {
+    return { title: "Cliente bloqueado: revise o cadastro antes de aceitar um novo pedido.", message: "" };
+  }
+  switch (customer.segment) {
+    case "vip":
+      return {
+        title:
+          days === 0
+            ? "Cliente VIP comprou hoje: agradeça e ofereça um mimo no próximo pedido."
+            : "Cliente VIP: agradeça a preferência e mantenha por perto.",
+        message: `${name}, valeu demais pela preferência! No seu próximo pedido tem um mimo por nossa conta.`,
+      };
+    case "recorrente":
+      return {
+        title: "Cliente fiel: agradeça por voltar.",
+        message: `Oi, ${name}! Obrigado por pedir com a gente de novo. Bom apetite!`,
+      };
+    case "em-risco":
+      return {
+        title: `${days} dias sem pedir: chame antes que vire cliente sumido.`,
+        message: `Oi, ${name}! Sentimos sua falta por aqui. Que tal matar a saudade hoje?`,
+      };
+    case "sumido":
+      return {
+        title: `Sumiu há ${days} dias: tente reconquistar com uma condição especial.`,
+        message: `Oi, ${name}! Faz tempo que você não pede com a gente. Preparamos uma condição especial pra você voltar — quer saber?`,
+      };
+    default:
+      return {
+        title: "Primeiro pedido: dê as boas-vindas e convide para voltar.",
+        message: `Oi, ${name}! Obrigado pelo seu primeiro pedido. Conta pra gente o que achou?`,
+      };
+  }
+};
+
+const buildCrmWhatsappUrl = (customer, message) => {
+  const base = String(customer?.whatsappUrl || "").trim();
+  if (!base) return "";
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+};
+
+const getCrmMessageDraft = (customer) => {
+  const drafts = adminState.crmMessageDrafts || {};
+  return typeof drafts[customer.customerKey] === "string" ? drafts[customer.customerKey] : getCrmNextAction(customer).message;
+};
+
+const renderCrmSegmentBadge = (customer) => {
+  const meta = getCrmSegmentMeta(customer.segment);
+  const blocked = customer.tags.includes("bloqueado")
+    ? '<span class="gx-crm-badge is-dark">Bloqueado</span>'
+    : "";
+  return `<span class="gx-crm-badge ${meta.tone}">${escapeHtml(meta.badge)}</span>${blocked}`;
+};
+
+const renderCrmPanel = (customer) => {
+  if (!customer) {
+    return `
+      <aside class="gx-crm-panel is-empty">
+        <strong>Nenhum cliente selecionado</strong>
+        <span>Escolha um cliente na lista para ver a próxima ação.</span>
+      </aside>`;
+  }
+  const action = getCrmNextAction(customer);
+  const message = getCrmMessageDraft(customer);
+  const editing = adminState.crmEditingKey === customer.customerKey;
+  const sendUrl = buildCrmWhatsappUrl(customer, message);
+  const favorite = customer.topItems?.[0]?.name || "—";
+  const recent = (customer.orders || []).slice(0, 3);
+  const showFull = adminState.crmFullKey === customer.customerKey;
+  const saving = adminState.isSavingCustomerProfile;
+
+  return `
+    <aside class="gx-crm-panel" data-crm-panel>
+      <header class="gx-crm-panel-head">
+        <span class="gx-crm-avatar is-lg" aria-hidden="true">${escapeHtml(getCrmInitials(customer.customerName))}</span>
+        <div>
+          <h3>${escapeHtml(customer.customerName)}</h3>
+          <p>${renderCrmSegmentBadge(customer)}<span>${escapeHtml(customer.customerPhone || customer.customerEmail || "Sem contato")}</span></p>
+        </div>
+      </header>
+      <div class="gx-crm-panel-stats">
+        <div><small>Pedidos</small><strong>${escapeHtml(String(customer.revenueOrderCount))}</strong></div>
+        <div><small>Gasto</small><strong>${escapeHtml(formatMoney(customer.totalSpent || 0))}</strong></div>
+        <div><small>Ticket</small><strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</strong></div>
+      </div>
+
+      <section class="gx-crm-action">
+        <span class="gx-crm-eyebrow">Próxima ação</span>
+        <strong>${escapeHtml(action.title)}</strong>
+        ${
+          action.message
+            ? `${
+                editing
+                  ? `<textarea class="gx-crm-message-input" rows="4" data-crm-message aria-label="Mensagem para ${escapeHtml(customer.customerName)}">${escapeHtml(message)}</textarea>`
+                  : `<p class="gx-crm-message">“${escapeHtml(message)}”</p>`
+              }
+              <div class="gx-crm-action-buttons">
+                ${
+                  sendUrl
+                    ? `<a class="gx-crm-btn is-whatsapp" href="${escapeHtml(sendUrl)}" target="_blank" rel="noopener" data-crm-send>Enviar no WhatsApp</a>`
+                    : '<span class="gx-crm-muted">Sem telefone para WhatsApp.</span>'
+                }
+                <button class="gx-crm-btn is-ghost" type="button" data-crm-edit>${editing ? "Pronto" : "Editar mensagem"}</button>
+              </div>`
+            : ""
+        }
+      </section>
+
+      ${
+        adminState.actionMessage && adminState.activeSection === "customers"
+          ? `<div class="gx-crm-feedback is-${escapeHtml(adminState.actionTone || "success")}">${escapeHtml(adminState.actionMessage)}</div>`
+          : ""
+      }
+
+      <section class="gx-crm-recent">
+        <span class="gx-crm-eyebrow is-muted">Últimos pedidos</span>
+        ${
+          recent.length
+            ? recent
+                .map(
+                  (order) => `
+                    <div class="gx-crm-recent-row">
+                      <span><strong>${escapeHtml(formatCrmOrderDate(order.createdAt))}</strong><small>${escapeHtml(getCrmChannelLabel(order))}${String(order.status || "").toLowerCase() === "cancelado" ? " · cancelado" : ""}</small></span>
+                      <strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>
+                    </div>`
+                )
+                .join("")
+            : '<span class="gx-crm-muted">Sem pedidos registrados.</span>'
+        }
+      </section>
+
+      <dl class="gx-crm-facts">
+        <div><dt>Prato favorito</dt><dd>${escapeHtml(favorite)}</dd></div>
+        <div><dt>Canal</dt><dd>${escapeHtml(getCrmMainChannel(customer))}</dd></div>
+        <div class="is-wide"><dt>Endereço</dt><dd>${escapeHtml(customer.mostUsedAddress || "Não informado")}</dd></div>
+      </dl>
+
+      <button class="gx-crm-link" type="button" data-crm-full aria-expanded="${showFull ? "true" : "false"}">${showFull ? "Fechar ficha" : "Ver ficha completa"}</button>
+
+      ${
+        showFull
+          ? `
+            <section class="gx-crm-full">
+              <div class="gx-crm-full-block">
+                <span class="gx-crm-eyebrow is-muted">Marcações</span>
+                <div class="gx-crm-tags">
+                  ${CUSTOMER_CRM_TAG_OPTIONS.filter((option) => option.key)
+                    .map(
+                      (option) => `<button type="button" class="gx-crm-tag${customer.tags.includes(option.key) ? " is-active" : ""}" aria-pressed="${customer.tags.includes(option.key) ? "true" : "false"}" data-crm-tag="${escapeHtml(option.key)}" ${saving ? "disabled" : ""}>${escapeHtml(option.label)}</button>`
+                    )
+                    .join("")}
+                </div>
+              </div>
+              <form class="gx-crm-full-block" data-crm-notes-form>
+                <label class="gx-crm-eyebrow is-muted" for="gx-crm-notes">Observações da equipe</label>
+                <textarea id="gx-crm-notes" name="notes" rows="4" placeholder="Ex.: prefere sem cebolinha; entregar no portão lateral." ${saving ? "disabled" : ""}>${escapeHtml(customer.notes || "")}</textarea>
+                <button class="gx-crm-btn is-primary" type="submit" ${saving ? "disabled" : ""}>${saving ? "Salvando…" : "Salvar observação"}</button>
+              </form>
+              <div class="gx-crm-full-block">
+                <span class="gx-crm-eyebrow is-muted">Mais pedidos por este cliente</span>
+                ${
+                  customer.topItems?.length
+                    ? `<ul class="gx-crm-items">${customer.topItems
+                        .slice(0, 5)
+                        .map((item) => `<li><span>${escapeHtml(item.name || "Item")}</span><strong>${escapeHtml(String(item.quantity || item.ordersCount || 0))}x</strong></li>`)
+                        .join("")}</ul>`
+                    : '<span class="gx-crm-muted">Os itens aparecem quando os pedidos trazem o carrinho.</span>'
+                }
+              </div>
+              <div class="gx-crm-full-block">
+                <span class="gx-crm-eyebrow is-muted">Histórico</span>
+                <ul class="gx-crm-history">${(customer.orders || [])
+                  .slice(0, 12)
+                  .map(
+                    (order) => `<li><span>${escapeHtml(order.publicId || "Pedido")} · ${escapeHtml(formatCrmOrderDate(order.createdAt))}</span><span>${escapeHtml(order.status || "")}</span><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong></li>`
+                  )
+                  .join("")}</ul>
+              </div>
+            </section>`
+          : ""
+      }
+    </aside>`;
+};
+
+const renderCrmCampaignDialog = () => {
+  const atRisk = getCustomerCrmSnapshot().customers.filter((customer) => customer.segment === "em-risco");
+  const template = adminState.crmCampaignTemplate || "Oi, {nome}! Sentimos sua falta por aqui. Que tal matar a saudade hoje?";
+  return `
+    <dialog class="gx-crm-dialog" data-crm-campaign-dialog aria-labelledby="gx-crm-campaign-title">
+      <header>
+        <div>
+          <span class="gx-crm-eyebrow">Campanha</span>
+          <h3 id="gx-crm-campaign-title">Clientes “Em risco” (${atRisk.length})</h3>
+          <p>30 a 59 dias sem pedir. O WhatsApp não permite envio em massa: abra uma conversa por vez — a mensagem já vai preenchida.</p>
+        </div>
+        <button type="button" class="gx-crm-close" aria-label="Fechar" data-crm-campaign-close>×</button>
+      </header>
+      <label class="gx-crm-eyebrow is-muted" for="gx-crm-template">Mensagem ({nome} vira o primeiro nome)</label>
+      <textarea id="gx-crm-template" rows="3" data-crm-template>${escapeHtml(template)}</textarea>
+      <ul class="gx-crm-campaign-list">
+        ${
+          atRisk.length
+            ? atRisk
+                .map(
+                  (customer) => `
+                    <li>
+                      <span><strong>${escapeHtml(customer.customerName)}</strong><small>${escapeHtml(customer.customerPhone || "Sem telefone")} · ${escapeHtml(String(customer.daysSinceLastPurchase))} dias</small></span>
+                      ${
+                        customer.whatsappUrl
+                          ? `<a class="gx-crm-btn is-whatsapp is-sm" href="${escapeHtml(customer.whatsappUrl)}" target="_blank" rel="noopener" data-crm-campaign-send="${escapeHtml(customer.customerKey)}">Abrir WhatsApp</a>`
+                          : '<span class="gx-crm-muted">Sem WhatsApp</span>'
+                      }
+                    </li>`
+                )
+                .join("")
+            : '<li class="gx-crm-muted">Nenhum cliente em risco agora.</li>'
+        }
+      </ul>
+    </dialog>`;
+};
+
 const renderCustomerModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -6658,113 +6972,252 @@ const renderCustomerModule = () => {
 
   const snapshot = getCustomerCrmSnapshot();
   const summary = snapshot.summary || {};
+  const all = snapshot.customers || [];
   const customers = getVisibleCustomerCrmRecords();
   const selectedCustomer = getSelectedCustomerCrmRecord();
+  const segmentCounts = summary.segments || {};
+  const activeSegment = adminState.customerFilters.segment || "";
+  const dining = summary.unidentifiedDining || { orders: 0, total: 0 };
+  const atRiskCount = Number(segmentCounts["em-risco"] || 0);
 
   moduleRoot.innerHTML = `
-    <header class="admin-module-head">
-      <div>
-        <span class="admin-chip">CRM simples</span>
-        <h2>Relacionamento e fidelizacao</h2>
-        <p>Clientes consolidados a partir dos pedidos, com sinais de recorrência, sumico e ação sugerida.</p>
+    <section class="gx-crm">
+      <header class="gx-crm-head">
+        <div>
+          <span class="gx-crm-eyebrow">CRM · Relacionamento e fidelização</span>
+          <h2>Clientes</h2>
+          <p>Quem compra, quem voltou e quem sumiu — com a próxima ação pronta pra enviar.</p>
+        </div>
+        <div class="gx-crm-head-actions">
+          <button class="gx-crm-btn is-ghost" type="button" data-crm-export ${customers.length ? "" : "disabled"}>Exportar lista</button>
+          <button class="gx-crm-btn is-primary" type="button" data-crm-campaign ${atRiskCount ? "" : "disabled"}>Campanha para “Em risco”</button>
+        </div>
+      </header>
+
+      <div class="gx-crm-kpis">
+        <article><span>Clientes identificados</span><strong>${escapeHtml(String(summary.totalCustomers || 0))}</strong><small>sem contar mesas do salão</small></article>
+        <article><span>Taxa de retorno</span><strong>${escapeHtml(String(summary.returnRate || 0))}%</strong><small>compraram 2+ vezes</small></article>
+        <article class="${atRiskCount ? "is-alert" : ""}"><span>Em risco agora</span><strong>${escapeHtml(String(atRiskCount))}</strong><small>30–59 dias sem pedir</small></article>
+        <article><span>Gasto total</span><strong>${escapeHtml(formatMoney(summary.totalSpent || 0))}</strong><small>ticket médio ${escapeHtml(formatMoney(summary.averageTicket || 0))}</small></article>
       </div>
-      <div class="admin-module-head-meta">
-        <span>Clientes na base</span>
-        <strong>${escapeHtml(String(summary.totalCustomers || 0))}</strong>
-      </div>
-    </header>
 
-    <section class="admin-module-kpis">
-      <article class="admin-mini-stat is-warm">
-        <span>Recorrentes</span>
-        <strong>${escapeHtml(String(summary.recurringCustomers || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-green">
-        <span>VIP</span>
-        <strong>${escapeHtml(String(summary.vipCustomers || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-blue">
-        <span>Sumidos</span>
-        <strong>${escapeHtml(String(summary.lapsedCustomers || 0))}</strong>
-      </article>
-      <article class="admin-mini-stat is-cyan">
-        <span>Gasto total</span>
-        <strong>${escapeHtml(formatMoney(summary.totalSpent || 0))}</strong>
-      </article>
-    </section>
-
-    <section class="admin-customer-toolbar">
-      <label>
-        <span>Tag</span>
-        <select class="admin-input" data-customer-filter="tag">
-          ${CUSTOMER_CRM_TAG_OPTIONS.map(
-            (option) => `<option value="${escapeHtml(option.key)}" ${adminState.customerFilters.tag === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>`
-          ).join("")}
-        </select>
-      </label>
-      <label>
-        <span>Recencia</span>
-        <select class="admin-input" data-customer-filter="inactiveDays">
-          ${CUSTOMER_CRM_INACTIVE_FILTERS.map(
-            (option) => `<option value="${escapeHtml(option.key)}" ${String(adminState.customerFilters.inactiveDays || "") === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>`
-          ).join("")}
-        </select>
-      </label>
-      <label>
-        <span>Ordenar</span>
-        <select class="admin-input" data-customer-filter="sortBy">
-          ${CUSTOMER_CRM_SORT_OPTIONS.map(
-            (option) => `<option value="${escapeHtml(option.key)}" ${adminState.customerFilters.sortBy === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>`
-          ).join("")}
-        </select>
-      </label>
-    </section>
-
-    <section class="admin-customer-list">
       ${
-        customers.length > 0
-          ? customers
-              .map(
-                (customer) => `
-                  <button
-                    class="admin-customer-card${customer.key === selectedCustomer?.key ? " is-selected" : ""}${customer.isLapsed ? " is-lapsed" : ""}"
-                    type="button"
-                    data-customer-key="${escapeHtml(customer.key)}"
-                  >
-                    <div class="admin-customer-card-top">
-                      <div>
-                        <strong>${escapeHtml(customer.customerName)}</strong>
-                        <small>${escapeHtml(customer.customerPhone || customer.customerEmail || "Sem contato")}</small>
-                      </div>
-                      <span>${escapeHtml(String(customer.ordersCount))} pedidos</span>
-                    </div>
-                    <div class="admin-customer-card-tags">
-                      ${buildCustomerTagChips(customer)}
-                    </div>
-                    <div class="admin-customer-card-grid">
-                      <span><strong>Última compra</strong>${escapeHtml(formatDateTime(customer.lastPurchaseAt || ""))}</span>
-                      <span><strong>Total gasto</strong>${escapeHtml(formatMoney(customer.totalSpent || 0))}</span>
-                      <span><strong>Ticket médio</strong>${escapeHtml(formatMoney(customer.averageTicket || 0))}</span>
-                      <span><strong>Endereço</strong>${escapeHtml(customer.mostUsedAddress || "Não informado")}</span>
-                    </div>
-                    <div class="admin-customer-action-line">
-                      <small>${escapeHtml(getCustomerDaysSinceLabel(customer))}</small>
-                      <strong>${escapeHtml(customer.suggestedAction || "Mandar mensagem no WhatsApp")}</strong>
-                    </div>
-                  </button>
-                `
-              )
-              .join("")
-          : `
-            <div class="admin-empty-state">
-              <strong>Nenhum cliente encontrado</strong>
-              <span>Ajuste busca e filtros ou aguarde novos pedidos para alimentar o CRM.</span>
-            </div>
-          `
+        dining.orders > 0
+          ? `<p class="gx-crm-notice" data-crm-dining><strong>Salão sem identificação:</strong> ${escapeHtml(String(dining.orders))} ${dining.orders === 1 ? "pedido de mesa" : "pedidos de mesa"} (${escapeHtml(formatMoney(dining.total))}) ${dining.orders === 1 ? "fica" : "ficam"} fora da base de clientes, porque a comanda não tem telefone do cliente.</p>`
+          : ""
       }
+
+      <div class="gx-crm-segments" role="tablist" aria-label="Segmentos">
+        ${CRM_SEGMENTS.map((segment) => {
+          const count = segment.key ? Number(segmentCounts[segment.key] || 0) : all.length;
+          const on = segment.key === activeSegment;
+          return `<button type="button" role="tab" class="gx-crm-seg${on ? " is-active" : ""}" aria-selected="${on ? "true" : "false"}" data-crm-segment="${escapeHtml(segment.key)}">${escapeHtml(segment.label)}<span>${escapeHtml(String(count))}</span></button>`;
+        }).join("")}
+      </div>
+
+      <div class="gx-crm-filters">
+        <label class="gx-crm-search"><span>Buscar</span><input type="search" placeholder="Nome ou telefone" value="${escapeHtml(adminState.customerFilters.query || "")}" data-crm-search /></label>
+        <label class="gx-crm-sort"><span>Ordenar por</span>
+          <select data-customer-filter="sortBy">
+            ${CRM_SORTS.map((option) => `<option value="${option.key}" ${(adminState.customerFilters.sortBy || "recent") === option.key ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+
+      <div class="gx-crm-body">
+        <div class="gx-crm-table-wrap">
+          <table class="gx-crm-table">
+            <thead><tr><th scope="col">Cliente</th><th scope="col">Segmento</th><th scope="col" class="is-num">Pedidos</th><th scope="col" class="is-num">Gasto</th><th scope="col" class="is-num">Ticket</th><th scope="col">Última compra</th></tr></thead>
+            <tbody>
+              ${
+                customers.length
+                  ? customers
+                      .map(
+                        (customer) => `
+                          <tr class="${customer.key === selectedCustomer?.key ? "is-selected" : ""}" data-customer-key="${escapeHtml(customer.key)}" tabindex="0" aria-selected="${customer.key === selectedCustomer?.key ? "true" : "false"}">
+                            <td><span class="gx-crm-who"><span class="gx-crm-avatar" aria-hidden="true">${escapeHtml(getCrmInitials(customer.customerName))}</span><span><strong>${escapeHtml(customer.customerName)}</strong><small>${escapeHtml(customer.customerPhone || customer.customerEmail || "Sem contato")}</small></span></span></td>
+                            <td data-label="Segmento">${renderCrmSegmentBadge(customer)}</td>
+                            <td class="is-num" data-label="Pedidos">${escapeHtml(String(customer.revenueOrderCount))}</td>
+                            <td class="is-num is-strong" data-label="Gasto">${escapeHtml(formatMoney(customer.totalSpent || 0))}</td>
+                            <td class="is-num" data-label="Ticket">${escapeHtml(formatMoney(customer.averageTicket || 0))}</td>
+                            <td data-label="Última compra">${escapeHtml(formatCrmWhen(customer.lastPurchaseAt || customer.lastOrderAt))}</td>
+                          </tr>`
+                      )
+                      .join("")
+                  : `<tr><td colspan="6" class="gx-crm-empty">${all.length ? "Nenhum cliente neste filtro." : "Ainda não há clientes identificados. Eles aparecem quando chegam pedidos com nome e telefone."}</td></tr>`
+              }
+            </tbody>
+          </table>
+          <p class="gx-crm-foot">Mostrando ${escapeHtml(String(customers.length))} de ${escapeHtml(String(all.length))}</p>
+        </div>
+        ${renderCrmPanel(selectedCustomer)}
+      </div>
+      ${renderCrmCampaignDialog()}
     </section>
   `;
 };
+
+const exportCrmCsv = () => {
+  const rows = getVisibleCustomerCrmRecords();
+  const header = ["nome", "telefone", "email", "segmento", "pedidos", "gasto", "ticket_medio", "ultima_compra", "endereco"];
+  const lines = [
+    header.join(";"),
+    ...rows.map((customer) =>
+      [
+        customer.customerName,
+        customer.customerPhone,
+        customer.customerEmail,
+        getCrmSegmentMeta(customer.segment).badge,
+        customer.revenueOrderCount,
+        Number(customer.totalSpent || 0).toFixed(2),
+        Number(customer.averageTicket || 0).toFixed(2),
+        customer.lastPurchaseAt ? formatDateTime(customer.lastPurchaseAt) : "",
+        customer.mostUsedAddress,
+      ]
+        .map(escapeCsvValue)
+        .join(";")
+    ),
+  ];
+  downloadTextFile(`clientes-${new Date().toISOString().slice(0, 10)}.csv`, `﻿${lines.join("\r\n")}`, "text/csv;charset=utf-8");
+};
+
+const rerenderCrm = () => {
+  renderModuleContent();
+  renderOrderDetails();
+  updateSidebarMeta();
+};
+
+document.addEventListener("click", (event) => {
+  if (adminState.activeSection !== "customers") return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const segmentButton = target.closest("[data-crm-segment]");
+  if (segmentButton) {
+    adminState.customerFilters = { ...adminState.customerFilters, segment: segmentButton.dataset.crmSegment || "" };
+    adminState.selectedCustomerKey = "";
+    rerenderCrm();
+    return;
+  }
+
+  if (target.closest("[data-crm-export]")) {
+    exportCrmCsv();
+    return;
+  }
+
+  if (target.closest("[data-crm-campaign]")) {
+    document.querySelector("[data-crm-campaign-dialog]")?.showModal();
+    return;
+  }
+
+  if (target.closest("[data-crm-campaign-close]") || (target instanceof HTMLDialogElement && target.matches("[data-crm-campaign-dialog]"))) {
+    target.closest("dialog")?.close();
+    return;
+  }
+
+  const campaignSend = target.closest("[data-crm-campaign-send]");
+  if (campaignSend) {
+    const customer = getCustomerCrmSnapshot().customers.find((entry) => entry.customerKey === campaignSend.dataset.crmCampaignSend);
+    const template = document.querySelector("[data-crm-template]")?.value || "";
+    adminState.crmCampaignTemplate = template;
+    if (customer) {
+      campaignSend.href = buildCrmWhatsappUrl(customer, template.replaceAll("{nome}", getCrmFirstName(customer.customerName)));
+    }
+    return;
+  }
+
+  const editButton = target.closest("[data-crm-edit]");
+  if (editButton) {
+    const customer = getSelectedCustomerCrmRecord();
+    if (!customer) return;
+    const field = document.querySelector("[data-crm-message]");
+    if (field) {
+      adminState.crmMessageDrafts = { ...(adminState.crmMessageDrafts || {}), [customer.customerKey]: field.value };
+    }
+    adminState.crmEditingKey = adminState.crmEditingKey === customer.customerKey ? "" : customer.customerKey;
+    renderModuleContent();
+    if (adminState.crmEditingKey) document.querySelector("[data-crm-message]")?.focus();
+    return;
+  }
+
+  const sendLink = target.closest("[data-crm-send]");
+  if (sendLink) {
+    const customer = getSelectedCustomerCrmRecord();
+    const field = document.querySelector("[data-crm-message]");
+    if (customer && field) {
+      sendLink.href = buildCrmWhatsappUrl(customer, field.value);
+    }
+    return;
+  }
+
+  if (target.closest("[data-crm-full]")) {
+    const customer = getSelectedCustomerCrmRecord();
+    adminState.crmFullKey = customer && adminState.crmFullKey !== customer.customerKey ? customer.customerKey : "";
+    renderModuleContent();
+    return;
+  }
+
+  const tagButton = target.closest("[data-crm-tag]");
+  if (tagButton) {
+    const customer = getSelectedCustomerCrmRecord();
+    const tag = String(tagButton.dataset.crmTag || "").toLowerCase();
+    if (!customer || !tag) return;
+    const current = normalizeCustomerTags(customer.tags || []);
+    const notesField = document.querySelector("[data-crm-notes-form] textarea[name='notes']");
+    void saveCustomerProfile({
+      customerKey: customer.customerKey,
+      notes: notesField ? notesField.value.trim() : customer.notes || "",
+      tags: current.includes(tag) ? current.filter((entry) => entry !== tag) : [...current, tag],
+    });
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (adminState.activeSection !== "customers" || (event.key !== "Enter" && event.key !== " ")) return;
+  const row = event.target instanceof Element ? event.target.closest("tr[data-customer-key]") : null;
+  if (!row) return;
+  event.preventDefault();
+  row.click();
+});
+
+document.addEventListener("submit", (event) => {
+  const form = event.target instanceof Element ? event.target.closest("[data-crm-notes-form]") : null;
+  if (!form) return;
+  event.preventDefault();
+  const customer = getSelectedCustomerCrmRecord();
+  if (!customer) return;
+  void saveCustomerProfile({
+    customerKey: customer.customerKey,
+    notes: String(new FormData(form).get("notes") || "").trim(),
+    tags: customer.tags || [],
+  });
+});
+
+document.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target.matches("[data-crm-search]")) {
+    const caret = target.selectionStart;
+    adminState.customerFilters = { ...adminState.customerFilters, query: target.value };
+    rerenderCrm();
+    const field = document.querySelector("[data-crm-search]");
+    if (field) {
+      field.focus();
+      field.setSelectionRange(caret, caret);
+    }
+    return;
+  }
+  if (target.matches("[data-crm-message]")) {
+    const customer = getSelectedCustomerCrmRecord();
+    if (customer) {
+      adminState.crmMessageDrafts = { ...(adminState.crmMessageDrafts || {}), [customer.customerKey]: target.value };
+    }
+    return;
+  }
+  if (target.matches("[data-crm-template]")) {
+    adminState.crmCampaignTemplate = target.value;
+  }
+});
 
 const FIN_WEEKDAY_PAST = ["domingo passado", "segunda passada", "terça passada", "quarta passada", "quinta passada", "sexta passada", "sábado passado"];
 const FIN_PAYMENT_TONES = Object.freeze({ pix: "is-orange", cartao: "is-blue", dinheiro: "is-green", online_outros: "is-purple" });
