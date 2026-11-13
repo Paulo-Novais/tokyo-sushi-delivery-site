@@ -66,6 +66,8 @@
     current = state;
     document.body.dataset.phase = state.phase;
     $("#app-version").textContent = state.version ? `v${state.version}` : "";
+    document.querySelectorAll("[data-app-version]").forEach((node) => (node.textContent = state.version || ""));
+    renderUpdate(state, previous);
 
     // Abertura / sem conexão
     if (state.phase === "starting" || state.phase === "connecting") {
@@ -114,6 +116,65 @@
 
     requestAnimationFrame(reportStage);
   };
+
+  /* ---------- atualização do app ---------- */
+
+  const UPDATE_SHORT = {
+    available: () => "Atualizar",
+    downloading: (u) => `${u.progress || 0}%`,
+    installing: () => "Instalando…",
+    ready: () => "Baixado",
+  };
+
+  const UPDATE_LABELS = {
+    available: (u) => `Atualizar para ${u.latestVersion}`,
+    downloading: (u) => `Baixando ${u.progress || 0}%`,
+    installing: () => "Instalando…",
+    ready: () => "Atualização baixada",
+  };
+
+  const renderUpdate = (state, previous) => {
+    const update = state.update || {};
+    const label = UPDATE_LABELS[update.status];
+    const button = $("#update-btn");
+    button.hidden = !label;
+    button.dataset.status = update.status || "";
+    button.disabled = update.status !== "available";
+    if (label) {
+      $("#update-label").textContent = label(update);
+      $("#update-short").textContent = UPDATE_SHORT[update.status](update);
+      button.title = label(update);
+    }
+    const loginUpdate = $("#login-update");
+    loginUpdate.hidden = !label;
+    loginUpdate.textContent = label ? label(update) : "";
+    loginUpdate.disabled = update.status !== "available";
+    const before = previous?.update?.status;
+    if (before === "checking" && update.status === "uptodate") {
+      toast(`Você já está na versão mais recente (${state.version}).`);
+    } else if (before === "checking" && update.status === "available") {
+      toast(`Versão ${update.latestVersion} disponível. Clique em "Atualizar".`);
+    } else if (update.status === "error" && before !== "error") {
+      toast(update.message || "Não foi possível atualizar agora.", "error");
+    }
+  };
+
+  const updateDialog = $("#confirm-update");
+  const askUpdate = () => {
+    if (current?.update?.status !== "available") return;
+    $("#confirm-update-version").textContent = current.update.latestVersion;
+    pdv.setStageBounds({ x: 0, y: 0, width: 0, height: 0 });
+    updateDialog.showModal();
+  };
+  $("#update-btn").addEventListener("click", askUpdate);
+  $("#login-update").addEventListener("click", askUpdate);
+  updateDialog.addEventListener("close", () => {
+    reportStage();
+    if (updateDialog.returnValue === "ok") void pdv.installUpdate();
+  });
+  document.querySelectorAll("[data-update-check]").forEach((node) =>
+    node.addEventListener("click", () => void pdv.checkUpdate())
+  );
 
   const renderNav = (state) => {
     $("#nav-items").innerHTML = state.modules

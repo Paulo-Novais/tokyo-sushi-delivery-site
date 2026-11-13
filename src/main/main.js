@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("node:path");
+const { spawn } = require("node:child_process");
 const {
   BrowserWindow,
   Menu,
@@ -19,6 +20,7 @@ const { createApiClient } = require("./api-client");
 const { createConfig } = require("./config");
 const { createCredentialStore } = require("./credentials");
 const { createElectronCookieStore } = require("./electron-cookie-store");
+const { INSTALLER_ARGS, createUpdater } = require("./updater");
 const GESTOR_APP_CSS = require("./gestor-view.css.js");
 const {
   ALLOWED_GESTOR_SECTIONS,
@@ -91,6 +93,8 @@ const state = {
   restaurants: null,
   catalogAccess: "none",
   version: app.getVersion(),
+  // Botão "Atualizar": idle | checking | uptodate | available | downloading | installing | ready | error
+  update: { status: "idle", latestVersion: "", progress: 0, message: "" },
 };
 
 const publicState = () => ({
@@ -506,6 +510,89 @@ const startup = async () => {
   }
 };
 
+/* ---------------- Atualização do app ---------------- */
+
+const UPDATE_CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
+let updater = null;
+let updateBusy = false;
+
+const setUpdate = (patch) => setState({ update: { ...state.update, ...patch } });
+
+const initUpdater = () => {
+  const testing = !app.isPackaged;
+  try {
+    updater = createUpdater({
+      feedUrl: (testing && process.env.INOVAS_PDV_UPDATE_URL) || undefined,
+      currentVersion: app.getVersion(),
+      fetchImpl: (url, options) => net.fetch(url, options),
+      downloadDir: path.join(app.getPath("temp"), "inovas-pdv-update"),
+      allowLocal: testing,
+    });
+  } catch (error) {
+    debug("atualização desligada", error.message);
+    updater = null;
+  }
+};
+
+const checkForUpdate = async ({ manual = false } = {}) => {
+  if (!updater || updateBusy) return state.update;
+  if (["downloading", "installing", "ready"].includes(state.update.status)) return state.update;
+  if (manual) setUpdate({ status: "checking", message: "" });
+  try {
+    const result = await updater.check();
+    setUpdate({
+      status: result.available ? "available" : "uptodate",
+      latestVersion: result.latestVersion,
+      message: "",
+    });
+  } catch (error) {
+    debug("verificação de atualização falhou", error.code, error.message);
+    // Falha silenciosa na verificação automática; na manual, mostra o motivo.
+    setUpdate(manual ? { status: "error", message: error.message } : { status: state.update.latestVersion ? state.update.status : "idle" });
+  }
+  return state.update;
+};
+
+const installUpdate = async () => {
+  if (!updater || updateBusy) return state.update;
+  if (process.platform !== "win32" && process.env.INOVAS_PDV_UPDATE_DRY_RUN !== "1") {
+    setUpdate({ status: "error", message: "A atualização automática funciona só no Windows." });
+    return state.update;
+  }
+  updateBusy = true;
+  try {
+    const check = await updater.check();
+    if (!check.available) {
+      setUpdate({ status: "uptodate", latestVersion: check.latestVersion, message: "" });
+      return state.update;
+    }
+    setUpdate({ status: "downloading", latestVersion: check.latestVersion, progress: 0, message: "" });
+    let lastSent = -1;
+    const { filePath } = await updater.download((progress) => {
+      if (progress !== lastSent && (progress - lastSent >= 2 || progress === 100)) {
+        lastSent = progress;
+        setUpdate({ progress });
+      }
+    });
+    if (!app.isPackaged && process.env.INOVAS_PDV_UPDATE_DRY_RUN === "1") {
+      // Testes: baixou e conferiu, mas não roda o instalador.
+      setUpdate({ status: "ready", progress: 100, message: filePath });
+      return state.update;
+    }
+    setUpdate({ status: "installing", progress: 100 });
+    // O instalador roda sozinho (silencioso), substitui o app e abre de novo.
+    // A sessão e o login guardado ficam na pasta do usuário e não são apagados.
+    const child = spawn(filePath, INSTALLER_ARGS, { detached: true, stdio: "ignore" });
+    child.unref();
+    setTimeout(() => app.quit(), 500);
+  } catch (error) {
+    setUpdate({ status: "error", message: error.message || "Não foi possível atualizar." });
+  } finally {
+    updateBusy = false;
+  }
+  return state.update;
+};
+
 /* ---------------- Atalhos ---------------- */
 
 const setZoom = (factor) => {
@@ -588,6 +675,9 @@ const registerIpc = () => {
   });
 
   handle("pdv:open", ({ moduleId, routeId }) => openModule(moduleId, routeId));
+
+  handle("pdv:update:check", () => checkForUpdate({ manual: true }));
+  handle("pdv:update:install", () => installUpdate());
 
   handle("pdv:reload", () => {
     reloadActiveModule();
@@ -770,6 +860,9 @@ app.whenReady().then(async () => {
     void startup();
   });
   sessionTimer = setInterval(() => void checkSession(), SESSION_CHECK_MS);
+  initUpdater();
+  setTimeout(() => void checkForUpdate(), Number(process.env.INOVAS_PDV_UPDATE_FIRST_CHECK_MS || 20000));
+  setInterval(() => void checkForUpdate(), UPDATE_CHECK_EVERY_MS);
   powerMonitor.on("resume", () => void checkSession());
   powerMonitor.on("unlock-screen", () => void checkSession());
 });

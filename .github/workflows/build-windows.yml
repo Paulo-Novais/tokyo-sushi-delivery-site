@@ -1,6 +1,6 @@
 # Gera o instalador do INOVAS PDV para Windows (NSIS) num computador Windows do GitHub.
 # Roda os testes unitários antes. Não publica nada: o instalador fica como
-# artefato da execução (aba Actions), para baixar e testar. Branches fix/** geram
+# artefato da execução (aba Actions), para baixar e testar. Branches fix/** e feat/** geram
 # instaladores de teste.
 # Publicar para clientes (Releases / botão do site) precisa de GO do Paulo.
 name: Instalador Windows
@@ -8,7 +8,7 @@ name: Instalador Windows
 on:
   workflow_dispatch:
   push:
-    branches: ["app-pdv", "fix/**"]
+    branches: ["app-pdv", "fix/**", "feat/**"]
     tags: ["v*"]
 
 permissions:
@@ -26,12 +26,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run dist:win
-      - name: Nome fixo do instalador
-        shell: pwsh
-        run: Copy-Item (Get-ChildItem dist/INOVAS-PDV-Setup-*.exe | Select-Object -First 1).FullName dist/INOVAS-PDV-Setup.exe
+      # dist:win também gera dist/latest.yml (scripts/update-manifest.js).
       - uses: actions/upload-artifact@v4
         with:
           name: INOVAS-PDV-Setup
-          path: dist/INOVAS-PDV-Setup.exe
+          path: |
+            dist/INOVAS-PDV-Setup.exe
+            dist/latest.yml
           if-no-files-found: error
           retention-days: 30

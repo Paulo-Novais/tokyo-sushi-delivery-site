@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("pdv", {
   listCatalog: () => ipcRenderer.invoke("pdv:catalog:list"),
   setAvailability: (itemId, state) => ipcRenderer.invoke("pdv:catalog:set", { itemId, state }),
   setStageBounds: (rect) => ipcRenderer.send("pdv:stage-bounds", rect),
+  checkUpdate: () => ipcRenderer.invoke("pdv:update:check"),
+  installUpdate: () => ipcRenderer.invoke("pdv:update:install"),
   onState: (callback) => {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on("pdv:state", listener);

@@ -68,6 +68,26 @@ Atalhos: F5 recarrega a tela; Ctrl + / Ctrl − / Ctrl 0 ajustam o zoom das tela
 Não precisa de senha de administrador: instala só para o usuário do Windows que rodou o instalador.
 Para remover: Configurações do Windows → Aplicativos → INOVAS PDV → Desinstalar.
 
+## Atualizar o app (botão "Atualizar")
+
+O app procura versão nova ao abrir e a cada 6 horas. Quando há, aparece no topo o botão **"Atualizar para X"**.
+O operador clica, confirma e o app baixa, confere e instala a versão nova, abrindo de novo sozinho.
+O app nunca instala sem o clique, para não interromper uma comanda.
+Também dá para conferir na hora em **"Verificar atualização"** (rodapé do menu e da tela de login).
+
+**Como publicar uma versão nova**
+1. Suba a versão no `package.json` (ex.: 0.2.0 → 0.2.1).
+2. Envie para a branch `app-pdv`. O GitHub Actions gera `INOVAS-PDV-Setup.exe` e `latest.yml`.
+3. No Release `gestor-pdv` do GitHub, troque **os dois arquivos** pelos novos.
+
+O botão "Baixar Gestor" do site usa o mesmo `INOVAS-PDV-Setup.exe`, então o site também passa a entregar a versão nova.
+
+**Segurança:** o app só baixa do Release do GitHub e confere o tamanho e o sha512 do `latest.yml` antes de instalar.
+Arquivo diferente é descartado. Enquanto o instalador não for assinado, isso garante que o arquivo é o publicado, mas não quem publicou.
+Nos PCs com o Controle Inteligente de Aplicativos do Windows ligado, a atualização é bloqueada como a instalação.
+
+**Primeira vez:** quem está com a versão 0.1.x (sem o botão) precisa instalar a 0.2.0 manualmente uma vez.
+
 ## Gerar o instalador
 
 ```bash

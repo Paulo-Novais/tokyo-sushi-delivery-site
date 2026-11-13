@@ -75,7 +75,11 @@
           <button type="button" class="btn" id="server-save">Salvar</button>
         </div>
       </form>
-      <footer class="login-foot">INOVAS PDV <span id="app-version"></span></footer>
+      <footer class="login-foot">
+        INOVAS PDV <span id="app-version"></span> ·
+        <button type="button" class="link" data-update-check>Verificar atualização</button>
+        <button type="button" class="link" id="login-update" hidden></button>
+      </footer>
     </div>
   </section>
 
@@ -86,6 +90,11 @@
       <span class="pill">PDV</span>
       <span class="top-restaurant" id="top-restaurant"></span>
       <span class="grow"></span>
+      <button type="button" class="btn btn-update" id="update-btn" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+        <span id="update-label" class="long">Atualizar</span>
+        <span id="update-short" class="short">Atualizar</span>
+      </button>
       <span class="conn" id="conn" data-state="ok"><i></i><span id="conn-label">Conectado neste computador</span></span>
       <div class="operator">
         <div class="avatar" id="op-initials">?</div>
@@ -101,6 +110,10 @@
       <nav class="side" aria-label="Menu do PDV">
         <div id="nav-items"></div>
         <p class="side-foot">Painel, relatórios, financeiro e configurações ficam no Gestor (site), só para dono e gerente.</p>
+        <p class="side-version">
+          <span>Versão <b data-app-version></b></span>
+          <button type="button" class="link" data-update-check>Verificar atualização</button>
+        </p>
       </nav>
 
       <main class="main">
@@ -148,6 +161,17 @@
       <div class="confirm-actions">
         <button type="submit" value="cancel" class="btn">Cancelar</button>
         <button type="submit" value="ok" class="btn btn-primary">Sair</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm" id="confirm-update">
+    <form method="dialog">
+      <h2>Atualizar o app para a versão <span id="confirm-update-version"></span>?</h2>
+      <p>O app baixa a versão nova, fecha, instala e abre de novo sozinho. Leva cerca de 1 a 2 minutos. Termine a comanda ou o pagamento em andamento antes. Você continua conectado.</p>
+      <div class="confirm-actions">
+        <button type="submit" value="cancel" class="btn">Agora não</button>
+        <button type="submit" value="ok" class="btn btn-primary">Atualizar agora</button>
       </div>
     </form>
   </dialog>
