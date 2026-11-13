@@ -312,26 +312,24 @@ const runValidation = async () => {
       );
     }
 
-    await assertRejectsWithCode(
-      "rate limit de login",
-      () =>
-        guardSecurity(
-          buildReq({
-            url: "/api/admin/login",
-            method: "POST",
-            tenantContext: defaultTenant,
-            ip: "10.0.0.10",
-          }),
-          {
-            routeType: "admin-auth",
-            group: "auth",
-            action: "login",
-            requireTenant: true,
-            requireSession: false,
-          }
-        ),
-      "security_rate_limited"
+    // Login da equipe sem limite de tentativas (decisão do Paulo, 13/11/2026):
+    // a sexta tentativa seguida continua liberada.
+    const sixthLogin = await guardSecurity(
+      buildReq({
+        url: "/api/admin/login",
+        method: "POST",
+        tenantContext: defaultTenant,
+        ip: "10.0.0.10",
+      }),
+      {
+        routeType: "admin-auth",
+        group: "auth",
+        action: "login",
+        requireTenant: true,
+        requireSession: false,
+      }
     );
+    assert.equal(sixthLogin.allowed, true, "login da equipe nao deveria ter limite de tentativas");
 
     resetSecurityGuardianForTests();
     const auditReq = buildReq({
