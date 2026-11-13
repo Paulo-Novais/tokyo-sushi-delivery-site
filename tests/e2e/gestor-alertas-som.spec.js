@@ -34,7 +34,10 @@ test("Alertas de som: novo pedido, atrasado e preferências", async ({ page }) =
 
   // Antes do primeiro clique o navegador bloqueia som: aparece o aviso para liberar.
   await expect(page.locator("[data-order-alert-unlock]")).toBeVisible();
-  await page.locator('.admin-nav [data-admin-section="orders"]').first().click();
+  // Primeiro clique do operador: no próprio aviso de som. (Pedidos saiu do menu
+  // do navegador; a tela abre pelo botão escondido, como no app INOVAS PDV.)
+  await page.locator("[data-order-alert-unlock]").click();
+  await page.evaluate(() => document.querySelector('.admin-nav [data-admin-section="orders"]').click());
   await page.waitForSelector(".gx-ticket");
   await expect(page.locator("[data-order-alert-unlock]")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.__tones.length)).toBe(0);

@@ -38,7 +38,9 @@ const openOrders = async (page, theme = "light") => {
   await page.locator('input[name="password"]').fill(restaurant.ownerPassword);
   await page.locator("[data-admin-login-submit]").click();
   await page.waitForLoadState("networkidle");
-  await page.locator('.admin-nav [data-admin-section="orders"]').first().click();
+  // Pedidos saiu do menu do navegador (fica no app INOVAS PDV); o botão continua
+  // na página, escondido, e o app troca de tela clicando nele.
+  await page.evaluate(() => document.querySelector('.admin-nav [data-admin-section="orders"]').click());
   await page.waitForSelector(".gx-ticket");
   await page.waitForTimeout(400);
 };

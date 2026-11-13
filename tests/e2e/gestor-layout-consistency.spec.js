@@ -37,6 +37,14 @@ const measure = () => {
   };
 };
 
+// Pedidos e Caixa saíram do menu do navegador (ficam no app INOVAS PDV): o botão
+// continua na página, escondido, e é clicado como o app faz.
+const openSection = async (page, key) => {
+  const button = page.locator(`.admin-nav [data-admin-section="${key}"]`);
+  if (await button.isVisible()) await button.click();
+  else await button.evaluate((node) => node.click());
+};
+
 test("Gestor: menu e conteúdo com as mesmas medidas em todas as páginas", async ({ page }) => {
   test.setTimeout(240_000);
   const master = await loginMaster();
@@ -61,7 +69,7 @@ test("Gestor: menu e conteúdo com as mesmas medidas em todas as páginas", asyn
       const current = await page.evaluate(() => document.body.dataset.adminTheme);
       if (current !== theme) await page.locator("[data-admin-theme-toggle]").click();
       for (const section of ["dashboard", "cash-register", "orders", "menu", "finance", "settings"]) {
-        await page.locator(`.admin-nav [data-admin-section="${section}"]`).click();
+        await openSection(page, section);
         await page.waitForTimeout(500);
         rows.push({ theme, page: section, ...(await page.evaluate(measure)) });
       }

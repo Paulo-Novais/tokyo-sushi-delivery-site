@@ -26,6 +26,14 @@ const SECTIONS = [
   ["configuracoes", "settings"],
 ];
 
+// Pedidos e Caixa saíram do menu do navegador (ficam no app INOVAS PDV): o botão
+// continua na página, escondido, e é clicado como o app faz.
+const openSection = async (page, key) => {
+  const button = page.locator(`.admin-nav [data-admin-section="${key}"]`);
+  if (await button.isVisible()) await button.click();
+  else await button.evaluate((node) => node.click());
+};
+
 test("Gestor: todas as áreas abrem sem erro e sem rolagem lateral", async ({ page }) => {
   test.setTimeout(180_000);
   const errors = [];
@@ -47,7 +55,7 @@ test("Gestor: todas as áreas abrem sem erro e sem rolagem lateral", async ({ pa
     await page.waitForLoadState("networkidle");
 
     for (const [name, key] of SECTIONS) {
-      await page.locator(`.admin-nav [data-admin-section="${key}"]`).click();
+      await openSection(page, key);
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(400);
       for (const [width, height] of [[1366, 768], [1024, 768]]) {

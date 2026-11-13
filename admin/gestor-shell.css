@@ -8587,3 +8587,13 @@ html body.admin-body.admin-body .gx-crm-campaign-list small { color: var(--gx-in
 .support-access-banner button:focus-visible {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* Pedidos e Caixa ficam no app INOVAS PDV (Gestor desktop). No navegador eles
+   saem do menu, mas os botões continuam na página: o app troca de tela clicando
+   neles (com o menu inteiro escondido) e o aviso "Ver pedido" também. O
+   endereço direto (/admin/?section=orders, /admin/caixa/...) continua abrindo. */
+html body.admin-body.admin-body .admin-nav .admin-nav-item[data-admin-section="orders"],
+html body.admin-body.admin-body .admin-nav .admin-nav-item[data-admin-section="cash-register"],
+html body.admin-body.admin-body .admin-nav .admin-nav-submenu {
+  display: none !important;
+}

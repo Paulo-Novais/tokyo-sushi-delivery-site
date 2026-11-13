@@ -603,7 +603,9 @@ const openOrdersSection = async (page, expectedPreparingCount) => {
     return;
   }
 
-  await page.locator('[data-admin-section="orders"]').click();
+  // Pedidos saiu do menu do navegador (fica no app INOVAS PDV); o botão segue
+  // na página, escondido, e o app troca de tela clicando nele.
+  await page.evaluate(() => document.querySelector('.admin-nav [data-admin-section="orders"]').click());
   await waitForOrdersSection(page, expectedPreparingCount);
 };
 
