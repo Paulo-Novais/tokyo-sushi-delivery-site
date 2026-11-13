@@ -31,14 +31,21 @@ const has = (permissions, permission) =>
 const MODULE_IDS = Object.freeze(["pedidos", "caixa", "comandas", "cardapio"]);
 
 // Telas do Gestor que cada módulo abre. Caminhos relativos ao servidor.
+// `section` é a seção do Gestor (body[data-admin-section]) e `cashView` a tela
+// do Caixa (window.InovasCashRegister.getView()). Com a página já aberta, o app
+// troca de tela usando os próprios botões do Gestor, sem recarregar.
 const MODULE_ROUTES = Object.freeze({
-  pedidos: Object.freeze([{ id: "fila", label: "Fila de pedidos", path: "/admin/?section=orders" }]),
-  caixa: Object.freeze([
-    { id: "salao", label: "Salão", path: "/admin/caixa/salao" },
-    { id: "abertura", label: "Abertura", path: "/admin/caixa/abertura" },
-    { id: "fechamento", label: "Fechamento", path: "/admin/caixa/fechamento" },
+  pedidos: Object.freeze([
+    { id: "fila", label: "Fila de pedidos", path: "/admin/?section=orders", section: "orders", cashView: "" },
   ]),
-  comandas: Object.freeze([{ id: "mesas", label: "Mesas e comandas", path: "/admin/caixa/salao" }]),
+  caixa: Object.freeze([
+    { id: "salao", label: "Salão", path: "/admin/caixa/salao", section: "cash-register", cashView: "floor" },
+    { id: "abertura", label: "Abertura", path: "/admin/caixa/abertura", section: "cash-register", cashView: "opening" },
+    { id: "fechamento", label: "Fechamento", path: "/admin/caixa/fechamento", section: "cash-register", cashView: "closing" },
+  ]),
+  comandas: Object.freeze([
+    { id: "mesas", label: "Mesas e comandas", path: "/admin/caixa/salao", section: "cash-register", cashView: "floor" },
+  ]),
   cardapio: Object.freeze([]),
 });
 
@@ -95,6 +102,34 @@ const routeFor = (moduleId, routeId) => {
 // Seções do Gestor que podem aparecer dentro do app. Qualquer outra (painel,
 // financeiro, relatórios...) faz o app voltar para Pedidos.
 const ALLOWED_GESTOR_SECTIONS = Object.freeze(["orders", "cash-register", "scheduled"]);
+
+const ALLOWED_CASH_VIEWS = Object.freeze(["floor", "opening", "closing"]);
+
+// Script que roda na página do Gestor já carregada para trocar de tela com os
+// botões do próprio Gestor (menu lateral, escondido no app) e a API pública do
+// Caixa (window.InovasCashRegister.setView). Não muda regra de negócio: faz o
+// mesmo que o operador faria clicando no menu do Gestor no navegador.
+// Devolve "ok" ou "missing" (botão/API ainda não existe: o app recarrega a URL).
+const buildInPageSwitchScript = (route) => {
+  const section = String(route?.section || "");
+  const cashView = String(route?.cashView || "");
+  if (!ALLOWED_GESTOR_SECTIONS.includes(section)) throw new Error(`Seção não permitida: ${section}`);
+  if (cashView && !ALLOWED_CASH_VIEWS.includes(cashView)) throw new Error(`Tela do Caixa inválida: ${cashView}`);
+  return `(() => {
+  const body = document.body;
+  if (!body) return "missing";
+  if (body.dataset.adminSection !== ${JSON.stringify(section)}) {
+    const button = document.querySelector('[data-admin-nav] [data-admin-section=${JSON.stringify(section)}]');
+    if (!button) return "missing";
+    button.click();
+    if (body.dataset.adminSection !== ${JSON.stringify(section)}) return "missing";
+  }
+  ${cashView ? `const cash = window.InovasCashRegister;
+  if (!cash) return "missing";
+  if (cash.getView() !== ${JSON.stringify(cashView)}) cash.setView(${JSON.stringify(cashView)});` : ""}
+  return "ok";
+})()`;
+};
 
 const ALLOWED_GESTOR_PATHS = Object.freeze([
   "/admin",
@@ -164,7 +199,9 @@ const isCatalogImagePath = (path) =>
   !path.includes("..");
 
 module.exports = {
+  ALLOWED_CASH_VIEWS,
   ALLOWED_GESTOR_SECTIONS,
+  buildInPageSwitchScript,
   MODULE_HINTS,
   MODULE_IDS,
   MODULE_ROUTES,

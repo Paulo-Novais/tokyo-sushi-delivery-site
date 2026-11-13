@@ -145,7 +145,17 @@ const createApiClient = ({ getServerUrl, cookieStore, fetchImpl = globalThis.fet
     if (!restaurantResult.ok || restaurantResult.data?.authenticated !== true || !session) {
       return { authenticated: false };
     }
+    // Contexto do restaurante explícito: sem restaurante na sessão, o app não
+    // entra (nunca assume um restaurante padrão).
+    if (!String(session.restaurantKey || "").trim()) {
+      return { authenticated: false, reason: "missing_tenant" };
+    }
     const admin = adminResult.ok && adminResult.data?.authenticated ? adminResult.data.admin || {} : {};
+    // As duas rotas precisam falar do MESMO restaurante.
+    const adminKey = String(admin.tenantContext?.restaurantKey || admin.restaurantKey || "").trim();
+    if (adminKey && adminKey !== String(session.restaurantKey).trim()) {
+      return { authenticated: false, reason: "tenant_mismatch" };
+    }
     const displayName = session.displayName || admin.displayName || session.login || "";
     return {
       authenticated: true,
@@ -154,7 +164,7 @@ const createApiClient = ({ getServerUrl, cookieStore, fetchImpl = globalThis.fet
         displayName,
         role: String(session.role || "").toUpperCase(),
         roleLabel: roleLabel(session.role),
-        restaurantKey: session.restaurantKey || admin.restaurantKey || "",
+        restaurantKey: String(session.restaurantKey).trim(),
         restaurantName: admin.restaurantName || admin.restaurant || session.restaurantKey || "",
         expiresAt: session.expiresAt || adminResult.data?.expiresAt || null,
         permissions: Array.isArray(session.effectivePermissions) ? session.effectivePermissions : [],

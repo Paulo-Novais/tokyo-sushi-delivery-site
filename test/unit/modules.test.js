@@ -114,3 +114,26 @@ test("rotas dos módulos apontam para telas existentes do Gestor", () => {
     }
   }
 });
+
+test("cada tela do app diz qual seção do Gestor e qual tela do Caixa ela é", () => {
+  for (const [moduleId, routes] of Object.entries(m.MODULE_ROUTES)) {
+    for (const route of routes) {
+      assert.ok(m.ALLOWED_GESTOR_SECTIONS.includes(route.section), `${moduleId}/${route.id}`);
+      if (route.section === "cash-register") assert.ok(m.ALLOWED_CASH_VIEWS.includes(route.cashView), route.id);
+      else assert.equal(route.cashView, "");
+    }
+  }
+  assert.equal(m.routeFor("caixa", "abertura").cashView, "opening");
+  assert.equal(m.routeFor("comandas").cashView, "floor");
+});
+
+test("troca de tela na página só aceita seções do app", () => {
+  const script = m.buildInPageSwitchScript(m.routeFor("caixa", "fechamento"));
+  assert.match(script, /data-admin-section="cash-register"/);
+  assert.match(script, /setView\("closing"\)/);
+  const orders = m.buildInPageSwitchScript(m.routeFor("pedidos"));
+  assert.doesNotMatch(orders, /InovasCashRegister/);
+  assert.throws(() => m.buildInPageSwitchScript({ section: "finance", cashView: "" }), /não permitida/);
+  assert.throws(() => m.buildInPageSwitchScript({ section: "dashboard" }), /não permitida/);
+  assert.throws(() => m.buildInPageSwitchScript({ section: "cash-register", cashView: '"); alert(1); ("' }), /inválida/);
+});

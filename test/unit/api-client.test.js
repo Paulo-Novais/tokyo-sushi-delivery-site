@@ -192,3 +192,22 @@ test("lista do cardápio vem enxuta (sem descrição)", async () => {
     { id: "s1", title: "Hot rolls", items: [{ id: "hot", name: "Hot Roll", category: "Hot", price: 19.99, image: "./site-images/x.webp", availabilityState: "paused" }] },
   ]);
 });
+
+test("sessão sem restaurante não entra no app (nunca assume um restaurante padrão)", async () => {
+  const { api } = client({
+    "GET /api/auth/restaurant/session": () =>
+      response(200, { success: true, authenticated: true, data: { session: { login: "a", role: "CASHIER", effectivePermissions: [] } } }),
+    "GET /api/admin/session": () => response(200, { authenticated: true, admin: { restaurantName: "Tokyo Sushi" } }),
+  });
+  assert.deepEqual(await api.fetchSession(), { authenticated: false, reason: "missing_tenant" });
+});
+
+test("sessões de restaurantes diferentes são recusadas", async () => {
+  const { api } = client({
+    "GET /api/auth/restaurant/session": () =>
+      response(200, { success: true, authenticated: true, data: { session: { login: "a", role: "CASHIER", restaurantKey: "restaurante-a", effectivePermissions: [] } } }),
+    "GET /api/admin/session": () =>
+      response(200, { authenticated: true, admin: { restaurantKey: "default", tenantContext: { restaurantKey: "tokyo" } } }),
+  });
+  assert.deepEqual(await api.fetchSession(), { authenticated: false, reason: "tenant_mismatch" });
+});

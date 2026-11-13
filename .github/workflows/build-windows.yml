@@ -1,13 +1,14 @@
 # Gera o instalador do INOVAS PDV para Windows (NSIS) num computador Windows do GitHub.
 # Roda os testes unitários antes. Não publica nada: o instalador fica como
-# artefato da execução (aba Actions), para baixar e testar.
+# artefato da execução (aba Actions), para baixar e testar. Branches fix/** geram
+# instaladores de teste.
 # Publicar para clientes (Releases / botão do site) precisa de GO do Paulo.
 name: Instalador Windows
 
 on:
   workflow_dispatch:
   push:
-    branches: ["app-pdv"]
+    branches: ["app-pdv", "fix/**"]
     tags: ["v*"]
 
 permissions:

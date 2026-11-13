@@ -1,35 +1,26 @@
 "use strict";
 
 // Roda dentro das telas do Gestor abertas no app. Não expõe nada para a página:
-// só avisa o app em qual seção do Gestor a tela está, para o app voltar para
-// Pedidos se alguém chegar ao painel, financeiro, relatórios etc.
-//
-// Ao abrir, o Gestor passa rapidamente por outras seções antes de chegar na
-// pedida (ex.: "users" por um instante ao abrir o Caixa). Por isso só avisamos
-// depois que a seção fica parada por um tempo.
+// só avisa o app em qual seção do Gestor a tela está (body[data-admin-section]).
+// Quem decide é o processo principal (src/main/main.js, scheduleSectionCheck):
+// ele só age depois que a página recebeu a sessão do Gestor, porque antes disso
+// o Gestor passa por seções provisórias (ex.: "users") enquanto carrega.
 const { ipcRenderer } = require("electron");
 
-const SETTLE_MS = 1200;
-let lastReported = null;
-let timer = null;
+let lastSection = null;
 
-const read = () => (document.body && document.body.dataset.adminSection) || "";
-
-const schedule = () => {
-  clearTimeout(timer);
-  timer = setTimeout(() => {
-    const section = read();
-    if (section !== lastReported) {
-      lastReported = section;
-      ipcRenderer.send("gestor:section", section);
-    }
-  }, SETTLE_MS);
+const report = () => {
+  const section = (document.body && document.body.dataset.adminSection) || "";
+  if (section !== lastSection) {
+    lastSection = section;
+    ipcRenderer.send("gestor:section", section);
+  }
 };
 
 window.addEventListener("DOMContentLoaded", () => {
-  schedule();
+  report();
   if (document.body) {
-    new MutationObserver(schedule).observe(document.body, {
+    new MutationObserver(report).observe(document.body, {
       attributes: true,
       attributeFilter: ["data-admin-section"],
     });

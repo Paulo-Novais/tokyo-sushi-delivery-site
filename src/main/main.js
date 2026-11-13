@@ -24,6 +24,7 @@ const {
   ALLOWED_GESTOR_SECTIONS,
   MODULE_HINTS,
   MODULE_ROUTES,
+  buildInPageSwitchScript,
   buildModules,
   catalogAccess,
   classifyGestorNavigation,
@@ -62,6 +63,13 @@ let api;
 let gestorSession;
 let mainWindow = null;
 let gestorView = null;
+// O que está carregado na tela do Gestor e se ela já terminou de abrir.
+// "Pronta" = a página atual já recebeu a resposta de /api/admin/session. Antes
+// disso o Gestor passa por seções provisórias (ex.: "users") enquanto não sabe
+// as permissões; o vigia de seções não pode agir nesse intervalo.
+const gestorPage = { route: null, ready: false, section: "" };
+let sectionCheckTimer = null;
+const SECTION_SETTLE_MS = 1500;
 let stageBounds = { x: 0, y: 0, width: 0, height: 0 };
 let sessionTimer = null;
 let offlineTimer = null;
@@ -126,11 +134,6 @@ const syncGestorVisibility = () => {
   if (visible) gestorView.setBounds(stageBounds);
 };
 
-const gestorUrlFor = (moduleId, routeId) => {
-  const route = routeFor(moduleId, routeId);
-  return route ? `${config.getServerUrl()}${route.path}` : null;
-};
-
 const destroyGestorView = () => {
   if (!gestorView) return;
   try {
@@ -144,6 +147,10 @@ const destroyGestorView = () => {
     // ignora
   }
   gestorView = null;
+  gestorPage.route = null;
+  gestorPage.ready = false;
+  gestorPage.section = "";
+  clearTimeout(sectionCheckTimer);
 };
 
 const openExternalIfAllowed = (rawUrl) => {
@@ -193,6 +200,14 @@ const createGestorView = () => {
   };
   contents.on("will-navigate", guard);
   contents.on("will-redirect", guard);
+  contents.on("did-start-navigation", (details) => {
+    // Electron 45: o primeiro argumento traz isMainFrame e isSameDocument.
+    if (details && details.isMainFrame && !details.isSameDocument) {
+      gestorPage.ready = false;
+      gestorPage.section = "";
+      clearTimeout(sectionCheckTimer);
+    }
+  });
   contents.on("did-navigate", (_event, url) => {
     debug("did-navigate", url);
     const verdict = classifyGestorNavigation(url, config.getServerUrl());
@@ -203,9 +218,11 @@ const createGestorView = () => {
     openExternalIfAllowed(url);
     return { action: "deny" };
   });
-  contents.on("dom-ready", () => {
-    void contents.insertCSS(GESTOR_APP_CSS, { cssOrigin: "user" }).catch(() => {});
-  });
+  // CSS do app: aplicado logo que a página nova começa (did-navigate) e de
+  // novo no dom-ready, para os indicadores do painel nunca piscarem na tela.
+  const applyAppCss = () => void contents.insertCSS(GESTOR_APP_CSS, { cssOrigin: "user" }).catch(() => {});
+  contents.on("did-navigate", applyAppCss);
+  contents.on("dom-ready", applyAppCss);
   contents.on("did-fail-load", (_event, errorCode, _description, _url, isMainFrame) => {
     if (isMainFrame && errorCode !== -3 /* ABORTED */) {
       setState({ connection: "offline" });
@@ -224,39 +241,84 @@ const createGestorView = () => {
   });
   contents.on("render-process-gone", () => {
     setTimeout(() => {
-      if (gestorView && state.phase === "app" && isGestorModule(state.activeModule)) {
-        void contents.loadURL(gestorUrlFor(state.activeModule, state.activeRoute));
-      }
+      if (gestorView && state.phase === "app") reloadActiveModule();
     }, 1000);
   });
   contents.on("before-input-event", (event, input) => handleShortcut(event, input));
   return gestorView;
 };
 
+const sameRoute = (a, b) => Boolean(a && b && a.section === b.section && a.cashView === b.cashView);
+
+const loadGestorRoute = async (view, route) => {
+  gestorPage.route = route;
+  await view.webContents.loadURL(`${config.getServerUrl()}${route.path}`).catch(() => {});
+};
+
+// Troca a tela do Gestor. Com a página já aberta e pronta, usa os botões do
+// próprio Gestor (sem recarregar: Pedidos não perde o estado). Só recarrega a
+// URL quando a página ainda não existe, ainda está abrindo, saiu das telas do
+// app ou quando `force` é pedido.
+const showGestorRoute = async (route, { force = false } = {}) => {
+  const view = createGestorView();
+  const current = view.webContents.getURL();
+  const pageOk = current && classifyGestorNavigation(current, config.getServerUrl()) === "allow";
+  if (force || !pageOk) {
+    await loadGestorRoute(view, route);
+    return;
+  }
+  if (sameRoute(gestorPage.route, route)) return;
+  if (!gestorPage.ready) {
+    // Ainda abrindo: os botões do Gestor não existem. Abre direto a tela pedida.
+    await loadGestorRoute(view, route);
+    return;
+  }
+  let result = "missing";
+  try {
+    result = await view.webContents.executeJavaScript(buildInPageSwitchScript(route), true);
+  } catch {
+    result = "missing";
+  }
+  debug("troca na página", route.section, route.cashView || "", result);
+  if (result === "ok") {
+    gestorPage.route = route;
+    gestorPage.section = route.section;
+  } else {
+    await loadGestorRoute(view, route);
+  }
+};
+
 const openModule = async (moduleId, routeId, { force = false } = {}) => {
-  debug("openModule", moduleId, routeId || "");
+  debug("openModule", moduleId, routeId || "", force ? "(force)" : "");
   const target = state.modules.find((module) => module.id === moduleId);
   if (!target || !target.available) return publicState();
   const route = routeFor(moduleId, routeId);
-  const previousUrl = isGestorModule(state.activeModule)
-    ? gestorUrlFor(state.activeModule, state.activeRoute)
-    : null;
   setState({ activeModule: moduleId, activeRoute: route ? route.id : null });
-  if (isGestorModule(moduleId)) {
-    const view = createGestorView();
-    const url = gestorUrlFor(moduleId, route.id);
-    const current = view.webContents.getURL();
-    if (
-      force ||
-      !current ||
-      url !== previousUrl ||
-      classifyGestorNavigation(current, config.getServerUrl()) !== "allow"
-    ) {
-      await view.webContents.loadURL(url).catch(() => {});
-    }
+  if (isGestorModule(moduleId) && route) {
+    await showGestorRoute(route, { force });
     syncGestorVisibility();
   }
   return publicState();
+};
+
+const reloadActiveModule = () => {
+  if (!gestorView || !isGestorModule(state.activeModule)) return;
+  const route = routeFor(state.activeModule, state.activeRoute);
+  if (route) void loadGestorRoute(gestorView, route);
+};
+
+// Vigia de seções: se, com a página pronta, o Gestor ficar numa seção fora do
+// app (painel, financeiro, usuários...), volta para o primeiro módulo.
+const scheduleSectionCheck = () => {
+  clearTimeout(sectionCheckTimer);
+  sectionCheckTimer = setTimeout(() => {
+    if (!gestorView || !gestorPage.ready || state.phase !== "app") return;
+    const section = gestorPage.section;
+    if (section && !ALLOWED_GESTOR_SECTIONS.includes(section)) {
+      debug("seção fora do app", section);
+      void openModule(firstAvailableModule(state.modules), null, { force: true });
+    }
+  }, SECTION_SETTLE_MS);
 };
 
 /* ---------------- Sessão ---------------- */
@@ -275,9 +337,7 @@ const applySession = async (sessionInfo, { keepModule = false } = {}) => {
     catalogAccess: catalogAccess(user.permissions),
   });
   if (keep) {
-    if (isGestorModule(state.activeModule) && gestorView) {
-      gestorView.webContents.reload();
-    }
+    reloadActiveModule();
   } else {
     await openModule(firstAvailableModule(modules));
   }
@@ -405,9 +465,7 @@ const scheduleOfflineRetry = () => {
       await startup();
     } else if (state.phase === "app" && state.connection === "offline") {
       await checkSession();
-      if (state.connection === "ok" && gestorView && isGestorModule(state.activeModule)) {
-        gestorView.webContents.reload();
-      }
+      if (state.connection === "ok") reloadActiveModule();
     }
   }, OFFLINE_RETRY_MS);
 };
@@ -461,7 +519,7 @@ const handleShortcut = (event, input) => {
   const ctrl = input.control || input.meta;
   if (input.key === "F5" || (ctrl && input.key.toLowerCase() === "r")) {
     event.preventDefault();
-    gestorView?.webContents.reload();
+    reloadActiveModule();
   } else if (ctrl && (input.key === "=" || input.key === "+")) {
     event.preventDefault();
     setZoom((Number(config.get("zoom", 1)) || 1) + 0.1);
@@ -532,7 +590,7 @@ const registerIpc = () => {
   handle("pdv:open", ({ moduleId, routeId }) => openModule(moduleId, routeId));
 
   handle("pdv:reload", () => {
-    gestorView?.webContents.reload();
+    reloadActiveModule();
     return true;
   });
 
@@ -594,10 +652,9 @@ const registerIpc = () => {
 
   ipcMain.on("gestor:section", (event, section) => {
     if (!gestorView || event.sender !== gestorView.webContents) return;
-    debug("gestor:section", section);
-    if (section && !ALLOWED_GESTOR_SECTIONS.includes(section)) {
-      void openModule(firstAvailableModule(state.modules), null, { force: true });
-    }
+    debug("gestor:section", section, gestorPage.ready ? "(pronta)" : "(abrindo)");
+    gestorPage.section = String(section || "");
+    scheduleSectionCheck();
   });
 };
 
@@ -684,6 +741,23 @@ app.whenReady().then(async () => {
   gestorSession.setPermissionRequestHandler((_contents, permission, callback) => {
     // O Gestor só precisa tocar som (autoplay não pede permissão) e imprimir.
     callback(["clipboard-sanitized-write", "fullscreen"].includes(permission));
+  });
+  // A tela do Gestor fica "pronta" quando a página atual recebe a resposta da
+  // sessão. Só então o vigia de seções pode agir (veja scheduleSectionCheck).
+  gestorSession.webRequest.onCompleted({ urls: ["<all_urls>"] }, (details) => {
+    if (!gestorView || details.webContentsId !== gestorView.webContents.id) return;
+    let url;
+    try {
+      url = new URL(details.url);
+    } catch {
+      return;
+    }
+    if (url.origin !== config.getServerUrl() || url.pathname !== "/api/admin/session") return;
+    if (details.statusCode === 200) {
+      gestorPage.ready = true;
+      debug("tela do Gestor pronta");
+      scheduleSectionCheck();
+    }
   });
   api = createApiClient({
     getServerUrl: () => config.getServerUrl(),
