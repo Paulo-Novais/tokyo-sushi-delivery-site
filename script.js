@@ -1952,6 +1952,7 @@ const hydrateCatalogRuntimeState = async () => {
       initComboHeroImages();
       catalogLoadFailed = false;
       renderHomeHeroMetrics();
+      syncTenantCatalogShortcuts();
     } catch (error) {
       catalogRuntimeHydrationPromise = null;
       catalogLoadFailed = true;
@@ -2107,9 +2108,77 @@ const fillDeliveryAddressFromCep = (form, cepData) => {
   }
 };
 
+// ---------- Restaurante pelo caminho: inovasfood.com.br/<slug> ----------
+// Vários restaurantes dividem o mesmo domínio: o slug do endereço separa os dados guardados
+// no aparelho (sacola, login, histórico) e mantém os links dentro do restaurante.
+// No domínio próprio (ex.: tokyosushidelivery.com.br) não há slug e nada muda.
+const PUBLIC_RESERVED_FIRST_SEGMENTS = new Set([
+  "r", "admin", "system", "gestor", "master", "login", "api", "assets", "site-images",
+  "menu_pdf_images", "inovas", "cardapio", "entrega", "historico", "avaliar", "trabalhe-conosco", "acompanhar",
+]);
+const PUBLIC_TENANT_PATH_SLUG = (() => {
+  const first = String(window.location.pathname || "/").split("/").filter(Boolean)[0] || "";
+  return !first || first.includes(".") || PUBLIC_RESERVED_FIRST_SEGMENTS.has(first.toLowerCase())
+    ? ""
+    : first.toLowerCase();
+})();
+const PUBLIC_PAGE_HREF_PATTERN = /^(?:\.\/)?(index|cardapio|entrega|historico|avaliar|trabalhe-conosco|acompanhar)\.html([?#].*)?$/i;
+
+const toTenantPath = (href) => {
+  const value = String(href ?? "");
+
+  if (!PUBLIC_TENANT_PATH_SLUG) {
+    return value;
+  }
+
+  if (value === "./" || value === ".") {
+    return `/${PUBLIC_TENANT_PATH_SLUG}`;
+  }
+
+  const match = value.match(PUBLIC_PAGE_HREF_PATTERN);
+
+  if (!match) {
+    return value;
+  }
+
+  const page = match[1].toLowerCase();
+  return `/${PUBLIC_TENANT_PATH_SLUG}${page === "index" ? "" : `/${page}`}${match[2] || ""}`;
+};
+
+const rewriteTenantLink = (link) => {
+  const current = link.getAttribute("href");
+  const next = toTenantPath(current);
+
+  if (next !== current) {
+    link.setAttribute("href", next);
+  }
+};
+
+if (PUBLIC_TENANT_PATH_SLUG) {
+  const rewriteWithin = (root) => {
+    if (root.matches?.("a[href]")) rewriteTenantLink(root);
+    root.querySelectorAll?.("a[href]").forEach(rewriteTenantLink);
+  };
+  rewriteWithin(document);
+  new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "attributes") {
+        rewriteTenantLink(mutation.target);
+        return;
+      }
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === 1) rewriteWithin(node);
+      });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+}
+
+const scopeStorageKey = (storageKey) =>
+  PUBLIC_TENANT_PATH_SLUG ? `${PUBLIC_TENANT_PATH_SLUG}:${storageKey}` : storageKey;
+
 const getStoredString = (storageKey, fallback = "") => {
   try {
-    const value = localStorage.getItem(storageKey);
+    const value = localStorage.getItem(scopeStorageKey(storageKey));
     return value == null ? fallback : String(value);
   } catch (error) {
     return fallback;
@@ -2118,7 +2187,7 @@ const getStoredString = (storageKey, fallback = "") => {
 
 const setStoredString = (storageKey, value) => {
   try {
-    localStorage.setItem(storageKey, String(value));
+    localStorage.setItem(scopeStorageKey(storageKey), String(value));
     return true;
   } catch (error) {
     return false;
@@ -2127,7 +2196,7 @@ const setStoredString = (storageKey, value) => {
 
 const removeStoredValue = (storageKey) => {
   try {
-    localStorage.removeItem(storageKey);
+    localStorage.removeItem(scopeStorageKey(storageKey));
     return true;
   } catch (error) {
     return false;
@@ -4583,8 +4652,12 @@ const normalizeCartAddonQuantity = (value, fallback = 0) => {
   return Math.max(0, quantity);
 };
 
+// Hashi e Shoyu são complementos do Tokyo: outro restaurante não tem complementos fixos.
+const getActiveCartAddonDefinitions = () =>
+  restaurantSettingsState.isDefaultTenant === false ? [] : CART_REQUIRED_ADDONS;
+
 const getDefaultCartAddons = () =>
-  CART_REQUIRED_ADDONS.map((addon) => ({
+  getActiveCartAddonDefinitions().map((addon) => ({
     ...addon,
     quantity: addon.defaultQuantity,
   }));
@@ -4596,7 +4669,7 @@ const normalizeCartAddons = (storedAddons) => {
       .filter(([id]) => id)
   );
 
-  return CART_REQUIRED_ADDONS.map((addon) => ({
+  return getActiveCartAddonDefinitions().map((addon) => ({
     ...addon,
     quantity: quantitiesById.has(addon.id)
       ? quantitiesById.get(addon.id)
@@ -7785,6 +7858,106 @@ const syncPlatformFooter = (settings) => {
   });
 };
 
+// ---------- Modelo Premium: o HTML é do Tokyo; para outro restaurante, troca o que é do Tokyo ----------
+const TOKYO_NAME_PATTERN = /Tokyo Sushi Delivery|Tokyo Sushi|Tokyo/g;
+const isPublicNonDefaultTenant = () => restaurantSettingsState.isDefaultTenant === false;
+
+const replaceTokyoNameInText = (root, name) => {
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement && !node.parentElement.closest("script, style, noscript") && /Tokyo/.test(node.nodeValue)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT,
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((node) => {
+    node.nodeValue = node.nodeValue.replace(TOKYO_NAME_PATTERN, name);
+  });
+};
+
+const setTenantMetaContent = (selector, value) => {
+  document.querySelectorAll(selector).forEach((node) => {
+    if (value) {
+      node.setAttribute(node.tagName === "LINK" ? "href" : "content", value);
+    } else {
+      node.remove();
+    }
+  });
+};
+
+const syncTenantCatalogShortcuts = () => {
+  if (!isPublicNonDefaultTenant()) return;
+  document.querySelectorAll(".catalog-addons-panel").forEach((panel) => {
+    panel.hidden = true;
+  });
+  document.querySelectorAll(".catalog-hero .quick-links").forEach((nav) => {
+    const sections = catalogHydratedFromApi
+      ? MENU_SECTIONS.filter((section) => Array.isArray(section?.items) && section.items.length > 0)
+      : [];
+    nav.innerHTML = sections
+      .map((section) => `<a href="#${escapeHtml(section.id)}">${escapeHtml(section.title || section.kicker || section.id)}</a>`)
+      .join("");
+    nav.hidden = sections.length === 0;
+  });
+  // Card de destaque da home: sem destaque cadastrado, não mostra o prato do Tokyo.
+  document.querySelectorAll(".hero-visual").forEach((visual) => {
+    visual.hidden = !catalogHydratedFromApi || runtimeFeaturedCatalogItems.length === 0;
+  });
+};
+
+const applyTenantNeutralPresentation = (settings) => {
+  if (!isPublicNonDefaultTenant()) return;
+  const name = settings.restaurantName || "Restaurante";
+
+  replaceTokyoNameInText(document.body, name);
+  document.title = document.title.replace(TOKYO_NAME_PATTERN, name);
+  document.querySelectorAll("[alt*='Tokyo']").forEach((node) => {
+    node.alt = node.alt.replace(TOKYO_NAME_PATTERN, name);
+  });
+
+  // Home: selo e título sem "delivery japonês" / "sabor do Japão".
+  const eyebrow = document.querySelector(".hero-copy .eyebrow");
+  if (eyebrow) {
+    const textNode = [...eyebrow.childNodes].reverse().find((node) => node.nodeType === 3 && node.nodeValue.trim());
+    if (textNode) textNode.nodeValue = ` ${settings.slogan || "Peça online direto do restaurante"} `;
+  }
+  const titleLines = document.querySelectorAll(".hero-copy h1 .hero-title-line");
+  if (titleLines.length >= 2) {
+    titleLines[0].textContent = name;
+    titleLines[1].textContent = "direto na sua casa.";
+  }
+
+  // Sem logo cadastrada: não usa a do Tokyo (o nome aparece ao lado).
+  const logoUrl = resolvePublicAssetUrl(settings.logoUrl);
+  document.querySelectorAll(".brand-mark img, img[src*='tokyo-logo']").forEach((image) => {
+    if (logoUrl) {
+      image.src = logoUrl;
+      image.style.removeProperty("display");
+    } else {
+      image.style.display = "none";
+    }
+  });
+
+  // SEO: descrição, imagem e endereço do próprio restaurante.
+  const description =
+    settings.seoDescription || settings.description || settings.presentationText || `${name}: peça online pelo site.`;
+  const shareImage = resolvePublicAssetUrl(settings.seoShareImage || settings.bannerUrl || settings.logoUrl);
+  const absoluteShareImage = shareImage ? new URL(shareImage, window.location.href).href : "";
+  const pageUrl = `${window.location.origin}${window.location.pathname}`;
+  setTenantMetaContent('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]', description);
+  setTenantMetaContent('meta[property="og:image"], meta[name="twitter:image"]', absoluteShareImage);
+  setTenantMetaContent('meta[property="og:image:alt"], meta[name="twitter:image:alt"]', absoluteShareImage ? name : "");
+  setTenantMetaContent('meta[name="keywords"]', name);
+  setTenantMetaContent('link[rel="canonical"], meta[property="og:url"]', pageUrl);
+  document.querySelectorAll('meta[property="og:title"], meta[name="twitter:title"]').forEach((node) => {
+    node.setAttribute("content", String(node.getAttribute("content") || "").replace(TOKYO_NAME_PATTERN, name));
+  });
+
+  syncTenantCatalogShortcuts();
+};
+
 const syncPublicLayoutNavigation = () => {
   const catalogContainer = document.querySelector(".catalog-section .container");
 
@@ -7825,6 +7998,7 @@ const applyRestaurantSettingsToPublicSite = () => {
   syncRestaurantSocialLinks(settings);
   syncPlatformFooter(settings);
   syncPublicLayoutNavigation();
+  applyTenantNeutralPresentation(settings);
   refreshStoreStatusUi({ rerenderCartUi: false });
   renderHomeHeroMetrics();
 };
@@ -9115,7 +9289,7 @@ const runPendingAuthAction = () => {
   authState.pendingHref = "";
   authState.pendingIntent = "";
   closeAuth();
-  window.location.href = pendingHref;
+  window.location.href = toTenantPath(pendingHref);
 };
 
 const finalizeAuth = (profile, message) => {

@@ -354,12 +354,18 @@ const resolveLocalRestaurantRequest = async (pathname, search) => {
     return { staticPathname: "/tokyo.html", slug: canonicalSlug };
   }
 
-  const relativePath = suffix.replace(/^\/+/, "");
+  const rawRelativePath = suffix.replace(/^\/+/, "").replace(/\/+$/, "");
+  // Igual ao middleware: /<slug>/cardapio = /<slug>/cardapio.html.
+  const relativePath =
+    rawRelativePath && !rawRelativePath.includes(".") && PUBLIC_RESTAURANT_PAGES.has(`${rawRelativePath}.html`)
+      ? `${rawRelativePath}.html`
+      : rawRelativePath;
   const isAllowed =
     PUBLIC_RESTAURANT_PAGES.has(relativePath) ||
     PUBLIC_RESTAURANT_ROOT_ASSETS.has(relativePath) ||
     relativePath.startsWith("assets/") ||
-    relativePath.startsWith("site-images/");
+    relativePath.startsWith("site-images/") ||
+    relativePath.startsWith("menu_pdf_images/");
 
   return isAllowed
     ? { staticPathname: `/${relativePath}`, slug: canonicalSlug }

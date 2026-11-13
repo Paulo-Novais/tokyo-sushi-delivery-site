@@ -8640,3 +8640,10 @@ body.has-tracking-order .tracking-section {
 [data-whatsapp-missing] {
   display: none !important;
 }
+
+/* Modelo Premium: blocos do Tokyo escondidos em outro restaurante. */
+.hero-visual[hidden],
+.catalog-addons-panel[hidden],
+.quick-links[hidden] {
+  display: none !important;
+}

@@ -228,7 +228,8 @@ const isPublicRestaurantAssetPath = (suffix = "") => {
     PUBLIC_RESTAURANT_PAGES.has(normalizedSuffix) ||
     PUBLIC_RESTAURANT_ROOT_ASSETS.has(normalizedSuffix) ||
     normalizedSuffix.startsWith("assets/") ||
-    normalizedSuffix.startsWith("site-images/")
+    normalizedSuffix.startsWith("site-images/") ||
+    normalizedSuffix.startsWith("menu_pdf_images/")
   );
 };
 
@@ -274,10 +275,18 @@ const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
     );
   }
 
+  // Endereço limpo das páginas: /<slug>/cardapio = /<slug>/cardapio.html.
+  const cleanPage = suffix.replace(/^\/+/, "").replace(/\/+$/, "");
+  const cleanPageFile =
+    cleanPage && !cleanPage.includes(".") && PUBLIC_RESTAURANT_PAGES.has(`${cleanPage}.html`)
+      ? `${cleanPage}.html`
+      : "";
   const destination = suffix
-    ? isPublicRestaurantAssetPath(suffix)
-      ? `/${suffix.replace(/^\/+/, "")}`
-      : ""
+    ? cleanPageFile
+      ? `/${cleanPageFile}`
+      : isPublicRestaurantAssetPath(suffix)
+        ? `/${suffix.replace(/^\/+/, "")}`
+        : ""
     : "/tokyo.html";
 
   if (!destination) {
