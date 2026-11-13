@@ -15,6 +15,8 @@ const PREMIUM_SETTINGS = (name) => ({
   slogan: "Pizzaria Delivery",
   whatsapp: "5516900001111",
   averagePreparationTimeMinutes: 40,
+  // Os testes rodam a qualquer hora: o restaurante de teste aceita pedido fora do horário.
+  businessSchedule: { acceptOrdersOutsideHours: true },
   premiumContent: {
     heroEyebrow: "Pizzaria artesanal (dados de teste)",
     heroTitleLines: ["Pizza quentinha,", "direto na sua casa."],
