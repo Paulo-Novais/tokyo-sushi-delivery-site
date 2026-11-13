@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' pdvimg: data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+  />
+  <title>INOVAS PDV</title>
+  <link rel="stylesheet" href="shell.css" />
+</head>
+<body data-phase="starting">
+  <!-- Abrindo / sem conexão -->
+  <section class="splash" id="splash" aria-live="polite">
+    <img src="assets/inovas-food-logo-menu.webp" alt="INOVAS Food" class="splash-logo" />
+    <p id="splash-message">Abrindo o INOVAS PDV…</p>
+    <button type="button" class="btn" id="splash-retry" hidden>Tentar de novo</button>
+  </section>
+
+  <!-- Login -->
+  <section class="login" id="login" aria-label="Entrar no INOVAS PDV">
+    <aside class="login-side">
+      <img src="assets/inovas-food-logo-menu.webp" alt="INOVAS Food" class="login-logo" />
+      <div class="login-side-copy">
+        <span class="pill pill-dark">PDV</span>
+        <h1>Operação do restaurante, <em>sem sair do balcão.</em></h1>
+        <p>Pedidos, Caixa, Comandas e Cardápio. Painel, relatórios e financeiro ficam no Gestor (site), com o dono e o gerente.</p>
+      </div>
+      <p class="login-side-foot">Use o mesmo e-mail e senha do Gestor.</p>
+    </aside>
+
+    <div class="login-main">
+      <form class="login-box" id="login-form" novalidate>
+        <span class="pill">Acesso da equipe</span>
+        <h2>Entrar no PDV</h2>
+        <p class="login-intro">Entre com o mesmo login que você usa no Gestor. O que aparece depende da sua permissão.</p>
+
+        <label class="field">
+          <span>E-mail ou usuário</span>
+          <input type="text" name="identifier" id="identifier" autocomplete="username" placeholder="voce@seurestaurante.com.br" required />
+        </label>
+
+        <label class="field">
+          <span>Senha</span>
+          <span class="input-with-button">
+            <input type="password" name="password" id="password" autocomplete="current-password" placeholder="Sua senha" required />
+            <button type="button" class="eye" id="eye" aria-label="Mostrar senha" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+            </button>
+          </span>
+        </label>
+
+        <label class="check" id="remember-row">
+          <input type="checkbox" name="remember" id="remember" checked />
+          <span><strong>Manter conectado neste computador</strong><small>O app só sai quando alguém clicar em Sair.</small></span>
+        </label>
+
+        <div class="restaurants" id="restaurants" hidden>
+          <strong>Escolha o restaurante</strong>
+          <div id="restaurant-list"></div>
+        </div>
+
+        <div class="feedback" id="login-feedback" role="alert" hidden></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit">Entrar</button>
+
+        <p class="login-help">Esqueceu a senha? Peça ao dono ou gerente para redefinir em <b>Usuários</b>, no Gestor.</p>
+
+        <div class="server">
+          <span>Servidor: <b id="server-label">—</b></span>
+          <button type="button" class="link" id="server-edit">Alterar</button>
+        </div>
+        <div class="server-form" id="server-form" hidden>
+          <input type="url" id="server-input" placeholder="https://inovasfood.com.br" />
+          <button type="button" class="btn" id="server-save">Salvar</button>
+        </div>
+      </form>
+      <footer class="login-foot">INOVAS PDV <span id="app-version"></span></footer>
+    </div>
+  </section>
+
+  <!-- App -->
+  <section class="app" id="app" aria-label="INOVAS PDV">
+    <header class="top">
+      <img src="assets/inovas-food-logo-menu.webp" alt="INOVAS Food" class="top-logo" />
+      <span class="pill">PDV</span>
+      <span class="top-restaurant" id="top-restaurant"></span>
+      <span class="grow"></span>
+      <span class="conn" id="conn" data-state="ok"><i></i><span id="conn-label">Conectado neste computador</span></span>
+      <div class="operator">
+        <div class="avatar" id="op-initials">?</div>
+        <div class="operator-copy"><strong id="op-name"></strong><small id="op-role"></small></div>
+      </div>
+      <button type="button" class="btn" id="logout">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+        Sair
+      </button>
+    </header>
+
+    <div class="body">
+      <nav class="side" aria-label="Menu do PDV">
+        <div id="nav-items"></div>
+        <p class="side-foot">Painel, relatórios, financeiro e configurações ficam no Gestor (site), só para dono e gerente.</p>
+      </nav>
+
+      <main class="main">
+        <div class="steps" id="steps"></div>
+        <div class="stage" id="stage">
+          <!-- As telas do Gestor (Pedidos, Caixa, Comandas) são desenhadas aqui por cima, pelo app. -->
+          <div class="stage-loading" id="stage-loading">Carregando…</div>
+          <section class="cardapio" id="cardapio" hidden aria-label="Cardápio">
+            <div class="cd-head">
+              <div>
+                <h1>Cardápio</h1>
+                <p>Pause um prato e ele some do site. Para voltar, clique em Reativar.</p>
+              </div>
+              <span class="grow"></span>
+              <div class="cd-stats">
+                <div class="cd-stat"><span>No site</span><strong id="cd-on">0</strong></div>
+                <div class="cd-stat is-paused"><span>Pausados</span><strong id="cd-off">0</strong></div>
+              </div>
+            </div>
+            <div class="cd-bar">
+              <label class="sr-only" for="cd-search">Buscar prato</label>
+              <input id="cd-search" class="cd-search" type="search" placeholder="Buscar prato…" autocomplete="off" />
+              <div class="cd-chips" role="group" aria-label="Filtro">
+                <button type="button" class="chip" data-filter="all" aria-pressed="true">Todos</button>
+                <button type="button" class="chip" data-filter="active" aria-pressed="false">No site</button>
+                <button type="button" class="chip" data-filter="paused" aria-pressed="false">Pausados</button>
+              </div>
+              <button type="button" class="btn" id="cd-refresh">Atualizar</button>
+            </div>
+            <p class="cd-note">Preço, foto e descrição continuam sendo editados no Gestor (site), só pelo dono ou gerente.</p>
+            <div class="cd-message" id="cd-message" hidden></div>
+            <div class="cd-list" id="cd-list"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="confirm" id="confirm-logout">
+    <form method="dialog">
+      <h2>Sair deste computador?</h2>
+      <p>O app vai pedir login e senha de novo para entrar. Use isto na troca de turno ou se o computador for usado por outra pessoa.</p>
+      <div class="confirm-actions">
+        <button type="submit" value="cancel" class="btn">Cancelar</button>
+        <button type="submit" value="ok" class="btn btn-primary">Sair</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="shell.js"></script>
+</body>
+</html>

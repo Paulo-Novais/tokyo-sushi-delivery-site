@@ -1,0 +1,85 @@
+{
+  "name": "inovas-pdv",
+  "productName": "INOVAS PDV",
+  "version": "0.1.0",
+  "description": "App INOVAS PDV: Pedidos, Caixa, Comandas e Cardápio do restaurante, com o mesmo login do Gestor.",
+  "main": "src/main/main.js",
+  "private": true,
+  "author": "INOVAS Food",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node --test --test-concurrency=1 \"test/e2e/*.e2e.js\"",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:win:zip": "electron-builder --win zip --x64 -c.win.signAndEditExecutable=false",
+    "dist:linux:dir": "electron-builder --linux dir"
+  },
+  "devDependencies": {
+    "electron": "45.2.0",
+    "electron-builder": "26.18.0",
+    "playwright-core": "1.63.0"
+  },
+  "build": {
+    "appId": "br.com.inovasfood.pdv",
+    "productName": "INOVAS PDV",
+    "copyright": "INOVAS Food",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "INOVAS-PDV-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "INOVAS PDV",
+      "artifactName": "INOVAS-PDV-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "pt_BR"
+      ],
+      "language": "1046",
+      "runAfterFinish": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "uninstallDisplayName": "INOVAS PDV"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Office"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableCookieEncryption": true
+    },
+    "publish": [],
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ]
+  }
+}
