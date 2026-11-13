@@ -140,3 +140,42 @@ test("Entrega usa endereço e faixas do restaurante, nunca os do Tokyo", () => {
   assert.doesNotMatch(html, /R\$ 9,00 até 1,9 km/, "faixa do Tokyo");
   assert.match(html, /acréscimo de R\$ 2,00 por km adicional/);
 });
+
+test("cores e tema do restaurante já vêm no HTML (sem piscar o vermelho do Tokyo)", () => {
+  const html = render("inicio", {
+    settings: {
+      ...KASULO,
+      primaryColor: "#ff8c00",
+      secondaryColor: "#2f6f3e",
+      accentColor: "#ffd166",
+      gradientStart: "#ff8c00",
+      gradientEnd: "#fff3e0",
+      siteLayout: "MODERN",
+      siteTheme: "LIGHT",
+    },
+  });
+  const htmlTag = html.match(/<html[^>]*>/)[0];
+  assert.match(htmlTag, /data-site-theme="light"/);
+  assert.match(htmlTag, /data-site-theme-mode="light"/);
+  assert.match(htmlTag, /data-site-layout="modern"/);
+  // As variáveis vêm num <style> DEPOIS do styles.css (na cascata, o último :root vence)
+  // e ainda dentro do <head>, para a primeira pintura já ser a certa.
+  const styleIndex = html.indexOf("--primary: #ff8c00");
+  const sheetIndex = html.indexOf('href="/styles.css"');
+  const headEnd = html.indexOf("</head>");
+  assert.ok(sheetIndex > 0 && styleIndex > sheetIndex && styleIndex < headEnd, "estilo inline depois do styles.css, dentro do head");
+  assert.match(html, /--primary-dark: #ff8c00/);
+  assert.match(html, /--gold: #2f6f3e/);
+  assert.match(html, /--gold-soft: rgba\(47, 111, 62, 0\.18\)/);
+  assert.match(html, /--site-accent: #ffd166/);
+  assert.match(html, /--site-gradient-end: #fff3e0/);
+  assert.match(html, /<meta name="theme-color" content="#ff8c00" \/>/);
+  assert.doesNotMatch(html, /#e83637/);
+});
+
+test("tema automático deixa a escolha claro/escuro para o navegador", () => {
+  const html = render("inicio", { settings: { ...KASULO, primaryColor: "#ff8c00", siteTheme: "AUTO" } });
+  const htmlTag = html.match(/<html[^>]*>/)[0];
+  assert.doesNotMatch(htmlTag, /data-site-theme="/);
+  assert.match(htmlTag, /data-site-theme-mode="auto"/);
+});
