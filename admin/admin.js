@@ -1583,9 +1583,20 @@ const fetchJson = async (url, options = {}) => {
   }
 
   if (!response.ok) {
-    const requestError = new Error(data?.error || "Não foi possível concluir a operação.");
+    // Algumas respostas trazem o erro como objeto ({ code, message }): nunca
+    // mostrar "[object Object]" na tela.
+    const errorText =
+      typeof data?.error === "string"
+        ? data.error
+        : typeof data?.error?.message === "string"
+          ? data.error.message
+          : "";
+    const requestError = new Error(errorText || "Não foi possível concluir a operação.");
     requestError.status = response.status;
-    requestError.errorCode = data?.errorCode || "request_error";
+    requestError.errorCode =
+      data?.errorCode ||
+      (typeof data?.error?.code === "string" ? data.error.code : "") ||
+      "request_error";
     requestError.payload = data;
     throw requestError;
   }

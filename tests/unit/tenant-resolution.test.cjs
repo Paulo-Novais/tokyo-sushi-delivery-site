@@ -319,3 +319,45 @@ test("uses one parser for canonical and legacy public paths", () => {
     false
   );
 });
+
+// Login de 13/11/2026: o cookie do site público (último restaurante visitado
+// por slug) derrubava o login e o Gestor de quem já estava autenticado.
+test("authenticated platform requests use the session and ignore the public-site slug cookie", async () => {
+  process.env.NODE_ENV = "production";
+  process.env.VERCEL = "1";
+  process.env.PUBLIC_APP_URL = "https://inovasfood.com.br";
+  const session = {
+    audience: "restaurant",
+    tenantId: "tenant_default",
+    restaurantId: "restaurant_default",
+    restaurantKey: "default",
+  };
+
+  for (const cookie of [
+    "",
+    "inovas_restaurant_slug=restaurante-que-nao-existe-mais",
+    "inovas_restaurant_slug=pilot-a",
+    "inovas_restaurant_slug=inactive",
+  ]) {
+    const resolution = await tenantResolution.resolveTenantRequest(
+      request({ host: "inovasfood.com.br", cookie, url: "/api/admin/login" }),
+      { authenticatedSession: session }
+    );
+
+    assert.equal(resolution.ok, true, `cookie "${cookie}" nao pode bloquear o login`);
+    assert.equal(resolution.restaurantKey, "default");
+    assert.equal(resolution.source, tenantResolution.RESOLUTION_SOURCES.SESSION);
+  }
+});
+
+test("public requests on the platform host still follow the slug cookie", async () => {
+  process.env.NODE_ENV = "production";
+  process.env.VERCEL = "1";
+  process.env.PUBLIC_APP_URL = "https://inovasfood.com.br";
+
+  const resolution = await tenantResolution.resolveTenantRequest(
+    request({ host: "inovasfood.com.br", cookie: "inovas_restaurant_slug=pilot-a" })
+  );
+
+  assert.equal(resolution.restaurantKey, "pilot-a");
+});
