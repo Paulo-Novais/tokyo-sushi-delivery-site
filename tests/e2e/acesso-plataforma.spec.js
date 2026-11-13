@@ -43,7 +43,7 @@ test("Login: endereço oficial é /login e os antigos levam até ele", async ({ 
   // "Baixar Gestor" baixa o instalador do app INOVAS PDV (Windows).
   await expect(page.locator(".if-menu-actions a", { hasText: "Baixar Gestor" })).toHaveAttribute(
     "href",
-    "https://github.com/Paulo-Novais/tokyo-sushi-delivery-site/releases/download/gestor-pdv/INOVAS-PDV-Setup.exe"
+    "https://github.com/Paulo-Novais/tokyo-sushi-delivery-site/releases/download/Gestor-PDV/INOVAS-PDV-Setup.exe"
   );
   await expect(page.locator(".if-menu-actions a", { hasText: "Entrar no Gestor" })).toHaveCount(0);
   expect(errors).toEqual([]);
