@@ -772,7 +772,7 @@ const MENU_SECTIONS = [
     items: [
       {
         id: "hot-roll-8",
-        name: "Hot Holl",
+        name: "Hot Roll",
         category: "HOT HOLLS (8 unidades)",
         detail: "8 unidades",
         description: "Porcao com 8 unidades de hot holl.",
@@ -1209,7 +1209,7 @@ const MENU_SECTIONS = [
         name: "Combo Yume",
         category: "Categoria Sakura",
         detail: "24 peças",
-        description: "08x Hot Holl, 08x Hot Couve e 08x Hot Temperado.",
+        description: "08x Hot Roll, 08x Hot Couve e 08x Hot Temperado.",
         image: "./menu_pdf_images/page_08.jpg",
         price: 54.99,
         badge: "Consulte",
@@ -1220,7 +1220,7 @@ const MENU_SECTIONS = [
         category: "Categoria Sakura",
         detail: "18 peças",
         unitsLabel: "16 unid + 2 Temakis",
-        description: "08x Uramaki Skin, 08x Hot Holl e 02x Temaki Skin.",
+        description: "08x Uramaki Skin, 08x Hot Roll e 02x Temaki Skin.",
         image: "./menu_pdf_images/page_08.jpg",
         price: 59.99,
         badge: "Consulte",
@@ -1231,7 +1231,7 @@ const MENU_SECTIONS = [
         category: "Categoria Sakura",
         detail: "35 peças",
         description:
-          "10x Hot Temperado, 10x Hot Holl, 10x Hot Poro e 5x Hot Couve.",
+          "10x Hot Temperado, 10x Hot Roll, 10x Hot Poro e 5x Hot Couve.",
         image: "./menu_pdf_images/catalog/combinado-kumo.png",
         price: 71.99,
         badge: "Consulte",
@@ -1253,7 +1253,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "36 peças",
         description:
-          "8x Uramaki Salmão, 8x Hot Holl, 8x Hot Couve, 6x Nigiri Salmão e 6x Sashimi Salmão.",
+          "8x Uramaki Salmão, 8x Hot Roll, 8x Hot Couve, 6x Nigiri Salmão e 6x Sashimi Salmão.",
         image: "./menu_pdf_images/catalog/combinado-fuji.png",
         price: 107.99,
         badge: "Consulte",
@@ -1264,7 +1264,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "29 peças",
         description:
-          "4x Hot Holl, 4x Hot Camarão, 4x Hakusai Camarão, 4x Joe Eby, 4x Fusion, 4x Eby Especial e 5x Hakusai Grelhado.",
+          "4x Hot Roll, 4x Hot Camarão, 4x Hakusai Camarão, 4x Joe Eby, 4x Fusion, 4x Eby Especial e 5x Hakusai Grelhado.",
         image: "./menu_pdf_images/catalog/combinado-sora.png",
         price: 116.99,
         badge: "Consulte",
@@ -1275,7 +1275,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "33 peças",
         description:
-          "8x Uramaki Salmão, 4x Hakusai Salmão, 4x Hot Holl, 4x Hot Couve, 5x Joe Mostarda e 4x Hakusai Camarão.",
+          "8x Uramaki Salmão, 4x Hakusai Salmão, 4x Hot Roll, 4x Hot Couve, 5x Joe Mostarda e 4x Hakusai Camarão.",
         image: "./menu_pdf_images/catalog/combinado-kaito.png",
         price: 94.99,
         badge: "Consulte",
@@ -1297,7 +1297,7 @@ const MENU_SECTIONS = [
         category: "Categoria Oceano",
         detail: "28 peças",
         description:
-          "4x Hot Holl, 4x Hot Couve, 4x Nigiri Salmão, 4x Joe Poró, 4x Joe Geleia, 4x Joe Tartar e 4x Fusion.",
+          "4x Hot Roll, 4x Hot Couve, 4x Nigiri Salmão, 4x Joe Poró, 4x Joe Geleia, 4x Joe Tartar e 4x Fusion.",
         image: "./menu_pdf_images/catalog/combinado-kaigun.png",
         price: 79.99,
         badge: "Consulte",
@@ -1308,7 +1308,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "25 peças",
         description:
-          "8x Hot Holl, 6x Eby Especial, 6x Joe Flanbado e 5x Camarão Recheado.",
+          "8x Hot Roll, 6x Eby Especial, 6x Joe Flanbado e 5x Camarão Recheado.",
         image: "./menu_pdf_images/combinado-imperial.png",
         price: 98.99,
         badge: "Consulte",
@@ -1319,7 +1319,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "32 peças",
         description:
-          "10x Hot Holl, 10x Hot Couve, 6x Nigiri Salmão e 6x Camarão Recheado.",
+          "10x Hot Roll, 10x Hot Couve, 6x Nigiri Salmão e 6x Camarão Recheado.",
         image: "./menu_pdf_images/catalog/combinado-samurai.png",
         price: 89.99,
         badge: "Consulte",
@@ -1330,7 +1330,7 @@ const MENU_SECTIONS = [
         category: "Categoria Samurai",
         detail: "30 peças",
         description:
-          "12x Hot Holl, 8x Hot Temperado, 6x Hot Camarão e 4x Camarão Recheado.",
+          "12x Hot Roll, 8x Hot Temperado, 6x Hot Camarão e 4x Camarão Recheado.",
         image: "./menu_pdf_images/catalog/combinado-shogun.png",
         price: 79.99,
         badge: "Consulte",
@@ -1352,7 +1352,7 @@ const MENU_SECTIONS = [
         category: "Categoria Família",
         detail: "70 peças",
         description:
-          "8x Uramaki Salmão, 8x Uramaki Skin, 8x Hossomaki Salmão, 8x Hot Holl, 8x Hot Couve, 4x Nigiri Salmão, 4x Nigiri Skin, 5x Hakusai Salmão, 5x Hakusai Grelhado e 12x Sashimi Salmão.",
+          "8x Uramaki Salmão, 8x Uramaki Skin, 8x Hossomaki Salmão, 8x Hot Roll, 8x Hot Couve, 4x Nigiri Salmão, 4x Nigiri Skin, 5x Hakusai Salmão, 5x Hakusai Grelhado e 12x Sashimi Salmão.",
         image: "./menu_pdf_images/catalog/combinado-kazoku.png",
         price: 179.99,
         badge: "Consulte",
@@ -1363,7 +1363,7 @@ const MENU_SECTIONS = [
         category: "Categoria Família",
         detail: "64 peças",
         description:
-          "6x Joe Rucula, 6x Joe Tartar, 6x Joe Especial, 6x Joe Poró, 6x Joe Salmão, 6x Joe Eby, 6x Joe Camarão Especial, 6x Eby Especial, 8x Hot Holl e 8x Hot Couve.",
+          "6x Joe Rucula, 6x Joe Tartar, 6x Joe Especial, 6x Joe Poró, 6x Joe Salmão, 6x Joe Eby, 6x Joe Camarão Especial, 6x Eby Especial, 8x Hot Roll e 8x Hot Couve.",
         image: "./menu_pdf_images/catalog/combinado-tomodachi.png",
         price: 224.99,
         badge: "Consulte",
@@ -7384,7 +7384,11 @@ const getPublicBusinessHoursLabel = (fallback = "18:00 as 23:00") => {
 // Texto do topo do login: no Tokyo continua "Acesso Tokyo".
 const getPublicAuthAccessLabel = () =>
   IS_TENANT_ROUTE ? "Acesso do cliente" : TOKYO_PUBLIC_TEXT.authAccessLabel || "Acesso Tokyo";
-const getPublicWhatsappNumber = () => getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER;
+// wa.me precisa do código do país: número brasileiro salvo sem o 55 (10 ou 11 dígitos) ganha o 55.
+const getPublicWhatsappNumber = () => {
+  const digits = String(getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER || "").replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+};
 // Mensagem do WhatsApp por página (Modelo Premium: pedido, entrega, histórico, avaliação, vagas).
 const PUBLIC_PAGE_WHATSAPP_MESSAGE = Object.freeze({
   inicio: "pedido",
@@ -12804,26 +12808,48 @@ const submitCareerForm = (form) => {
     return;
   }
 
-  const applications = loadStoredCollection(CAREER_STORAGE_KEY);
-  applications.unshift({
-    id: `career_${Date.now()}`,
-    name,
-    phone,
-    email,
-    area,
-    experience,
-    schedule,
-    link,
+  // A candidatura vai para o WhatsApp do próprio restaurante (antes ficava só neste aparelho
+  // e dizia "enviada com sucesso"). Sem WhatsApp configurado, avisa em vez de fingir que enviou.
+  const restaurantWhatsapp = restaurantSettingsState.loaded ? getPublicWhatsappNumber() : "";
+
+  if (String(restaurantWhatsapp).replace(/\D/g, "").length < 10) {
+    setResultCardState(feedbackNode, "error");
+
+    if (feedbackNode) {
+      feedbackNode.innerHTML =
+        "<p>O restaurante ainda não configurou o WhatsApp para receber candidaturas. Tente novamente mais tarde.</p>";
+    }
+
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  const restaurantName = getRestaurantSettings().restaurantName || "restaurante";
+  const careerMessage = [
+    `Olá! Quero me candidatar para trabalhar no ${restaurantName}.`,
+    "",
+    `Nome: ${name}`,
+    `Telefone: ${formatPhoneDisplay(phone)}`,
+    `E-mail: ${email}`,
+    `Área: ${area}`,
+    `Experiência: ${experience}`,
+    `Disponibilidade: ${schedule}`,
+    link ? `Currículo: ${link}` : "",
+    "",
     message,
-    createdAt: new Date().toISOString(),
-  });
-  saveStoredCollection(CAREER_STORAGE_KEY, applications.slice(0, 20));
+  ]
+    .filter((line, index, lines) => line !== "" || (index > 0 && lines[index - 1] !== ""))
+    .join("\n");
+  const careerHref = `https://wa.me/${restaurantWhatsapp}?text=${encodeURIComponent(careerMessage)}`;
+  window.open(careerHref, "_blank", "noopener");
   setResultCardState(feedbackNode, "success");
 
   if (feedbackNode) {
     feedbackNode.innerHTML = `
       <p>
-        Candidatura enviada com sucesso para a area de ${escapeHtml(area)}. A equipe ja pode revisar seus dados neste aparelho.
+        Abrimos o WhatsApp do ${escapeHtml(restaurantName)} com a sua candidatura para ${escapeHtml(area)}.
+        Confira a mensagem e toque em enviar. Se o WhatsApp não abriu,
+        <a href="${escapeHtml(careerHref)}" target="_blank" rel="noopener" data-whatsapp-keep>clique aqui</a>.
       </p>
     `;
   }
