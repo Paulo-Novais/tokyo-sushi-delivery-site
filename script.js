@@ -409,6 +409,32 @@ const RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
     "Cada detalhe e pensado para transformar seu pedido em uma experiencia unica.",
   updatedAt: "",
 });
+// Padrão de quem não é o Tokyo: o que o restaurante não preencheu fica vazio
+// (nunca o nome, WhatsApp, endereço, logo ou textos do Tokyo).
+const PUBLIC_NEUTRAL_SETTINGS_DEFAULTS = Object.freeze({
+  ...RESTAURANT_SETTINGS_DEFAULTS,
+  restaurantKey: "",
+  restaurantName: "",
+  logoUrl: "",
+  bannerUrl: "",
+  slogan: "",
+  description: "",
+  instagram: "",
+  facebook: "",
+  tiktok: "",
+  site: "",
+  seoTitle: "",
+  seoDescription: "",
+  seoShareImage: "",
+  seoKeywords: [],
+  seoOpenGraph: { title: "", description: "", image: "", type: "website" },
+  whatsapp: "",
+  address: "",
+  addressFields: { postalCode: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "" },
+  businessHours: "",
+  averagePreparationTimeMinutes: 0,
+  presentationText: "",
+});
 const DELIVERY_MANUAL_FALLBACK_FEE = DELIVERY_FEE_RULES[0]?.fee || 9;
 const DELIVERY_MANUAL_ROUTE_BAND = "Taxa provisoria";
 const DELIVERY_MANUAL_TIME_TEXT = "Confirmar com a loja";
@@ -1778,13 +1804,18 @@ const applyRuntimeCatalogState = (items = []) => {
   });
 };
 
-const applyRuntimeCatalogSections = (sections = []) => {
-  if (!Array.isArray(sections) || sections.length === 0) {
+// O MENU_SECTIONS fixo é o cardápio do Tokyo. Só o Tokyo (restaurante padrão) pode ser
+// completado por ele; qualquer outro restaurante usa apenas o que a API devolveu (mesmo vazio).
+const applyRuntimeCatalogSections = (sections = [], { allowStaticMenu = false } = {}) => {
+  const runtimeSections = Array.isArray(sections) ? sections : [];
+
+  if (allowStaticMenu && runtimeSections.length === 0) {
     return;
   }
 
+  sections = runtimeSections;
   const localSectionsById = new Map(
-    MENU_SECTIONS.map((section) => [String(section?.id || "").trim(), section])
+    allowStaticMenu ? MENU_SECTIONS.map((section) => [String(section?.id || "").trim(), section]) : []
   );
   const nextSections = [];
   const seenSectionIds = new Set();
@@ -1843,15 +1874,17 @@ const applyRuntimeCatalogSections = (sections = []) => {
     seenSectionIds.add(sectionId);
   });
 
-  MENU_SECTIONS.forEach((section) => {
-    const sectionId = String(section?.id || "").trim();
+  if (allowStaticMenu) {
+    MENU_SECTIONS.forEach((section) => {
+      const sectionId = String(section?.id || "").trim();
 
-    if (!sectionId || seenSectionIds.has(sectionId)) {
-      return;
-    }
+      if (!sectionId || seenSectionIds.has(sectionId)) {
+        return;
+      }
 
-    nextSections.push(section);
-  });
+      nextSections.push(section);
+    });
+  }
 
   MENU_SECTIONS.length = 0;
   nextSections.forEach((section) => {
@@ -1864,6 +1897,7 @@ const applyRuntimeCatalogSections = (sections = []) => {
 
 let catalogRuntimeHydrationPromise;
 let catalogHydratedFromApi = false;
+let catalogLoadFailed = false;
 let publicReviewsHydrationPromise;
 let runtimeFeaturedCatalogItem = null;
 let runtimeFeaturedCatalogItems = [];
@@ -1901,8 +1935,9 @@ const hydrateCatalogRuntimeState = async () => {
       }
 
       const payload = await response.json();
+      const tenantKey = String(payload?.tenantContext?.restaurantKey || "").trim().toLowerCase();
       normalizeMenuSectionDisplayOrder(payload?.sectionDisplayOrder);
-      applyRuntimeCatalogSections(payload?.sections);
+      applyRuntimeCatalogSections(payload?.sections, { allowStaticMenu: tenantKey === "default" });
       applyRuntimeCatalogState(payload?.items);
       runtimeFeaturedCatalogItems = Array.isArray(payload?.featuredItems)
         ? payload.featuredItems.filter((item) => item && typeof item === "object")
@@ -1915,9 +1950,12 @@ const hydrateCatalogRuntimeState = async () => {
       renderCatalog();
       renderCart();
       initComboHeroImages();
+      catalogLoadFailed = false;
       renderHomeHeroMetrics();
     } catch (error) {
       catalogRuntimeHydrationPromise = null;
+      catalogLoadFailed = true;
+      renderCatalog();
     }
   })();
 
@@ -1925,6 +1963,15 @@ const hydrateCatalogRuntimeState = async () => {
 };
 
 const groupMediaControllers = new Map();
+// Atenção: o servidor (lib/catalog-store.cjs) executa o script.js até a linha acima para ler o
+// cardápio base. Código que usa document/window precisa ficar daqui para baixo.
+document.addEventListener("click", (event) => {
+  const retry = event.target instanceof Element ? event.target.closest("[data-catalog-retry]") : null;
+  if (!retry) return;
+  catalogLoadFailed = false;
+  renderCatalog();
+  void hydrateCatalogRuntimeState();
+});
 let collapsedCatalogSections = new Set();
 let revealObserver;
 const PLACEHOLDER_PRICE_LABEL = "R$: 00,00";
@@ -7200,9 +7247,8 @@ const validatePublicBusinessScheduleOrder = ({ dateValue = "", timeValue = "" } 
   return { isValid: true, reason: "" };
 };
 
-const normalizePublicRestaurantSettingsPayload = (settings = {}) => {
+const normalizePublicRestaurantSettingsPayload = (settings = {}, defaults = RESTAURANT_SETTINGS_DEFAULTS) => {
   const source = settings && typeof settings === "object" ? settings : {};
-  const defaults = RESTAURANT_SETTINGS_DEFAULTS;
   const hasStructuredAddressSource =
     Boolean(source.addressFields && typeof source.addressFields === "object") ||
     ["postalCode", "cep", "street", "rua", "number", "numero", "city", "cidade", "state", "estado"].some(
@@ -7313,7 +7359,15 @@ const getPublicBusinessHoursLabel = (fallback = "18:00 as 23:00") => {
 
   return settings.businessHours || fallback;
 };
-const getPublicWhatsappNumber = () => getRestaurantSettings().whatsapp || FALLBACK_WHATSAPP_NUMBER;
+// O número reserva é o do Tokyo: só vale para o próprio Tokyo.
+// wa.me precisa do código do país: número brasileiro salvo sem o 55 (10 ou 11 dígitos) ganha o 55.
+const getPublicWhatsappNumber = () => {
+  const digits = String(
+    getRestaurantSettings().whatsapp ||
+      (restaurantSettingsState.isDefaultTenant === false ? "" : FALLBACK_WHATSAPP_NUMBER)
+  ).replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+};
 const getPublicWhatsappSupportHref = () => {
   const settings = getRestaurantSettings();
   const template =
@@ -7622,11 +7676,17 @@ const syncRestaurantCopy = (settings) => {
 
 const syncRestaurantWhatsappLinks = (settings) => {
   const href = getPublicWhatsappSupportHref();
+  // Restaurante sem WhatsApp configurado: esconde os botões (nunca manda para outro restaurante).
+  const missing = !getPublicWhatsappNumber();
 
   // Links com mensagem própria (ex.: "Falar com a loja" sobre o pedido) mantêm o texto.
   document.querySelectorAll('a[href*="wa.me"]:not([data-whatsapp-keep])').forEach((link) => {
     link.href = href;
     link.dataset.baseHref = href;
+    link.toggleAttribute("data-whatsapp-missing", missing);
+  });
+  document.querySelectorAll(".whatsapp-bubble").forEach((bubble) => {
+    bubble.toggleAttribute("data-whatsapp-missing", missing);
   });
 };
 
@@ -7790,7 +7850,13 @@ const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
     restaurantSettingsState.summary = payload.summary || null;
     // Número exatamente como o restaurante configurou (o normalizador cai no padrão quando vazio).
     restaurantSettingsState.configuredWhatsapp = String(payload.settings?.whatsapp || "").replace(/\D/g, "");
-    restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(payload.settings || {});
+    // Só o Tokyo (restaurante padrão) é completado com os dados do Tokyo.
+    restaurantSettingsState.isDefaultTenant =
+      String(payload?.tenantContext?.restaurantKey || "default").trim().toLowerCase() === "default";
+    restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(
+      payload.settings || {},
+      restaurantSettingsState.isDefaultTenant ? RESTAURANT_SETTINGS_DEFAULTS : PUBLIC_NEUTRAL_SETTINGS_DEFAULTS
+    );
     restaurantSettingsState.loaded = true;
   } catch (error) {
     restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(
@@ -12824,6 +12890,32 @@ const syncCatalogSelections = () => {
 
 const renderCatalog = () => {
   if (!catalogRoot) {
+    return;
+  }
+
+  // Só desenha o cardápio que veio da API do restaurante (nunca o fixo de outro).
+  if (!catalogHydratedFromApi) {
+    catalogRoot.innerHTML = catalogLoadFailed
+      ? `
+        <div class="empty-panel catalog-load-state" data-catalog-error role="alert">
+          <strong>Não foi possível carregar o cardápio.</strong>
+          <span>Confira sua conexão e tente de novo.</span>
+          <button class="button button-primary" type="button" data-catalog-retry>Tentar de novo</button>
+        </div>`
+      : `
+        <div class="empty-panel catalog-load-state" data-catalog-loading aria-live="polite">
+          <strong>Carregando cardápio…</strong>
+          <span>Buscando os itens e preços do restaurante.</span>
+        </div>`;
+    return;
+  }
+
+  if (!MENU_SECTIONS.some((section) => Array.isArray(section?.items) && section.items.length > 0)) {
+    catalogRoot.innerHTML = `
+      <div class="empty-panel catalog-load-state" data-catalog-empty>
+        <strong>Este restaurante ainda não publicou o cardápio.</strong>
+        <span>Volte em breve ou fale com o restaurante pelo WhatsApp.</span>
+      </div>`;
     return;
   }
 

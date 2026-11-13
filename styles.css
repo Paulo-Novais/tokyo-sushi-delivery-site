@@ -8635,3 +8635,8 @@ body.has-tracking-order .tracking-section {
 .hero-metrics article[hidden] {
   display: none !important;
 }
+
+/* Restaurante sem WhatsApp configurado: sem botões de WhatsApp. */
+[data-whatsapp-missing] {
+  display: none !important;
+}

@@ -92,6 +92,7 @@ const writeJson = (res, payload, statusCode = 200) => {
 
 const buildRestaurantSettingsPayload = () => ({
   ok: true,
+  tenantContext: { restaurantKey: "default" },
   storageMode: "mock",
   settings: {
     restaurantKey: "default",
@@ -169,6 +170,8 @@ const buildRestaurantSettingsPayload = () => ({
 
 const buildCatalogPayload = () => ({
   ok: true,
+  // Imita a API real do Tokyo (restaurante padrao), que sempre informa o restaurante.
+  tenantContext: { restaurantKey: "default" },
   sections: [],
   items: [],
   featuredItems: [],

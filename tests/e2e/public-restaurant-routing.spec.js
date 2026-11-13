@@ -144,7 +144,9 @@ test.describe("Endereço INOVAS por slug", () => {
       expect(firstResponse?.status()).toBe(200);
       expect(new URL(page.url()).pathname).toBe(`/${tenantA.key}`);
       expect(new URL(page.url()).searchParams.get("origem")).toBe("teste");
-      await expect(page).toHaveTitle(/Tokyo Sushi/i);
+      // Modelo Premium: o título é do próprio restaurante, nunca "Tokyo Sushi".
+      await expect(page).toHaveTitle(`Restaurante ${tenantA.key}`);
+      await expect(page).not.toHaveTitle(/Tokyo/i);
 
       const catalogA = await page.request.get("/api/catalog");
       expect(catalogA.status()).toBe(200);
