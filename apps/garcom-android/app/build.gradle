@@ -1,0 +1,56 @@
+// INOVAS Garçom (Android): abre a tela /garcom do sistema num WebView.
+// Sem bibliotecas extras. Versão e endereço podem vir da linha de comando:
+//   gradle assembleRelease -PversionName=1.0.1 -PversionCode=2 -PgarcomUrl=https://...
+plugins {
+    id "com.android.application"
+}
+
+def appVersionName = project.findProperty("versionName") ?: "1.0.0"
+def appVersionCode = (project.findProperty("versionCode") ?: "1").toString().toInteger()
+def garcomUrl = project.findProperty("garcomUrl") ?: "https://inovasfood.com.br/garcom"
+
+// Assinatura de produção: só quando o arquivo da chave existir (GitHub Secrets).
+// Sem ela, o APK sai assinado com a chave de teste (serve para testar).
+def keystorePath = System.getenv("GARCOM_KEYSTORE_FILE")
+def hasReleaseKey = keystorePath && new File(keystorePath).exists()
+
+android {
+    namespace "br.com.inovasfood.garcom"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "br.com.inovasfood.garcom"
+        minSdk 24
+        targetSdk 34
+        versionCode appVersionCode
+        versionName appVersionName
+        buildConfigField "String", "GARCOM_URL", "\"${garcomUrl}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv("GARCOM_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("GARCOM_KEY_ALIAS")
+                keyPassword System.getenv("GARCOM_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
