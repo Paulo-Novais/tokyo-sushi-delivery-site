@@ -12,7 +12,7 @@
     comandas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>',
     cardapio: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>',
   };
-  const MODULE_LABELS = { pedidos: "Pedidos", caixa: "Caixa", comandas: "Comandas", cardapio: "Cardápio" };
+  const MODULE_LABELS = { pedidos: "Pedidos", caixa: "Caixa e Comandas", cardapio: "Cardápio" };
 
   let current = null;
   let catalog = null;

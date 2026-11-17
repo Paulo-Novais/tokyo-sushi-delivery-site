@@ -1,10 +1,10 @@
 # INOVAS PDV (app desktop)
 
-App da operação do restaurante: **Pedidos, Caixa, Comandas e Cardápio**.
+App da operação do restaurante: **Pedidos, Caixa e Comandas, e Cardápio**.
 O login é **o mesmo do Gestor**: mesmo e-mail e senha, mesmo usuário, mesmo papel.
 Painel, relatórios, financeiro e configurações continuam no Gestor (site).
 
-> Versão 0.1.0. Corresponde à **fase 4** do esboço (`ESBOCO-APP-PDV.md`), feita **sem nenhuma mudança no site**.
+> Versão 0.2.0 (Caixa e Comandas num item só). A base (0.1.0) corresponde à **fase 4** do esboço (`ESBOCO-APP-PDV.md`), feita **sem nenhuma mudança no site**.
 > As fases 1, 2, 3 e 5 (servidor) continuam pendentes e precisam de GO do Paulo. Veja "O que ainda depende do site".
 
 ## Como funciona
@@ -13,8 +13,7 @@ Painel, relatórios, financeiro e configurações continuam no Gestor (site).
 |---|---|
 | Login (tela do app) | Chama `POST /api/admin/login`, a mesma rota da tela de login do Gestor. Funciona para qualquer usuário de restaurante já cadastrado. Usuário da equipe INOVAS (System) é recusado. Usuário com mais de um restaurante escolhe o restaurante. |
 | Pedidos | Abre a tela real do Gestor (`/admin/?section=orders`) dentro do app, com o menu lateral do Gestor escondido. |
-| Caixa | Abre as telas reais do Caixa: Salão, Abertura e Fechamento (`/admin/caixa/*`). Sangria e suprimento ficam no Salão, como hoje. |
-| Comandas | Abre o Salão do Caixa (mesas e comandas). F1 nova comanda, F2 enviar à cozinha, F4 conferir conta. |
+| Caixa e Comandas | Um item só (desde a 0.2.0; antes eram "Caixa" e "Comandas", que abriam a mesma tela). Abas: **Mesas e comandas** (`/admin/caixa/salao`), **Abertura** e **Fechamento** (`/admin/caixa/*`). Quem só trabalha com comandas (garçom) vê apenas Mesas e comandas. Sangria e suprimento ficam em Mesas e comandas. F1 nova comanda, F2 enviar à cozinha, F4 conferir conta. |
 | Cardápio | Tela nova e enxuta: busca, filtro (Todos / No site / Pausados) e **Pausar / Reativar**. Envia só `{ itemId, availabilityState }` para `POST /api/admin/catalog/update`. |
 | Sair | Encerra a sessão no servidor (`/api/admin/logout`), apaga o cookie e o login guardado. |
 
@@ -22,12 +21,14 @@ Nenhuma rota nova foi criada no servidor. Quem decide o que cada usuário pode f
 
 ### O que o app mostra para cada papel (permissões de hoje)
 
-| Papel | Pedidos | Caixa | Comandas | Cardápio |
-|---|---|---|---|---|
-| Caixa | sim | sim | sim | aparece, mas **sem poder pausar** (o servidor responde 403) |
-| Garçom | sim | não | sim | aparece, sem acesso |
-| Cozinha | sim | não | não | só consulta |
-| Gerente / Dono | sim | sim | sim | pausa e reativa |
+| Papel | Pedidos | Caixa e Comandas | Cardápio |
+|---|---|---|---|
+| Caixa | sim | Mesas e comandas, Abertura, Fechamento | aparece, mas **sem poder pausar** (o servidor responde 403) |
+| Garçom | sim | só Mesas e comandas (*) | aparece, sem acesso |
+| Cozinha | sim | não | só consulta |
+| Gerente / Dono | sim | Mesas e comandas, Abertura, Fechamento | pausa e reativa |
+
+(*) Hoje o site não dá ao papel Garçom a permissão de tela `tenant.navigation.cash_register`: o Gestor manda o garçom de volta para Pedidos. Já acontecia com o item "Comandas" da 0.1.0. A correção é no site (permissão do papel) e precisa de GO.
 
 ### "Fica conectado até alguém clicar em Sair"
 

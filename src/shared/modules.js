@@ -28,53 +28,76 @@ const roleLabel = (role) => {
 const has = (permissions, permission) =>
   Array.isArray(permissions) && permissions.includes(permission);
 
-const MODULE_IDS = Object.freeze(["pedidos", "caixa", "comandas", "cardapio"]);
+// "Caixa" e "Comandas" eram dois itens que abriam a mesma tela (o Salão).
+// Agora são um módulo só, "Caixa e Comandas", com abas por permissão:
+// garçom vê só Mesas e comandas; quem opera o caixa vê as três.
+const MODULE_IDS = Object.freeze(["pedidos", "caixa", "cardapio"]);
+
+// Ids antigos (app 0.1.0) que podem chegar de atalhos ou estado salvo.
+const LEGACY_MODULE_IDS = Object.freeze({ comandas: "caixa" });
+const LEGACY_ROUTE_IDS = Object.freeze({ salao: "mesas" });
 
 // Telas do Gestor que cada módulo abre. Caminhos relativos ao servidor.
+// "access" diz quem vê a aba: "tab" (comandas), "cash" (caixa) ou ambos.
 const MODULE_ROUTES = Object.freeze({
   pedidos: Object.freeze([{ id: "fila", label: "Fila de pedidos", path: "/admin/?section=orders" }]),
   caixa: Object.freeze([
-    { id: "salao", label: "Salão", path: "/admin/caixa/salao" },
-    { id: "abertura", label: "Abertura", path: "/admin/caixa/abertura" },
-    { id: "fechamento", label: "Fechamento", path: "/admin/caixa/fechamento" },
+    Object.freeze({ id: "mesas", label: "Mesas e comandas", path: "/admin/caixa/salao", access: ["tab", "cash"] }),
+    Object.freeze({ id: "abertura", label: "Abertura", path: "/admin/caixa/abertura", access: ["cash"] }),
+    Object.freeze({ id: "fechamento", label: "Fechamento", path: "/admin/caixa/fechamento", access: ["cash"] }),
   ]),
-  comandas: Object.freeze([{ id: "mesas", label: "Mesas e comandas", path: "/admin/caixa/salao" }]),
   cardapio: Object.freeze([]),
 });
 
 const MODULE_HINTS = Object.freeze({
   pedidos: "",
-  caixa: "Sangria e suprimento ficam no Salão.",
-  comandas: "F1 nova comanda · F2 enviar à cozinha · F4 conferir conta",
+  caixa: "F1 nova comanda · F2 enviar à cozinha · F4 conferir conta · Sangria e suprimento em Mesas e comandas",
   cardapio: "",
 });
 
-const buildModules = (permissions = []) => [
-  {
-    id: "pedidos",
-    label: "Pedidos",
-    available: has(permissions, "tenant.orders.view"),
-  },
-  {
-    id: "caixa",
-    label: "Caixa",
-    available:
-      has(permissions, "tenant.cash_register.view") &&
-      (has(permissions, "tenant.cash_register.open") || has(permissions, "tenant.cash_register.close")),
-  },
-  {
-    id: "comandas",
-    label: "Comandas",
-    available:
-      has(permissions, "tenant.cash_register.open_tab") || has(permissions, "tenant.cash_register.add_item"),
-  },
-  {
-    id: "cardapio",
-    label: "Cardápio",
-    // O módulo aparece sempre. Sem permissão, a tela explica o que falta.
-    available: true,
-  },
-];
+const cashAccessOf = (permissions = []) => ({
+  // Opera o caixa: abre, fecha, recebe, sangria e suprimento.
+  cash:
+    has(permissions, "tenant.cash_register.view") &&
+    (has(permissions, "tenant.cash_register.open") || has(permissions, "tenant.cash_register.close")),
+  // Trabalha com comandas: abre comanda e lança itens.
+  tab: has(permissions, "tenant.cash_register.open_tab") || has(permissions, "tenant.cash_register.add_item"),
+});
+
+const allowedRoutes = (moduleId, permissions = []) => {
+  const routes = MODULE_ROUTES[moduleId] || [];
+  if (moduleId !== "caixa") return routes.slice();
+  const access = cashAccessOf(permissions);
+  return routes.filter((route) => route.access.some((kind) => access[kind]));
+};
+
+const buildModules = (permissions = []) => {
+  const caixaRoutes = allowedRoutes("caixa", permissions);
+  return [
+    {
+      id: "pedidos",
+      label: "Pedidos",
+      available: has(permissions, "tenant.orders.view"),
+      routes: allowedRoutes("pedidos", permissions),
+    },
+    {
+      id: "caixa",
+      label: "Caixa e Comandas",
+      available: caixaRoutes.length > 0,
+      routes: caixaRoutes,
+    },
+    {
+      id: "cardapio",
+      label: "Cardápio",
+      // O módulo aparece sempre. Sem permissão, a tela explica o que falta.
+      available: true,
+      routes: [],
+    },
+  ];
+};
+
+const normalizeModuleId = (moduleId) => LEGACY_MODULE_IDS[moduleId] || moduleId;
+const normalizeRouteId = (routeId) => LEGACY_ROUTE_IDS[routeId] || routeId;
 
 const catalogAccess = (permissions = []) => {
   if (has(permissions, "tenant.catalog.edit")) return "pause";
@@ -87,9 +110,11 @@ const firstAvailableModule = (modules) => {
   return found ? found.id : "cardapio";
 };
 
-const routeFor = (moduleId, routeId) => {
-  const routes = MODULE_ROUTES[moduleId] || [];
-  return routes.find((route) => route.id === routeId) || routes[0] || null;
+// Aba a abrir. Com "routes" (as abas permitidas do módulo), nunca devolve
+// uma aba que a pessoa não pode ver.
+const routeFor = (moduleId, routeId, routes = MODULE_ROUTES[normalizeModuleId(moduleId)] || []) => {
+  const wanted = normalizeRouteId(routeId);
+  return routes.find((route) => route.id === wanted) || routes[0] || null;
 };
 
 // Seções do Gestor que podem aparecer dentro do app. Qualquer outra (painel,
@@ -168,6 +193,8 @@ module.exports = {
   MODULE_HINTS,
   MODULE_IDS,
   MODULE_ROUTES,
+  allowedRoutes,
+  normalizeModuleId,
   ROLE_LABELS,
   buildModules,
   catalogAccess,

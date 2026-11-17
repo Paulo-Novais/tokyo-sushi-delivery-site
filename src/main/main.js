@@ -23,8 +23,8 @@ const GESTOR_APP_CSS = require("./gestor-view.css.js");
 const {
   ALLOWED_GESTOR_SECTIONS,
   MODULE_HINTS,
-  MODULE_ROUTES,
   buildModules,
+  normalizeModuleId,
   catalogAccess,
   classifyGestorNavigation,
   firstAvailableModule,
@@ -96,7 +96,7 @@ const publicState = () => ({
         login: state.user.login,
       }
     : null,
-  routes: state.activeModule ? MODULE_ROUTES[state.activeModule] : [],
+  routes: state.activeModule ? routesOf(state.activeModule) : [],
   hint: state.activeModule ? MODULE_HINTS[state.activeModule] : "",
 });
 
@@ -116,7 +116,10 @@ const setState = (patch) => {
 
 /* ---------------- Tela do Gestor (WebContentsView) ---------------- */
 
-const isGestorModule = (moduleId) => ["pedidos", "caixa", "comandas"].includes(moduleId);
+const isGestorModule = (moduleId) => ["pedidos", "caixa"].includes(moduleId);
+
+// Abas que o usuário logado pode ver no módulo (filtradas pela permissão).
+const routesOf = (moduleId) => state.modules.find((module) => module.id === moduleId)?.routes || [];
 
 const syncGestorVisibility = () => {
   if (!gestorView) return;
@@ -127,7 +130,7 @@ const syncGestorVisibility = () => {
 };
 
 const gestorUrlFor = (moduleId, routeId) => {
-  const route = routeFor(moduleId, routeId);
+  const route = routeFor(moduleId, routeId, routesOf(moduleId));
   return route ? `${config.getServerUrl()}${route.path}` : null;
 };
 
@@ -233,11 +236,12 @@ const createGestorView = () => {
   return gestorView;
 };
 
-const openModule = async (moduleId, routeId, { force = false } = {}) => {
+const openModule = async (requestedModuleId, routeId, { force = false } = {}) => {
+  const moduleId = normalizeModuleId(requestedModuleId);
   debug("openModule", moduleId, routeId || "");
   const target = state.modules.find((module) => module.id === moduleId);
   if (!target || !target.available) return publicState();
-  const route = routeFor(moduleId, routeId);
+  const route = routeFor(moduleId, routeId, target.routes);
   const previousUrl = isGestorModule(state.activeModule)
     ? gestorUrlFor(state.activeModule, state.activeRoute)
     : null;

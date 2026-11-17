@@ -103,6 +103,7 @@ const seed = async () => {
     await owner("/api/admin/login", { method: "POST", body: { identifier: restaurant.ownerLogin, password: restaurant.ownerPassword } });
     restaurant.cashier = await createTenantUser(owner, restaurant.key, "CASHIER", "ana");
     restaurant.manager = await createTenantUser(owner, restaurant.key, "MANAGER", "gerente");
+    restaurant.waiter = await createTenantUser(owner, restaurant.key, "WAITER", "garcom");
     result[slot] = restaurant;
   }
   result.master = { login: MASTER_LOGIN, password: MASTER_PASSWORD };

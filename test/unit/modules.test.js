@@ -24,14 +24,35 @@ const MANAGER_LIKE = [...CASHIER, "tenant.catalog.view", "tenant.catalog.edit"];
 const available = (permissions) =>
   m.buildModules(permissions).filter((module) => module.available).map((module) => module.id);
 
-test("CAIXA vê Pedidos, Caixa, Comandas e Cardápio (sem poder pausar)", () => {
-  assert.deepEqual(available(CASHIER), ["pedidos", "caixa", "comandas", "cardapio"]);
+const caixaTabs = (permissions) =>
+  m.buildModules(permissions).find((module) => module.id === "caixa").routes.map((route) => route.id);
+
+test("CAIXA vê Pedidos, Caixa e Comandas e Cardápio (sem poder pausar)", () => {
+  assert.deepEqual(available(CASHIER), ["pedidos", "caixa", "cardapio"]);
+  assert.deepEqual(caixaTabs(CASHIER), ["mesas", "abertura", "fechamento"]);
   assert.equal(m.catalogAccess(CASHIER), "none");
   assert.equal(m.firstAvailableModule(m.buildModules(CASHIER)), "pedidos");
 });
 
-test("GARÇOM não abre/fecha caixa, mas lança comanda", () => {
-  assert.deepEqual(available(WAITER), ["pedidos", "comandas", "cardapio"]);
+test("GARÇOM vê Caixa e Comandas só com a aba Mesas (não abre/fecha caixa)", () => {
+  assert.deepEqual(available(WAITER), ["pedidos", "caixa", "cardapio"]);
+  assert.deepEqual(caixaTabs(WAITER), ["mesas"]);
+  const routes = m.buildModules(WAITER).find((module) => module.id === "caixa").routes;
+  assert.equal(m.routeFor("caixa", "abertura", routes).id, "mesas", "garçom nunca cai na Abertura");
+  assert.equal(m.routeFor("caixa", "fechamento", routes).id, "mesas", "garçom nunca cai no Fechamento");
+});
+
+test("Caixa e Comandas: um item só no menu, com nome novo", () => {
+  const modules = m.buildModules(CASHIER);
+  assert.equal(modules.filter((module) => module.id === "comandas").length, 0);
+  assert.equal(modules.find((module) => module.id === "caixa").label, "Caixa e Comandas");
+  assert.deepEqual(m.MODULE_IDS, ["pedidos", "caixa", "cardapio"]);
+});
+
+test("ids antigos do app 0.1.0 (comandas, salao) continuam abrindo Mesas e comandas", () => {
+  assert.equal(m.normalizeModuleId("comandas"), "caixa");
+  assert.equal(m.routeFor("comandas", "mesas").id, "mesas");
+  assert.equal(m.routeFor("caixa", "salao").id, "mesas");
 });
 
 test("COZINHA vê pedidos e consulta cardápio", () => {
@@ -107,6 +128,7 @@ test("rotas dos módulos apontam para telas existentes do Gestor", () => {
   assert.equal(m.routeFor("pedidos").path, "/admin/?section=orders");
   assert.equal(m.routeFor("caixa", "fechamento").path, "/admin/caixa/fechamento");
   assert.equal(m.routeFor("caixa", "nao-existe").path, "/admin/caixa/salao");
+  assert.equal(m.routeFor("caixa", "mesas").path, "/admin/caixa/salao");
   assert.equal(m.routeFor("cardapio"), null);
   for (const routes of Object.values(m.MODULE_ROUTES)) {
     for (const route of routes) {

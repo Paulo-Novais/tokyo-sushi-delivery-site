@@ -99,7 +99,7 @@ test.before(async () => {
   data = await seed();
 });
 
-test("CAIXA entra com o login do Gestor e vê só os 4 módulos, sem o menu do Gestor", async () => {
+test("CAIXA entra com o login do Gestor e vê só os 3 módulos, sem o menu do Gestor", async () => {
   const userData = tempUserData();
   const { app, win } = await launch(userData);
   try {
@@ -108,7 +108,8 @@ test("CAIXA entra com o login do Gestor e vê só os 4 módulos, sem o menu do G
     assert.equal(await win.textContent("#top-restaurant"), "Restaurante A");
     assert.equal(await win.textContent("#op-role"), "Caixa");
     const labels = await win.$$eval("#nav-items .nav-item:not([disabled])", (nodes) => nodes.map((n) => n.dataset.module));
-    assert.deepEqual(labels, ["pedidos", "caixa", "comandas", "cardapio"]);
+    assert.deepEqual(labels, ["pedidos", "caixa", "cardapio"]);
+    assert.equal(await win.textContent('[data-module="caixa"] span'), "Caixa e Comandas");
 
     const pedidos = await waitFor(async () => {
       const info = await gestor(app);
@@ -124,12 +125,34 @@ test("CAIXA entra com o login do Gestor e vê só os 4 módulos, sem o menu do G
       return info && /\/admin\/caixa\//.test(info.url) && info.section === "cash-register" ? info : null;
     }, { message: "tela do Caixa" });
     assert.equal(caixa.sidebar, "none");
+    const tabs = await win.$$eval("[data-route]", (nodes) => nodes.map((n) => n.textContent.trim()));
+    assert.deepEqual(tabs, ["Mesas e comandas", "Abertura", "Fechamento"]);
 
     await win.click('[data-module="cardapio"]');
     await win.waitForSelector("#cd-message[data-tone='locked']");
     assert.match(await win.textContent("#cd-message"), /ainda não pode pausar/);
     const hidden = await gestor(app);
     assert.equal(hidden.visible, false, "tela do Gestor some no Cardápio");
+  } finally {
+    await app.close();
+  }
+});
+
+test("GARÇOM vê Caixa e Comandas só com Mesas e comandas, sem Abertura e Fechamento", async () => {
+  const userData = tempUserData();
+  const { app, win } = await launch(userData);
+  try {
+    await login(win, data.a.waiter);
+    await win.waitForSelector('body[data-phase="app"]', { timeout: 20000 });
+    const labels = await win.$$eval("#nav-items .nav-item:not([disabled])", (nodes) => nodes.map((n) => n.dataset.module));
+    assert.deepEqual(labels, ["pedidos", "caixa", "cardapio"]);
+    await win.click('[data-module="caixa"]');
+    const salao = await waitFor(async () => {
+      const info = await gestor(app);
+      return info && /\/admin\/caixa\/salao/.test(info.url) && info.section === "cash-register" ? info : null;
+    }, { message: "Mesas e comandas do garçom" });
+    assert.equal(salao.sidebar, "none");
+    assert.equal(await win.$$eval("[data-route]", (nodes) => nodes.length), 0, "garçom não vê abas de Abertura/Fechamento");
   } finally {
     await app.close();
   }
