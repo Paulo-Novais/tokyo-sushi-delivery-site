@@ -26,17 +26,36 @@ test("Gestor no site: menu sem Caixa e Pedidos, telas continuam abrindo pelo end
   const nav = page.locator(".admin-nav");
   await expect(nav.locator('[data-admin-section="dashboard"]')).toBeVisible();
   await expect(nav.locator('[data-admin-section="menu"]')).toBeVisible();
-  await expect(nav.locator('[data-admin-section="cash-register"]')).toHaveCount(0);
-  await expect(nav.locator('[data-admin-section="orders"]')).toHaveCount(0);
+  await expect(nav.locator('[data-admin-section="cash-register"]')).toBeHidden();
+  await expect(nav.locator('[data-admin-section="orders"]')).toBeHidden();
+  const visibleTitles = await nav.locator(".admin-nav-item:visible strong").allInnerTexts();
+  expect(visibleTitles).not.toContain("Caixa");
+  expect(visibleTitles).not.toContain("Pedidos");
+  expect(visibleTitles).toContain("Agendamentos");
+
+  // Atalhos internos continuam abrindo Pedidos (ex.: "ver pedidos" do Financeiro).
+  await nav.locator('[data-admin-section="finance"]').click();
+  await expect(page.locator("body")).toHaveAttribute("data-admin-section", "finance");
+  await page.evaluate(() => {
+    const link = document.createElement("button");
+    link.type = "button";
+    link.dataset.finGoto = "orders";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  });
+  await expect(page.locator("body")).toHaveAttribute("data-admin-section", "orders");
+  await expect(nav.locator('[data-admin-section="orders"]')).toBeHidden();
 
   // Endereços que o app abre continuam funcionando.
   await page.goto("/admin/?section=orders");
   await expect.poll(() => page.evaluate(() => document.body.dataset.adminSection)).toBe("orders");
-  await expect(nav.locator('[data-admin-section="orders"]')).toHaveCount(0);
+  await expect(nav.locator('[data-admin-section="orders"]')).toBeHidden();
 
   await page.goto("/admin/caixa/salao");
   await expect.poll(() => page.evaluate(() => document.body.dataset.adminSection)).toBe("cash-register");
-  await expect(nav.locator('[data-admin-section="cash-register"]')).toHaveCount(0);
+  await expect(nav.locator('[data-admin-section="cash-register"]')).toBeHidden();
+  await expect(nav.locator(".admin-nav-submenu")).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });

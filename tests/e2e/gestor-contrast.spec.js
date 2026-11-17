@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const { loginMaster, onboardRestaurant, uniqueKey } = require("./helpers/v1.9-fixtures.cjs");
+const { openGestorSection } = require("./helpers/gestor-nav.cjs");
 
 // Auditoria de legibilidade: em cada aba do Gestor, nos temas claro e escuro,
 // todo texto visível precisa de contraste mínimo com o fundo real
@@ -133,7 +134,7 @@ test("Gestor: texto legível e títulos contidos em todas as abas, nos dois tema
       if (current !== theme) await page.locator("[data-admin-theme-toggle]").click();
       await expect(page.locator("body")).toHaveAttribute("data-admin-theme", theme);
       for (const section of SECTIONS) {
-        await page.locator(`.admin-nav [data-admin-section="${section}"]`).click();
+        await openGestorSection(page, section);
         await page.waitForLoadState("networkidle");
         await page.waitForTimeout(500);
         const result = await page.evaluate(auditPage);

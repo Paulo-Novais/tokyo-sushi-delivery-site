@@ -4135,8 +4135,13 @@ const renderSidebarNav = () => {
 
   ensureActiveSectionAllowed();
 
-  navRoot.innerHTML = getSidebarNavSections().map((section) => {
+  // Caixa e Pedidos continuam no HTML do menu, só escondidos: atalhos internos
+  // (Financeiro "ver pedidos", aviso de pedido novo, abas de Resultados) abrem
+  // a seção clicando no botão do menu.
+  const sidebarKeys = new Set(getSidebarNavSections().map((section) => section.key));
+  navRoot.innerHTML = getVisibleNavSections().map((section) => {
     const isActive = adminState.activeSection === section.key;
+    const isHiddenInSidebar = !sidebarKeys.has(section.key);
     const isImplemented = IMPLEMENTED_SECTIONS.has(section.key);
     const badgeValue = (() => {
       if (section.key === "dashboard") {
@@ -4205,7 +4210,7 @@ const renderSidebarNav = () => {
       return "Em breve";
     })();
 
-    const cashRegisterSubmenu = section.key === "cash-register" && isActive
+    const cashRegisterSubmenu = section.key === "cash-register" && isActive && !isHiddenInSidebar
       ? `
         <div class="admin-nav-submenu" aria-label="Opções do caixa">
           <button type="button" data-cash-register-subview="floor">Salão</button>
@@ -4221,6 +4226,7 @@ const renderSidebarNav = () => {
         type="button"
         data-admin-section="${escapeHtml(section.key)}"
         ${isActive ? 'aria-current="page"' : ""}
+        ${isHiddenInSidebar ? 'hidden style="display:none" aria-hidden="true" tabindex="-1"' : ""}
       >
         <span class="admin-nav-icon" aria-hidden="true">${getNavIconSvg(section.key)}</span>
         <div>

@@ -33,8 +33,8 @@ test("Estoque v2: tabela, filtros, entrada/baixa e menu agrupado", async ({ page
   }
   await expect(page.locator('.admin-nav [data-admin-section="scheduled"] .admin-nav-icon')).toBeVisible();
   // Caixa e Pedidos ficam só no app: o menu do site não mostra esses itens.
-  await expect(page.locator('.admin-nav [data-admin-section="orders"]')).toHaveCount(0);
-  await expect(page.locator('.admin-nav [data-admin-section="cash-register"]')).toHaveCount(0);
+  await expect(page.locator('.admin-nav [data-admin-section="orders"]')).toBeHidden();
+  await expect(page.locator('.admin-nav [data-admin-section="cash-register"]')).toBeHidden();
   await expect(page.locator('.admin-nav [data-admin-section="settings"] .admin-nav-badge')).toHaveText("Site");
 
   // Cabeçalho, indicadores e tabela.

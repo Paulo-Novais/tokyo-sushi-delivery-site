@@ -7,6 +7,7 @@ const {
   onboardRestaurant,
   uniqueKey,
 } = require("./helpers/v1.9-fixtures.cjs");
+const { openGestorSection } = require("./helpers/gestor-nav.cjs");
 
 // Captura cada área do Gestor para revisão visual e garante que nenhuma
 // tela quebra a largura em 1024, 1366 e 1920 px.
@@ -47,7 +48,7 @@ test("Gestor: todas as áreas abrem sem erro e sem rolagem lateral", async ({ pa
     await page.waitForLoadState("networkidle");
 
     for (const [name, key] of SECTIONS) {
-      await page.locator(`.admin-nav [data-admin-section="${key}"]`).click();
+      await openGestorSection(page, key);
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(400);
       for (const [width, height] of [[1366, 768], [1024, 768]]) {

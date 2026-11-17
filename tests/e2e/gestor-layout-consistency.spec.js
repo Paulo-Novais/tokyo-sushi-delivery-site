@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const { loginMaster, onboardRestaurant, uniqueKey } = require("./helpers/v1.9-fixtures.cjs");
+const { openGestorSection } = require("./helpers/gestor-nav.cjs");
 
 // Padronização: o menu lateral e o início do conteúdo precisam ter as mesmas
 // medidas em todas as páginas do Gestor (abas internas e páginas separadas,
@@ -61,7 +62,7 @@ test("Gestor: menu e conteúdo com as mesmas medidas em todas as páginas", asyn
       const current = await page.evaluate(() => document.body.dataset.adminTheme);
       if (current !== theme) await page.locator("[data-admin-theme-toggle]").click();
       for (const section of ["dashboard", "cash-register", "orders", "menu", "finance", "settings"]) {
-        await page.locator(`.admin-nav [data-admin-section="${section}"]`).click();
+        await openGestorSection(page, section);
         await page.waitForTimeout(500);
         rows.push({ theme, page: section, ...(await page.evaluate(measure)) });
       }
