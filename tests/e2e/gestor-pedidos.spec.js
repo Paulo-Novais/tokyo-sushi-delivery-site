@@ -38,7 +38,8 @@ const openOrders = async (page, theme = "light") => {
   await page.locator('input[name="password"]').fill(restaurant.ownerPassword);
   await page.locator("[data-admin-login-submit]").click();
   await page.waitForLoadState("networkidle");
-  await page.locator('.admin-nav [data-admin-section="orders"]').first().click();
+  // Pedidos não aparece no menu do site (fica no app): abre pelo endereço.
+  await page.goto("/admin/?section=orders");
   await page.waitForSelector(".gx-ticket");
   await page.waitForTimeout(400);
 };

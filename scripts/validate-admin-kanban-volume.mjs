@@ -603,7 +603,8 @@ const openOrdersSection = async (page, expectedPreparingCount) => {
     return;
   }
 
-  await page.locator('[data-admin-section="orders"]').click();
+  // Pedidos não aparece no menu do site (fica no app): abre pelo endereço.
+  await page.goto(new URL("/admin/?section=orders", page.url()).toString());
   await waitForOrdersSection(page, expectedPreparingCount);
 };
 

@@ -1137,6 +1137,17 @@ const getNavigationSectionByKey = (sectionKey) =>
 const getVisibleNavSections = () =>
   getNavigationSectionsForActor().filter((section) => canAccessAdminSection(section.key));
 
+// Caixa e Pedidos ficam só no app INOVAS PDV: no site, o menu lateral do
+// restaurante não mostra esses itens. As telas continuam existindo (o app abre
+// /admin/?section=orders e /admin/caixa/...), por isso isto só afeta a lista do
+// menu, não a permissão nem a seção ativa. O System (equipe INOVAS) não muda.
+const SIDEBAR_HIDDEN_RESTAURANT_SECTIONS = new Set(["cash-register", "orders"]);
+
+const getSidebarNavSections = () =>
+  isSystemAdminActor()
+    ? getVisibleNavSections()
+    : getVisibleNavSections().filter((section) => !SIDEBAR_HIDDEN_RESTAURANT_SECTIONS.has(section.key));
+
 const ensureActiveSectionAllowed = () => {
   if (
     getVisibleNavSections().some((section) => section.key === adminState.activeSection) &&
@@ -4124,7 +4135,7 @@ const renderSidebarNav = () => {
 
   ensureActiveSectionAllowed();
 
-  navRoot.innerHTML = getVisibleNavSections().map((section) => {
+  navRoot.innerHTML = getSidebarNavSections().map((section) => {
     const isActive = adminState.activeSection === section.key;
     const isImplemented = IMPLEMENTED_SECTIONS.has(section.key);
     const badgeValue = (() => {
@@ -4237,7 +4248,7 @@ const NAV_GROUPS = Object.freeze([
 ]);
 
 const appendNavGroupHeadings = (navRoot) => {
-  const visibleKeys = new Set(getVisibleNavSections().map((section) => section.key));
+  const visibleKeys = new Set(getSidebarNavSections().map((section) => section.key));
   navRoot.insertAdjacentHTML(
     "beforeend",
     NAV_GROUPS.filter((group) => group.sections.some((key) => visibleKeys.has(key)))

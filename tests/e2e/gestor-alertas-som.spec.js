@@ -33,9 +33,11 @@ test("Alertas de som: novo pedido, atrasado e preferências", async ({ page }) =
   await page.waitForLoadState("networkidle");
 
   // Antes do primeiro clique o navegador bloqueia som: aparece o aviso para liberar.
-  await expect(page.locator("[data-order-alert-unlock]")).toBeVisible();
-  await page.locator('.admin-nav [data-admin-section="orders"]').first().click();
+  // Pedidos não aparece no menu do site (fica no app): abre pelo endereço.
+  await page.goto("/admin/?section=orders");
   await page.waitForSelector(".gx-ticket");
+  await expect(page.locator("[data-order-alert-unlock]")).toBeVisible();
+  await page.mouse.click(5, 5);
   await expect(page.locator("[data-order-alert-unlock]")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.__tones.length)).toBe(0);
 
