@@ -390,7 +390,13 @@ const serveStatic = async (req, res, pathname) => {
     res.setHeader("X-Robots-Tag", "noindex, nofollow");
   }
   res.writeHead(200, {
-    "Cache-Control": staticPathname.startsWith("/admin/") ? "no-store, max-age=0" : "public, max-age=0, must-revalidate",
+    // Igual ao vercel.json: .js/.css do Gestor e do System são versionados (?v=)
+    // no build e podem ficar no cache; o resto de /admin continua sem cache.
+    "Cache-Control": /^\/(admin|system)\/.+\.(js|css)$/.test(staticPathname)
+      ? "public, max-age=31536000, immutable"
+      : staticPathname.startsWith("/admin/")
+        ? "no-store, max-age=0"
+        : "public, max-age=0, must-revalidate",
     "Content-Type": contentType,
   });
   res.end(body);

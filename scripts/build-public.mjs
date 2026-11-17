@@ -4,6 +4,7 @@
 // ./lib from the repository root.
 //
 // Usage: node scripts/build-public.mjs [--out <dir>]
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -32,6 +33,45 @@ const walk = (dir, results = []) => {
   return results;
 };
 
+// Cache do Gestor e do System: os .js/.css de /admin e /system ganham um
+// "?v=<hash do conteúdo>" em todo HTML publicado. O vercel.json guarda esses
+// arquivos no cache por muito tempo; quando o conteúdo muda, o hash muda e o
+// navegador (ou o app INOVAS PDV) baixa a versão nova.
+const VERSIONED_ASSET_PATTERN = /(\s(?:src|href)=")(\/(?:admin|system)\/[^"?#]+\.(?:js|css))(")/g;
+
+const hashCache = new Map();
+const contentHash = (absolutePath) => {
+  if (!hashCache.has(absolutePath)) {
+    const digest = crypto.createHash("sha256").update(fs.readFileSync(absolutePath)).digest("hex");
+    hashCache.set(absolutePath, digest.slice(0, 10));
+  }
+  return hashCache.get(absolutePath);
+};
+
+export const versionAssetReferences = (html, resolveAsset) =>
+  html.replace(VERSIONED_ASSET_PATTERN, (match, prefix, assetPath, suffix) => {
+    const version = resolveAsset(assetPath);
+    return version ? `${prefix}${assetPath}?v=${version}${suffix}` : match;
+  });
+
+const versionHtmlFiles = (targetDir, copied) => {
+  hashCache.clear();
+  const resolveAsset = (assetPath) => {
+    const absolute = path.join(targetDir, assetPath.slice(1));
+    if (!fs.existsSync(absolute)) {
+      throw new Error(`[build-public] HTML referencia arquivo que nao foi publicado: ${assetPath}`);
+    }
+    return contentHash(absolute);
+  };
+  for (const relativePath of copied) {
+    if (!relativePath.endsWith(".html")) continue;
+    const absolute = path.join(targetDir, relativePath);
+    const html = fs.readFileSync(absolute, "utf8");
+    const versioned = versionAssetReferences(html, resolveAsset);
+    if (versioned !== html) fs.writeFileSync(absolute, versioned);
+  }
+};
+
 export const buildPublic = (targetDir = outDir) => {
   if (path.resolve(targetDir) === repoRoot) {
     throw new Error("Refusing to build public output into the repository root.");
@@ -47,6 +87,7 @@ export const buildPublic = (targetDir = outDir) => {
     fs.copyFileSync(path.join(repoRoot, relativePath), destination);
     copied.push(relativePath);
   }
+  versionHtmlFiles(targetDir, copied);
   return copied;
 };
 
