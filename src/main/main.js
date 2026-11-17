@@ -718,6 +718,12 @@ app.whenReady().then(async () => {
     allowBasicText: !app.isPackaged && process.env.INOVAS_PDV_TEST_ALLOW_BASIC_STORE === "1",
   });
   gestorSession = session.fromPartition(PARTITION);
+  // O servidor reconhece o app (Pedidos e Caixa só funcionam aqui, não no
+  // navegador): marca no User-Agent e cabeçalho em todas as chamadas ao Gestor.
+  gestorSession.setUserAgent(`${gestorSession.getUserAgent()} InovasPDV/${app.getVersion()}`);
+  gestorSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: { ...details.requestHeaders, "X-Inovas-Client": "inovas-pdv-desktop" } });
+  });
   gestorSession.setPermissionRequestHandler((_contents, permission, callback) => {
     // O Gestor só precisa tocar som (autoplay não pede permissão) e imprimir.
     callback(["clipboard-sanitized-write", "fullscreen"].includes(permission));
