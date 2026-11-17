@@ -84,9 +84,6 @@
     ],
     "appx": {
       "applicationId": "INOVASPDV",
-      "identityName": "${env.STORE_IDENTITY_NAME}",
-      "publisher": "${env.STORE_PUBLISHER}",
-      "publisherDisplayName": "${env.STORE_PUBLISHER_DISPLAY_NAME}",
       "displayName": "INOVAS PDV",
       "languages": [
         "pt-BR"
