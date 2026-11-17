@@ -37,9 +37,12 @@ test("Login: endereço oficial é /login e os antigos levam até ele", async ({ 
   await page.goto("/admin/");
   expect(new URL(page.url()).pathname).toBe("/login");
 
-  // "Acessar Plataforma" da home aponta para /login.
+  // A home não mostra mais entrada para o Gestor/Caixa no navegador:
+  // o acesso fica no app. /login continua funcionando por endereço direto.
   await page.goto("/inovas");
-  await expect(page.locator(".if-menu-actions a", { hasText: "Acessar Plataforma" })).toHaveAttribute("href", "/login");
+  await expect(page.locator("a", { hasText: "Acessar Plataforma" })).toHaveCount(0);
+  await expect(page.locator('a[href="/login"], a[href="/gestor"], a[href^="/admin"]')).toHaveCount(0);
+  await expect(page.locator("a", { hasText: "Entrar no Gestor" })).toHaveCount(0);
   // "Baixar Gestor" baixa o instalador do app INOVAS PDV (Windows).
   await expect(page.locator(".if-menu-actions a", { hasText: "Baixar Gestor" })).toHaveAttribute(
     "href",
