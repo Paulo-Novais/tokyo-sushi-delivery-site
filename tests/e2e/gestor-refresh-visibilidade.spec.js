@@ -40,21 +40,28 @@ test("Gestor: recarga pausa com a tela escondida e o aviso de pedido continua", 
     if (url.pathname.startsWith("/api/")) calls.push(`${url.pathname}${url.search}`);
   });
   const count = (predicate) => calls.filter(predicate).length;
-  const isSectionRefresh = (call) => call.startsWith("/api/admin/inventory/list") || call.startsWith("/api/catalog");
+  // Avança o relógio aos poucos: as chamadas de rede são reais e precisam
+  // terminar antes do próximo ciclo (o aviso não sobrepõe buscas).
+  const advance = async (totalMs) => {
+    for (let elapsed = 0; elapsed < totalMs; elapsed += 5_000) {
+      await page.clock.runFor(5_000);
+      await page.waitForTimeout(400);
+    }
+  };
   const isAlertCheck = (call) => call.startsWith("/api/admin/orders/list?limit=80");
+  // Qualquer outra chamada de dados é a recarga da tela (a seção aberta decide quais).
+  const isSectionRefresh = (call) => !isAlertCheck(call) && !call.startsWith("/api/admin/session");
 
   // Visível: a recarga da tela acontece a cada 20 s.
-  await page.clock.runFor(41_000);
-  await page.waitForLoadState("networkidle");
-  expect(count(isSectionRefresh)).toBeGreaterThan(0);
+  await advance(45_000);
+  await expect.poll(() => count(isSectionRefresh)).toBeGreaterThan(0);
 
   // Escondido: nenhuma recarga da tela, mas o aviso de pedido continua buscando.
   calls.length = 0;
   await setHidden(page, true);
-  await page.clock.runFor(61_000);
-  await page.waitForLoadState("networkidle");
+  await advance(60_000);
   expect(count(isSectionRefresh)).toBe(0);
-  expect(count(isAlertCheck)).toBeGreaterThanOrEqual(2);
+  expect(count(isAlertCheck)).toBeGreaterThanOrEqual(3);
 
   // Voltou a ficar visível: recarrega na hora.
   calls.length = 0;
