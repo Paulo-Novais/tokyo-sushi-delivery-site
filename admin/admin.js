@@ -12335,6 +12335,7 @@ const ORDER_ALERT_DEFAULTS = Object.freeze({
   late: true,
 });
 const ORDER_ALERT_REPEAT_MS = 30000;
+const ORDER_ALERT_HIDDEN_CHECK_MS = 15000;
 const orderAlertState = {
   prefs: null,
   known: null,
@@ -12548,7 +12549,10 @@ const checkOrderAlerts = (orders = []) => {
 const pollOrderAlerts = async () => {
   if (orderAlertState.polling || document.body?.dataset.adminPage !== "dashboard") return;
   if (!hasAdminPermission("orders_view") || !hasPlanFeatureForSection("orders")) return;
-  if (Date.now() - orderAlertState.lastCheckAt < ADMIN_DASHBOARD_REFRESH_MS + 5000) return;
+  // Com o Gestor escondido a recarga da tela pausa; o aviso busca sozinho em
+  // intervalo menor para o pedido novo tocar no mesmo tempo de antes.
+  const minimumGap = document.hidden ? ORDER_ALERT_HIDDEN_CHECK_MS : ADMIN_DASHBOARD_REFRESH_MS + 5000;
+  if (Date.now() - orderAlertState.lastCheckAt < minimumGap) return;
   orderAlertState.polling = true;
   try {
     const payload = await fetchJson("/api/admin/orders/list?limit=80");
@@ -17908,9 +17912,23 @@ const initDashboardPage = () => {
       await loadActiveAdminSection({ preserveSelection: false });
     }
   })();
-  window.setInterval(() => {
+  // Recarga periódica da tela: pausa quando o Gestor não está visível (aba
+  // escondida, janela minimizada, outro módulo aberto no app) e recarrega na
+  // hora ao voltar. O aviso de pedido novo (pollOrderAlerts) continua rodando.
+  let lastSectionRefreshAt = Date.now();
+  const refreshActiveSection = () => {
+    lastSectionRefreshAt = Date.now();
     void loadActiveAdminSection({ preserveSelection: true });
+  };
+  window.setInterval(() => {
+    if (document.hidden) return;
+    refreshActiveSection();
   }, ADMIN_DASHBOARD_REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastSectionRefreshAt >= ADMIN_DASHBOARD_REFRESH_MS) {
+      refreshActiveSection();
+    }
+  });
   // Alertas sonoros em qualquer tela do Gestor.
   syncOrderAlertBanner();
   window.setInterval(() => {
