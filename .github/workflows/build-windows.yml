@@ -1,11 +1,20 @@
 # Gera o instalador do INOVAS PDV para Windows (NSIS) num computador Windows do GitHub.
 # Roda os testes unitários antes. Não publica nada: o instalador fica como
 # artefato da execução (aba Actions), para baixar e testar.
-# Publicar para clientes (Releases / botão do site) precisa de GO do Paulo.
+# Publicar para clientes (Releases / botão do site) precisa de GO do Paulo:
+# rodar à mão (Actions > Instalador Windows > Run workflow) com "publicar"
+# marcado. Antes de trocar, guarda o instalador atual como
+# INOVAS-PDV-Setup-anterior.exe no mesmo Release (para voltar, basta subir
+# esse arquivo de novo com o nome INOVAS-PDV-Setup.exe).
 name: Instalador Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: "Publicar no Release gestor-pdv (botão Baixar Gestor do site). Só com GO do Paulo."
+        type: boolean
+        default: false
   push:
     branches: ["app-pdv"]
     tags: ["v*"]
@@ -34,3 +43,33 @@ jobs:
           path: dist/INOVAS-PDV-Setup.exe
           if-no-files-found: error
           retention-days: 30
+
+  publicar:
+    # Só roda à mão, com "publicar" marcado.
+    if: github.event_name == 'workflow_dispatch' && inputs.publicar == true
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: gestor-pdv
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: INOVAS-PDV-Setup
+          path: novo
+      - name: Guardar o instalador atual como INOVAS-PDV-Setup-anterior.exe
+        run: |
+          mkdir -p anterior
+          gh release download "$TAG" -p INOVAS-PDV-Setup.exe -D anterior
+          mv anterior/INOVAS-PDV-Setup.exe anterior/INOVAS-PDV-Setup-anterior.exe
+          gh release upload "$TAG" anterior/INOVAS-PDV-Setup-anterior.exe --clobber
+      - name: Publicar o instalador novo
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release upload "$TAG" novo/INOVAS-PDV-Setup.exe --clobber
+          gh release edit "$TAG" --title "INOVAS PDV (Gestor para Windows) $VERSION" --notes "Instalador do app INOVAS PDV $VERSION para Windows (Pedidos, Caixa e Comandas, Cardápio), com o mesmo login do Gestor. A versão anterior fica em INOVAS-PDV-Setup-anterior.exe."
+          sha256sum novo/INOVAS-PDV-Setup.exe
