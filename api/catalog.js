@@ -1,3 +1,4 @@
+const { withRequestTiming } = require("../lib/request-timing.cjs");
 const { json } = require("../lib/http.cjs");
 const { getPublicCatalogState } = require("../lib/catalog-store.cjs");
 const { getPublicDeliverySettings } = require("../lib/delivery-settings-store.cjs");
@@ -158,7 +159,7 @@ const assertPublicReviewTenantCanOperate = async (tenantContext) => {
   }
 };
 
-module.exports = async (req, res) => {
+module.exports = withRequestTiming(async (req, res) => {
   const action = resolvePublicAction(req);
 
   if (action === "premium-page") {
@@ -302,4 +303,4 @@ module.exports = async (req, res) => {
         error?.errorCode || (error?.statusCode ? "public_catalog_error" : "internal_error"),
     });
   }
-};
+});

@@ -1,3 +1,4 @@
+const { withRequestTiming } = require("../../lib/request-timing.cjs");
 const { json, parseJsonBody } = require("../../lib/http.cjs");
 const { sendWhatsappVerificationCode } = require("../../lib/customer-verification.cjs");
 const {
@@ -6,7 +7,7 @@ const {
 } = require("../../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../../lib/security-guardian.cjs");
 
-module.exports = async (req, res) => {
+module.exports = withRequestTiming(async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(res, 405, {
@@ -57,4 +58,4 @@ module.exports = async (req, res) => {
       providerStatus: error?.providerStatus || undefined,
     });
   }
-};
+});

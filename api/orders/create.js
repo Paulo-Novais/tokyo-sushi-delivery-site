@@ -1,3 +1,4 @@
+const { withRequestTiming } = require("../../lib/request-timing.cjs");
 const {
   createCustomerSessionToken,
   hasCustomerSessionConfig,
@@ -180,7 +181,7 @@ const assertPublicOrderTenantCanOperate = async (tenantContext) => {
   }
 };
 
-module.exports = async (req, res) => {
+module.exports = withRequestTiming(async (req, res) => {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(res, 405, {
@@ -262,4 +263,4 @@ module.exports = async (req, res) => {
       ...(error?.operationalStatus ? { operationalStatus: error.operationalStatus } : {}),
     });
   }
-};
+});

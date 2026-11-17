@@ -644,6 +644,11 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/:path*"],
+  // Imagens e fontes nas pastas públicas (/site-images, /menu_pdf_images,
+  // /assets) não passam pelo middleware: são arquivos públicos, sem dado de
+  // restaurante, e assim cada imagem deixa de gerar consulta ao banco (no
+  // domínio próprio o middleware descobre o restaurante a cada pedido).
+  // Caminhos com slug (/restaurante/site-images/...) continuam passando.
+  matcher: ["/((?!(?:site-images|menu_pdf_images|assets)/).*)"],
   runtime: "nodejs",
 };
