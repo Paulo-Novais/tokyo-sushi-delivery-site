@@ -14,7 +14,8 @@
     "dist:win": "electron-builder --win nsis --x64 --publish never",
     "dist:linux": "electron-builder --linux AppImage",
     "dist:win:zip": "electron-builder --win zip --x64 -c.win.signAndEditExecutable=false",
-    "dist:linux:dir": "electron-builder --linux dir"
+    "dist:linux:dir": "electron-builder --linux dir",
+    "dist:store": "electron-builder --win appx --x64 --publish never"
   },
   "devDependencies": {
     "electron": "45.2.0",
@@ -80,6 +81,19 @@
     "electronLanguages": [
       "pt-BR",
       "en-US"
-    ]
+    ],
+    "appx": {
+      "applicationId": "INOVASPDV",
+      "identityName": "${env.STORE_IDENTITY_NAME}",
+      "publisher": "${env.STORE_PUBLISHER}",
+      "publisherDisplayName": "${env.STORE_PUBLISHER_DISPLAY_NAME}",
+      "displayName": "INOVAS PDV",
+      "languages": [
+        "pt-BR"
+      ],
+      "backgroundColor": "#ffffff",
+      "showNameOnTiles": false,
+      "artifactName": "INOVAS-PDV-Loja-${version}.${ext}"
+    }
   }
 }

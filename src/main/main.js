@@ -697,7 +697,8 @@ app.whenReady().then(async () => {
   updater = createUpdater({
     currentVersion: app.getVersion(),
     downloadDir: path.join(app.getPath("temp"), "inovas-pdv-atualizacao"),
-    enabled: (process.platform === "win32" && app.isPackaged) || Boolean(testManifestUrl),
+    // Instalado pela Microsoft Store: quem atualiza é a própria Loja.
+    enabled: (process.platform === "win32" && app.isPackaged && !process.windowsStore) || Boolean(testManifestUrl),
     ...(testManifestUrl
       ? {
           manifestUrl: testManifestUrl,

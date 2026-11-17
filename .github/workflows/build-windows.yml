@@ -15,6 +15,22 @@ on:
         description: "Publicar no Release gestor-pdv (botão Baixar Gestor do site). Só com GO do Paulo."
         type: boolean
         default: false
+      loja:
+        description: "Gerar o pacote da Microsoft Store (.appx) para enviar no Partner Center."
+        type: boolean
+        default: false
+      loja_identity_name:
+        description: "Partner Center > Identidade do produto > Package/Identity/Name"
+        type: string
+        default: ""
+      loja_publisher:
+        description: "Partner Center > Identidade do produto > Package/Identity/Publisher (CN=...)"
+        type: string
+        default: ""
+      loja_publisher_display_name:
+        description: "Partner Center > Identidade do produto > Package/Properties/PublisherDisplayName"
+        type: string
+        default: ""
   push:
     branches: ["app-pdv"]
     tags: ["v*"]
@@ -88,3 +104,36 @@ jobs:
           gh release upload "$TAG" novo/versao.json --clobber
           gh release edit "$TAG" --title "INOVAS PDV (Gestor para Windows) $VERSION" --notes "Instalador do app INOVAS PDV $VERSION para Windows (Pedidos, Caixa e Comandas, Cardápio), com o mesmo login do Gestor. A versão anterior fica em INOVAS-PDV-Setup-anterior.exe."
           sha256sum novo/INOVAS-PDV-Setup.exe
+
+  loja:
+    # Pacote da Microsoft Store. A Loja assina o pacote ao publicar; aqui ele
+    # sai sem assinatura, só para enviar no Partner Center.
+    if: github.event_name == 'workflow_dispatch' && inputs.loja == true
+    runs-on: windows-latest
+    env:
+      STORE_IDENTITY_NAME: ${{ inputs.loja_identity_name }}
+      STORE_PUBLISHER: ${{ inputs.loja_publisher }}
+      STORE_PUBLISHER_DISPLAY_NAME: ${{ inputs.loja_publisher_display_name }}
+    steps:
+      - name: Conferir a identidade da Loja
+        shell: pwsh
+        run: |
+          if (-not $env:STORE_IDENTITY_NAME -or -not $env:STORE_PUBLISHER -or -not $env:STORE_PUBLISHER_DISPLAY_NAME) {
+            Write-Error "Preencha os três campos da identidade (Partner Center > Identidade do produto)."
+            exit 1
+          }
+          if ($env:STORE_PUBLISHER -notmatch '^CN=') { Write-Error "Publisher precisa começar com CN="; exit 1 }
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:store
+      - uses: actions/upload-artifact@v4
+        with:
+          name: INOVAS-PDV-Loja
+          path: dist/*.appx
+          if-no-files-found: error
+          retention-days: 30
