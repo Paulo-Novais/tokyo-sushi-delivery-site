@@ -71,5 +71,20 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           gh release upload "$TAG" novo/INOVAS-PDV-Setup.exe --clobber
+          # versao.json vai por último: o app só vê a versão nova quando o
+          # instalador já está no Release. Ele confere o SHA-256 antes de usar.
+          node -e "
+            const fs = require('fs'); const crypto = require('crypto');
+            const file = 'novo/INOVAS-PDV-Setup.exe';
+            const data = fs.readFileSync(file);
+            fs.writeFileSync('novo/versao.json', JSON.stringify({
+              version: require('./package.json').version,
+              sha256: crypto.createHash('sha256').update(data).digest('hex'),
+              size: data.length,
+              file: 'INOVAS-PDV-Setup.exe',
+            }, null, 2));
+          "
+          cat novo/versao.json
+          gh release upload "$TAG" novo/versao.json --clobber
           gh release edit "$TAG" --title "INOVAS PDV (Gestor para Windows) $VERSION" --notes "Instalador do app INOVAS PDV $VERSION para Windows (Pedidos, Caixa e Comandas, Cardápio), com o mesmo login do Gestor. A versão anterior fica em INOVAS-PDV-Setup-anterior.exe."
           sha256sum novo/INOVAS-PDV-Setup.exe

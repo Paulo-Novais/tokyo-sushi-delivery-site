@@ -213,3 +213,12 @@ body[data-phase="app"] .app { display: flex; }
   .price, .state { display: none; }
   .toggle { min-width: 0; }
 }
+
+/* Aviso de atualização (na barra de cima: a tela do Gestor cobre o resto). */
+.update { display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 12px; border-radius: 12px; background: var(--brand-soft); border: 1px solid #fed7aa; }
+.update[hidden] { display: none; }
+.update-copy { display: grid; line-height: 1.2; }
+.update-copy strong { font-size: 13px; color: var(--brand-ink); }
+.update-copy small { font-size: 11px; color: #9a3412; max-width: 260px; }
+.update .btn { height: 32px; padding: 0 12px; font-size: 13px; }
+@media (max-width: 1200px) { .update-copy small { display: none; } }

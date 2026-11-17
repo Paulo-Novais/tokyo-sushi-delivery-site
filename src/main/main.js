@@ -20,6 +20,7 @@ const { createConfig } = require("./config");
 const { createCredentialStore } = require("./credentials");
 const { createElectronCookieStore } = require("./electron-cookie-store");
 const GESTOR_APP_CSS = require("./gestor-view.css.js");
+const { createUpdater } = require("./updater");
 const {
   ALLOWED_GESTOR_SECTIONS,
   MODULE_HINTS,
@@ -83,7 +84,10 @@ const state = {
   restaurants: null,
   catalogAccess: "none",
   version: app.getVersion(),
+  update: null, // { version, visible } quando há versão nova baixada
 };
+
+let updater = null;
 
 const publicState = () => ({
   ...state,
@@ -534,6 +538,16 @@ const registerIpc = () => {
   });
 
   handle("pdv:open", ({ moduleId, routeId }) => openModule(moduleId, routeId));
+  handle("pdv:update-now", () => {
+    if (!updater?.installNow()) return publicState();
+    setState({ phase: "starting", message: "Atualizando o INOVAS PDV… o app abre de novo sozinho." });
+    setTimeout(() => app.quit(), 600);
+    return publicState();
+  });
+  handle("pdv:update-later", () => {
+    setState({ update: updater?.later() || null });
+    return publicState();
+  });
 
   handle("pdv:reload", () => {
     gestorView?.webContents.reload();
@@ -677,6 +691,24 @@ app.on("second-instance", () => {
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
+  // Atualização automática: só no app instalado no Windows (ou em teste, com
+  // INOVAS_PDV_UPDATE_MANIFEST_URL apontando para um versao.json local).
+  const testManifestUrl = !app.isPackaged ? process.env.INOVAS_PDV_UPDATE_MANIFEST_URL : "";
+  updater = createUpdater({
+    currentVersion: app.getVersion(),
+    downloadDir: path.join(app.getPath("temp"), "inovas-pdv-atualizacao"),
+    enabled: (process.platform === "win32" && app.isPackaged) || Boolean(testManifestUrl),
+    ...(testManifestUrl
+      ? {
+          manifestUrl: testManifestUrl,
+          releaseBaseUrl: testManifestUrl.replace(/\/[^/]*$/, ""),
+          firstCheckDelayMs: 500,
+        }
+      : {}),
+    onChange: (update) => setState({ update }),
+    log: (...args) => debug("updater", ...args),
+  });
+  updater.start();
   config = createConfig({ directory: app.getPath("userData") });
   credentials = createCredentialStore({
     safeStorage,
@@ -707,4 +739,11 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => {
   if (sessionTimer) clearInterval(sessionTimer);
   app.quit();
+});
+
+// Atualização pendente é obrigatória: se a pessoa escolheu "Mais tarde",
+// instala quando o app for fechado.
+app.on("before-quit", () => {
+  updater?.stop();
+  updater?.installOnQuit();
 });

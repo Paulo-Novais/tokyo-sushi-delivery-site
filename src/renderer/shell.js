@@ -102,6 +102,9 @@
             ? "Reconectando…"
             : "Conectado neste computador";
       conn.title = $("#conn-label").textContent;
+      const update = state.update && state.update.visible ? state.update : null;
+      $("#update").hidden = !update;
+      $("#update-version").textContent = update ? update.version : "";
       renderNav(state);
       renderSteps(state);
       const onCardapio = state.activeModule === "cardapio";
@@ -252,6 +255,16 @@
 
   // O diálogo fica por cima da tela do Gestor: o app esconde a tela enquanto ele está aberto.
   const dialog = $("#confirm-logout");
+  $("#update-now").addEventListener("click", async () => {
+    $("#update-now").disabled = true;
+    $("#update-later").disabled = true;
+    await pdv.updateNow();
+  });
+  $("#update-later").addEventListener("click", async () => {
+    await pdv.updateLater();
+    toast("Tudo certo. A atualização será instalada quando o app for fechado.");
+  });
+
   $("#logout").addEventListener("click", () => {
     pdv.setStageBounds({ x: 0, y: 0, width: 0, height: 0 });
     dialog.showModal();

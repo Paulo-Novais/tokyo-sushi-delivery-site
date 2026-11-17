@@ -158,6 +158,44 @@ test("GARÇOM vê Caixa e Comandas só com Mesas e comandas, sem Abertura e Fech
   }
 });
 
+test("versão nova: aviso aparece no topo; Mais tarde esconde", async () => {
+  const http = require("node:http");
+  const crypto = require("node:crypto");
+  const fakeInstaller = Buffer.from("instalador falso para teste");
+  const manifest = {
+    version: "9.9.9",
+    sha256: crypto.createHash("sha256").update(fakeInstaller).digest("hex"),
+    size: fakeInstaller.length,
+    file: "INOVAS-PDV-Setup.exe",
+  };
+  const server = http.createServer((req, res) => {
+    if (req.url.startsWith("/versao.json")) {
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify(manifest));
+    }
+    if (req.url.startsWith("/INOVAS-PDV-Setup.exe")) return res.end(fakeInstaller);
+    res.statusCode = 404;
+    return res.end();
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const manifestUrl = `http://127.0.0.1:${server.address().port}/versao.json`;
+  const { app, win } = await launch(tempUserData(), { INOVAS_PDV_UPDATE_MANIFEST_URL: manifestUrl });
+  try {
+    await login(win, data.a.cashier);
+    await win.waitForSelector('body[data-phase="app"]', { timeout: 20000 });
+    await win.waitForSelector("#update:not([hidden])", { timeout: 20000 });
+    assert.equal(await win.textContent("#update-version"), "9.9.9");
+    if (process.env.PDV_SHOT_DIR) await win.screenshot({ path: path.join(process.env.PDV_SHOT_DIR, "aviso-atualizacao.png") });
+    assert.ok(await win.isVisible("#update-now"));
+    await win.click("#update-later");
+    await win.waitForSelector("#update", { state: "hidden" });
+    assert.equal(await win.getAttribute("body", "data-phase"), "app", "Mais tarde não interrompe o trabalho");
+  } finally {
+    await app.close();
+    server.close();
+  }
+});
+
 test("app continua logado depois de fechar e abrir; renova sozinho quando a sessão expira; Sair desconecta", async () => {
   const userData = tempUserData();
   let { app, win } = await launch(userData);

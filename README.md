@@ -30,6 +30,19 @@ Nenhuma rota nova foi criada no servidor. Quem decide o que cada usuário pode f
 
 (*) Hoje o site não dá ao papel Garçom a permissão de tela `tenant.navigation.cash_register`: o Gestor manda o garçom de volta para Pedidos. Já acontecia com o item "Comandas" da 0.1.0. A correção é no site (permissão do papel) e precisa de GO.
 
+### Atualização automática (desde a 0.2.0)
+
+O app confere a cada 30 minutos o `versao.json` do Release `gestor-pdv` (versão, SHA-256 e tamanho do instalador).
+Se houver versão nova, baixa o instalador em segundo plano, confere o SHA-256 e mostra no topo:
+**Atualizar agora** (o app fecha, instala por cima em silêncio e abre de novo) ou **Mais tarde**
+(o aviso volta em 2 h e a atualização é instalada obrigatoriamente quando o app for fechado).
+Não precisa desinstalar: configurações e login salvo ficam na pasta do usuário.
+
+Para publicar uma versão: suba a versão no `package.json`, envie para a branch `app-pdv` e rode o workflow
+**Instalador Windows** à mão com **publicar** marcado (precisa de GO do Paulo). O workflow guarda o instalador
+anterior como `INOVAS-PDV-Setup-anterior.exe`, troca o `INOVAS-PDV-Setup.exe` e por último sobe o `versao.json`.
+Quem tem a 0.1.0 instala a 0.2.0 uma vez pelo botão "Baixar Gestor"; daí em diante é automático.
+
 ### "Fica conectado até alguém clicar em Sair"
 
 O servidor encerra a sessão em 12 h e o site não foi mudado. Até a fase 3 (token de dispositivo), o app faz assim:

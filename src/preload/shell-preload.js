@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("pdv", {
   logout: () => ipcRenderer.invoke("pdv:logout"),
   open: (moduleId, routeId) => ipcRenderer.invoke("pdv:open", { moduleId, routeId }),
   reload: () => ipcRenderer.invoke("pdv:reload"),
+  updateNow: () => ipcRenderer.invoke("pdv:update-now"),
+  updateLater: () => ipcRenderer.invoke("pdv:update-later"),
   retry: () => ipcRenderer.invoke("pdv:retry"),
   setServer: (url) => ipcRenderer.invoke("pdv:set-server", { url }),
   listCatalog: () => ipcRenderer.invoke("pdv:catalog:list"),
