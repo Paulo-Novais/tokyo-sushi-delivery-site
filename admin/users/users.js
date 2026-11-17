@@ -440,7 +440,7 @@
         );
     sidebar.innerHTML = `
       <a class="users-brand" href="${homePath}">
-        <img src="/assets/inovas-food-logo-oficial.png" alt="INOVAS Food" />
+        <img src="/assets/inovas-food-logo-oficial-480.webp" alt="INOVAS Food" />
         <span class="users-brand-copy">
           <small>${isSystem ? "Plataforma" : "Restaurante"}</small>
           <strong>${isSystem ? "Painel System" : "Administração"}</strong>

@@ -758,7 +758,7 @@
         <tr>
           <td>${escapeHtml(restaurant.restaurantId || restaurant.restaurantKey || restaurant.key)}</td>
           <td>
-            <img class="master-brand-logo" src="${escapeHtml(restaurant.logo || "../assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(restaurant.name || "Restaurante")}" />
+            <img class="master-brand-logo" src="${escapeHtml(restaurant.logo || "../assets/inovas-food-logo-oficial-480.webp")}" alt="${escapeHtml(restaurant.name || "Restaurante")}" />
           </td>
           <td>
             <strong>${escapeHtml(restaurant.name)}</strong>

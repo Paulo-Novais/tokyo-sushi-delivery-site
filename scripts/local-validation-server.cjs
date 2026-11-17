@@ -351,6 +351,19 @@ const resolveLocalRestaurantRequest = async (pathname, search) => {
   return { notFound: true };
 };
 
+// Igual ao vercel.json: .js/.css/.cjs pedidos com "?v=" (versão do build)
+// ficam no cache; imagens por 1 dia; fontes para sempre; o resto de /admin
+// sem cache.
+const getStaticCacheControl = (staticPathname, requestUrl = "") => {
+  const hasVersion = new URL(requestUrl, "http://local").searchParams.has("v");
+  if (hasVersion && /\.(js|css|cjs)$/.test(staticPathname)) return "public, max-age=31536000, immutable";
+  if (/^\/assets\/fonts\//.test(staticPathname)) return "public, max-age=31536000, immutable";
+  if (/^\/(site-images|menu_pdf_images|assets)\/.+\.(png|jpe?g|webp|svg|gif|ico)$/i.test(staticPathname)) {
+    return "public, max-age=86400, stale-while-revalidate=604800";
+  }
+  return staticPathname.startsWith("/admin/") ? "no-store, max-age=0" : "public, max-age=0, must-revalidate";
+};
+
 const serveStatic = async (req, res, pathname) => {
   const staticPathname = resolveStaticPathname(pathname);
 
@@ -390,13 +403,7 @@ const serveStatic = async (req, res, pathname) => {
     res.setHeader("X-Robots-Tag", "noindex, nofollow");
   }
   res.writeHead(200, {
-    // Igual ao vercel.json: .js/.css do Gestor e do System são versionados (?v=)
-    // no build e podem ficar no cache; o resto de /admin continua sem cache.
-    "Cache-Control": /^\/(admin|system)\/.+\.(js|css)$/.test(staticPathname)
-      ? "public, max-age=31536000, immutable"
-      : staticPathname.startsWith("/admin/")
-        ? "no-store, max-age=0"
-        : "public, max-age=0, must-revalidate",
+    "Cache-Control": getStaticCacheControl(staticPathname, req.url),
     "Content-Type": contentType,
   });
   res.end(body);

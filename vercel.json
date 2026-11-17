@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["gru1"],
+  "regions": [
+    "gru1"
+  ],
   "buildCommand": "node scripts/build-public.mjs",
   "outputDirectory": "public",
   "functions": {
@@ -287,7 +289,31 @@
       ]
     },
     {
-      "source": "/(admin|system)/(.*)\\.(js|css)",
+      "source": "/(.*)\\.(js|css|cjs)",
+      "has": [
+        {
+          "type": "query",
+          "key": "v"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(site-images|menu_pdf_images|assets)/(.*)\\.(png|jpe?g|webp|svg|gif|ico)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/assets/fonts/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

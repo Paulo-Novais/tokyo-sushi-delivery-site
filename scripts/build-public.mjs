@@ -33,11 +33,11 @@ const walk = (dir, results = []) => {
   return results;
 };
 
-// Cache do Gestor e do System: os .js/.css de /admin e /system ganham um
-// "?v=<hash do conteúdo>" em todo HTML publicado. O vercel.json guarda esses
-// arquivos no cache por muito tempo; quando o conteúdo muda, o hash muda e o
+// Cache dos arquivos .js/.css/.cjs: todo HTML publicado pede esses arquivos
+// com "?v=<hash do conteúdo>". O vercel.json guarda no cache, por muito tempo,
+// só os pedidos que têm "?v=". Quando o conteúdo muda, o hash muda e o
 // navegador (ou o app INOVAS PDV) baixa a versão nova.
-const VERSIONED_ASSET_PATTERN = /(\s(?:src|href)=")(\/(?:admin|system)\/[^"?#]+\.(?:js|css))(")/g;
+const VERSIONED_ASSET_PATTERN = /(\s(?:src|href)=")((?:\.\/|\/)[^"?#:]+\.(?:js|css|cjs))(")/g;
 
 const hashCache = new Map();
 const contentHash = (absolutePath) => {
@@ -56,16 +56,19 @@ export const versionAssetReferences = (html, resolveAsset) =>
 
 const versionHtmlFiles = (targetDir, copied) => {
   hashCache.clear();
-  const resolveAsset = (assetPath) => {
-    const absolute = path.join(targetDir, assetPath.slice(1));
-    if (!fs.existsSync(absolute)) {
-      throw new Error(`[build-public] HTML referencia arquivo que nao foi publicado: ${assetPath}`);
-    }
-    return contentHash(absolute);
-  };
   for (const relativePath of copied) {
     if (!relativePath.endsWith(".html")) continue;
     const absolute = path.join(targetDir, relativePath);
+    const htmlDir = path.dirname(absolute);
+    const resolveAsset = (assetPath) => {
+      const assetFile = assetPath.startsWith("/")
+        ? path.join(targetDir, assetPath.slice(1))
+        : path.resolve(htmlDir, assetPath);
+      if (!assetFile.startsWith(targetDir + path.sep) || !fs.existsSync(assetFile)) {
+        throw new Error(`[build-public] ${relativePath} referencia arquivo que nao foi publicado: ${assetPath}`);
+      }
+      return contentHash(assetFile);
+    };
     const html = fs.readFileSync(absolute, "utf8");
     const versioned = versionAssetReferences(html, resolveAsset);
     if (versioned !== html) fs.writeFileSync(absolute, versioned);

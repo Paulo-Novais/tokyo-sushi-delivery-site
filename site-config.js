@@ -22,7 +22,7 @@
     "publicBanner": "./site-images/combinado-imperial.png",
     "socialImage": "/site-images/combinado-imperial.png",
     "supportAvatar": "./site-images/support-avatar-duo.webp",
-    "loginCover": "./site-images/login-cover-floating.png",
+    "loginCover": "./site-images/login-cover-floating-1024.webp",
     "adminSidebarLogo": "../assets/inovas-food-logo-menu.png"
   },
   "appBranding": {
@@ -118,7 +118,7 @@
     "platformFooter": {
       "showPlatformBranding": true,
       "brandName": "INOVAS Food",
-      "logo": "./assets/inovas-food-logo-oficial.png",
+      "logo": "./assets/inovas-food-logo-oficial-480.webp",
       "headline": "Desenvolvido por INOVAS Food",
       "description": "Plataforma profissional para restaurantes",
       "url": "https://inovasfood.com.br",

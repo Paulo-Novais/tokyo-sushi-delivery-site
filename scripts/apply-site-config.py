@@ -129,8 +129,8 @@ def build_runtime_config(site_config: dict) -> dict:
             "publicBanner": "./site-images/combinado-imperial.png",
             "socialImage": social_image_path,
             "supportAvatar": "./site-images/support-avatar-duo.webp",
-            "loginCover": "./site-images/login-cover-floating.png",
-            "adminSidebarLogo": "../assets/inovas-food-logo-oficial.png",
+            "loginCover": "./site-images/login-cover-floating-1024.webp",
+            "adminSidebarLogo": "../assets/inovas-food-logo-oficial-480.webp",
         },
         site_config.get("assets"),
     )

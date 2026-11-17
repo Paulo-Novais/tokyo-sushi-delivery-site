@@ -391,7 +391,7 @@ const TOKYO_RESTAURANT_SETTINGS_DEFAULTS = Object.freeze({
   platformFooter: {
     showPlatformBranding: TOKYO_SITE_APPEARANCE.platformFooter?.showPlatformBranding !== false,
     brandName: TOKYO_SITE_APPEARANCE.platformFooter?.brandName || "INOVAS Food",
-    logo: TOKYO_SITE_APPEARANCE.platformFooter?.logo || "./assets/inovas-food-logo-oficial.png",
+    logo: TOKYO_SITE_APPEARANCE.platformFooter?.logo || "./assets/inovas-food-logo-oficial-480.webp",
     headline: TOKYO_SITE_APPEARANCE.platformFooter?.headline || "Desenvolvido por INOVAS Food",
     description:
       TOKYO_SITE_APPEARANCE.platformFooter?.description ||
@@ -537,6 +537,106 @@ const cartUiState = {
   orderSubmitting: false,
 };
 const SITE_IMAGES_DIRECTORY = "./site-images";
+// Imagens pesadas: o site usa a versão .webp gerada ao lado do arquivo
+// original (scripts/optimize-images.py). Cobre também endereços já salvos nas
+// configurações e no cardápio do banco.
+// <optimized-images>
+// Gerado por scripts/optimize-images.py. Não editar à mão.
+const OPTIMIZED_IMAGE_PATHS = new Set([
+  "site-images/carpaccio-chef-premium.jpg",
+  "site-images/carpaccio-saint-peter-premium.jpg",
+  "site-images/carpaccio-salmao-premium.jpg",
+  "site-images/ceviche-saint-peter-premium.jpg",
+  "site-images/ceviche-salmao-premium.jpg",
+  "site-images/combinado-fuji.png",
+  "site-images/combinado-imperial.png",
+  "site-images/combinado-kaigun.png",
+  "site-images/combinado-kaito.png",
+  "site-images/combinado-kazoku.png",
+  "site-images/combinado-kumo.png",
+  "site-images/combinado-ryujin.png",
+  "site-images/combinado-ryuu.png",
+  "site-images/combinado-sakura.png",
+  "site-images/combinado-samurai.png",
+  "site-images/combinado-shogun.png",
+  "site-images/combinado-sora.png",
+  "site-images/combinado-tenno.png",
+  "site-images/combinado-tomodachi.png",
+  "site-images/login-cover-floating.png",
+  "site-images/support-avatar-duo.png",
+  "site-images/tartar-cover.jpg",
+  "site-images/temaki-camarao.png",
+  "site-images/temaki-grelhado.png",
+  "site-images/temaki-hot.png",
+  "site-images/temaki-salmao.png",
+  "site-images/teppan-camarao.png",
+  "site-images/teppan-completo.png",
+  "site-images/teppan.png",
+  "menu_pdf_images/catalog/carpaccio-chef-premium.jpg",
+  "menu_pdf_images/catalog/carpaccio-saint-peter-premium.jpg",
+  "menu_pdf_images/catalog/carpaccio-salmao-premium.jpg",
+  "menu_pdf_images/catalog/ceviche-saint-peter-premium.jpg",
+  "menu_pdf_images/catalog/ceviche-salmao-premium.jpg",
+  "menu_pdf_images/catalog/combinado-fuji.png",
+  "menu_pdf_images/catalog/combinado-kaigun.png",
+  "menu_pdf_images/catalog/combinado-kaito.png",
+  "menu_pdf_images/catalog/combinado-kazoku.png",
+  "menu_pdf_images/catalog/combinado-kumo.png",
+  "menu_pdf_images/catalog/combinado-ryujin.png",
+  "menu_pdf_images/catalog/combinado-ryuu.png",
+  "menu_pdf_images/catalog/combinado-sakura.png",
+  "menu_pdf_images/catalog/combinado-samurai.png",
+  "menu_pdf_images/catalog/combinado-shogun.png",
+  "menu_pdf_images/catalog/combinado-sora.png",
+  "menu_pdf_images/catalog/combinado-tenno.png",
+  "menu_pdf_images/catalog/combinado-tomodachi.png",
+  "menu_pdf_images/catalog/tartar-cover.jpg",
+  "menu_pdf_images/catalog/temaki-camarao.png",
+  "menu_pdf_images/catalog/temaki-grelhado.png",
+  "menu_pdf_images/catalog/temaki-hot.png",
+  "menu_pdf_images/catalog/temaki-salmao.png",
+  "menu_pdf_images/catalog/teppan-camarao.png",
+  "menu_pdf_images/catalog/teppan-completo.png",
+  "menu_pdf_images/catalog/teppan.png",
+  "menu_pdf_images/combinado-imperial.png",
+  "menu_pdf_images/page_12.jpg",
+  "menu_pdf_images/support-avatar-chef-dev.png",
+  "menu_pdf_images/support-avatar-chef.png",
+  "menu_pdf_images/support-avatar-duo.png",
+  "assets/inovas-food-logo-menu.png",
+  "assets/inovas-food-logo-oficial.png",
+  "assets/login-cover-floating.png",
+  "assets/login-cover-v2.png",
+  "assets/login-cover.png",
+  "assets/login-window-reference-crop.png",
+  "assets/login-window-reference.png",
+  "assets/profile-avatar-chef-dev.png",
+  "assets/tokyo-logo-banner.png",
+  "assets/tokyo-logo-crop.png",
+  "assets/tokyo-logo-custom.png",
+  "assets/tokyo-logo-sidebar.png",
+  "assets/tokyo-logo-wide.png",
+  "assets/tokyo-poster-reference.png",
+  "assets/tokyo-torii-mark.png",
+  "assets/tokyo-torii-seal.png"
+]);
+// </optimized-images>
+const OPTIMIZED_ASSET_REPLACEMENTS = Object.freeze([
+  [/(^|\/)assets\/inovas-food-logo-oficial\.png$/, "$1assets/inovas-food-logo-oficial-480.webp"],
+  [/(^|\/)site-images\/login-cover-floating\.png$/, "$1site-images/login-cover-floating-1024.webp"],
+]);
+
+const optimizeKnownAssetUrl = (value = "") => {
+  const url = String(value || "");
+  for (const [pattern, replacement] of OPTIMIZED_ASSET_REPLACEMENTS) {
+    if (pattern.test(url)) return url.replace(pattern, replacement);
+  }
+  const match = url.match(/^(\.\/|\/)?([^?#]+)\.(png|jpe?g)$/i);
+  if (match && OPTIMIZED_IMAGE_PATHS.has(`${match[2]}.${match[3]}`)) {
+    return `${match[1] || ""}${match[2]}.webp`;
+  }
+  return url;
+};
 const LEGACY_SITE_IMAGE_PATH_PREFIXES = ["./assets/", "./menu_pdf_images/"];
 const LEGACY_SITE_IMAGE_FIELD_NAMES = new Set(["image", "src"]);
 const getSiteImagePath = (path) => {
@@ -550,6 +650,7 @@ const getSiteImagePath = (path) => {
   const fileName = path.split("/").pop();
   return fileName ? `${SITE_IMAGES_DIRECTORY}/${fileName}` : path;
 };
+const getOptimizedSiteImagePath = (path) => optimizeKnownAssetUrl(getSiteImagePath(path));
 const normalizeImageFields = (value) => {
   if (!value || typeof value !== "object") {
     return;
@@ -562,7 +663,7 @@ const normalizeImageFields = (value) => {
 
   Object.entries(value).forEach(([key, fieldValue]) => {
     if (LEGACY_SITE_IMAGE_FIELD_NAMES.has(key)) {
-      value[key] = getSiteImagePath(fieldValue);
+      value[key] = getOptimizedSiteImagePath(fieldValue);
       return;
     }
 
@@ -2681,7 +2782,7 @@ const getCombinadosPreviewMarkup = (category, selectedCombo, section) => {
     <article class="catalog-combinados-spotlight-card">
       <figure class="catalog-combinados-spotlight-media">
         <img
-          src="${selectedCombo.image}"
+          src="${optimizeKnownAssetUrl(selectedCombo.image)}"
           alt="${selectedCombo.name}"
           loading="lazy"
           decoding="async"
@@ -2822,7 +2923,7 @@ const getCombinadosMobileCardsMarkup = (section, category, selectedComboId) =>
             >
               <figure class="catalog-combinados-mobile-media">
                 <img
-                  src="${item.image}"
+                  src="${optimizeKnownAssetUrl(item.image)}"
                   alt="${escapeHtml(item.name)}"
                   loading="lazy"
                   decoding="async"
@@ -3363,7 +3464,7 @@ const showGroupMedia = (figure, controller, index) => {
     controller.timeoutId = 0;
   }
 
-  nextImage.src = entry.src;
+  nextImage.src = optimizeKnownAssetUrl(entry.src);
   nextImage.alt = entry.alt;
   nextImage.dataset.mediaSrc = entry.src;
 
@@ -3372,7 +3473,7 @@ const showGroupMedia = (figure, controller, index) => {
   updateGroupMediaCaption(figure, entry, controller.selectedCount);
 
   controller.timeoutId = window.setTimeout(() => {
-    activeImage.src = entry.src;
+    activeImage.src = optimizeKnownAssetUrl(entry.src);
     activeImage.alt = entry.alt;
     activeImage.dataset.mediaSrc = entry.src;
     nextImage.classList.remove("is-visible");
@@ -3878,7 +3979,7 @@ const getMobileCatalogSheetItemsMarkup = (section, visibleItems, activeGroup) =>
             <article class="catalog-mobile-sheet-card${item.isPromoted ? " is-promoted" : ""}${!isOrderable ? " is-disabled" : ""}">
               <figure class="catalog-mobile-sheet-media">
                 <img
-                  src="${item.image}"
+                  src="${optimizeKnownAssetUrl(item.image)}"
                   alt="${escapeHtml(item.name)}"
                   loading="lazy"
                   decoding="async"
@@ -3998,7 +4099,7 @@ const renderMobileCatalogSection = (section) => {
               >
                 <figure class="catalog-mobile-group-media">
                   <img
-                    src="${group.image}"
+                    src="${optimizeKnownAssetUrl(group.image)}"
                     alt="${escapeHtml(group.defaultAlt || group.title)}"
                     loading="lazy"
                     decoding="async"
@@ -5804,7 +5905,7 @@ const applyHeroFeaturedItem = (item) => {
     return;
   }
 
-  heroImage.src = item.image;
+  heroImage.src = optimizeKnownAssetUrl(item.image);
   heroImage.alt = (
     IS_TENANT_ROUTE
       ? `{itemName} - ${getRestaurantSettings().restaurantName || ""}`
@@ -6303,7 +6404,7 @@ const normalizePublicPlatformFooter = (source = {}, defaults = RESTAURANT_SETTIN
     brandName: normalizePublicSettingsText(footer.brandName, fallback.brandName || "INOVAS Food", 80),
     logo: normalizePublicAssetUrl(
       footer.logo,
-      fallback.logo || "./assets/inovas-food-logo-oficial.png"
+      fallback.logo || "./assets/inovas-food-logo-oficial-480.webp"
     ),
     headline: normalizePublicSettingsText(
       footer.headline,
@@ -7791,7 +7892,7 @@ const syncRestaurantSocialLinks = (settings) => {
 const PUBLIC_PLATFORM_FOOTER = Object.freeze({
   showPlatformBranding: true,
   brandName: "INOVAS Food",
-  logo: "./assets/inovas-food-logo-oficial.png",
+  logo: "./assets/inovas-food-logo-oficial-480.webp",
   headline: "Desenvolvido por INOVAS Food",
   description: "Plataforma profissional para restaurantes",
   url: "https://inovasfood.com.br",
@@ -7815,7 +7916,7 @@ const syncPlatformFooter = (settings) => {
     }
 
     if (logo) {
-      logo.src = footer.logo || "./assets/inovas-food-logo-oficial.png";
+      logo.src = footer.logo || "./assets/inovas-food-logo-oficial-480.webp";
       logo.alt = footer.brandName || "INOVAS Food";
     }
 
@@ -8735,7 +8836,9 @@ const createAuthShell = () => {
           <button class="auth-close" type="button" data-auth-close aria-label="Fechar login">&times;</button>
           <figure class="auth-media"${IS_TENANT_ROUTE ? " hidden" : ""}>
             <img
-              src="${escapeHtml(IS_TENANT_ROUTE ? "" : TOKYO_ASSETS.loginCover || "./site-images/login-cover-floating.png")}"
+              src="${escapeHtml(IS_TENANT_ROUTE ? "" : optimizeKnownAssetUrl(TOKYO_ASSETS.loginCover || "./site-images/login-cover-floating-1024.webp"))}"
+              loading="lazy"
+              decoding="async"
               alt="${escapeHtml(IS_TENANT_ROUTE ? "" : TOKYO_PUBLIC_TEXT.loginCoverAlt || "Arte de login Tokyo Sushi com cerejeiras, logo e combinado de sushi")}"
             />
           </figure>
@@ -10234,7 +10337,7 @@ const createSiteFooter = () => {
           </div>
           <div class="inovas-platform-footer" data-platform-branding>
             <a class="inovas-platform-brand" href="${escapeHtml(normalizePublicExternalHref(platformFooter.url || "https://inovasfood.com.br"))}" target="_blank" rel="noopener" aria-label="Conhecer a INOVAS Food" data-platform-branding-brand>
-              <img src="${escapeHtml(platformFooter.logo || "./assets/inovas-food-logo-oficial.png")}" alt="${escapeHtml(platformFooter.brandName || "INOVAS Food")}" data-platform-branding-logo />
+              <img src="${escapeHtml(optimizeKnownAssetUrl(platformFooter.logo || "./assets/inovas-food-logo-oficial-480.webp"))}" loading="lazy" decoding="async" alt="${escapeHtml(platformFooter.brandName || "INOVAS Food")}" data-platform-branding-logo />
               <div>
                 <strong data-platform-branding-headline>${escapeHtml(platformFooter.headline || "Desenvolvido por INOVAS Food")}</strong>
                 <span data-platform-branding-description>${escapeHtml(platformFooter.description || "Plataforma profissional para restaurantes")}</span>
@@ -12984,7 +13087,7 @@ const renderCatalog = () => {
                       class="catalog-media-image is-active"
                       data-group-media-active
                       data-media-src="${group.image}"
-                      src="${group.image}"
+                      src="${optimizeKnownAssetUrl(group.image)}"
                       alt="${group.defaultAlt}"
                       loading="lazy"
                       decoding="async"

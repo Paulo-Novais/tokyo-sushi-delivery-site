@@ -15,7 +15,7 @@ const TEST_PASSWORD_1 = `test-${inovasTestRandomBytes(18).toString("base64url")}
 const require = createRequire(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const realDataDirectory = path.join(workspaceRoot, ".data");
-const OFFICIAL_ADMIN_LOGO = "assets/inovas-food-logo-oficial.png";
+const OFFICIAL_ADMIN_LOGO = "assets/inovas-food-logo-oficial-480.webp";
 
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
