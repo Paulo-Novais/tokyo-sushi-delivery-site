@@ -3,7 +3,8 @@ const { loginMaster, onboardRestaurant, uniqueKey } = require("./helpers/v1.9-fi
 const { mockBusyOrders } = require("./helpers/orders-mock.cjs");
 
 // Alertas sonoros do Gestor: novo pedido (com aviso e repetição até aceitar),
-// pedido passando de 30 min e preferências salvas no computador.
+// pedido passando de 30 min (alarme repete a cada 2 min enquanto atrasado) e
+// preferências salvas no computador.
 test("Alertas de som: novo pedido, atrasado e preferências", async ({ page }) => {
   test.setTimeout(120_000);
   const master = await loginMaster();
@@ -57,7 +58,9 @@ test("Alertas de som: novo pedido, atrasado e preferências", async ({ page }) =
   await page.evaluate(() => (window.__tones = []));
   await page.evaluate(() => loadActiveAdminSection({ preserveSelection: true }));
   await expect(page.locator(".gx-alert-toast.is-newOrder")).toContainText("Cliente Novo Som");
-  await expect.poll(() => page.evaluate(() => window.__tones.slice(0, 3))).toEqual([880, 1175, 1568]);
+  await expect.poll(() => page.evaluate(() => window.__tones.slice(0, 3))).toEqual([1319, 2638, 3957]);
+  // Campainha mais longa: 3 "ding-dong" (6 notas, cada uma com 2 harmônicos).
+  await expect.poll(() => page.evaluate(() => window.__tones.length)).toBe(18);
   await page.screenshot({ path: "artifacts/novo-gestor/pedidos/alerta-novo-pedido.png" });
   await page.locator(".gx-alert-toast.is-newOrder [data-order-alert-open]").click();
   await expect(page.locator("[data-admin-order-detail] .gx-od-head h2")).toHaveText("Cliente Novo Som");
@@ -72,7 +75,25 @@ test("Alertas de som: novo pedido, atrasado e preferências", async ({ page }) =
   await page.evaluate(() => (window.__tones = []));
   await page.evaluate(() => loadActiveAdminSection({ preserveSelection: true }));
   await expect(page.locator(".gx-alert-toast.is-late")).toContainText("passou de 30 min");
-  await expect.poll(() => page.evaluate(() => window.__tones.slice(0, 3))).toEqual([523, 523, 392]);
+  await expect.poll(() => page.evaluate(() => window.__tones.slice(0, 3))).toEqual([988, 740, 988]);
+  await expect.poll(() => page.evaluate(() => window.__tones.length)).toBe(8);
+
+  // O atrasado continua em aberto: depois de 2 min o alarme toca de novo.
+  await page.evaluate(() => {
+    window.__tones = [];
+    orderAlertState.lastLateAt = Date.now() - 121_000;
+    orderAlertState.lastRepeatAt = Date.now();
+  });
+  await page.evaluate(() => loadActiveAdminSection({ preserveSelection: true }));
+  await expect.poll(() => page.evaluate(() => window.__tones.slice(0, 3))).toEqual([988, 740, 988]);
+  // ...e não toca de novo antes de 2 min.
+  await page.evaluate(() => {
+    window.__tones = [];
+    orderAlertState.lastRepeatAt = Date.now();
+  });
+  await page.evaluate(() => loadActiveAdminSection({ preserveSelection: true }));
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => window.__tones.length)).toBe(0);
 
   // Desligar os alertas: nada mais toca e a escolha fica salva.
   await page.locator("[data-order-alert-panel]").click();

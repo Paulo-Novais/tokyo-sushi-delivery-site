@@ -12334,7 +12334,9 @@ const ORDER_ALERT_DEFAULTS = Object.freeze({
   warn: true,
   late: true,
 });
-const ORDER_ALERT_REPEAT_MS = 30000;
+const ORDER_ALERT_REPEAT_MS = 20000;
+// Pedido atrasado em aberto: o alarme volta a tocar a cada 2 min.
+const ORDER_ALERT_LATE_REPEAT_MS = 120000;
 const ORDER_ALERT_HIDDEN_CHECK_MS = 15000;
 const orderAlertState = {
   prefs: null,
@@ -12342,6 +12344,7 @@ const orderAlertState = {
   tones: new Map(),
   audio: null,
   lastRepeatAt: 0,
+  lastLateAt: 0,
   lastCheckAt: 0,
   panelOpen: false,
   baseTitle: "",
@@ -12393,20 +12396,61 @@ const unlockOrderAlertAudio = () => {
   syncOrderAlertBanner();
 };
 
-const ORDER_ALERT_SOUNDS = Object.freeze({
-  // Campainha clara e alegre (duas vezes).
-  newOrder: [
-    [880, 0, 0.14], [1175, 0.16, 0.14], [1568, 0.32, 0.28],
-    [880, 0.8, 0.14], [1175, 0.96, 0.14], [1568, 1.12, 0.32],
-  ].map(([freq, at, dur]) => ({ freq, at, dur, type: "sine", gain: 0.32 })),
-  // Atenção (20 min): um toque suave.
-  warn: [
-    { freq: 740, at: 0, dur: 0.22, type: "triangle", gain: 0.28 },
-    { freq: 587, at: 0.26, dur: 0.3, type: "triangle", gain: 0.24 },
+// Sons mais chamativos (pedido novo e atrasado). Cada nota pode ter
+// "partials" (harmônicos) para soar como campainha de balcão. Tudo passa por
+// um compressor: fica mais alto sem distorcer.
+const bellNote = (freq, at, dur, gain = 0.55) => ({
+  freq,
+  at,
+  dur,
+  type: "sine",
+  gain,
+  partials: [
+    { ratio: 2, gain: 0.32, type: "sine" },
+    { ratio: 3, gain: 0.12, type: "triangle" },
   ],
-  // Atrasado (+30 min): três toques graves e insistentes.
-  late: [0, 0.3, 0.6].map((at, index) => ({ freq: index === 2 ? 392 : 523, at, dur: 0.22, type: "square", gain: 0.12 })),
 });
+
+const ORDER_ALERT_SOUNDS = Object.freeze({
+  // Pedido novo: "ding-dong" de balcão, 3 vezes seguidas (~3,3 s).
+  newOrder: [0, 1.1, 2.2].flatMap((offset) => [
+    bellNote(1319, offset, 0.42),
+    bellNote(1047, offset + 0.38, 0.62),
+  ]),
+  // Atenção (20 min): dois toques claros.
+  warn: [
+    { freq: 784, at: 0, dur: 0.26, type: "triangle", gain: 0.42 },
+    { freq: 988, at: 0.3, dur: 0.34, type: "triangle", gain: 0.42 },
+  ],
+  // Atrasado (+30 min): alarme alternado agudo/grave, 8 toques rápidos.
+  late: Array.from({ length: 8 }, (_, index) => ({
+    freq: index % 2 === 0 ? 988 : 740,
+    at: index * 0.2,
+    dur: 0.18,
+    type: "sawtooth",
+    gain: 0.3,
+  })),
+});
+
+const getOrderAlertOutput = (ctx) => {
+  if (orderAlertState.output?.context === ctx) return orderAlertState.output;
+  const master = ctx.createGain();
+  master.gain.value = 1;
+  let output = master;
+  if (typeof ctx.createDynamicsCompressor === "function") {
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -18;
+    compressor.knee.value = 12;
+    compressor.ratio.value = 6;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.2;
+    master.connect(compressor).connect(ctx.destination);
+  } else {
+    master.connect(ctx.destination);
+  }
+  orderAlertState.output = { context: ctx, node: output };
+  return orderAlertState.output;
+};
 
 const playOrderAlertSound = (kind) => {
   const notes = ORDER_ALERT_SOUNDS[kind];
@@ -12415,18 +12459,25 @@ const playOrderAlertSound = (kind) => {
     syncOrderAlertBanner(true);
     return false;
   }
+  const output = getOrderAlertOutput(ctx).node;
   const start = ctx.currentTime + 0.02;
-  notes.forEach((note) => {
+  const playVoice = (freq, type, peak, at, dur) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = note.type;
-    osc.frequency.value = note.freq;
-    gain.gain.setValueAtTime(0.0001, start + note.at);
-    gain.gain.exponentialRampToValueAtTime(note.gain, start + note.at + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + note.at + note.dur);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(start + note.at);
-    osc.stop(start + note.at + note.dur + 0.05);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, start + at);
+    gain.gain.exponentialRampToValueAtTime(peak, start + at + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + at + dur);
+    osc.connect(gain).connect(output);
+    osc.start(start + at);
+    osc.stop(start + at + dur + 0.05);
+  };
+  notes.forEach((note) => {
+    playVoice(note.freq, note.type, note.gain, note.at, note.dur);
+    (note.partials || []).forEach((partial) =>
+      playVoice(note.freq * partial.ratio, partial.type, note.gain * partial.gain, note.at, note.dur * 0.8)
+    );
   });
   orderAlertState.lastPlayed = kind;
   return true;
@@ -12503,6 +12554,7 @@ const checkOrderAlerts = (orders = []) => {
     orderAlertState.known = new Set(list.map((order) => order.id));
     active.forEach((order) => orderAlertState.tones.set(order.id, getOrderSla(order).tone));
     orderAlertState.lastRepeatAt = Date.now();
+    orderAlertState.lastLateAt = Date.now();
     return;
   }
 
@@ -12532,6 +12584,7 @@ const checkOrderAlerts = (orders = []) => {
   else if (escalations.warn.length && prefs.warn) played = playOrderAlertSound("warn") ? "warn" : "blocked";
 
   if (played === "newOrder") orderAlertState.lastRepeatAt = Date.now();
+  if (played === "late") orderAlertState.lastLateAt = Date.now();
 
   // Repete a campainha enquanto houver pedido esperando aceite.
   if (
@@ -12542,6 +12595,17 @@ const checkOrderAlerts = (orders = []) => {
     Date.now() - orderAlertState.lastRepeatAt >= ORDER_ALERT_REPEAT_MS
   ) {
     if (playOrderAlertSound("newOrder")) orderAlertState.lastRepeatAt = Date.now();
+    return;
+  }
+
+  // Alarme de atrasado volta a tocar enquanto houver pedido atrasado em aberto.
+  if (
+    !played &&
+    prefs.late &&
+    active.some((order) => getOrderSla(order).tone === "late") &&
+    Date.now() - orderAlertState.lastLateAt >= ORDER_ALERT_LATE_REPEAT_MS
+  ) {
+    if (playOrderAlertSound("late")) orderAlertState.lastLateAt = Date.now();
   }
 };
 
