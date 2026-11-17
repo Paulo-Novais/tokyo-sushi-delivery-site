@@ -32,6 +32,8 @@ process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
 // "Gestor aberto": em Production vale para todos. Aqui só para restaurantes de
 // teste "presenca-*", para os demais testes seguirem criando pedidos.
 process.env.INOVAS_PRESENCE_ENFORCE = process.env.INOVAS_PRESENCE_ENFORCE || "prefix:presenca-";
+// Pedidos e Caixa só no app INOVAS PDV: aqui só para restaurantes "somenteapp-*".
+process.env.INOVAS_REQUIRE_PDV_APP = process.env.INOVAS_REQUIRE_PDV_APP || "prefix:somenteapp-";
 process.env.ADMIN_LOGIN = adminLogin;
 process.env.ADMIN_PASSWORD = adminPassword;
 process.env.ADMIN_DISPLAY_NAME = process.env.E2E_ADMIN_DISPLAY_NAME || "Admin E2E";

@@ -11917,7 +11917,46 @@ const renderSystemGlobalFilters = () => {
   `);
 };
 
+// Pedidos e Caixa só no app INOVAS PDV: no navegador essas telas mostram
+// o aviso com o botão de baixar o app (quando a regra estiver ligada).
+const GESTOR_PDV_DOWNLOAD_URL =
+  "https://github.com/Paulo-Novais/tokyo-sushi-delivery-site/releases/download/gestor-pdv/INOVAS-PDV-Setup.exe";
+const isPdvAppBlockedSection = () =>
+  adminState.pdvAppBlocked === true && ["orders", "cash-register"].includes(adminState.activeSection);
+
+const renderPdvAppRequired = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  const statsRoot = document.querySelector("[data-admin-stats]");
+  const detailRoot = document.querySelector("[data-admin-order-detail]");
+  if (statsRoot) statsRoot.innerHTML = "";
+  if (detailRoot) detailRoot.innerHTML = "";
+  if (!moduleRoot) return;
+  const area = adminState.activeSection === "cash-register" ? "Caixa e Comandas" : "Pedidos";
+  moduleRoot.innerHTML = `
+    <section class="gx-pdv-required" data-pdv-app-required>
+      <span class="gx-pdv-required-chip">Somente no app</span>
+      <h2>${escapeHtml(area)} funciona no app INOVAS PDV</h2>
+      <p>Para receber pedidos, abrir o caixa e lançar comandas, use o app INOVAS PDV no computador do restaurante.
+      O Painel, os relatórios e o financeiro continuam aqui no navegador.</p>
+      <a class="gx-pdv-required-download" href="${GESTOR_PDV_DOWNLOAD_URL}" data-pdv-download>Baixar o app INOVAS PDV</a>
+      <small>Já tem o app instalado? Abra o INOVAS PDV e entre com o mesmo e-mail e senha.</small>
+    </section>`;
+};
+
 const renderModuleContent = () => {
+  // Marca a página para o CSS esconder o painel de detalhes vazio.
+  const blocked = isPdvAppBlockedSection();
+  if (document.body) document.body.toggleAttribute("data-pdv-blocked", blocked);
+  // Estilo inline com prioridade: a tela de Pedidos tem regras fortes para o painel.
+  const detailPanel = document.querySelector("[data-admin-detail-panel]");
+  if (detailPanel) {
+    if (blocked) detailPanel.style.setProperty("display", "none", "important");
+    else detailPanel.style.removeProperty("display");
+  }
+  if (isPdvAppBlockedSection()) {
+    renderPdvAppRequired();
+    return;
+  }
   renderModuleContentBody();
   renderSystemGlobalFilters();
 };
@@ -12631,6 +12670,7 @@ const syncOrderAlertBanner = (force = false) => {
   let banner = document.querySelector("[data-order-alert-unlock]");
   const needs =
     prefs.enabled &&
+    adminState.pdvAppBlocked !== true &&
     !isOrderAlertAudioReady() &&
     document.body?.dataset.adminPage === "dashboard" &&
     (force || !orderAlertState.gestured);
@@ -12657,6 +12697,8 @@ const syncOrderAlertTitle = (orders) => {
 };
 
 const checkOrderAlerts = (orders = []) => {
+  // Pedidos só no app: no navegador não toca som nem mostra aviso de pedido.
+  if (adminState.pdvAppBlocked === true) return;
   const list = Array.isArray(orders) ? orders : [];
   const prefs = getOrderAlertPrefs();
   const active = list.filter((order) => !isFinalOrder(order));
@@ -12726,6 +12768,8 @@ const checkOrderAlerts = (orders = []) => {
 // Fora de Pedidos/Painel a lista não é recarregada: busca leve só para os alertas.
 const pollOrderAlerts = async () => {
   if (orderAlertState.polling || document.body?.dataset.adminPage !== "dashboard") return;
+  // Pedidos só no app: no navegador não toca som de pedido.
+  if (adminState.pdvAppBlocked === true) return;
   if (!hasAdminPermission("orders_view") || !hasPlanFeatureForSection("orders")) return;
   // Com o Gestor escondido a recarga da tela pausa; o aviso busca sozinho em
   // intervalo menor para o pedido novo tocar no mesmo tempo de antes.
@@ -15854,6 +15898,8 @@ const loadInitialAdminSession = async () => {
   }
 
   syncAdminAccessFromPayload(session.admin);
+  adminState.pdvAppBlocked = session.pdvApp?.required === true && session.pdvApp?.isApp !== true;
+  if (adminState.pdvAppBlocked) syncOrderAlertBanner();
   renderSupportAccessBanner(session.admin?.support || null);
   if (
     getRequestedCashRegisterView() &&
@@ -15873,6 +15919,12 @@ const loadInitialAdminSession = async () => {
 
 const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
   ensureActiveSectionAllowed();
+
+  if (isPdvAppBlockedSection()) {
+    renderSectionChrome();
+    renderModuleContent();
+    return;
+  }
 
   if (adminState.activeSection === "cash-register") {
     await window.InovasCashRegister?.load({ force: true });
