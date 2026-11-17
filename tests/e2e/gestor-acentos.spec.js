@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { test, expect } = require("@playwright/test");
 const { loginMaster, onboardRestaurant, uniqueKey } = require("./helpers/v1.9-fixtures.cjs");
+const { openGestorSection } = require("./helpers/gestor-nav.cjs");
 
 // Textos do Gestor precisam sair com acento. Varre o texto visível, placeholders,
 // rótulos acessíveis e opções de todas as abas e falha se achar palavras comuns
@@ -44,7 +45,7 @@ test("Gestor: textos com acento em todas as abas", async ({ page }) => {
       [...new Set(nodes.map((node) => node.getAttribute("data-admin-section")))]
     );
     for (const section of sections) {
-      await page.locator(`.admin-nav [data-admin-section="${section}"]`).first().click();
+      await openGestorSection(page, section);
       await page.waitForTimeout(700);
       const lines = await page.evaluate(() => {
         const collect = [];
