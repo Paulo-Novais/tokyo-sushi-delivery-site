@@ -50,7 +50,8 @@ test("Gestor: recarga pausa com a tela escondida e o aviso de pedido continua", 
   };
   const isAlertCheck = (call) => call.startsWith("/api/admin/orders/list?limit=80");
   // Qualquer outra chamada de dados é a recarga da tela (a seção aberta decide quais).
-  const isSectionRefresh = (call) => !isAlertCheck(call) && !call.startsWith("/api/admin/session");
+  const isSectionRefresh = (call) =>
+    !isAlertCheck(call) && !call.startsWith("/api/admin/session") && !call.startsWith("/api/admin/presence");
 
   // Visível: a recarga da tela acontece a cada 20 s.
   await advance(45_000);

@@ -12566,7 +12566,12 @@ const changePresence = async (path, body) => {
 
 const initPresenceControl = () => {
   void loadPresenceStatus();
-  if (!presenceState.timer) presenceState.timer = window.setInterval(() => void loadPresenceStatus(), 60000);
+  // Com o Gestor escondido não consulta (o sinal de vida segue pelo aviso de pedidos).
+  if (!presenceState.timer) {
+    presenceState.timer = window.setInterval(() => {
+      if (!document.hidden) void loadPresenceStatus();
+    }, 60000);
+  }
 };
 
 document.addEventListener("click", (event) => {
