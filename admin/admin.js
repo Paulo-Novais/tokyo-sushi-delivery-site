@@ -12113,7 +12113,10 @@ const renderOrdersStageBar = (statsRoot) => {
     <div class="gx-orders-top">
       <div class="gx-orders-titles">
         <h1 class="gx-orders-title">Pedidos</h1>
-        <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+        <div class="gx-presence-row">
+          <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+          <div class="gx-presence" data-admin-presence hidden></div>
+        </div>
       </div>
       <div class="gx-orders-tools">
       ${renderOrderAlertControl()}
@@ -12149,6 +12152,7 @@ const renderOrdersStageBar = (statsRoot) => {
         <span>Cancelados</span><strong>${escapeHtml(String(cancelledCount))}</strong>
       </button>
     </div>`;
+  renderPresenceControl();
 };
 
 // Detalhes do pedido no lado direito (no celular, painel deslizante).
@@ -12482,6 +12486,111 @@ const playOrderAlertSound = (kind) => {
   orderAlertState.lastPlayed = kind;
   return true;
 };
+
+// ---------- "Fechar Gestor" (pausar pedidos do site) ----------
+// Ao lado do nome do restaurante: mostra se o site está recebendo pedidos e
+// permite fechar por 15/30/60/240 min ou reabrir. Vale para todos os
+// restaurantes. O site mostra "indisponível" enquanto estiver fechado.
+const presenceState = { status: null, menuOpen: false, busy: false, timer: null };
+
+const formatPresenceUntil = (iso) => {
+  const date = iso ? new Date(iso) : null;
+  return date && !Number.isNaN(date.getTime())
+    ? date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+};
+
+// Desenha em todo lugar marcado com data-admin-presence (topo comum e
+// cabeçalho de Pedidos, que tem o nome do restaurante em outro ponto).
+const renderPresenceControl = () => {
+  document.querySelectorAll("[data-admin-presence]").forEach((root) => renderPresenceInto(root));
+};
+
+const renderPresenceInto = (root) => {
+  const status = presenceState.status;
+  if (!status || isSystemAdminActor() || !hasAdminPermission("orders_view")) {
+    root.hidden = true;
+    root.innerHTML = "";
+    return;
+  }
+  const canChange = hasAdminPermission("orders_edit");
+  const paused = status.paused === true;
+  const label = paused ? `Fechado até ${formatPresenceUntil(status.pausedUntil)}` : "Recebendo pedidos";
+  const options = (status.options || [15, 30, 60, 240])
+    .map((minutes) => `<button type="button" class="gx-presence-option" data-presence-pause="${minutes}">${minutes} min</button>`)
+    .join("");
+  root.hidden = false;
+  root.innerHTML = `
+    <button type="button" class="gx-presence-toggle ${paused ? "is-paused" : "is-open"}"
+      data-presence-toggle aria-haspopup="true" aria-expanded="${presenceState.menuOpen}"
+      ${canChange ? "" : "disabled"} title="${canChange ? "Fechar ou reabrir o Gestor" : "Somente quem altera pedidos pode fechar o Gestor"}">
+      <span class="gx-presence-dot" aria-hidden="true"></span>${escapeHtml(label)}${canChange ? '<span aria-hidden="true"> ▾</span>' : ""}
+    </button>
+    ${
+      presenceState.menuOpen && canChange
+        ? `<div class="gx-presence-menu" role="menu">
+            <strong>Fechar Gestor por</strong>
+            <small>O site fica "indisponível" e não recebe pedidos nesse tempo.</small>
+            <div class="gx-presence-options">${options}</div>
+            ${paused ? '<button type="button" class="gx-presence-resume" data-presence-resume>Reabrir agora</button>' : ""}
+          </div>`
+        : ""
+    }`;
+};
+
+const loadPresenceStatus = async () => {
+  if (isSystemAdminActor() || !hasAdminPermission("orders_view")) return renderPresenceControl();
+  try {
+    const payload = await fetchJson("/api/admin/presence/status");
+    presenceState.status = payload.presence || null;
+  } catch {
+    // Mantém o último status conhecido.
+  }
+  renderPresenceControl();
+};
+
+const changePresence = async (path, body) => {
+  if (presenceState.busy) return;
+  presenceState.busy = true;
+  try {
+    const payload = await fetchJson(path, { method: "POST", body: JSON.stringify(body || {}) });
+    presenceState.status = payload.presence || presenceState.status;
+    presenceState.menuOpen = false;
+  } catch (error) {
+    window.alert(error?.message || "Não foi possível atualizar o Gestor.");
+  } finally {
+    presenceState.busy = false;
+    renderPresenceControl();
+  }
+};
+
+const initPresenceControl = () => {
+  void loadPresenceStatus();
+  if (!presenceState.timer) presenceState.timer = window.setInterval(() => void loadPresenceStatus(), 60000);
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  if (target.closest("[data-presence-toggle]")) {
+    presenceState.menuOpen = !presenceState.menuOpen;
+    renderPresenceControl();
+    return;
+  }
+  const pause = target.closest("[data-presence-pause]");
+  if (pause) {
+    void changePresence("/api/admin/presence/pause", { minutes: Number(pause.getAttribute("data-presence-pause")) });
+    return;
+  }
+  if (target.closest("[data-presence-resume]")) {
+    void changePresence("/api/admin/presence/resume", {});
+    return;
+  }
+  if (presenceState.menuOpen && !target.closest("[data-admin-presence]")) {
+    presenceState.menuOpen = false;
+    renderPresenceControl();
+  }
+});
 
 const getOrderAlertToastRoot = () => {
   let root = document.querySelector("[data-order-alert-toasts]");
@@ -17973,6 +18082,7 @@ const initDashboardPage = () => {
 
   void (async () => {
     if (await loadInitialAdminSession()) {
+      initPresenceControl();
       await loadActiveAdminSection({ preserveSelection: false });
     }
   })();

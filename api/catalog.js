@@ -17,6 +17,7 @@ const {
 } = require("../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../lib/security-guardian.cjs");
 const { runWithDatabaseScope } = require("../lib/tenant-sql.cjs");
+const { getPresence } = require("../lib/restaurant-presence.cjs");
 const { PREMIUM_PAGES } = require("../lib/premium-model.cjs");
 const { renderPremiumPage } = require("../lib/premium-site-renderer.cjs");
 const { getPublicAppUrl, validateRestaurantSlug } = require("../lib/restaurant-public-url.cjs");
@@ -250,10 +251,15 @@ module.exports = withRequestTiming(async (req, res) => {
       const tenantContext = await getRequestTenantContext(req, {
         source: `public:${action}`,
       });
-      const payload = await runAsPublicTenant(tenantContext, () =>
+      const payload = await runAsPublicTenant(tenantContext, async () =>
         action === "delivery-settings"
           ? getPublicDeliverySettings({ tenantContext })
-          : getPublicRestaurantSettings({ tenantContext })
+          : {
+              ...(await getPublicRestaurantSettings({ tenantContext })),
+              // "Gestor aberto": o site mostra "indisponível" quando o Gestor
+              // do restaurante não deu sinal nos últimos minutos.
+              availability: { gestorOnline: (await getPresence({ tenantContext })).online },
+            }
       );
 
       return json(res, 200, {

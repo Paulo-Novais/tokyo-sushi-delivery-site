@@ -14,6 +14,12 @@ process.env.E2E_ADMIN_PASSWORD =
   process.env.E2E_ADMIN_PASSWORD || crypto.randomBytes(24).toString("base64url");
 process.env.INOVAS_ALLOW_INVITE_LINK_COPY =
   process.env.INOVAS_ALLOW_INVITE_LINK_COPY || "true";
+// Licença do caixa local (PDV): par de chaves descartável, só para os testes.
+if (!process.env.PDV_LEASE_PRIVATE_KEY) {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519");
+  process.env.PDV_LEASE_PRIVATE_KEY = privateKey.export({ type: "pkcs8", format: "pem" });
+  process.env.PDV_LEASE_PUBLIC_KEY_E2E = publicKey.export({ type: "spki", format: "pem" });
+}
 
 module.exports = defineConfig({
   testDir: "./tests",

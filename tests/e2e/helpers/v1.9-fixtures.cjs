@@ -332,5 +332,6 @@ module.exports = {
   loginMaster,
   loginTenantOwner,
   onboardRestaurant,
+  orderPayload,
   uniqueKey,
 };

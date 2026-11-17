@@ -19,6 +19,7 @@ const {
 } = require("../../lib/tenant-context.cjs");
 const { guardSecurity, recordSecurityFailure } = require("../../lib/security-guardian.cjs");
 const { runWithDatabaseScope } = require("../../lib/tenant-sql.cjs");
+const { getPresence } = require("../../lib/restaurant-presence.cjs");
 const {
   DEFAULT_TIMEZONE,
   getBusinessHoursStatus,
@@ -160,6 +161,21 @@ const createOrderWithRetry = async (payload, tenantContext) => {
   throw lastError;
 };
 
+// "Gestor aberto" (regra de todos os restaurantes): sem sinal do Gestor/app
+// nos últimos minutos, o pedido não entra — o cliente não fica esperando um
+// pedido que ninguém vai ver. Sem dado confiável (tabela ausente/erro), segue
+// como antes para não travar vendas por falha técnica.
+const assertRestaurantGestorOnline = async (tenantContext) => {
+  const presence = await getPresence({ tenantContext });
+  if (presence.online) return;
+  throw buildHttpError(
+    409,
+    "Restaurante indisponivel no momento. Tente novamente mais tarde.",
+    "restaurant_unavailable",
+    { operationalStatus: { gestorOnline: false } }
+  );
+};
+
 const assertPublicOrderTenantCanOperate = async (tenantContext) => {
   const planAccess = await getPlanAccessForAdminModule({
     group: "orders",
@@ -211,6 +227,7 @@ module.exports = withRequestTiming(async (req, res) => {
       },
       async () => {
         await assertPublicOrderTenantCanOperate(tenantContext);
+        await assertRestaurantGestorOnline(tenantContext);
         return createOrderWithRetry(payload, tenantContext);
       }
     );

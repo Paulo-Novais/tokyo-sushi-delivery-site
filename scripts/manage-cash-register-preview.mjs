@@ -9,7 +9,10 @@ import {
 } from "@neondatabase/serverless";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const migrationPaths = ["029_cash_register_shift_tables_and_occupancy.sql"].map(
+const migrationPaths = [
+  "029_cash_register_shift_tables_and_occupancy.sql",
+  "030_cash_register_operations.sql",
+].map(
   (fileName) => path.join(rootDir, "migrations", fileName)
 );
 const expectedTables = Object.freeze([
@@ -23,6 +26,7 @@ const expectedTables = Object.freeze([
   "cash_payments",
   "cash_register_movements",
   "cash_register_audit_events",
+  "cash_register_operations",
 ]);
 const expectedForeignKeys = Object.freeze([
   ["cash_register_table_assignments", "cash_register_sessions"],

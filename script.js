@@ -530,7 +530,13 @@ const restaurantSettingsState = {
   error: "",
   summary: null,
   settings: null,
+  // "Gestor aberto": sem Gestor do restaurante aberto (ou pausado), o site
+  // fica indisponível para pedidos. Vem de /api/restaurant-settings.
+  availability: null,
 };
+const GESTOR_UNAVAILABLE_MESSAGE =
+  "Restaurante indisponivel no momento. Os pedidos voltam a ser aceitos assim que o restaurante reabrir.";
+const AVAILABILITY_REFRESH_MS = 60000;
 const cartUiState = {
   checkoutExpanded: false,
   orderNotice: null,
@@ -4797,7 +4803,29 @@ const parseCurrencyAmount = (value) => {
   return Number.isFinite(amount) && amount >= 0 ? Number(amount.toFixed(2)) : null;
 };
 
-const getStoreOperatingContext = (now = new Date()) => {
+const isGestorUnavailable = () => restaurantSettingsState.availability?.gestorOnline === false;
+
+// Gestor fechado/pausado: loja indisponível, sem pedido imediato nem agendado.
+const applyGestorAvailability = (context) =>
+  isGestorUnavailable()
+    ? {
+        ...context,
+        isOpen: false,
+        acceptsImmediateOrders: false,
+        acceptsOrdersOutsideHours: false,
+        gestorUnavailable: true,
+        statusTone: "closed",
+        statusLabel: "Indisponivel agora",
+        shortStatusLabel: "Indisponivel agora",
+        closedReason: "gestor_offline",
+        warningMessage: GESTOR_UNAVAILABLE_MESSAGE,
+        detail: GESTOR_UNAVAILABLE_MESSAGE,
+      }
+    : context;
+
+const getStoreOperatingContext = (now = new Date()) => applyGestorAvailability(getBaseStoreOperatingContext(now));
+
+const getBaseStoreOperatingContext = (now = new Date()) => {
   const structuredContext = getPublicBusinessScheduleStatus(now);
 
   if (structuredContext) {
@@ -5142,6 +5170,14 @@ const getCartCheckoutValidation = (
   deliveryQuote = getLatestSavedDeliveryQuote(profile)
 ) => {
   const storeContext = getStoreOperatingContext();
+
+  if (storeContext.gestorUnavailable) {
+    return {
+      isValid: false,
+      tone: "warning",
+      message: GESTOR_UNAVAILABLE_MESSAGE,
+    };
+  }
 
   if (cart.length === 0) {
     return {
@@ -8026,6 +8062,7 @@ const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
     );
 
     restaurantSettingsState.summary = payload.summary || null;
+    restaurantSettingsState.availability = payload.availability || null;
     restaurantSettingsState.settings = normalizePublicRestaurantSettingsPayload(payload.settings || {});
     restaurantSettingsState.loaded = true;
   } catch (error) {
@@ -8042,7 +8079,28 @@ const loadPublicRestaurantSettings = async ({ force = false } = {}) => {
     }
     applyRestaurantSettingsToPublicSite();
     renderCart();
+    startAvailabilityRefresh();
   }
+};
+
+// Confere a cada minuto se o Gestor abriu/fechou (libera ou bloqueia sozinho).
+let availabilityTimer = null;
+const startAvailabilityRefresh = () => {
+  if (availabilityTimer || typeof window === "undefined") return;
+  availabilityTimer = window.setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const payload = await getJsonWithTimeout(PUBLIC_RESTAURANT_SETTINGS_ENDPOINT, CUSTOMER_AUTH_REQUEST_TIMEOUT_MS);
+      const before = isGestorUnavailable();
+      restaurantSettingsState.availability = payload.availability || null;
+      if (before !== isGestorUnavailable()) {
+        applyRestaurantSettingsToPublicSite();
+        renderCart();
+      }
+    } catch {
+      // Sem resposta: mantém o último estado conhecido.
+    }
+  }, AVAILABILITY_REFRESH_MS);
 };
 
 const cloneDeliverySettingsDefaults = () => {
