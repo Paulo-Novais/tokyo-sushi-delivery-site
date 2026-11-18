@@ -10554,15 +10554,21 @@ const formatFeeLabel = (fee) => {
 const feeCentsFor = (fee, amountCents) =>
   fee ? Math.round((amountCents * fee.percentBps) / 10000) + fee.fixedCents : null;
 
-const formatPlatformFee = (data) =>
-  `${(Number(data?.platformFeeBps ?? 150) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%`;
+const platformBps = (data, methodId) => Number(data?.platformFeesBps?.[methodId] ?? 0);
+const formatBpsLabel = (bps) =>
+  bps ? `${(bps / 100).toLocaleString("pt-BR", { minimumFractionDigits: bps % 100 ? 1 : 0, maximumFractionDigits: 2 })}%` : "sem taxa";
+const formatPlatformFee = (data, methodId) => {
+  if (methodId) return formatBpsLabel(platformBps(data, methodId));
+  const fees = data?.platformFeesBps || {};
+  return fees.pix ? formatBpsLabel(fees.credit_card) : `${formatBpsLabel(fees.credit_card)} em cartão e vale (Pix sem taxa)`;
+};
 const renderFeeRow = (method, amountCents, data) => {
   const fee = feeCentsFor(method.fee, amountCents);
-  const platform = Math.round((amountCents * Number(data?.platformFeeBps ?? 150)) / 10000);
+  const platform = Math.round((amountCents * platformBps(data, method.id)) / 10000);
   return `<tr>
     <td>${escapeHtml(method.shortLabel)}</td>
     <td>${fee === null ? "A confirmar" : `${escapeHtml(formatFeeLabel(method.fee))} · − ${escapeHtml(formatMoney(fee / 100))}`}</td>
-    <td>${escapeHtml(formatPlatformFee(data))} · − ${escapeHtml(formatMoney(platform / 100))}</td>
+    <td>${platform ? `${escapeHtml(formatPlatformFee(data, method.id))} · − ${escapeHtml(formatMoney(platform / 100))}` : "Sem taxa"}</td>
     <td><strong>${fee === null ? `até ${escapeHtml(formatMoney((amountCents - platform) / 100))}` : escapeHtml(formatMoney((amountCents - fee - platform) / 100))}</strong></td>
   </tr>`;
 };
@@ -10609,7 +10615,7 @@ const renderPaymentSettingsBody = () => {
             <input type="checkbox" data-pay-method="${escapeHtml(method.id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
             <span class="gx-pay-method-text">
               <strong>${escapeHtml(method.label)}</strong>
-              <small>${method.availableOnPlatform ? `Taxa da operadora: ${escapeHtml(formatFeeLabel(method.fee))} · Taxa INOVAS: ${escapeHtml(formatPlatformFee(data))}` : "Em breve na sua região"}</small>
+              <small>${method.availableOnPlatform ? `Taxa da operadora: ${escapeHtml(formatFeeLabel(method.fee))} · Taxa INOVAS: ${escapeHtml(formatPlatformFee(data, method.id))}` : "Em breve na sua região"}</small>
             </span>
             <span class="gx-pay-switch" aria-hidden="true"></span>
           </label>`;

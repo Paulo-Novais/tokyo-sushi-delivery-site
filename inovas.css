@@ -534,3 +534,14 @@ html.if-js .if-page:not(.is-active) { display: none; }
 .if-table td.is-addon { color: var(--if-ink); font-weight: 700; white-space: nowrap; }
 .if-table tbody tr:hover > * { background: #fafafa; }
 .if-table tbody tr:hover > td.is-hl { background: #ffefe7; }
+
+/* Quatro planos (Grátis, Essencial, Profissional, Completo) */
+.if-plans.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.if-plans.is-four .if-plan { padding: 26px 22px; }
+.if-plans.is-four .if-price b { font-size: 40px; }
+@media (max-width: 1180px) {
+  .if-plans.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .if-plans.is-four { grid-template-columns: 1fr; }
+}

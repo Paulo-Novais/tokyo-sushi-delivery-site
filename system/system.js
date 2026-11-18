@@ -100,13 +100,13 @@
   });
 
   const PLAN_LABELS = Object.freeze({
-    PREMIUM: "Premium",
+    PREMIUM: "Completo",
     TRIAL: "Avaliação",
-    FREE: "Gratuito",
-    BASIC: "Básico",
-    START: "Start",
-    BUSINESS: "Business",
-    PRO: "Pro",
+    FREE: "Grátis",
+    BASIC: "Essencial",
+    START: "Essencial",
+    BUSINESS: "Profissional",
+    PRO: "Completo",
     ENTERPRISE: "Empresarial",
   });
 
@@ -658,7 +658,9 @@
         requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/payment-account`),
         requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/payouts`),
       ]);
-      sysPayments.byKey[key] = { account: account.data || {}, payouts: payouts.data || {}, error: "" };
+      sysPayments.byKey[key] = account.data?.unavailable
+        ? { error: "Restaurante ainda não provisionado para pagamento online." }
+        : { account: account.data || {}, payouts: payouts.data || {}, error: "" };
     } catch (error) {
       sysPayments.byKey[key] = {
         error: error.code === "payouts_not_configured" || error.code === "online_payment_disabled"

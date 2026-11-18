@@ -143,7 +143,11 @@ test("taxa INOVAS (1,5%): linha própria, por pedido e descontada do repasse", (
   });
   assert.equal(statement.totals.platformFeesCents, 150);
   assert.equal(statement.netCents, 10000 - 349 - 150);
-  assert.ok(statement.lines.some((line) => line.label === "Taxa INOVAS (1,5% das vendas online)" && line.amountCents === -150));
+  assert.ok(statement.lines.some((line) => line.label === "Taxa INOVAS (1,5% em cartão e vale; Pix sem taxa)" && line.amountCents === -150));
+  // Pix sem taxa INOVAS; cartão e vale 1,5%.
+  assert.equal(computePlatformFeeCents(10000, "pix"), 0);
+  assert.equal(computePlatformFeeCents(10000, "debit_card"), 150);
+  assert.equal(computePlatformFeeCents(10000, "meal_voucher"), 150);
   assert.equal(statement.orders[0].platformFeeCents, 150);
   assert.equal(statement.orders[0].netCents, 9501);
 });

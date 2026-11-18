@@ -60,29 +60,29 @@ test("Home: Recursos mostra o módulo escolhido", async ({ page }) => {
   await expect(page.locator('[data-module="4"]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[data-module="0"]')).toHaveAttribute("aria-selected", "false");
   await expect(page.locator("[data-module-name]")).toHaveText("Estoque");
-  await expect(page.locator("[data-module-plan]")).toHaveText("Profissional e PRO");
+  await expect(page.locator("[data-module-plan]")).toHaveText("Profissional e Completo");
   await expect(page.locator("[data-module-items] li")).toHaveCount(4);
 });
 
 test("Home: Economia calcula plano, domínio e comissão do app", async ({ page }) => {
   await page.goto("/inovas#economia");
   const price = page.locator("[data-builder-price]");
-  await expect(price).toHaveText("R$ 100");
-  await expect(page.locator("[data-builder-year]")).toContainText("R$ 1.200 por ano");
+  await expect(price).toHaveText("R$ 49,90");
+  await expect(page.locator("[data-builder-year]")).toContainText("R$ 598,80 por ano");
 
-  // Valores padrão do esboço: R$ 20.000, 30%, Plano Básico (15,2%), plano Delivery.
+  // Valores padrão: R$ 20.000, 30%, Plano Básico do app (15,2%), plano Essencial (R$ 49,90).
   await expect(page.locator("[data-calc-fee]")).toHaveText("R$ 912/mês");
-  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 812");
-  await expect(page.locator("[data-calc-year]")).toHaveText("R$ 9.744");
-  await expect(page.locator("[data-calc-break]")).toContainText("R$ 658 por mês");
+  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 862,10");
+  await expect(page.locator("[data-calc-year]")).toHaveText("R$ 10.345");
+  await expect(page.locator("[data-calc-break]")).toContainText("R$ 328,29 por mês");
 
-  // Profissional + domínio próprio = R$ 260.
+  // Profissional + domínio próprio = R$ 189,90.
   await page.locator('.if-plan-pick label:has(input[value="profissional"])').click();
   await page.locator(".if-toggle").click();
-  await expect(price).toHaveText("R$ 260");
+  await expect(price).toHaveText("R$ 189,90");
   await expect(page.locator("[data-builder-desc]")).toHaveText("Plano Profissional · domínio próprio incluso");
-  await expect(page.locator("[data-calc-inovas]")).toHaveText("R$ 260/mês");
-  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 652");
+  await expect(page.locator("[data-calc-inovas]")).toHaveText("R$ 189,90/mês");
+  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 722,10");
 
   // Plano Entrega do app (26,2%) sobre R$ 6.000 = R$ 1.572.
   await page.locator('.if-calc-plan label:has(input[value="0.262"])').click();
@@ -93,9 +93,10 @@ test("Home: Economia calcula plano, domínio e comissão do app", async ({ page 
   await page.locator("[data-calc-share]").fill("5");
   await expect(page.locator("[data-calc-month]")).toHaveText("R$ 0");
 
-  // "trocar" avança o plano: Profissional -> PRO.
+  // "trocar" avança o plano: Profissional -> Completo (domínio próprio já incluso).
   await page.locator("[data-calc-swap]").click();
-  await expect(price).toHaveText("a partir de R$ 390");
+  await expect(price).toHaveText("R$ 219,90");
+  await expect(page.locator("[data-builder-desc]")).toHaveText("Plano Completo · domínio próprio incluso");
 });
 
 test("Home: Dúvidas abre uma por vez e o contato valida antes de abrir o e-mail", async ({ page }) => {

@@ -94,10 +94,11 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   const statement = (await (await owner.api.get("/api/admin/payouts/statement")).json()).statement;
   expect(statement.totals.grossSalesCents).toBe(5850);
   expect(statement.totals.feesCents).toBe(58);
-  expect(statement.totals.platformFeesCents).toBe(88);
-  expect(statement.netCents).toBe(5850 - 58 - 88);
+  // Pix: sem taxa INOVAS (só a da operadora).
+  expect(statement.totals.platformFeesCents).toBe(0);
+  expect(statement.netCents).toBe(5850 - 58);
   expect(statement.lines.map((line) => line.label)).toEqual(
-    expect.arrayContaining(["Vendas Pix (1 pedido)", "Taxa Pix", "Taxa INOVAS (1,5% das vendas online)"])
+    expect.arrayContaining(["Vendas Pix (1 pedido)", "Taxa Pix"])
   );
 
   // Tela de volta do cliente: banner de aprovado.
@@ -116,10 +117,19 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   expect(cancelBody.onlineRefund).toMatchObject({ refunded: true });
   const afterRefund = (await (await owner.api.get("/api/admin/payouts/statement")).json()).statement;
   expect(afterRefund.totals.refundsCents).toBe(5850);
-  // Taxa INOVAS devolvida; só a taxa da operadora fica.
-  expect(afterRefund.totals.creditsCents).toBe(88);
+  // Só a taxa da operadora fica.
   expect(afterRefund.netCents).toBe(-58);
   expect((await (await site.get(`/api/payments/status?payment=${checkout.paymentId}`)).json()).status).toBe("REFUNDED");
+
+  // Crédito aprovado: taxa INOVAS de 1,5% (R$ 58,50 -> R$ 0,88).
+  const cardPayload = orderPayload("pagonline-credito");
+  cardPayload.checkout.onlinePaymentMethod = "credit_card";
+  const card = await (await postJson(site, "/api/payments/checkout", cardPayload)).json();
+  const cardOrder = new URL(card.checkoutUrl, baseURL).searchParams.get("order");
+  expect((await (await postJson(site, "/api/payments/test-simulate", { providerOrderId: cardOrder, outcome: "paid" })).json()).status).toBe("PAID");
+  const withCard = (await (await owner.api.get("/api/admin/payouts/statement")).json()).statement;
+  expect(withCard.totals.platformFeesCents).toBe(88);
+  expect(withCard.lines.map((line) => line.label)).toContain("Taxa INOVAS (1,5% em cartão e vale; Pix sem taxa)");
 
   // VR/VA recusado: nenhum pedido criado.
   const voucherPayload = orderPayload("pagonline-vale");
@@ -128,7 +138,7 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   const voucherOrderId = new URL(voucher.checkoutUrl, baseURL).searchParams.get("order");
   const refused = await (await postJson(site, "/api/payments/test-simulate", { providerOrderId: voucherOrderId, outcome: "failed" })).json();
   expect(refused.status).toBe("FAILED");
-  expect((await listOrders()).length).toBe(ordersBefore + 1);
+  expect((await listOrders()).length).toBe(ordersBefore + 2);
 
   // Forma inválida, rota da rotina sem segredo e retorno para outro site.
   const invalid = orderPayload("pagonline-invalido");
