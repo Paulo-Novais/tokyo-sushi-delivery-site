@@ -83,3 +83,20 @@ No site do Tokyo: carrinho → "Pix (pagar agora)" → pagar no checkout de
 teste → o pedido aparece no Gestor como **PAGO ONLINE** → Financeiro mostra a
 venda e a taxa → cancelar o pedido devolve o valor. Conferido isso, troque
 para a chave real (`sk_...`) e apague `PAGARME_API_URL`.
+
+## 7. Integrações com plataformas de delivery (sem taxa INOVAS)
+
+- **iFood:** cadastrar a INOVAS como empresa de software em
+  developer.ifood.com.br (CNPJ), criar o app e passar na homologação. Na
+  Vercel: `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET`, `IFOOD_WEBHOOK_TOKEN`.
+  Webhook no portal: `https://inovasfood.com.br/api/channels/ifood/webhook?token=...`.
+  O restaurante cola o ID da loja em Configurações > Integrações.
+- **99Food e Keeta (padrão Open Delivery da Abrasel):** pedir à plataforma o
+  cadastro da INOVAS como "Software Service". Ela entrega client id/secret,
+  endereço da API e App ID. Na Vercel: `FOOD99_CLIENT_ID`,
+  `FOOD99_CLIENT_SECRET`, `FOOD99_API_URL`, `FOOD99_APP_ID` (Keeta:
+  `KEETA_...`). Endereço do aviso para informar à plataforma:
+  `https://inovasfood.com.br/api/channels/food99` (ela chama `/v1/newEvent`).
+  O restaurante clica "Gerar código e conectar" e cola o código no portal.
+- **Uber Eats:** encerrou o delivery de restaurantes no Brasil; os pedidos
+  de comida do app Uber chegam pelo iFood.

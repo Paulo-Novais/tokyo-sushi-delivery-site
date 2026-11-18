@@ -1,4 +1,4 @@
--- Integrações com plataformas de delivery (iFood; 99Food e Uber Eats depois):
+-- Integrações com plataformas de delivery (iFood; 99Food e Keeta pelo Open Delivery):
 -- qual loja da plataforma pertence a cada restaurante. Sem taxa para o
 -- restaurante. Ordem: depois de 034. Volta: 035_channel_accounts.rollback.sql
 BEGIN;
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS restaurant_channel_accounts (
   tenant_id TEXT NOT NULL,
   restaurant_id TEXT NOT NULL,
   restaurant_key TEXT NOT NULL,
-  channel TEXT NOT NULL CHECK (channel IN ('ifood', 'food99', 'ubereats')),
+  channel TEXT NOT NULL CHECK (channel IN ('ifood', 'food99', 'keeta', 'ubereats')),
   external_store_id TEXT NOT NULL CHECK (char_length(external_store_id) BETWEEN 3 AND 120),
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   updated_by TEXT NOT NULL DEFAULT '',

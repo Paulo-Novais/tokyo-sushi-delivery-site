@@ -10859,7 +10859,7 @@ const renderChannelsBody = () => {
     .map((channel) => {
       const linked = Boolean(channel.externalStoreId);
       const status = !channel.available
-        ? ["Em breve", "is-warn"]
+        ? [channel.note ? "Pelo iFood" : "Em breve", "is-warn"]
         : !channel.platformReady
           ? ["Aguardando ativação INOVAS", "is-warn"]
           : linked
@@ -10867,12 +10867,26 @@ const renderChannelsBody = () => {
             : ["Não conectado", "is-bad"];
       const draft = channelsState.drafts[channel.id] ?? channel.externalStoreId;
       const busy = channelsState.saving;
+      const isOpenDelivery = channel.standard === "opendelivery";
+      // Open Delivery (99Food, Keeta): a INOVAS gera o código e o restaurante
+      // cola no portal da plataforma.
+      const openDeliveryBody = `<div class="gx-set-grid">
+          <label class="gx-set-field is-wide"><span class="gx-set-field-label">Código da sua loja para o ${escapeHtml(channel.label)}</span>
+            <span class="gx-set-input"><input data-channel-code="${escapeHtml(channel.id)}" value="${escapeHtml(channel.externalStoreId || "Clique em Gerar código")}" readonly /></span></label>
+        </div>
+        <p class="gx-pay-muted">No portal de parceiros do ${escapeHtml(channel.label)}, escolha a INOVAS como sistema (padrão Open Delivery) e cole este código. Sem custo: a INOVAS não cobra nada pelos pedidos das plataformas.</p>
+        <div class="gx-pay-actions">
+          ${linked ? `<button type="button" class="gx-set-btn" data-channel-action="unlink" data-channel="${escapeHtml(channel.id)}" ${busy ? "disabled" : ""}>Desconectar</button>` : ""}
+          ${linked ? "" : `<button type="button" class="gx-set-btn is-primary" data-channel-action="generate" data-channel="${escapeHtml(channel.id)}" ${busy ? "disabled" : ""}>${busy ? "Gerando…" : "Gerar código e conectar"}</button>`}
+        </div>`;
       return gxSetCard(
         channel.label,
         channel.available
           ? `Os pedidos do ${channel.label} entram na mesma fila do Gestor. Ao aceitar, marcar pronto, saiu para entrega ou cancelar aqui, o ${channel.label} é avisado.`
-          : `A integração com o ${channel.label} está em preparação.`,
-        channel.available
+          : channel.note || `A integração com o ${channel.label} está em preparação.`,
+        channel.available && isOpenDelivery
+          ? openDeliveryBody
+          : channel.available
           ? `<div class="gx-set-grid">
               <label class="gx-set-field is-wide"><span class="gx-set-field-label">ID da loja no ${escapeHtml(channel.label)} (Portal do Parceiro → Perfil da loja)</span>
                 <span class="gx-set-input"><input data-channel-store="${escapeHtml(channel.id)}" value="${escapeHtml(draft)}" placeholder="ex.: 0f2c7e6a-...-b81d" autocomplete="off" ${busy ? "disabled" : ""} /></span></label>
@@ -10899,6 +10913,7 @@ document.addEventListener("click", async (event) => {
   if (!button) return;
   const channel = button.dataset.channel;
   const unlink = button.dataset.channelAction === "unlink";
+  const generate = button.dataset.channelAction === "generate";
   const input = document.querySelector(`[data-channel-store="${channel}"]`);
   channelsState.saving = true;
   channelsState.message = "";
@@ -10906,7 +10921,7 @@ document.addEventListener("click", async (event) => {
   try {
     const payload = await fetchJson("/api/admin/channels/save", {
       method: "POST",
-      body: JSON.stringify({ channel, externalStoreId: unlink ? "" : String(input?.value || "").trim() }),
+      body: JSON.stringify({ channel, externalStoreId: unlink ? "" : generate ? "generate" : String(input?.value || "").trim() }),
     });
     channelsState.data = payload;
     channelsState.drafts = {};

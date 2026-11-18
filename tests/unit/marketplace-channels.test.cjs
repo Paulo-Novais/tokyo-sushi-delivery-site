@@ -31,3 +31,27 @@ test("pedido do iFood vira pedido INOVAS com origem, itens, total e observaçõe
   // Mesmo pedido -> mesma assinatura (não duplica).
   assert.equal(mapped.requestSignature, mapIfoodOrder({ id: "abc-123" }).requestSignature);
 });
+
+test("pedido Open Delivery (99Food) vira pedido INOVAS", () => {
+  const { mapOpenDeliveryOrder } = require("../../lib/marketplace-channels.cjs");
+  const mapped = mapOpenDeliveryOrder("food99", {
+    id: "od-1",
+    displayId: "77",
+    type: "TAKEOUT",
+    orderTiming: "INSTANT",
+    customer: { id: "c9", name: "João", phone: { number: "(16) 99999-0000" } },
+    items: [{ id: "a", name: "Hot roll", quantity: 2, totalPrice: { value: 49.8 }, specialInstructions: "bem passado" }],
+    otherFees: [{ type: "DELIVERY_FEE", price: { value: 0 } }],
+    total: { itemsPrice: { value: 49.8 }, orderAmount: { value: 49.8 } },
+    payments: { prepaid: 0, pending: 49.8, methods: [{ method: "CREDIT", type: "PENDING" }] },
+  });
+  assert.equal(mapped.order.fulfillmentMode, "pickup");
+  assert.equal(mapped.order.paymentMethod, "credito");
+  assert.equal(mapped.order.total, 49.8);
+  assert.equal(mapped.items[0].unitPrice, 24.9);
+  assert.equal(mapped.customer.phone, "16999990000");
+  assert.equal(mapped.order.rawPayload.channelOrder.standard, "opendelivery");
+  assert.equal(mapped.order.rawPayload.channelOrder.prepaid, false);
+  assert.match(mapped.order.customerNotes, /Pedido 99Food #77/);
+  assert.match(mapped.order.customerNotes, /Cobrar na entrega/);
+});

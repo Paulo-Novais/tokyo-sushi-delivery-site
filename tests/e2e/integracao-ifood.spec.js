@@ -38,7 +38,8 @@ test("iFood: pedido entra no Gestor e os status voltam para o iFood", async ({ b
   await page.goto("/admin/?section=settings&tab=channels");
   const slot = page.locator("[data-channels-slot]");
   await expect(slot.locator('[data-channel-status="ifood"]')).toHaveText("Não conectado");
-  await expect(slot.locator('[data-channel-status="food99"]')).toHaveText("Em breve");
+  await expect(slot.locator('[data-channel-status="food99"]')).toHaveText("Não conectado");
+  await expect(slot.locator('[data-channel-status="ubereats"]')).toHaveText("Pelo iFood");
   await slot.locator('[data-channel-store="ifood"]').fill(merchantId);
   await slot.locator('[data-channel-action="link"][data-channel="ifood"]').click();
   await expect(slot).toContainText("Integração salva");
@@ -85,5 +86,62 @@ test("iFood: pedido entra no Gestor e os status voltam para o iFood", async ({ b
   await site.dispose();
   await owner.api.dispose();
   await otherOwner.api.dispose();
+  await master.api.dispose();
+});
+
+test("99Food (Open Delivery): código gerado pela INOVAS, pedido no Gestor e status de volta", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const master = await loginMaster();
+  const restaurant = await onboardRestaurant(master.api, { key: uniqueKey("food99"), name: "Restaurante 99", ownerPassword: "Owner99Food123!" });
+  const owner = await loginTenantOwner(restaurant);
+  const site = await createApiContext();
+
+  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": `127.98.${Math.floor(Math.random() * 200)}.9` } });
+  const page = await context.newPage();
+  await page.goto("/admin/login.html?next=%2Fadmin%2F");
+  await page.locator('input[name="identifier"]').fill(restaurant.ownerLogin);
+  await page.locator('input[name="password"]').fill(restaurant.ownerPassword);
+  await page.locator("[data-admin-login-submit]").click();
+  await page.waitForLoadState("networkidle");
+  await page.goto("/admin/?section=settings&tab=channels");
+  const slot = page.locator("[data-channels-slot]");
+  await slot.locator('[data-channel-action="generate"][data-channel="food99"]').click();
+  await expect(slot.locator('[data-channel-status="food99"]')).toHaveText("Conectado");
+  const merchantId = await slot.locator('[data-channel-code="food99"]').inputValue();
+  expect(merchantId.length).toBeGreaterThanOrEqual(36);
+  await context.close();
+
+  const listOrders = async () => (await (await owner.api.get("/api/admin/orders/list?limit=80")).json()).orders || [];
+  const before = (await listOrders()).length;
+  const created = await (await post(site, "/api/channels/test-simulate", { channel: "food99", merchantId })).json();
+  expect(created.created, JSON.stringify(created)).toBe(true);
+  // Aviso repetido (mesmo pedido) não duplica.
+  await site.post("/api/channels/food99/v1/newEvent", {
+    headers: { Origin: baseURL, "x-app-merchantid": merchantId, "x-app-id": "app-teste" },
+    data: { eventId: "e1", eventType: "CREATED", orderId: created.externalOrderId, orderURL: "", createdAt: new Date().toISOString() },
+  });
+  const orders = await listOrders();
+  expect(orders.length).toBe(before + 1);
+  const order = orders.find((entry) => String(entry.publicId) === String(created.orderPublicId));
+
+  for (const [status, action] of [["Aceito", "confirm"], ["Em preparo", "preparing"], ["Pronto", "readyForPickup"], ["Saiu para entrega", "dispatch"], ["Entregue", "delivered"]]) {
+    const body = await (await owner.api.post("/api/admin/orders/status", { data: { orderId: order.id, status, manual: true } })).json();
+    expect(body.channelSync, status).toMatchObject({ ok: true, action });
+  }
+  const actions = (await (await site.get(`/api/channels/test-actions?orderId=${created.externalOrderId}`)).json()).actions.map((entry) => entry.action);
+  expect(actions).toEqual(["confirm", "preparing", "readyForPickup", "dispatch", "delivered"]);
+
+  // Entrega pela plataforma: "saiu" não é enviado; cancelamento com motivo.
+  const second = await (await post(site, "/api/channels/test-simulate", { channel: "food99", merchantId, deliveredBy: "MARKETPLACE" })).json();
+  const secondOrder = (await listOrders()).find((entry) => String(entry.publicId) === String(second.orderPublicId));
+  const dispatched = await (await owner.api.post("/api/admin/orders/status", { data: { orderId: secondOrder.id, status: "Saiu para entrega", manual: true } })).json();
+  expect(dispatched.channelSync).toBeUndefined();
+  const cancelled = await (await owner.api.post("/api/admin/orders/status", { data: { orderId: secondOrder.id, status: "Cancelado", note: "Sem entregador", manual: true } })).json();
+  expect(cancelled.channelSync).toMatchObject({ ok: true, action: "requestCancellation" });
+  const cancelAction = (await (await site.get(`/api/channels/test-actions?orderId=${second.externalOrderId}`)).json()).actions.pop();
+  expect(cancelAction.body).toMatchObject({ code: "INTERNAL_DIFFICULTIES_OF_THE_RESTAURANT", mode: "MANUAL", reason: "Sem entregador" });
+
+  await site.dispose();
+  await owner.api.dispose();
   await master.api.dispose();
 });
