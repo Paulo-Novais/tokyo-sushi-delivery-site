@@ -13,7 +13,7 @@
   "rewrites": [
     {
       "source": "/api/payments/:path*",
-      "destination": "/api/customer/__payments/:path*"
+      "destination": "/api/customer/[...action]?action=__payments/:path*"
     },
     {
       "source": "/robots.txt",
@@ -210,6 +210,18 @@
     {
       "source": "/api/admin/cash-register/:action",
       "destination": "/api/admin/[...action]?action=cash-register/:action"
+    },
+    {
+      "source": "/api/admin/presence/:action",
+      "destination": "/api/admin/[...action]?action=presence/:action"
+    },
+    {
+      "source": "/api/admin/pdv/:action",
+      "destination": "/api/admin/[...action]?action=pdv/:action"
+    },
+    {
+      "source": "/api/admin/payouts/:action",
+      "destination": "/api/admin/[...action]?action=payouts/:action"
     },
     {
       "source": "/api/admin/finance",
