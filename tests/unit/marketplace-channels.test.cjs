@@ -22,7 +22,7 @@ test("pedido do iFood vira pedido INOVAS com origem, itens, total e observaçõe
   assert.equal(mapped.order.paymentMethod, "dinheiro");
   assert.equal(mapped.order.total, 65);
   assert.equal(mapped.order.deliveryFee, 5);
-  assert.deepEqual(mapped.order.rawPayload.channelOrder, { channel: "ifood", externalId: "abc-123", displayId: "4321", prepaid: false, deliveredBy: "MERCHANT" });
+  assert.deepEqual(mapped.order.rawPayload.channelOrder, { channel: "ifood", salesChannel: "", externalId: "abc-123", displayId: "4321", prepaid: false, deliveredBy: "MERCHANT" });
   assert.equal(mapped.items[0].quantity, 2);
   assert.equal(mapped.items[0].unitPrice, 30);
   assert.match(mapped.order.customerNotes, /Pedido iFood #4321/);
@@ -54,4 +54,19 @@ test("pedido Open Delivery (99Food) vira pedido INOVAS", () => {
   assert.equal(mapped.order.rawPayload.channelOrder.prepaid, false);
   assert.match(mapped.order.customerNotes, /Pedido 99Food #77/);
   assert.match(mapped.order.customerNotes, /Cobrar na entrega/);
+});
+
+test("pedido feito no app da Uber (via iFood) guarda o canal de venda", () => {
+  const { mapIfoodOrder } = require("../../lib/marketplace-channels.cjs");
+  const mapped = mapIfoodOrder({
+    id: "uber-1",
+    displayId: "1",
+    orderType: "TAKEOUT",
+    salesChannel: "UBER_EATS",
+    customer: { id: "c", name: "Cli" },
+    items: [{ id: "i", name: "Temaki", quantity: 1, unitPrice: 10, totalPrice: 10 }],
+    total: { subTotal: 10, deliveryFee: 0, orderAmount: 10 },
+    payments: { prepaid: 10, pending: 0, methods: [{ method: "CREDIT", prepaid: true }] },
+  });
+  assert.equal(mapped.order.rawPayload.channelOrder.salesChannel, "UBER_EATS");
 });

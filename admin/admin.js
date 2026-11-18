@@ -1713,7 +1713,7 @@ const getAdminDisplayInitials = (value) => {
 };
 
 const getOrdersNotificationCount = () =>
-  getVisibleOperationalOrders().filter((order) => order.status === "Recebido").length;
+  getVisibleOperationalOrders().filter((order) => order.status === "Recebido" && !isDiningOrder(order)).length;
 
 const buildCatalogLookupKeys = (item = {}) => {
   const keys = new Set();
@@ -1957,9 +1957,26 @@ const getPaymentLabel = (paymentMethod) => {
 // Pedido pago online pelo site (Pix, cartão ou vale): já está pago, o
 // entregador não cobra nada na entrega.
 const isOnlinePaidOrder = (order) => order?.rawPayload?.onlinePayment?.status === "PAID";
-const CHANNEL_LABELS = { ifood: "iFood", food99: "99Food", ubereats: "Uber Eats" };
+const CHANNEL_LABELS = { ifood: "iFood", food99: "99Food", keeta: "Keeta", ubereats: "Uber Eats" };
+// Origem do pedido para a etiqueta do cartão: INOVAS (site/balcão), iFood,
+// Uber (pedido do app da Uber que chega pelo iFood), 99Food ou Keeta.
+const ORDER_ORIGINS = Object.freeze([
+  ["inovas", "INOVAS"],
+  ["ifood", "iFood"],
+  ["uber", "Uber"],
+  ["food99", "99Food"],
+  ["keeta", "Keeta"],
+]);
+const ORDER_ORIGIN_LABELS = Object.freeze(Object.fromEntries(ORDER_ORIGINS));
+const getOrderChannelOrder = (order) => order?.channelOrder || order?.rawPayload?.channelOrder || null;
+const getOrderOrigin = (order) => {
+  const channelOrder = getOrderChannelOrder(order);
+  if (!channelOrder) return "inovas";
+  if (channelOrder.channel === "ifood" && /uber/i.test(String(channelOrder.salesChannel || ""))) return "uber";
+  return ORDER_ORIGIN_LABELS[channelOrder.channel] ? channelOrder.channel : "inovas";
+};
 const getOrderPaymentLabel = (order) => {
-  const channelOrder = order?.rawPayload?.channelOrder;
+  const channelOrder = getOrderChannelOrder(order);
   if (channelOrder) {
     const channel = CHANNEL_LABELS[channelOrder.channel] || "Plataforma";
     return channelOrder.prepaid
@@ -12525,7 +12542,10 @@ const ORDER_AGE_TIERS = Object.freeze([
   { key: "late", max: Infinity, label: "+30 min" },
 ]);
 const ORDERS_STAGE_KEYS = Object.freeze(["all", ...BOARD_COLUMNS.map((column) => column.key), "done", "cancelled"]);
-const ORDERS_MODE_KEYS = Object.freeze(["all", "dining", "delivery", "pickup"]);
+const ORDERS_MODE_KEYS = Object.freeze(["all", "delivery", "pickup"]);
+const ORDERS_ORIGIN_KEYS = Object.freeze(["all", ...ORDER_ORIGINS.map(([key]) => key)]);
+// iFood cancela sozinho o pedido que não é aceito a tempo (cerca de 8 min).
+const IFOOD_ACCEPT_WINDOW_MIN = 8;
 const ORDER_STATUS_BADGES = Object.freeze({
   Recebido: "Recebido",
   Aceito: "Aceito",
@@ -12574,7 +12594,52 @@ const getOrderProductLines = (order) =>
 
 const getOrdersStage = () => (ORDERS_STAGE_KEYS.includes(adminState.ordersStage) ? adminState.ordersStage : "all");
 const getOrdersMode = () => (ORDERS_MODE_KEYS.includes(adminState.ordersMode) ? adminState.ordersMode : "all");
-const matchesOrdersMode = (order, mode = getOrdersMode()) => mode === "all" || getOrderKind(order) === mode;
+const getOrdersView = () => (adminState.ordersView === "salon" ? "salon" : "delivery");
+const getOrdersOrigin = () => (ORDERS_ORIGIN_KEYS.includes(adminState.ordersOrigin) ? adminState.ordersOrigin : "all");
+// Pedidos (Gestor) = só delivery e retirada. Mesa fica na aba Salão.
+const matchesOrdersOrigin = (order, origin = getOrdersOrigin()) => origin === "all" || getOrderOrigin(order) === origin;
+const matchesOrdersMode = (order, mode = getOrdersMode(), origin = getOrdersOrigin()) =>
+  !isDiningOrder(order) && (mode === "all" || getOrderKind(order) === mode) && matchesOrdersOrigin(order, origin);
+const getOpenDiningOrders = () => adminState.orders.filter((order) => isDiningOrder(order) && !isFinalOrder(order));
+
+// Avisos das plataformas: pedido cancelado lá (cliente ou plataforma) e pedido
+// de cancelamento do cliente. "Entendi" esconde só neste aparelho.
+const PLATFORM_ALERT_STORAGE_KEY = "inovas.gestor.platformAlertsSeen";
+const readSeenPlatformAlerts = () => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PLATFORM_ALERT_STORAGE_KEY) || "[]");
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+};
+const markPlatformAlertSeen = (key) => {
+  const seen = readSeenPlatformAlerts();
+  seen.add(String(key));
+  try {
+    window.localStorage.setItem(PLATFORM_ALERT_STORAGE_KEY, JSON.stringify([...seen].slice(-200)));
+  } catch {
+    // Sem armazenamento: o aviso some só até a próxima atualização.
+  }
+  adminState.platformAlertsSeen = seen;
+};
+const isPlatformCancelled = (order) =>
+  Boolean(getOrderChannelOrder(order)) && order?.status === "Cancelado" && /^Cancelado no /i.test(String(order?.latestStatusNote || ""));
+const isPlatformCancelRequest = (order) =>
+  Boolean(getOrderChannelOrder(order)) && !isFinalOrder(order) && /^Cliente pediu cancelamento/i.test(String(order?.latestStatusNote || ""));
+const getPlatformAlerts = () => {
+  const seen = adminState.platformAlertsSeen instanceof Set ? adminState.platformAlertsSeen : (adminState.platformAlertsSeen = readSeenPlatformAlerts());
+  return adminState.orders
+    .filter((order) => isPlatformCancelled(order) || isPlatformCancelRequest(order))
+    .map((order) => ({ order, key: `${order.id}:${order.status}`, cancelled: order.status === "Cancelado" }))
+    .filter((entry) => !seen.has(entry.key));
+};
+const getIfoodAcceptMinutesLeft = (order) => {
+  const origin = getOrderOrigin(order);
+  if (order?.status !== "Recebido" || (origin !== "ifood" && origin !== "uber")) return null;
+  const elapsed = Math.floor((Date.now() - new Date(order.createdAt || Date.now()).getTime()) / 60000);
+  return Math.max(0, IFOOD_ACCEPT_WINDOW_MIN - elapsed);
+};
 
 const getActiveOrdersForGrid = () => {
   const visibleOrders = getVisibleOperationalOrders();
@@ -12620,6 +12685,11 @@ const renderBoard = () => {
     return;
   }
 
+  if (getOrdersView() === "salon") {
+    renderSalonBoard(boardRoot);
+    return;
+  }
+
   const stage = getOrdersStage();
   const orders = getOrdersForCurrentView();
   const column = BOARD_COLUMNS.find((entry) => entry.key === stage);
@@ -12628,6 +12698,7 @@ const renderBoard = () => {
   const closedView = stage === "done" || stage === "cancelled";
 
   boardRoot.innerHTML = `
+    ${renderPlatformAlerts()}
     <div class="gx-grid-head">
       <h2>${escapeHtml(heading)} <span>· ${escapeHtml(formatOrderCountLabel(orders.length))}</span></h2>
       ${
@@ -12650,6 +12721,80 @@ const renderBoard = () => {
   `;
 };
 
+const renderPlatformAlerts = () => {
+  const alerts = getPlatformAlerts();
+  if (!alerts.length) return "";
+  return `<div class="gx-platform-alerts" data-platform-alerts>${alerts
+    .map(({ order, key, cancelled }) => {
+      const label = ORDER_ORIGIN_LABELS[getOrderOrigin(order)] || "Plataforma";
+      const title = cancelled
+        ? `Pedido de ${order.customerName || "cliente"} (${label}) foi cancelado no ${label}`
+        : `Cliente pediu para cancelar o pedido (${label}) de ${order.customerName || "cliente"}`;
+      return `
+        <div class="gx-platform-alert ${cancelled ? "is-cancelled" : "is-request"}" role="alert">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="gx-platform-alert-copy">
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml(order.latestStatusNote || "")}</span>
+          </div>
+          ${cancelled ? "" : `<button type="button" class="gx-platform-alert-open" data-order-select="${escapeHtml(order.id)}">Ver pedido</button>`}
+          <button type="button" class="gx-platform-alert-ok" data-platform-alert-dismiss="${escapeHtml(key)}">Entendi</button>
+        </div>`;
+    })
+    .join("")}</div>`;
+};
+
+// Aba Salão: só acompanhamento. O pedido da mesa vai direto para a cozinha
+// (sem aceitar) e a conta fecha no Caixa.
+const renderSalonBoard = (boardRoot) => {
+  const tables = new Map();
+  getOpenDiningOrders().forEach((order) => {
+    const label = getDiningTableLabel(order);
+    const entry = tables.get(label) || { label, orders: [], total: 0, openedAt: order.createdAt, tab: getDiningTabCode(order) };
+    entry.orders.push(order);
+    entry.total += Number(order.totalAmount || 0);
+    if (new Date(order.createdAt) < new Date(entry.openedAt)) entry.openedAt = order.createdAt;
+    if (!entry.tab) entry.tab = getDiningTabCode(order);
+    tables.set(label, entry);
+  });
+  const list = [...tables.values()].sort((left, right) =>
+    left.label.localeCompare(right.label, "pt-BR", { numeric: true })
+  );
+  const tableStatus = (entry) => {
+    if (entry.orders.some((order) => ["Recebido", "Aceito", "Em preparo"].includes(order.status))) return ["kitchen", "Na cozinha"];
+    if (entry.orders.some((order) => order.status === "Pronto")) return ["ready", "Pronto para servir"];
+    return ["served", "Servido"];
+  };
+  boardRoot.innerHTML = `
+    <div class="gx-salon-note">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8h.01M11 12h1v5h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Pedido de mesa <strong>não precisa aceitar</strong>: o garçom lança e vai direto para a cozinha. Aqui é só para acompanhar. A conta fecha no <strong>Caixa</strong>.</span>
+    </div>
+    ${
+      list.length === 0
+        ? `<div class="gx-grid-empty"><strong>Nenhuma mesa com pedido aberto</strong><span>Os pedidos lançados pelo garçom ou pelo Caixa aparecem aqui.</span></div>`
+        : `<div class="gx-salon-grid" data-salon-grid>${list
+            .map((entry) => {
+              const [statusKey, statusLabel] = tableStatus(entry);
+              const items = entry.orders
+                .flatMap((order) => getOrderProductLines(order).map((item) => `${item.quantity || 1}x ${item.name}`))
+                .slice(0, 6);
+              return `
+                <article class="gx-salon-card" data-salon-table="${escapeHtml(entry.label)}">
+                  <div class="gx-salon-head">
+                    <strong>${escapeHtml(entry.label)}</strong>
+                    <span class="gx-salon-status is-${statusKey}">${escapeHtml(statusLabel)}</span>
+                  </div>
+                  <span class="gx-salon-meta">${escapeHtml([entry.tab ? `Comanda ${entry.tab}` : "", `aberta às ${formatTime(entry.openedAt)}`].filter(Boolean).join(" · "))}</span>
+                  <p class="gx-salon-items">${escapeHtml(items.join(" · ") || `${entry.orders.length} pedido(s)`)}</p>
+                  <div class="gx-salon-foot"><span>Consumo</span><strong>${escapeHtml(formatMoney(entry.total))}</strong></div>
+                  <button type="button" class="gx-salon-open" data-salon-open-cash>Ver no Caixa</button>
+                </article>`;
+            })
+            .join("")}</div>`
+    }`;
+};
+
 const renderOrderCard = (order) => {
   const isSelected = adminState.selectedOrderId === order.id;
   const isScheduled = order.timingMode === "scheduled";
@@ -12658,6 +12803,8 @@ const renderOrderCard = (order) => {
   const statusKey = normalizeStatusKey(order.status);
   const statusLabel = getOrderStatusLabel(order);
   const kind = getOrderKind(order);
+  const origin = getOrderOrigin(order);
+  const acceptLeft = getIfoodAcceptMinutesLeft(order);
 
   // Esboço: nome + tempo · tipo + hora + valor · etapa.
   return `
@@ -12678,12 +12825,21 @@ const renderOrderCard = (order) => {
           <span class="gx-ticket-timer is-${escapeHtml(sla.tone)}">${ORDER_CLOCK_ICON}${escapeHtml(sla.label)}</span>
         </div>
         <div class="gx-ticket-meta">
+          <span class="gx-origin is-${escapeHtml(origin)}" data-order-origin="${escapeHtml(origin)}">${escapeHtml(ORDER_ORIGIN_LABELS[origin] || "INOVAS")}</span>
           <span class="gx-tag is-${kind}">${escapeHtml(getOrderKindLabel(order))}</span>
           ${isScheduled ? `<span class="gx-tag is-scheduled">Agendado</span>` : ""}
           <span class="gx-ticket-time" title="Feito às ${escapeHtml(formatTime(order.createdAt))}">${escapeHtml(formatTime(order.createdAt))}</span>
           <strong class="gx-ticket-total">${escapeHtml(formatMoney(order.totalAmount || 0))}</strong>
         </div>
         <span class="gx-ticket-status is-${escapeHtml(statusKey.replace(/\s+/g, "-"))}">${escapeHtml(statusLabel)}</span>
+        ${
+          acceptLeft === null
+            ? ""
+            : `<span class="gx-accept-timer${acceptLeft <= 2 ? " is-urgent" : ""}" data-accept-timer title="O iFood cancela o pedido que não é aceito a tempo">${escapeHtml(
+                acceptLeft > 0 ? `Aceite em ${acceptLeft} min` : "Aceite agora"
+              )}</span>`
+        }
+        ${isPlatformCancelRequest(order) ? `<span class="gx-cancel-request">Cliente pediu cancelamento</span>` : ""}
       </div>
     </article>
   `;
@@ -12701,6 +12857,37 @@ const renderOrdersStageBar = (statsRoot) => {
   const restaurantName =
     String(document.querySelector("[data-admin-main-chip]")?.textContent || "").trim() || adminState.session?.restaurantName || "";
   const stageLabel = (column) => (column.key === "delivery" ? "Saiu p/ entrega" : column.label);
+  const view = getOrdersView();
+  const origin = getOrdersOrigin();
+  const deliveryCount = active.filter((entry) => !isDiningOrder(entry.order)).length;
+  const salonTables = new Set(getOpenDiningOrders().map((order) => getDiningTableLabel(order))).size;
+  const originCount = (key) => active.filter((entry) => matchesOrdersMode(entry.order, mode, key)).length;
+  const viewTabs = `
+    <div class="gx-view-tabs" role="tablist" aria-label="Pedidos ou salão">
+      <button type="button" role="tab" aria-selected="${view === "delivery"}" class="${view === "delivery" ? "is-active" : ""}" data-orders-view="delivery">
+        Delivery e retirada <span class="gx-view-count is-brand">${escapeHtml(String(deliveryCount))}</span>
+      </button>
+      <button type="button" role="tab" aria-selected="${view === "salon"}" class="${view === "salon" ? "is-active" : ""}" data-orders-view="salon">
+        Salão (mesas) <span class="gx-view-count">${escapeHtml(`${salonTables} ${salonTables === 1 ? "mesa" : "mesas"}`)}</span>
+      </button>
+    </div>`;
+
+  if (view === "salon") {
+    statsRoot.innerHTML = `
+      <div class="gx-orders-top">
+        <div class="gx-orders-titles">
+          <h1 class="gx-orders-title">Pedidos</h1>
+          <div class="gx-presence-row">
+            <p class="gx-orders-sub">${escapeHtml([restaurantName, "hoje"].filter(Boolean).join(" · "))}</p>
+            <div class="gx-presence" data-admin-presence hidden></div>
+          </div>
+        </div>
+        <div class="gx-orders-tools">${renderOrderAlertControl()}</div>
+      </div>
+      ${viewTabs}`;
+    renderPresenceControl();
+    return;
+  }
 
   statsRoot.innerHTML = `
     <div class="gx-orders-top">
@@ -12716,10 +12903,9 @@ const renderOrdersStageBar = (statsRoot) => {
       <div class="gx-mode-switch" role="tablist" aria-label="Tipo de pedido">
         ${[
           ["all", "Todos"],
-          ["dining", "Mesa"],
           ["delivery", "Entrega"],
           ["pickup", "Retirada"],
-        ].filter(([key]) => key !== "dining" || mode === "dining" || modeCount("dining") > 0)
+        ]
           .map(
             ([key, label]) =>
               `<button type="button" role="tab" aria-selected="${mode === key}" class="${mode === key ? "is-active" : ""}" data-orders-mode="${key}">${escapeHtml(label)} · ${escapeHtml(String(modeCount(key)))}</button>`
@@ -12727,6 +12913,16 @@ const renderOrdersStageBar = (statsRoot) => {
           .join("")}
       </div>
       </div>
+    </div>
+    ${viewTabs}
+    <div class="gx-origin-bar" role="group" aria-label="Filtrar pela origem do pedido">
+      <span class="gx-origin-bar-label">Origem:</span>
+      ${[["all", "Todos"], ...ORDER_ORIGINS]
+        .map(
+          ([key, label]) =>
+            `<button type="button" class="gx-origin-chip${origin === key ? " is-active" : ""}" aria-pressed="${origin === key}" data-orders-origin="${escapeHtml(key)}">${escapeHtml(label)} <span>${escapeHtml(String(originCount(key)))}</span></button>`
+        )
+        .join("")}
     </div>
     <div class="gx-stage-bar" role="tablist" aria-label="Filtrar pedidos por etapa">
       ${BOARD_COLUMNS.map(
@@ -13242,7 +13438,8 @@ const syncOrderAlertBanner = (force = false) => {
   }
 };
 
-const countWaitingOrders = (orders) => orders.filter((order) => order.status === "Recebido").length;
+// Mesa não espera aceite: só delivery e retirada tocam e contam como "novo".
+const countWaitingOrders = (orders) => orders.filter((order) => order.status === "Recebido" && !isDiningOrder(order)).length;
 
 const syncOrderAlertTitle = (orders) => {
   if (!orderAlertState.baseTitle) orderAlertState.baseTitle = document.title.replace(/^\(\d+\)\s*/, "");
@@ -13255,9 +13452,25 @@ const checkOrderAlerts = (orders = []) => {
   if (adminState.pdvAppBlocked === true) return;
   const list = Array.isArray(orders) ? orders : [];
   const prefs = getOrderAlertPrefs();
-  const active = list.filter((order) => !isFinalOrder(order));
+  // Mesa fica fora dos alarmes: não espera aceite e fecha no Caixa.
+  const active = list.filter((order) => !isFinalOrder(order) && !isDiningOrder(order));
   orderAlertState.lastCheckAt = Date.now();
   syncOrderAlertTitle(list);
+
+  // Cancelamento ou pedido de cancelamento vindo do iFood/99Food: avisa na hora.
+  const platformKeys = list
+    .filter((order) => isPlatformCancelled(order) || isPlatformCancelRequest(order))
+    .map((order) => `${order.id}:${order.status}:${order.latestStatusNote || ""}`);
+  if (!orderAlertState.platformKnown) {
+    orderAlertState.platformKnown = new Set(platformKeys);
+  } else {
+    const freshPlatform = platformKeys.filter((key) => !orderAlertState.platformKnown.has(key));
+    freshPlatform.forEach((key) => orderAlertState.platformKnown.add(key));
+    if (freshPlatform.length && getOrderAlertPrefs().enabled) {
+      playOrderAlertSound("late");
+      if (adminState.activeSection === "orders") renderBoard();
+    }
+  }
 
   // Primeira leitura: só memoriza (não toca pelos pedidos que já estavam na tela).
   if (!orderAlertState.known) {
@@ -13268,7 +13481,7 @@ const checkOrderAlerts = (orders = []) => {
     return;
   }
 
-  const fresh = list.filter((order) => !orderAlertState.known.has(order.id) && order.status === "Recebido");
+  const fresh = list.filter((order) => !orderAlertState.known.has(order.id) && order.status === "Recebido" && !isDiningOrder(order));
   list.forEach((order) => orderAlertState.known.add(order.id));
 
   const escalations = { warn: [], late: [] };
@@ -13444,6 +13657,30 @@ document.addEventListener("click", (event) => {
     adminState.ordersStage = getOrdersStage() === value ? "all" : value;
     renderDashboardStats();
     renderBoard();
+    return;
+  }
+  const viewButton = event.target.closest?.("[data-orders-view]");
+  if (viewButton) {
+    adminState.ordersView = viewButton.dataset.ordersView === "salon" ? "salon" : "delivery";
+    renderDashboardStats();
+    renderBoard();
+    return;
+  }
+  const originButton = event.target.closest?.("[data-orders-origin]");
+  if (originButton) {
+    adminState.ordersOrigin = originButton.dataset.ordersOrigin;
+    renderDashboardStats();
+    renderBoard();
+    return;
+  }
+  const alertDismiss = event.target.closest?.("[data-platform-alert-dismiss]");
+  if (alertDismiss) {
+    markPlatformAlertSeen(alertDismiss.dataset.platformAlertDismiss);
+    renderBoard();
+    return;
+  }
+  if (event.target.closest?.("[data-salon-open-cash]")) {
+    document.querySelector('.admin-nav [data-admin-section="cash-register"]')?.click();
     return;
   }
   const modeButton = event.target.closest?.("[data-orders-mode]");

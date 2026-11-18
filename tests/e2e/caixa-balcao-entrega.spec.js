@@ -91,39 +91,32 @@ test("Caixa lança pedido de mesa, retirada e entrega; Pedidos mostra o tipo cer
   await page.goto("/admin/?section=orders");
   await page.waitForSelector(".gx-ticket");
   const card = (name) => page.locator(".gx-ticket").filter({ hasText: name });
-  const mesa = page.locator(".gx-ticket").filter({ has: page.locator(".gx-tag.is-dining") });
-  await expect(mesa).toHaveCount(1);
-  await expect(mesa.locator(".gx-tag")).toHaveText(/Mesa 0?3/);
+  // Pedidos = só delivery e retirada; a mesa fica na aba Salão (sem aceitar).
+  await expect(page.locator(".gx-ticket").filter({ has: page.locator(".gx-tag.is-dining") })).toHaveCount(0);
   await expect(card("Bruna Balcão").locator(".gx-tag")).toHaveText("Retirada");
   await expect(card("Carlos Telefone").locator(".gx-tag")).toHaveText("Entrega");
-  await expect(page.locator('[data-orders-mode="dining"]')).toContainText("Mesa · 1");
+  await expect(card("Carlos Telefone").locator("[data-order-origin]")).toHaveText("INOVAS");
+  await expect(page.locator('[data-orders-mode="dining"]')).toHaveCount(0);
+  await expect(page.locator('[data-orders-view="salon"]')).toContainText("1 mesa");
 
-  // Detalhe da entrega: endereço e taxa; da mesa: sem taxa e com "Marcar como servido" no fim.
+  // Detalhe da entrega: endereço e taxa.
   await card("Carlos Telefone").locator(".gx-order-hit").click();
   const detail = page.locator("[data-admin-order-detail]");
   await detail.locator(".gx-od-data summary").click();
   await expect(detail.locator(".gx-od-data")).toContainText("Rua das Flores, 115 - Centro");
   await expect(detail.locator(".gx-od-sums")).toContainText("R$ 7,00");
-  await mesa.locator(".gx-order-hit").click();
-  await expect(detail.locator(".gx-od-pill.is-dining")).toHaveText(/Mesa 0?3/);
-  await expect(detail.locator(".gx-od-sums")).not.toContainText("Taxa de entrega");
   await page.screenshot({ path: path.join(shots, "4-pedidos-tipos.png") });
-  // Mesa: Aceitar → Iniciar preparo → Marcar como pronto → Marcar como servido (sem "Despachar").
-  // O painel continua no mesmo pedido a cada etapa.
-  const steps = ["Aceitar pedido", "Iniciar preparo", "Marcar como pronto", "Marcar como servido"];
-  for (let index = 0; index < steps.length - 1; index += 1) {
-    const button = detail.locator(".gx-od-primary");
-    await expect(button).toHaveText(steps[index]);
-    await expect(button).toBeEnabled();
-    // Servidor local guarda sessão em arquivo: espera as chamadas anteriores terminarem.
-    await page.waitForLoadState("networkidle");
-    await button.click();
-    await page.waitForLoadState("networkidle");
-    await expect(detail.locator(".gx-od-primary")).toHaveText(steps[index + 1], { timeout: 15_000 });
-    await expect(detail.locator(".gx-od-pill.is-dining")).toHaveText(/Mesa 0?3/);
-  }
-  await page.waitForLoadState("networkidle");
-  await detail.locator(".gx-od-primary").click();
-  await expect(detail.locator(".gx-od-steplabel")).toContainText("Servido");
+
+  // Aba Salão: a mesa aparece só para acompanhar, sem botão de aceitar.
+  await page.locator('[data-orders-view="salon"]').click();
+  const mesa = page.locator("[data-salon-table]");
+  await expect(mesa).toHaveCount(1);
+  await expect(mesa.locator(".gx-salon-head strong")).toHaveText(/Mesa 0?3/);
+  await expect(mesa.locator(".gx-salon-status")).toHaveText("Na cozinha");
+  await expect(page.locator("[data-admin-board]")).not.toContainText("Aceitar");
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(shots, "5-salao.png") });
+  await mesa.locator("[data-salon-open-cash]").click();
+  await expect(page.locator("body")).toHaveAttribute("data-admin-section", "cash-register");
   expect(errors).toEqual([]);
 });

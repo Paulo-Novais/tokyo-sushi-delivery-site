@@ -99,4 +99,20 @@ para a chave real (`sk_...`) e apague `PAGARME_API_URL`.
   `https://inovasfood.com.br/api/channels/food99` (ela chama `/v1/newEvent`).
   O restaurante clica "Gerar código e conectar" e cola o código no portal.
 - **Uber Eats:** encerrou o delivery de restaurantes no Brasil; os pedidos
-  de comida do app Uber chegam pelo iFood.
+  de comida do app Uber chegam pelo iFood (etiqueta "Uber" quando o iFood
+  informa esse canal de venda; senão aparece como "iFood").
+
+### No Gestor (Pedidos)
+
+- Pedidos = só **Delivery e retirada**. As mesas ficam na aba **Salão
+  (mesas)**, só para acompanhar (sem aceitar); a conta fecha no Caixa.
+- Cada cartão tem a origem: INOVAS, iFood, Uber, 99Food ou Keeta, e há
+  filtro por origem.
+- Pedido do iFood esperando aceite mostra "Aceite em X min" (o iFood cancela
+  o que não é aceito a tempo; contamos 8 minutos).
+- Avisos da plataforma atualizam o pedido sozinhos (aceito, pronto, saiu,
+  concluído) e **nunca voltam etapa**. Cancelamento feito no app (cliente ou
+  plataforma) cancela no Gestor, toca o alarme e mostra o aviso vermelho com
+  o motivo. "Cliente pediu cancelamento" (99Food/Keeta) aparece em laranja:
+  cancelar no Gestor aceita o pedido do cliente.
+- Aviso repetido do mesmo pedido nunca cria pedido duplicado.

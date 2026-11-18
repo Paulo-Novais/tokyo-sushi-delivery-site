@@ -145,3 +145,96 @@ test("99Food (Open Delivery): código gerado pela INOVAS, pedido no Gestor e sta
   await owner.api.dispose();
   await master.api.dispose();
 });
+
+test("Plataforma avisa o Gestor: aceite, pronto, cancelamento e pedido de cancelamento", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const master = await loginMaster();
+  const restaurant = await onboardRestaurant(master.api, { key: uniqueKey("avisos"), name: "Restaurante Avisos", ownerPassword: "OwnerAvisos123!" });
+  const owner = await loginTenantOwner(restaurant);
+  const site = await createApiContext();
+  const merchantId = `loja-${restaurant.key}`;
+  expect((await owner.api.post("/api/admin/channels/save", { data: { channel: "ifood", externalStoreId: merchantId } })).status()).toBe(200);
+  const listOrders = async () => (await (await owner.api.get("/api/admin/orders/list?limit=80")).json()).orders || [];
+  const findOrder = async (publicId) => (await listOrders()).find((entry) => String(entry.publicId) === String(publicId));
+  const event = (data) => post(site, "/api/channels/test-event", { merchantId, ...data });
+
+  // iFood confirma e marca pronto: o Gestor acompanha e NÃO reenvia ao iFood.
+  const first = await (await post(site, "/api/channels/test-simulate", { merchantId })).json();
+  expect((await (await event({ orderId: first.ifoodOrderId, code: "CFM" })).json()).status).toBe("Aceito");
+  expect((await findOrder(first.orderPublicId)).status).toBe("Aceito");
+  // Aviso repetido ou atrasado não volta a etapa.
+  await event({ orderId: first.ifoodOrderId, code: "RTP" });
+  expect((await (await event({ orderId: first.ifoodOrderId, code: "CFM" })).json()).reason).toBe("already_there");
+  expect((await findOrder(first.orderPublicId)).status).toBe("Pronto");
+  const echoed = (await (await site.get(`/api/channels/test-actions?orderId=${first.ifoodOrderId}`)).json()).actions;
+  expect(echoed).toEqual([]);
+
+  // Cliente cancela no app do iFood: pedido cancelado no Gestor com o motivo.
+  const second = await (await post(site, "/api/channels/test-simulate", { merchantId })).json();
+  const cancelled = await (await event({ orderId: second.ifoodOrderId, code: "CAN", metadata: { reason: "Cliente desistiu" } })).json();
+  expect(cancelled.status).toBe("Cancelado");
+  const cancelledOrder = await findOrder(second.orderPublicId);
+  expect(cancelledOrder.status).toBe("Cancelado");
+  expect(cancelledOrder.latestStatusNote).toContain("Cancelado no iFood");
+  expect(cancelledOrder.latestStatusNote).toContain("Cliente desistiu");
+  // Depois de cancelado, nenhum aviso muda o pedido.
+  expect((await (await event({ orderId: second.ifoodOrderId, code: "CFM" })).json()).reason).toBe("order_closed");
+
+  // Pedido feito no app da Uber (chega pelo iFood) e um novo esperando aceite.
+  const uber = await (await post(site, "/api/channels/test-simulate", { merchantId, salesChannel: "UBER_EATS" })).json();
+  expect(uber.created).toBe(true);
+
+  // Tela: alerta do cancelamento, etiqueta da origem, contador e filtro.
+  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": `127.96.${Math.floor(Math.random() * 200)}.7` } });
+  const page = await context.newPage();
+  await page.goto("/admin/login.html?next=%2Fadmin%2F");
+  await page.locator('input[name="identifier"]').fill(restaurant.ownerLogin);
+  await page.locator('input[name="password"]').fill(restaurant.ownerPassword);
+  await page.locator("[data-admin-login-submit]").click();
+  await page.waitForLoadState("networkidle");
+  await page.goto("/admin/?section=orders");
+  await page.waitForSelector(".gx-ticket");
+  const alert = page.locator(".gx-platform-alert.is-cancelled");
+  await expect(alert).toHaveCount(1);
+  await expect(alert).toContainText("foi cancelado no iFood");
+  await expect(alert).toContainText("Cliente desistiu");
+  const uberCard = page.locator(".gx-ticket").filter({ has: page.locator('[data-order-origin="uber"]') });
+  await expect(uberCard).toHaveCount(1);
+  await expect(uberCard.locator("[data-accept-timer]")).toContainText("Aceite em");
+  await expect(page.locator('[data-order-origin="ifood"]')).toHaveCount(1);
+  await page.locator('[data-orders-origin="uber"]').click();
+  await expect(page.locator(".gx-ticket")).toHaveCount(1);
+  await page.locator('[data-orders-origin="all"]').click();
+  await alert.locator("[data-platform-alert-dismiss]").click();
+  await expect(page.locator(".gx-platform-alert")).toHaveCount(0);
+  // "Entendi" vale depois de recarregar.
+  await page.reload();
+  await page.waitForSelector(".gx-ticket");
+  await expect(page.locator(".gx-platform-alert")).toHaveCount(0);
+  await context.close();
+
+  // 99Food: cliente pede cancelamento; cancelar no Gestor aceita o pedido dele.
+  const food = await owner.api.post("/api/admin/channels/save", { data: { channel: "food99", externalStoreId: "generate" } });
+  const foodBody = await food.json();
+  expect(food.status(), JSON.stringify(foodBody)).toBe(200);
+  const foodMerchant = (foodBody.channels || []).find((entry) => entry.id === "food99" || entry.channel === "food99")?.externalStoreId;
+  expect(foodMerchant).toBeTruthy();
+  const od = await (await post(site, "/api/channels/test-simulate", { channel: "food99", merchantId: foodMerchant })).json();
+  const request = await (await post(site, "/api/channels/test-event", {
+    channel: "food99",
+    merchantId: foodMerchant,
+    orderId: od.externalOrderId,
+    code: "ORDER_CANCELLATION_REQUEST",
+    metadata: { reason: "Endereço errado", code: "CONSUMER_CANCELLATION_REQUESTED" },
+  })).json();
+  expect(request.cancellationRequested).toBe(true);
+  const odOrder = await findOrder(od.orderPublicId);
+  expect(odOrder.status).toBe("Recebido");
+  expect(odOrder.latestStatusNote).toContain("Cliente pediu cancelamento no 99Food");
+  const odCancel = await (await owner.api.post("/api/admin/orders/status", { data: { orderId: odOrder.id, status: "Cancelado", note: "Aceito o pedido do cliente", manual: true } })).json();
+  expect(odCancel.channelSync).toMatchObject({ ok: true, action: "acceptCancellation" });
+
+  await site.dispose();
+  await owner.api.dispose();
+  await master.api.dispose();
+});
