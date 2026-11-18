@@ -32,6 +32,7 @@ process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
 // "Gestor aberto": em Production vale para todos. Aqui só para restaurantes de
 // teste "presenca-*", para os demais testes seguirem criando pedidos.
 process.env.INOVAS_PRESENCE_ENFORCE = process.env.INOVAS_PRESENCE_ENFORCE || "prefix:presenca-";
+process.env.INOVAS_PAYMENT_PROVIDER = process.env.INOVAS_PAYMENT_PROVIDER || "fake";
 // Pedidos e Caixa só no app INOVAS PDV: aqui só para restaurantes "somenteapp-*".
 process.env.INOVAS_REQUIRE_PDV_APP = process.env.INOVAS_REQUIRE_PDV_APP || "prefix:somenteapp-";
 process.env.ADMIN_LOGIN = adminLogin;
@@ -69,6 +70,7 @@ const restaurantAuthApi = require(path.join(
   "[...action].js"
 ));
 const customerApi = require(path.join(workspaceRoot, "api", "customer", "[...action].js"));
+const paymentsApi = require(path.join(workspaceRoot, "api", "payments", "[...action].js"));
 const catalogApi = require(path.join(workspaceRoot, "api", "catalog.js"));
 const orderCreateApi = require(path.join(workspaceRoot, "api", "orders", "create.js"));
 const whatsappCodeApi = require(path.join(workspaceRoot, "api", "auth", "send-whatsapp-code.js"));
@@ -427,6 +429,7 @@ const handleApi = async (req, res, pathname) => {
   if (pathname.startsWith("/api/support")) return runApi(supportApi, req, res);
   if (pathname.startsWith("/api/admin")) return runApi(adminApi, req, res);
   if (pathname.startsWith("/api/customer")) return runApi(customerApi, req, res);
+  if (pathname.startsWith("/api/payments")) return runApi(paymentsApi, req, res);
   if (pathname === "/api/orders/create") return runApi(orderCreateApi, req, res);
   if (pathname === "/api/catalog") return runApi(catalogApi, req, res);
   if (pathname === "/api/reviews") {

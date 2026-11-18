@@ -34,6 +34,8 @@ export const runtimeTablePrivileges = Object.freeze({
   restaurant_presence: ["SELECT", "INSERT", "UPDATE"],
   restaurant_ledger_entries: ["SELECT", "INSERT"],
   restaurant_payouts: ["SELECT", "INSERT", "UPDATE"],
+  online_payments: ["SELECT", "INSERT", "UPDATE"],
+  restaurant_payment_accounts: ["SELECT", "INSERT", "UPDATE"],
   restaurant_role_bindings: ["SELECT", "INSERT", "UPDATE"],
   restaurant_settings: ["SELECT", "INSERT", "UPDATE"],
   role_definitions: ["SELECT", "INSERT", "UPDATE"],

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Pagamento de teste</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f3f4f6; font: 16px system-ui, sans-serif; color: #111827; }
+      main { width: min(420px, calc(100% - 32px)); background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,.08); text-align: center; }
+      .tag { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #fff3cd; color: #7a5a00; font-weight: 700; font-size: 13px; }
+      button { width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+      .ok { background: #16a34a; color: #fff; }
+      .no { background: #e5e7eb; color: #111827; }
+      p { color: #4b5563; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="tag">AMBIENTE DE TESTE — sem dinheiro de verdade</span>
+      <h1>Pagamento de teste</h1>
+      <p>Esta tela substitui o checkout da Stone/Pagar.me enquanto a conta não está ativa. Escolha o resultado:</p>
+      <button type="button" class="ok" data-outcome="paid">Aprovar pagamento</button>
+      <button type="button" class="no" data-outcome="failed">Recusar pagamento</button>
+      <p data-status></p>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const providerOrderId = params.get("order") || "";
+        const status = document.querySelector("[data-status]");
+        document.querySelectorAll("[data-outcome]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            status.textContent = "Processando…";
+            try {
+              const response = await fetch("/api/payments/test-simulate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ providerOrderId, outcome: button.dataset.outcome }),
+              });
+              const data = await response.json();
+              if (!response.ok) throw new Error(data.error || "Falhou");
+              window.location.assign(data.returnUrl || "/");
+            } catch (error) {
+              status.textContent = error.message;
+            }
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

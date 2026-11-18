@@ -88,6 +88,19 @@ const CART_PAYMENT_METHODS = Object.freeze([
   { id: "debito", label: "Debito" },
   { id: "pix", label: "Pix" },
 ]);
+// Pagamento online (Pix, cartão, VR/VA pagos no site): só aparece quando o
+// restaurante tem pagamento online ativo (/api/payments/methods).
+const ONLINE_PAYMENT_PREFIX = "online_";
+const ONLINE_PAYMENT_LABELS = Object.freeze({
+  pix: "Pix (pagar agora)",
+  credit_card: "Crédito (pagar agora)",
+  debit_card: "Débito (pagar agora)",
+  meal_voucher: "VR/VA (pagar agora)",
+});
+const PAYMENTS_CHECKOUT_ENDPOINT = "/api/payments/checkout";
+let cartOnlinePaymentMethods = [];
+const getCartPaymentMethods = () => [...cartOnlinePaymentMethods, ...CART_PAYMENT_METHODS];
+const isOnlineCartPayment = (id) => String(id || "").startsWith(ONLINE_PAYMENT_PREFIX);
 const CART_FULFILLMENT_OPTIONS = Object.freeze([
   { id: "delivery", label: "Entrega" },
   { id: "pickup", label: "Retirada" },
@@ -4947,7 +4960,7 @@ const getCartScheduledOrderSummary = (checkout, now = new Date()) => {
 const normalizeCartCheckout = (storedCheckout = {}) => {
   const paymentMethod = normalizeCartCheckoutSelection(
     storedCheckout?.paymentMethod,
-    CART_PAYMENT_METHODS.map((method) => method.id)
+    getCartPaymentMethods().map((method) => method.id)
   );
   const fulfillmentMode = normalizeCartCheckoutSelection(
     storedCheckout?.fulfillmentMode,
@@ -5011,7 +5024,7 @@ const saveCartCheckout = (checkout) => {
 };
 
 const getCartPaymentMethodLabel = (id) =>
-  CART_PAYMENT_METHODS.find((method) => method.id === id)?.label || "";
+  getCartPaymentMethods().find((method) => method.id === id)?.label || "";
 
 const getCartFulfillmentLabel = (id) =>
   CART_FULFILLMENT_OPTIONS.find((option) => option.id === id)?.label || "";
@@ -10972,7 +10985,7 @@ const renderCartCheckout = (node, checkout, cart, addons, profile = loadAuthProf
       <div class="cart-checkout-group">
         <span class="cart-checkout-label">Forma de pagamento</span>
         <div class="cart-choice-grid">
-          ${CART_PAYMENT_METHODS.map(
+          ${getCartPaymentMethods().map(
             (method) => `
               <label class="cart-choice-pill${checkout.paymentMethod === method.id ? " is-selected" : ""}">
                 <input
@@ -11759,6 +11772,24 @@ const recordSubmittedOrderLocally = ({
   return true;
 };
 
+const startOnlineCartPayment = async ({ cart, addons, checkout, profile }) => {
+  const payload = buildCartOrderSubmissionPayload({ cart, addons, checkout, profile });
+  payload.checkout = {
+    ...(payload.checkout || {}),
+    paymentMethod: "pix",
+    onlinePaymentMethod: String(checkout.paymentMethod).slice(ONLINE_PAYMENT_PREFIX.length),
+    returnPath: window.location.pathname,
+  };
+  const response = await postJsonWithTimeout(PAYMENTS_CHECKOUT_ENDPOINT, payload, ORDER_CREATE_TIMEOUT_MS, {
+    headers: {
+      [CUSTOMER_CLIENT_TOKEN_HEADER]: ensureCustomerClientToken(),
+      [CUSTOMER_KEY_HEADER]: buildCustomerSessionKey(profile),
+    },
+  });
+  if (!response.checkoutUrl) throw new Error("Nao foi possivel abrir o pagamento online.");
+  window.location.assign(response.checkoutUrl);
+};
+
 const submitCartOrder = async () => {
   const profile = loadAuthProfile();
   const cart = loadCart();
@@ -11784,6 +11815,24 @@ const submitCartOrder = async () => {
   cartUiState.orderSubmitting = true;
   setCartOrderNotice("");
   renderCart();
+
+  // Pagamento online: cobra antes; o pedido só vai para o restaurante depois
+  // que o pagamento for aprovado.
+  if (isOnlineCartPayment(checkout.paymentMethod)) {
+    try {
+      await startOnlineCartPayment({ cart, addons, checkout, profile });
+    } catch (error) {
+      cartUiState.orderSubmitting = false;
+      setCartOrderNotice(
+        error?.message && !/WhatsApp/i.test(error.message)
+          ? error.message
+          : "Nao foi possivel abrir o pagamento online. Tente de novo ou escolha pagar na entrega.",
+        "error"
+      );
+      renderCart();
+    }
+    return;
+  }
 
   try {
     const customerClientToken = ensureCustomerClientToken();
@@ -13881,3 +13930,78 @@ window.addEventListener(
   },
   { passive: true }
 );
+
+// Pagamento online: formas ativas e volta do pagamento (?pagamento=...).
+const loadOnlinePaymentMethods = async () => {
+  try {
+    const response = await fetch("/api/payments/methods", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+    if (!response.ok) return;
+    const data = await response.json();
+    cartOnlinePaymentMethods = (Array.isArray(data.methods) ? data.methods : [])
+      .filter((method) => ONLINE_PAYMENT_LABELS[method.id])
+      .map((method) => ({ id: `${ONLINE_PAYMENT_PREFIX}${method.id}`, label: ONLINE_PAYMENT_LABELS[method.id] }));
+    if (cartOnlinePaymentMethods.length) renderCart();
+  } catch {
+    // Sem pagamento online: o carrinho segue com pagar na entrega.
+  }
+};
+
+const showOnlinePaymentBanner = (message, tone = "info") => {
+  let banner = document.querySelector("[data-online-payment-banner]");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.setAttribute("data-online-payment-banner", "");
+    banner.setAttribute("role", "status");
+    banner.style.cssText =
+      "position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:calc(100% - 32px);" +
+      "padding:14px 18px;border-radius:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);text-align:center";
+    document.body.appendChild(banner);
+  }
+  const colors = { info: ["#1f2937", "#fff"], success: ["#e8f7ee", "#0c3a20"], error: ["#ffe3e1", "#5a0d09"] }[tone] || ["#1f2937", "#fff"];
+  banner.style.background = colors[0];
+  banner.style.color = colors[1];
+  banner.textContent = message;
+};
+
+const handleOnlinePaymentReturn = async () => {
+  const url = new URL(window.location.href);
+  const paymentId = url.searchParams.get("pagamento") || "";
+  if (!/^pgto_[0-9a-f-]{36}$/.test(paymentId)) return;
+  showOnlinePaymentBanner("Confirmando seu pagamento…");
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const response = await fetch(`/api/payments/status?payment=${encodeURIComponent(paymentId)}`, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (data.status === "PAID") {
+        resetCartAfterCheckout({ keepOpen: false });
+        showOnlinePaymentBanner(
+          `Pagamento aprovado! Pedido ${formatOrderCode(data.orderPublicId)} enviado ao restaurante.`,
+          "success"
+        );
+        url.searchParams.delete("pagamento");
+        window.history.replaceState(null, "", url.toString());
+        await refreshCustomerTrackingState({ renderPage: true });
+        return;
+      }
+      if (data.status === "FAILED") {
+        showOnlinePaymentBanner("Pagamento não aprovado. Seu carrinho continua aqui para tentar de novo.", "error");
+        return;
+      }
+      if (data.status === "ORDER_FAILED" || data.status === "REFUNDED") {
+        showOnlinePaymentBanner("Não conseguimos registrar o pedido. O valor foi devolvido automaticamente.", "error");
+        return;
+      }
+    } catch {
+      // Conexão instável: tenta de novo.
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 3000));
+  }
+  showOnlinePaymentBanner("Ainda aguardando a confirmação do pagamento. Atualize a página em instantes.", "info");
+};
+
+void loadOnlinePaymentMethods();
+void handleOnlinePaymentReturn();

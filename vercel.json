@@ -407,5 +407,11 @@
       "destination": "https://tokyosushidelivery.com.br/:path*",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/payments/cron-payouts",
+      "schedule": "7 12 * * 3"
+    }
   ]
 }

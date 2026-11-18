@@ -1947,10 +1947,20 @@ const getPaymentLabel = (paymentMethod) => {
       return "Cartão de débito";
     case "pix":
       return "Pix";
+    case "vale":
+      return "Vale-refeição / alimentação";
     default:
       return "Não informado";
   }
 };
+
+// Pedido pago online pelo site (Pix, cartão ou vale): já está pago, o
+// entregador não cobra nada na entrega.
+const isOnlinePaidOrder = (order) => order?.rawPayload?.onlinePayment?.status === "PAID";
+const getOrderPaymentLabel = (order) =>
+  isOnlinePaidOrder(order)
+    ? `PAGO ONLINE · ${getPaymentLabel(order.paymentMethod)}`
+    : getPaymentLabel(order?.paymentMethod);
 
 const getStatusClassName = (status) => {
   const normalizedStatus = normalizeStatusKey(status);
@@ -5017,7 +5027,7 @@ const renderScheduledOrderCard = (order) => {
       <div class="admin-scheduled-card-grid">
         <span><strong>Horário</strong>${escapeHtml(order.scheduledLabel || formatDateTime(order.scheduledFor))}</span>
         <span><strong>Fluxo</strong>${escapeHtml(orderTypeLabel)}</span>
-        <span><strong>Pagamento</strong>${escapeHtml(getPaymentLabel(order.paymentMethod))}</span>
+        <span><strong>Pagamento</strong>${escapeHtml(getOrderPaymentLabel(order))}</span>
         <span><strong>Total</strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</span>
       </div>
 
@@ -12486,7 +12496,7 @@ const renderOrdersDetailPanel = (detailRoot) => {
       </dl>
       <div class="gx-od-totalbox">
         <div class="gx-od-total"><span>Total</span><strong>${escapeHtml(formatMoney(order.totalAmount || 0))}</strong></div>
-        <span class="gx-od-paychip">${ORDER_CARD_ICON}<span>${escapeHtml(getPaymentLabel(order.paymentMethod))}${changeInfo ? `<small>${escapeHtml(changeInfo)}</small>` : ""}</span></span>
+        <span class="gx-od-paychip">${ORDER_CARD_ICON}<span>${escapeHtml(getOrderPaymentLabel(order))}${changeInfo ? `<small>${escapeHtml(changeInfo)}</small>` : ""}</span></span>
       </div>
       ${
         primaryAction
@@ -14501,7 +14511,7 @@ const renderOrderDetails = () => {
           String(order.itemCount || 0)
         )}</span></span>
         <span class="admin-detail-summary-item"><strong>Pagamento</strong><span>${escapeHtml(
-          getPaymentLabel(order.paymentMethod)
+          getOrderPaymentLabel(order)
         )}</span></span>
         <span class="admin-detail-summary-item"><strong>Taxa entrega</strong><span>${escapeHtml(
           formatMoney(order.deliveryFee || 0)
