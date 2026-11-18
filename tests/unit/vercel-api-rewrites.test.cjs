@@ -15,6 +15,8 @@ test("rotas novas do Gestor e do pagamento online têm reescrita", () => {
     "/api/admin/payment-settings/:action",
     "/api/admin/cash-register/:action",
     "/api/payments/:path*",
+    "/api/channels/:path*",
+    "/api/admin/channels/:action",
   ]) {
     assert.ok(sources.has(source), `falta reescrita para ${source}`);
   }

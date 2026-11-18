@@ -1957,10 +1957,19 @@ const getPaymentLabel = (paymentMethod) => {
 // Pedido pago online pelo site (Pix, cartão ou vale): já está pago, o
 // entregador não cobra nada na entrega.
 const isOnlinePaidOrder = (order) => order?.rawPayload?.onlinePayment?.status === "PAID";
-const getOrderPaymentLabel = (order) =>
-  isOnlinePaidOrder(order)
+const CHANNEL_LABELS = { ifood: "iFood", food99: "99Food", ubereats: "Uber Eats" };
+const getOrderPaymentLabel = (order) => {
+  const channelOrder = order?.rawPayload?.channelOrder;
+  if (channelOrder) {
+    const channel = CHANNEL_LABELS[channelOrder.channel] || "Plataforma";
+    return channelOrder.prepaid
+      ? `${channel} · PAGO NO APP`
+      : `${channel} · cobrar na entrega (${getPaymentLabel(order.paymentMethod)})`;
+  }
+  return isOnlinePaidOrder(order)
     ? `PAGO ONLINE · ${getPaymentLabel(order.paymentMethod)}`
     : getPaymentLabel(order?.paymentMethod);
+};
 
 const getStatusClassName = (status) => {
   const normalizedStatus = normalizeStatusKey(status);
@@ -10336,6 +10345,7 @@ const SITE_SETTINGS_TABS = Object.freeze([
   { key: "contact", label: "Contato e redes", title: "Contato e redes", text: "Como o cliente fala com você." },
   { key: "seo", label: "Google e compartilhamento", title: "Google e compartilhamento", text: "Como o site aparece em buscas e links." },
   { key: "payments", label: "Pagamentos e repasses", title: "Pagamentos e repasses", text: "Pagamento online no site (Pix, cartão e vale), taxas e a conta bancária que recebe os repasses." },
+  { key: "channels", label: "Integrações", title: "iFood, 99Food e Uber Eats", text: "Receba os pedidos das plataformas no mesmo Gestor. Sem taxa da INOVAS." },
 ]);
 const SITE_SETTINGS_PALETTES = Object.freeze([
   { key: "tokyo", label: "Tokyo (padrão)", colors: ["#F97316", "#0F141F", "#FBBF24"] },
@@ -10817,6 +10827,100 @@ document.addEventListener("click", (event) => {
   adminState.siteSettingsTab = "payments";
 });
 
+// ---------- Configurações > Integrações (iFood, 99Food, Uber Eats) ----------
+const channelsState = { data: null, loading: false, saving: false, message: "", tone: "success", drafts: {} };
+
+const loadChannels = async () => {
+  channelsState.loading = true;
+  try {
+    channelsState.data = await fetchJson("/api/admin/channels/get");
+  } catch (error) {
+    channelsState.message = error.errorCode === "channels_not_configured"
+      ? "Integrações ainda não ativadas pela INOVAS."
+      : error.message || "Não foi possível carregar as integrações.";
+    channelsState.tone = "error";
+  } finally {
+    channelsState.loading = false;
+    const slot = document.querySelector("[data-channels-slot]");
+    if (slot) slot.innerHTML = renderChannelsBody();
+  }
+};
+
+const renderChannelsBody = () => {
+  const data = channelsState.data;
+  if (!data) {
+    if (!channelsState.loading && !channelsState.message) void loadChannels();
+    return `<p class="gx-pay-muted">${escapeHtml(channelsState.message || "Carregando integrações…")}</p>`;
+  }
+  const feedback = channelsState.message
+    ? `<div class="admin-feedback is-${escapeHtml(channelsState.tone)}" role="status">${escapeHtml(channelsState.message)}</div>`
+    : "";
+  return feedback + data.channels
+    .map((channel) => {
+      const linked = Boolean(channel.externalStoreId);
+      const status = !channel.available
+        ? ["Em breve", "is-warn"]
+        : !channel.platformReady
+          ? ["Aguardando ativação INOVAS", "is-warn"]
+          : linked
+            ? ["Conectado", "is-ok"]
+            : ["Não conectado", "is-bad"];
+      const draft = channelsState.drafts[channel.id] ?? channel.externalStoreId;
+      const busy = channelsState.saving;
+      return gxSetCard(
+        channel.label,
+        channel.available
+          ? `Os pedidos do ${channel.label} entram na mesma fila do Gestor. Ao aceitar, marcar pronto, saiu para entrega ou cancelar aqui, o ${channel.label} é avisado.`
+          : `A integração com o ${channel.label} está em preparação.`,
+        channel.available
+          ? `<div class="gx-set-grid">
+              <label class="gx-set-field is-wide"><span class="gx-set-field-label">ID da loja no ${escapeHtml(channel.label)} (Portal do Parceiro → Perfil da loja)</span>
+                <span class="gx-set-input"><input data-channel-store="${escapeHtml(channel.id)}" value="${escapeHtml(draft)}" placeholder="ex.: 0f2c7e6a-...-b81d" autocomplete="off" ${busy ? "disabled" : ""} /></span></label>
+            </div>
+            <p class="gx-pay-muted">No Portal do Parceiro do ${escapeHtml(channel.label)}, autorize o aplicativo INOVAS para a sua loja. Sem custo: a INOVAS não cobra nada pelos pedidos das plataformas.</p>
+            <div class="gx-pay-actions">
+              ${linked ? `<button type="button" class="gx-set-btn" data-channel-action="unlink" data-channel="${escapeHtml(channel.id)}" ${busy ? "disabled" : ""}>Desconectar</button>` : ""}
+              <button type="button" class="gx-set-btn is-primary" data-channel-action="link" data-channel="${escapeHtml(channel.id)}" ${busy ? "disabled" : ""}>${busy ? "Salvando…" : linked ? "Salvar" : "Conectar"}</button>
+            </div>`
+          : "",
+        `<span class="gx-payout-status ${status[1]}" data-channel-status="${escapeHtml(channel.id)}">${escapeHtml(status[0])}</span>`
+      );
+    })
+    .join("");
+};
+
+document.addEventListener("input", (event) => {
+  const input = event.target.closest?.("[data-channel-store]");
+  if (input) channelsState.drafts[input.dataset.channelStore] = input.value;
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest?.("[data-channel-action]");
+  if (!button) return;
+  const channel = button.dataset.channel;
+  const unlink = button.dataset.channelAction === "unlink";
+  const input = document.querySelector(`[data-channel-store="${channel}"]`);
+  channelsState.saving = true;
+  channelsState.message = "";
+  const slot = document.querySelector("[data-channels-slot]");
+  try {
+    const payload = await fetchJson("/api/admin/channels/save", {
+      method: "POST",
+      body: JSON.stringify({ channel, externalStoreId: unlink ? "" : String(input?.value || "").trim() }),
+    });
+    channelsState.data = payload;
+    channelsState.drafts = {};
+    channelsState.message = unlink ? "Integração desconectada." : "Integração salva.";
+    channelsState.tone = "success";
+  } catch (error) {
+    channelsState.message = error.message || "Não foi possível salvar.";
+    channelsState.tone = "error";
+  } finally {
+    channelsState.saving = false;
+    if (slot) slot.innerHTML = renderChannelsBody();
+  }
+});
+
 const renderRestaurantSettingsModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -11157,6 +11261,7 @@ const renderRestaurantSettingsModule = () => {
           )}
 
           ${panel("payments", `<div data-payment-settings-slot>${renderPaymentSettingsBody()}</div>`)}
+          ${panel("channels", `<div data-channels-slot>${renderChannelsBody()}</div>`)}
 
           <p class="gx-set-updated">Última atualização: ${escapeHtml(adminState.isLoadingRestaurantSettings ? "carregando..." : updatedLabel)}</p>
         </div>

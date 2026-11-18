@@ -33,6 +33,7 @@ process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
 // teste "presenca-*", para os demais testes seguirem criando pedidos.
 process.env.INOVAS_PRESENCE_ENFORCE = process.env.INOVAS_PRESENCE_ENFORCE || "prefix:presenca-";
 process.env.INOVAS_PAYMENT_PROVIDER = process.env.INOVAS_PAYMENT_PROVIDER || "fake";
+process.env.INOVAS_CHANNELS_PROVIDER = process.env.INOVAS_CHANNELS_PROVIDER || "fake";
 // Pedidos e Caixa só no app INOVAS PDV: aqui só para restaurantes "somenteapp-*".
 process.env.INOVAS_REQUIRE_PDV_APP = process.env.INOVAS_REQUIRE_PDV_APP || "prefix:somenteapp-";
 process.env.ADMIN_LOGIN = adminLogin;
@@ -430,6 +431,7 @@ const handleApi = async (req, res, pathname) => {
   if (pathname.startsWith("/api/admin")) return runApi(adminApi, req, res);
   if (pathname.startsWith("/api/customer")) return runApi(customerApi, req, res);
   if (pathname.startsWith("/api/payments")) return runApi(customerApi, req, res);
+  if (pathname.startsWith("/api/channels")) return runApi(customerApi, req, res);
   if (pathname === "/api/orders/create") return runApi(orderCreateApi, req, res);
   if (pathname === "/api/catalog") return runApi(catalogApi, req, res);
   if (pathname === "/api/reviews") {
