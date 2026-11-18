@@ -28,6 +28,29 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   const owner = await loginTenantOwner(restaurant);
   const site = await createApiContext({ host: restaurant.host });
 
+  // Sem conta bancária e sem escolha do dono: o site não oferece pagamento online.
+  expect((await (await site.get("/api/payments/methods")).json()).enabled).toBe(false);
+  const bank = await owner.api.post("/api/admin/payment-settings/save", {
+    data: {
+      bankAccount: {
+        holderName: "Restaurante Pagamento Online LTDA",
+        holderDocument: "11.222.333/0001-81",
+        holderEmail: "financeiro@restaurante.test",
+        holderPhone: "(16) 99999-0000",
+        bankCode: "341",
+        branchNumber: "1234",
+        accountNumber: "567890",
+        accountCheckDigit: "1",
+        accountType: "checking",
+      },
+    },
+  });
+  expect(bank.status(), JSON.stringify(await bank.json())).toBe(200);
+  const enable = await owner.api.post("/api/admin/payment-settings/save", {
+    data: { enabledMethods: ["pix", "credit_card", "debit_card", "meal_voucher"] },
+  });
+  expect((await enable.json()).settings.enabledMethods).toHaveLength(4);
+
   // Formas online ativas (provedor de teste).
   const methods = await (await site.get("/api/payments/methods")).json();
   expect(methods.enabled).toBe(true);

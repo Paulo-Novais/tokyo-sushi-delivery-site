@@ -224,6 +224,10 @@
       "destination": "/api/admin/[...action]?action=payouts/:action"
     },
     {
+      "source": "/api/admin/payment-settings/:action",
+      "destination": "/api/admin/[...action]?action=payment-settings/:action"
+    },
+    {
       "source": "/api/admin/finance",
       "destination": "/api/admin/[...action]?action=finance"
     },

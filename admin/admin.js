@@ -10335,6 +10335,7 @@ const SITE_SETTINGS_TABS = Object.freeze([
   { key: "delivery", label: "Entrega e retirada", title: "Entrega e retirada", text: "Área atendida, taxas e retirada no balcão." },
   { key: "contact", label: "Contato e redes", title: "Contato e redes", text: "Como o cliente fala com você." },
   { key: "seo", label: "Google e compartilhamento", title: "Google e compartilhamento", text: "Como o site aparece em buscas e links." },
+  { key: "payments", label: "Pagamentos e repasses", title: "Pagamentos e repasses", text: "Pagamento online no site (Pix, cartão e vale), taxas e a conta bancária que recebe os repasses." },
 ]);
 const SITE_SETTINGS_PALETTES = Object.freeze([
   { key: "tokyo", label: "Tokyo (padrão)", colors: ["#F97316", "#0F141F", "#FBBF24"] },
@@ -10529,6 +10530,270 @@ const refreshSiteSettingsExtras = () => {
     status.textContent = dirty ? "Alterações não salvas" : "Tudo salvo";
   }
 };
+
+// ---------- Configurações > Pagamentos e repasses ----------
+const PAYMENT_BANKS = Object.freeze([
+  ["001", "Banco do Brasil"], ["033", "Santander"], ["104", "Caixa Econômica"], ["237", "Bradesco"],
+  ["341", "Itaú"], ["260", "Nubank"], ["077", "Inter"], ["336", "C6 Bank"], ["290", "PagBank"],
+  ["323", "Mercado Pago"], ["380", "PicPay"], ["197", "Stone"], ["748", "Sicredi"], ["756", "Sicoob"],
+  ["212", "Banco Original"], ["422", "Safra"], ["461", "Asaas"],
+]);
+const PAYMENT_STATUS_INFO = {
+  NOT_SUBMITTED: ["Conta não cadastrada", "is-bad"],
+  PENDING: ["Em análise", "is-warn"],
+  ACTIVE: ["Ativa para receber", "is-ok"],
+  REFUSED: ["Recusada — revise os dados", "is-bad"],
+};
+const paymentSettingsState = { data: null, loading: false, saving: false, message: "", tone: "success", editingBank: false, simulateCents: 10000 };
+
+const formatFeeLabel = (fee) => {
+  if (!fee) return "A confirmar";
+  const percent = (fee.percentBps / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return fee.fixedCents ? `${percent}% + ${formatMoney(fee.fixedCents / 100)}` : `${percent}%`;
+};
+const feeCentsFor = (fee, amountCents) =>
+  fee ? Math.round((amountCents * fee.percentBps) / 10000) + fee.fixedCents : null;
+
+const loadPaymentSettings = async () => {
+  paymentSettingsState.loading = true;
+  try {
+    const payload = await fetchJson("/api/admin/payment-settings/get");
+    paymentSettingsState.data = payload.settings || null;
+  } catch (error) {
+    paymentSettingsState.message = error.message || "Não foi possível carregar os pagamentos.";
+    paymentSettingsState.tone = "error";
+  } finally {
+    paymentSettingsState.loading = false;
+    renderPaymentSettingsInto();
+    syncPaymentRequiredBanner();
+  }
+};
+
+const renderPaymentSettingsBody = () => {
+  const data = paymentSettingsState.data;
+  if (!data) {
+    if (!paymentSettingsState.loading) void loadPaymentSettings();
+    return `<p class="gx-pay-muted">${escapeHtml(paymentSettingsState.message || "Carregando pagamentos…")}</p>`;
+  }
+  const [statusLabel, statusTone] = PAYMENT_STATUS_INFO[data.status] || PAYMENT_STATUS_INFO.NOT_SUBMITTED;
+  const busy = paymentSettingsState.saving;
+  const bank = data.bankAccount;
+  const showBankForm = data.canEditBank && (!bank || paymentSettingsState.editingBank);
+  const simulate = Math.max(0, Number(paymentSettingsState.simulateCents) || 0);
+  const feedback = paymentSettingsState.message
+    ? `<div class="admin-feedback is-${escapeHtml(paymentSettingsState.tone)}" role="status">${escapeHtml(paymentSettingsState.message)}</div>`
+    : "";
+
+  const methodsCard = gxSetCard(
+    "Formas de pagamento online",
+    "Escolha o que o cliente pode pagar direto no site. O pedido só chega no Gestor depois de pago.",
+    `<div class="gx-pay-methods">
+      ${data.methods
+        .map((method) => {
+          const checked = data.enabledMethods.includes(method.id);
+          const disabled = busy || !method.availableOnPlatform || data.bankAccountRequired;
+          return `<label class="gx-pay-method${checked ? " is-on" : ""}${!method.availableOnPlatform ? " is-unavailable" : ""}">
+            <input type="checkbox" data-pay-method="${escapeHtml(method.id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
+            <span class="gx-pay-method-text">
+              <strong>${escapeHtml(method.label)}</strong>
+              <small>${method.availableOnPlatform ? `Taxa por venda: ${escapeHtml(formatFeeLabel(method.fee))}` : "Em breve na sua região"}</small>
+            </span>
+            <span class="gx-pay-switch" aria-hidden="true"></span>
+          </label>`;
+        })
+        .join("")}
+    </div>
+    ${data.bankAccountRequired ? '<p class="gx-pay-warn">Cadastre a conta bancária abaixo para poder ativar o pagamento online.</p>' : ""}
+    <div class="gx-pay-actions">
+      <button type="button" class="gx-set-btn is-primary" data-pay-action="save-methods" ${busy || data.bankAccountRequired ? "disabled" : ""}>${busy ? "Salvando…" : "Salvar formas de pagamento"}</button>
+    </div>`
+  );
+
+  const feesCard = gxSetCard(
+    "Taxas e quanto você recebe",
+    "A taxa é a cobrada pela operadora do pagamento (Stone), sem acréscimo da INOVAS. A INOVAS cobra só a mensalidade.",
+    `<label class="gx-set-field">
+      <span class="gx-set-field-label">Simular um pedido de</span>
+      <span class="gx-set-input has-prefix"><i>R$</i><input type="text" inputmode="decimal" data-pay-simulate value="${escapeHtml((simulate / 100).toFixed(2).replace(".", ","))}" /></span>
+    </label>
+    <table class="gx-pay-fees">
+      <thead><tr><th>Forma</th><th>Taxa</th><th>Desconto</th><th>Você recebe</th></tr></thead>
+      <tbody>
+        ${data.methods
+          .filter((method) => method.availableOnPlatform)
+          .map((method) => {
+            const fee = feeCentsFor(method.fee, simulate);
+            return `<tr>
+              <td>${escapeHtml(method.shortLabel)}</td>
+              <td>${escapeHtml(formatFeeLabel(method.fee))}</td>
+              <td>${fee === null ? "—" : `− ${escapeHtml(formatMoney(fee / 100))}`}</td>
+              <td><strong>${fee === null ? "A confirmar" : escapeHtml(formatMoney((simulate - fee) / 100))}</strong></td>
+            </tr>`;
+          })
+          .join("")}
+      </tbody>
+    </table>
+    <p class="gx-pay-muted">${escapeHtml(data.payoutSchedule?.description || "")} O extrato detalhado fica em Financeiro.</p>`
+  );
+
+  const bankField = (label, field, value = "", attrs = "") =>
+    `<label class="gx-set-field"><span class="gx-set-field-label">${escapeHtml(label)}</span><span class="gx-set-input"><input data-pay-field="${field}" value="${escapeHtml(value)}" ${attrs} ${busy ? "disabled" : ""} /></span></label>`;
+  const bankCard = gxSetCard(
+    "Conta bancária para os repasses",
+    "Obrigatória. É para essa conta que vai o valor das vendas online, toda semana. Deve estar no nome do restaurante (CNPJ) ou do dono (CPF).",
+    `${
+      showBankForm
+        ? `<div class="gx-set-grid" data-pay-bank-form>
+            ${bankField("Nome do titular (razão social ou nome completo)", "holderName", "", 'autocomplete="off"')}
+            ${bankField("CPF ou CNPJ do titular", "holderDocument", "", 'inputmode="numeric" autocomplete="off"')}
+            ${bankField("E-mail do titular", "holderEmail", "", 'type="email" autocomplete="off"')}
+            ${bankField("Telefone com DDD", "holderPhone", "", 'inputmode="tel" autocomplete="off"')}
+            <label class="gx-set-field"><span class="gx-set-field-label">Banco</span><span class="gx-set-input">
+              <select data-pay-field="bankCode" ${busy ? "disabled" : ""}>
+                <option value="">Selecione o banco</option>
+                ${PAYMENT_BANKS.map(([code, name]) => `<option value="${code}">${code} · ${escapeHtml(name)}</option>`).join("")}
+                <option value="other">Outro banco (digitar código)</option>
+              </select></span></label>
+            ${bankField("Código do banco (se outro)", "bankCodeOther", "", 'inputmode="numeric" maxlength="3" placeholder="ex.: 403"')}
+            ${bankField("Agência (sem dígito)", "branchNumber", "", 'inputmode="numeric" maxlength="4"')}
+            ${bankField("Dígito da agência (se houver)", "branchCheckDigit", "", 'inputmode="numeric" maxlength="1"')}
+            ${bankField("Conta", "accountNumber", "", 'inputmode="numeric" maxlength="13"')}
+            ${bankField("Dígito da conta", "accountCheckDigit", "", 'maxlength="2"')}
+            <label class="gx-set-field"><span class="gx-set-field-label">Tipo de conta</span><span class="gx-set-input">
+              <select data-pay-field="accountType" ${busy ? "disabled" : ""}><option value="checking">Conta corrente</option><option value="savings">Poupança</option></select>
+            </span></label>
+          </div>
+          <div class="gx-pay-actions">
+            ${bank ? `<button type="button" class="gx-set-btn" data-pay-action="cancel-bank" ${busy ? "disabled" : ""}>Cancelar</button>` : ""}
+            <button type="button" class="gx-set-btn is-primary" data-pay-action="save-bank" ${busy ? "disabled" : ""}>${busy ? "Salvando…" : "Salvar conta bancária"}</button>
+          </div>
+          <p class="gx-pay-muted">Seus dados são enviados com segurança à operadora do pagamento para criar a sua conta de recebimento. Depois de salvos, aparecem mascarados.</p>`
+        : bank
+          ? `<dl class="gx-pay-bank">
+              <div><dt>Titular</dt><dd>${escapeHtml(bank.holderName)}</dd></div>
+              <div><dt>${bank.holderType === "company" ? "CNPJ" : "CPF"}</dt><dd>${escapeHtml(bank.holderDocument)}</dd></div>
+              <div><dt>Banco</dt><dd>${escapeHtml(bank.bankCode)} · ${escapeHtml((PAYMENT_BANKS.find(([code]) => code === bank.bankCode) || [, "Banco"])[1])}</dd></div>
+              <div><dt>Agência</dt><dd>${escapeHtml(bank.branch)}</dd></div>
+              <div><dt>Conta</dt><dd>${escapeHtml(bank.account)} (${bank.accountType === "savings" ? "poupança" : "corrente"})</dd></div>
+            </dl>
+            ${data.canEditBank ? `<div class="gx-pay-actions"><button type="button" class="gx-set-btn" data-pay-action="edit-bank">Trocar conta bancária</button></div>` : '<p class="gx-pay-muted">Somente o dono do restaurante pode trocar a conta bancária.</p>'}`
+          : '<p class="gx-pay-warn">Conta bancária ainda não cadastrada. Peça ao dono do restaurante para cadastrar (somente ele pode).</p>'
+    }`,
+    `<span class="gx-payout-status ${statusTone}" data-pay-status>${escapeHtml(statusLabel)}</span>`
+  );
+
+  return `${feedback}${data.statusMessage ? `<p class="gx-pay-muted">${escapeHtml(data.statusMessage)}</p>` : ""}${bankCard}${methodsCard}${feesCard}`;
+};
+
+const renderPaymentSettingsInto = () => {
+  const slot = document.querySelector("[data-payment-settings-slot]");
+  if (slot) slot.innerHTML = renderPaymentSettingsBody();
+};
+
+const savePaymentSettingsRequest = async (body, successMessage) => {
+  paymentSettingsState.saving = true;
+  paymentSettingsState.message = "";
+  renderPaymentSettingsInto();
+  try {
+    const payload = await fetchJson("/api/admin/payment-settings/save", { method: "POST", body: JSON.stringify(body) });
+    paymentSettingsState.data = payload.settings || paymentSettingsState.data;
+    paymentSettingsState.message = successMessage;
+    paymentSettingsState.tone = "success";
+    paymentSettingsState.editingBank = false;
+  } catch (error) {
+    paymentSettingsState.message = error.message || "Não foi possível salvar.";
+    paymentSettingsState.tone = "error";
+  } finally {
+    paymentSettingsState.saving = false;
+    renderPaymentSettingsInto();
+    syncPaymentRequiredBanner();
+  }
+};
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-pay-action]");
+  if (!button) return;
+  const action = button.dataset.payAction;
+  const slot = document.querySelector("[data-payment-settings-slot]");
+  if (action === "edit-bank") {
+    paymentSettingsState.editingBank = true;
+    paymentSettingsState.message = "";
+    renderPaymentSettingsInto();
+  } else if (action === "cancel-bank") {
+    paymentSettingsState.editingBank = false;
+    renderPaymentSettingsInto();
+  } else if (action === "save-methods" && slot) {
+    const enabledMethods = [...slot.querySelectorAll("[data-pay-method]:checked")].map((input) => input.dataset.payMethod);
+    void savePaymentSettingsRequest({ enabledMethods }, enabledMethods.length ? "Formas de pagamento online atualizadas." : "Pagamento online desativado no site.");
+  } else if (action === "save-bank" && slot) {
+    const read = (field) => String(slot.querySelector(`[data-pay-field="${field}"]`)?.value || "").trim();
+    const bankCode = read("bankCode") === "other" ? read("bankCodeOther") : read("bankCode");
+    void savePaymentSettingsRequest(
+      {
+        bankAccount: {
+          holderName: read("holderName"),
+          holderDocument: read("holderDocument"),
+          holderEmail: read("holderEmail"),
+          holderPhone: read("holderPhone"),
+          bankCode,
+          branchNumber: read("branchNumber"),
+          branchCheckDigit: read("branchCheckDigit"),
+          accountNumber: read("accountNumber"),
+          accountCheckDigit: read("accountCheckDigit"),
+          accountType: read("accountType"),
+        },
+      },
+      "Conta bancária salva."
+    );
+  }
+});
+
+document.addEventListener("input", (event) => {
+  const input = event.target.closest?.("[data-pay-simulate]");
+  if (!input) return;
+  const cents = Math.round(Number(String(input.value).replace(/\./g, "").replace(",", ".")) * 100);
+  if (!Number.isFinite(cents)) return;
+  paymentSettingsState.simulateCents = cents;
+  const table = document.querySelector(".gx-pay-fees tbody");
+  const data = paymentSettingsState.data;
+  if (!table || !data) return;
+  table.innerHTML = data.methods
+    .filter((method) => method.availableOnPlatform)
+    .map((method) => {
+      const fee = feeCentsFor(method.fee, cents);
+      return `<tr><td>${escapeHtml(method.shortLabel)}</td><td>${escapeHtml(formatFeeLabel(method.fee))}</td><td>${fee === null ? "—" : `− ${escapeHtml(formatMoney(fee / 100))}`}</td><td><strong>${fee === null ? "A confirmar" : escapeHtml(formatMoney((cents - fee) / 100))}</strong></td></tr>`;
+    })
+    .join("");
+});
+
+// Obrigatório: enquanto o restaurante não cadastrar a conta bancária, o
+// Gestor mostra o aviso no topo (quando o pagamento online está disponível).
+const syncPaymentRequiredBanner = () => {
+  const data = paymentSettingsState.data;
+  const content = document.querySelector("[data-admin-module-content]");
+  let banner = document.querySelector("[data-payment-required-banner]");
+  const show = Boolean(data?.onlinePaymentAvailable && data?.bankAccountRequired);
+  if (!show) {
+    banner?.remove();
+    return;
+  }
+  if (!content?.parentElement) return;
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.setAttribute("data-payment-required-banner", "");
+    banner.className = "gx-pay-required";
+    banner.setAttribute("role", "alert");
+    content.parentElement.insertBefore(banner, content);
+  }
+  banner.innerHTML = `<strong>Obrigatório:</strong> cadastre a conta bancária do restaurante para receber os pagamentos online e os repasses semanais.
+    <a href="/admin/?section=settings&amp;tab=payments" data-payment-required-link>Cadastrar agora</a>`;
+};
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("[data-payment-required-link]");
+  if (!link) return;
+  adminState.siteSettingsTab = "payments";
+});
 
 const renderRestaurantSettingsModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
@@ -10868,6 +11133,8 @@ const renderRestaurantSettingsModule = () => {
                 </details>`
               )
           )}
+
+          ${panel("payments", `<div data-payment-settings-slot>${renderPaymentSettingsBody()}</div>`)}
 
           <p class="gx-set-updated">Última atualização: ${escapeHtml(adminState.isLoadingRestaurantSettings ? "carregando..." : updatedLabel)}</p>
         </div>
@@ -16046,6 +16313,7 @@ const loadInitialAdminSession = async () => {
   syncAdminAccessFromPayload(session.admin);
   adminState.pdvAppBlocked = session.pdvApp?.required === true && session.pdvApp?.isApp !== true;
   if (adminState.pdvAppBlocked) syncOrderAlertBanner();
+  adminState.isRestaurantUser = session.admin?.userScope === "RESTAURANT";
   renderSupportAccessBanner(session.admin?.support || null);
   if (
     getRequestedCashRegisterView() &&
@@ -16810,6 +17078,10 @@ const removeReview = async (payload = {}) => {
 
 const initDashboardPage = () => {
   const requestedSection = new URLSearchParams(window.location.search).get("section");
+  const requestedSettingsTab = new URLSearchParams(window.location.search).get("tab");
+  if (requestedSettingsTab && SITE_SETTINGS_TABS.some((tab) => tab.key === requestedSettingsTab)) {
+    adminState.siteSettingsTab = requestedSettingsTab;
+  }
   const requestedCashRegisterView = getRequestedCashRegisterView();
 
   if (requestedCashRegisterView) {
@@ -18286,6 +18558,9 @@ const initDashboardPage = () => {
   void (async () => {
     if (await loadInitialAdminSession()) {
       initPresenceControl();
+      // Conta bancária obrigatória: carrega a configuração de pagamento
+      // (mostra o aviso no topo enquanto não estiver cadastrada).
+      if (adminState.isRestaurantUser) void loadPaymentSettings();
       await loadActiveAdminSection({ preserveSelection: false });
     }
   })();

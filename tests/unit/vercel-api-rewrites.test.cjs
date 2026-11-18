@@ -12,6 +12,7 @@ test("rotas novas do Gestor e do pagamento online têm reescrita", () => {
     "/api/admin/presence/:action",
     "/api/admin/pdv/:action",
     "/api/admin/payouts/:action",
+    "/api/admin/payment-settings/:action",
     "/api/admin/cash-register/:action",
     "/api/payments/:path*",
   ]) {

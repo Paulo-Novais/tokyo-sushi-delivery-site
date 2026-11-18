@@ -36,12 +36,30 @@ CREATE TABLE IF NOT EXISTS online_payments (
 CREATE INDEX IF NOT EXISTS online_payments_provider_order_idx ON online_payments (provider_order_id);
 CREATE INDEX IF NOT EXISTS online_payments_order_idx ON online_payments (tenant_id, restaurant_id, order_id);
 
+-- Configuração de pagamento online do restaurante (Configurações >
+-- Pagamentos e repasses): formas aceitas, conta bancária para o repasse e o
+-- recebedor criado no provedor. Dados bancários só o servidor lê; a tela
+-- mostra mascarado. Só o dono do restaurante altera a conta bancária.
 CREATE TABLE IF NOT EXISTS restaurant_payment_accounts (
   tenant_id TEXT NOT NULL,
   restaurant_id TEXT NOT NULL,
   restaurant_key TEXT NOT NULL,
   provider TEXT NOT NULL CHECK (provider IN ('pagarme', 'fake')),
   recipient_id TEXT NOT NULL DEFAULT '',
+  recipient_status TEXT NOT NULL DEFAULT 'NOT_SUBMITTED'
+    CHECK (recipient_status IN ('NOT_SUBMITTED', 'PENDING', 'ACTIVE', 'REFUSED')),
+  recipient_message TEXT NOT NULL DEFAULT '' CHECK (char_length(recipient_message) <= 300),
+  enabled_methods JSONB NOT NULL DEFAULT '[]'::jsonb,
+  holder_name TEXT NOT NULL DEFAULT '' CHECK (char_length(holder_name) <= 128),
+  holder_document TEXT NOT NULL DEFAULT '' CHECK (holder_document ~ '^[0-9]{0,14}$'),
+  holder_email TEXT NOT NULL DEFAULT '' CHECK (char_length(holder_email) <= 160),
+  holder_phone TEXT NOT NULL DEFAULT '' CHECK (holder_phone ~ '^[0-9]{0,13}$'),
+  bank_code TEXT NOT NULL DEFAULT '' CHECK (bank_code ~ '^[0-9]{0,3}$'),
+  branch_number TEXT NOT NULL DEFAULT '' CHECK (branch_number ~ '^[0-9]{0,4}$'),
+  branch_check_digit TEXT NOT NULL DEFAULT '' CHECK (branch_check_digit ~ '^[0-9]?$'),
+  account_number TEXT NOT NULL DEFAULT '' CHECK (account_number ~ '^[0-9]{0,13}$'),
+  account_check_digit TEXT NOT NULL DEFAULT '' CHECK (account_check_digit ~ '^[0-9Xx]{0,2}$'),
+  account_type TEXT NOT NULL DEFAULT 'checking' CHECK (account_type IN ('checking', 'savings')),
   updated_by TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (tenant_id, restaurant_id)
