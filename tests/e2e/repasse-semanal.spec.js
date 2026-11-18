@@ -239,17 +239,17 @@ test("Painel INOVAS: Mensalidades mostra em atraso e em dia; registrar pagamento
   await page.locator('[data-billing-filter=""]').click();
   await expect(page.locator(`[data-billing-row="${restaurant.key}"]`)).toContainText("Em dia");
 
-  // Ciclo trimestral: R$ 349 x 3 = R$ 1.047 - R$ 15 = R$ 1.032.
+  // Ciclo trimestral (Completo R$ 219,90): R$ 659,70 - R$ 15 = R$ 644,70.
   const cycleSelect = page.locator(`[data-billing-cycle="${restaurant.key}"]`);
-  await expect(cycleSelect.locator('option[value="QUARTERLY"]')).toHaveText("Trimestral · R$ 1.032,00 (−R$ 15,00)");
-  await expect(cycleSelect.locator('option[value="ANNUAL"]')).toHaveText("Anual · R$ 3.852,96 (−R$ 335,04)");
+  await expect(cycleSelect.locator('option[value="QUARTERLY"]')).toHaveText("Trimestral · R$ 644,70 (−R$ 15,00)");
+  await expect(cycleSelect.locator('option[value="ANNUAL"]')).toHaveText("Anual · R$ 2.427,70 (−R$ 211,10)");
   const saved = page.waitForResponse((response) => response.url().includes("/api/admin/master/subscription"));
   await cycleSelect.selectOption("QUARTERLY");
   expect((await saved).status()).toBe(200);
   await expect(page.locator(`[data-billing-cycle="${restaurant.key}"]`)).toHaveValue("QUARTERLY");
   const after = (await (await master.api.get("/api/system/billing")).json()).data.restaurants.find((entry) => entry.restaurantKey === restaurant.key);
   expect(after.billingCycle).toBe("QUARTERLY");
-  expect(after.cycleCharge).toMatchObject({ totalCents: 103200, discountCents: 1500, months: 3 });
+  expect(after.cycleCharge).toMatchObject({ totalCents: 64470, discountCents: 1500, months: 3 });
 
   await context.close();
   await master.api.dispose();
