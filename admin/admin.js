@@ -10544,7 +10544,7 @@ const PAYMENT_STATUS_INFO = {
   ACTIVE: ["Ativa para receber", "is-ok"],
   REFUSED: ["Recusada — revise os dados", "is-bad"],
 };
-const paymentSettingsState = { data: null, loading: false, saving: false, message: "", tone: "success", editingBank: false, simulateCents: 10000 };
+const paymentSettingsState = { data: null, loading: false, saving: false, message: "", tone: "success", editingBank: false, simulateCents: 10000, bankDraft: {} };
 
 const formatFeeLabel = (fee) => {
   if (!fee) return "A confirmar";
@@ -10553,6 +10553,19 @@ const formatFeeLabel = (fee) => {
 };
 const feeCentsFor = (fee, amountCents) =>
   fee ? Math.round((amountCents * fee.percentBps) / 10000) + fee.fixedCents : null;
+
+const formatPlatformFee = (data) =>
+  `${(Number(data?.platformFeeBps ?? 150) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%`;
+const renderFeeRow = (method, amountCents, data) => {
+  const fee = feeCentsFor(method.fee, amountCents);
+  const platform = Math.round((amountCents * Number(data?.platformFeeBps ?? 150)) / 10000);
+  return `<tr>
+    <td>${escapeHtml(method.shortLabel)}</td>
+    <td>${fee === null ? "A confirmar" : `${escapeHtml(formatFeeLabel(method.fee))} · − ${escapeHtml(formatMoney(fee / 100))}`}</td>
+    <td>${escapeHtml(formatPlatformFee(data))} · − ${escapeHtml(formatMoney(platform / 100))}</td>
+    <td><strong>${fee === null ? `até ${escapeHtml(formatMoney((amountCents - platform) / 100))}` : escapeHtml(formatMoney((amountCents - fee - platform) / 100))}</strong></td>
+  </tr>`;
+};
 
 const loadPaymentSettings = async () => {
   paymentSettingsState.loading = true;
@@ -10596,7 +10609,7 @@ const renderPaymentSettingsBody = () => {
             <input type="checkbox" data-pay-method="${escapeHtml(method.id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
             <span class="gx-pay-method-text">
               <strong>${escapeHtml(method.label)}</strong>
-              <small>${method.availableOnPlatform ? `Taxa por venda: ${escapeHtml(formatFeeLabel(method.fee))}` : "Em breve na sua região"}</small>
+              <small>${method.availableOnPlatform ? `Taxa da operadora: ${escapeHtml(formatFeeLabel(method.fee))} · Taxa INOVAS: ${escapeHtml(formatPlatformFee(data))}` : "Em breve na sua região"}</small>
             </span>
             <span class="gx-pay-switch" aria-hidden="true"></span>
           </label>`;
@@ -10611,24 +10624,18 @@ const renderPaymentSettingsBody = () => {
 
   const feesCard = gxSetCard(
     "Taxas e quanto você recebe",
-    "A taxa é a cobrada pela operadora do pagamento (Stone), sem acréscimo da INOVAS. A INOVAS cobra só a mensalidade.",
+    `Em cada venda online saem a taxa da operadora do pagamento (Stone) e a taxa INOVAS de ${formatPlatformFee(data)}. Tudo aparece separado no extrato semanal.`,
     `<label class="gx-set-field">
       <span class="gx-set-field-label">Simular um pedido de</span>
       <span class="gx-set-input has-prefix"><i>R$</i><input type="text" inputmode="decimal" data-pay-simulate value="${escapeHtml((simulate / 100).toFixed(2).replace(".", ","))}" /></span>
     </label>
     <table class="gx-pay-fees">
-      <thead><tr><th>Forma</th><th>Taxa</th><th>Desconto</th><th>Você recebe</th></tr></thead>
+      <thead><tr><th>Forma</th><th>Taxa operadora</th><th>Taxa INOVAS</th><th>Você recebe</th></tr></thead>
       <tbody>
         ${data.methods
           .filter((method) => method.availableOnPlatform)
           .map((method) => {
-            const fee = feeCentsFor(method.fee, simulate);
-            return `<tr>
-              <td>${escapeHtml(method.shortLabel)}</td>
-              <td>${escapeHtml(formatFeeLabel(method.fee))}</td>
-              <td>${fee === null ? "—" : `− ${escapeHtml(formatMoney(fee / 100))}`}</td>
-              <td><strong>${fee === null ? "A confirmar" : escapeHtml(formatMoney((simulate - fee) / 100))}</strong></td>
-            </tr>`;
+            return renderFeeRow(method, simulate, data);
           })
           .join("")}
       </tbody>
@@ -10636,8 +10643,10 @@ const renderPaymentSettingsBody = () => {
     <p class="gx-pay-muted">${escapeHtml(data.payoutSchedule?.description || "")} O extrato detalhado fica em Financeiro.</p>`
   );
 
+  // O que já foi digitado sobrevive se a tela redesenhar (ex.: fim do carregamento).
+  const draft = paymentSettingsState.bankDraft;
   const bankField = (label, field, value = "", attrs = "") =>
-    `<label class="gx-set-field"><span class="gx-set-field-label">${escapeHtml(label)}</span><span class="gx-set-input"><input data-pay-field="${field}" value="${escapeHtml(value)}" ${attrs} ${busy ? "disabled" : ""} /></span></label>`;
+    `<label class="gx-set-field"><span class="gx-set-field-label">${escapeHtml(label)}</span><span class="gx-set-input"><input data-pay-field="${field}" value="${escapeHtml(draft[field] ?? value)}" ${attrs} ${busy ? "disabled" : ""} /></span></label>`;
   const bankCard = gxSetCard(
     "Conta bancária para os repasses",
     "Obrigatória. É para essa conta que vai o valor das vendas online, toda semana. Deve estar no nome do restaurante (CNPJ) ou do dono (CPF).",
@@ -10651,8 +10660,8 @@ const renderPaymentSettingsBody = () => {
             <label class="gx-set-field"><span class="gx-set-field-label">Banco</span><span class="gx-set-input">
               <select data-pay-field="bankCode" ${busy ? "disabled" : ""}>
                 <option value="">Selecione o banco</option>
-                ${PAYMENT_BANKS.map(([code, name]) => `<option value="${code}">${code} · ${escapeHtml(name)}</option>`).join("")}
-                <option value="other">Outro banco (digitar código)</option>
+                ${PAYMENT_BANKS.map(([code, name]) => `<option value="${code}" ${draft.bankCode === code ? "selected" : ""}>${code} · ${escapeHtml(name)}</option>`).join("")}
+                <option value="other" ${draft.bankCode === "other" ? "selected" : ""}>Outro banco (digitar código)</option>
               </select></span></label>
             ${bankField("Código do banco (se outro)", "bankCodeOther", "", 'inputmode="numeric" maxlength="3" placeholder="ex.: 403"')}
             ${bankField("Agência (sem dígito)", "branchNumber", "", 'inputmode="numeric" maxlength="4"')}
@@ -10660,7 +10669,7 @@ const renderPaymentSettingsBody = () => {
             ${bankField("Conta", "accountNumber", "", 'inputmode="numeric" maxlength="13"')}
             ${bankField("Dígito da conta", "accountCheckDigit", "", 'maxlength="2"')}
             <label class="gx-set-field"><span class="gx-set-field-label">Tipo de conta</span><span class="gx-set-input">
-              <select data-pay-field="accountType" ${busy ? "disabled" : ""}><option value="checking">Conta corrente</option><option value="savings">Poupança</option></select>
+              <select data-pay-field="accountType" ${busy ? "disabled" : ""}><option value="checking">Conta corrente</option><option value="savings" ${draft.accountType === "savings" ? "selected" : ""}>Poupança</option></select>
             </span></label>
           </div>
           <div class="gx-pay-actions">
@@ -10700,6 +10709,7 @@ const savePaymentSettingsRequest = async (body, successMessage) => {
     paymentSettingsState.message = successMessage;
     paymentSettingsState.tone = "success";
     paymentSettingsState.editingBank = false;
+    if (body.bankAccount) paymentSettingsState.bankDraft = {};
   } catch (error) {
     paymentSettingsState.message = error.message || "Não foi possível salvar.";
     paymentSettingsState.tone = "error";
@@ -10748,6 +10758,13 @@ document.addEventListener("click", (event) => {
   }
 });
 
+const rememberBankDraft = (event) => {
+  const field = event.target.closest?.("[data-pay-field]");
+  if (field) paymentSettingsState.bankDraft[field.dataset.payField] = field.value;
+};
+document.addEventListener("input", rememberBankDraft);
+document.addEventListener("change", rememberBankDraft);
+
 document.addEventListener("input", (event) => {
   const input = event.target.closest?.("[data-pay-simulate]");
   if (!input) return;
@@ -10760,8 +10777,7 @@ document.addEventListener("input", (event) => {
   table.innerHTML = data.methods
     .filter((method) => method.availableOnPlatform)
     .map((method) => {
-      const fee = feeCentsFor(method.fee, cents);
-      return `<tr><td>${escapeHtml(method.shortLabel)}</td><td>${escapeHtml(formatFeeLabel(method.fee))}</td><td>${fee === null ? "—" : `− ${escapeHtml(formatMoney(fee / 100))}`}</td><td><strong>${fee === null ? "A confirmar" : escapeHtml(formatMoney((cents - fee) / 100))}</strong></td></tr>`;
+      return renderFeeRow(method, cents, data);
     })
     .join("");
 });

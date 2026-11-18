@@ -8,6 +8,7 @@
   const ICONS = Object.freeze({
     overview: "M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z",
     restaurants: "M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z M5 13v8h14v-8",
+    billing: "M2 7h20v12H2z M2 11h20 M6 15h4",
     support: "M4 14v-2a8 8 0 0116 0v2 M4 14h3v5H5a1 1 0 01-1-1v-4z M20 14h-3v5h2a1 1 0 001-1v-4z",
     audit: "M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8l-5-5z M14 3v5h5 M8 13h8 M8 17h6",
     users: "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M22 21v-2a4 4 0 00-3-3.9 M16 3.1a4 4 0 010 7.8",
@@ -26,6 +27,7 @@
   const NAVIGATION = Object.freeze([
     { key: "overview", group: "Plataforma", label: "Visão geral", short: "Início", href: "/system", permission: "system.dashboard.view", mobile: true },
     { key: "restaurants", group: "Plataforma", label: "Restaurantes", short: "Restaurantes", href: "/system#restaurants", permission: "system.restaurants.view", mobile: true },
+    { key: "billing", group: "Plataforma", label: "Mensalidades e repasses", short: "Mensalidades", href: "/system#billing", permission: "system.billing.view", mobile: false },
     { key: "support", group: "Comercial", label: "Suporte", short: "Suporte", href: "/system#support", permission: "system.support.start", mobile: true },
     { key: "users", group: "Equipe INOVAS", label: "Usuários INOVAS", short: "Equipe", href: "/system/users", permission: "system.users.view", mobile: false },
     { key: "roles", group: "Equipe INOVAS", label: "Perfis e permissões", short: "Perfis", href: "/system/roles", permission: "system.roles.view", mobile: false },

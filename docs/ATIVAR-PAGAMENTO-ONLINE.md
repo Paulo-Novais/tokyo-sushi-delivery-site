@@ -42,6 +42,8 @@ ambiente de testes (sandbox). Anote as taxas de cada forma.
 | `PAGARME_WEBHOOK_TOKEN` | uma senha longa inventada (20+ letras e números) |
 | `CRON_SECRET` | outra senha longa inventada (repasse de quarta-feira) |
 | `PAGARME_CHECKOUT_METHODS` | `credit_card,debit_card,pix,voucher` (tire o que a Pagar.me não liberar) |
+| `PAGARME_PLATFORM_RECIPIENT_ID` | código do recebedor da própria INOVAS na Pagar.me (`re_...`): a taxa INOVAS de 1,5% cai direto nele em cada venda |
+| `INOVAS_PLATFORM_FEE_BPS` | opcional: taxa INOVAS em centésimos de % (padrão `150` = 1,5%) |
 | `INOVAS_PAYMENT_FEE_ESTIMATES` | taxas do contrato, ex.: `{"pix":{"percentBps":99},"credit_card":{"percentBps":349},"debit_card":{"percentBps":149},"meal_voucher":{"percentBps":600}}` (99 = 0,99%) |
 
 Depois de salvar: Deployments → último → **Redeploy**.
@@ -51,6 +53,20 @@ Depois de salvar: Deployments → último → **Redeploy**.
 URL: `https://inovasfood.com.br/api/payments/webhook?token=` + o mesmo valor
 de `PAGARME_WEBHOOK_TOKEN`. Eventos: `order.paid`, `order.payment_failed`,
 `order.canceled`, `charge.paid`, `charge.refunded`.
+
+## 4.1 Taxas e mensalidade (como o restaurante é cobrado)
+
+- Em cada venda online saem: a taxa da operadora (Pix, crédito, débito,
+  VR/VA) e a **taxa INOVAS de 1,5%**. Tudo aparece separado no extrato e
+  é descontado no repasse de quarta-feira. Pedido devolvido: a taxa INOVAS
+  volta para o restaurante (a da operadora, não).
+- Mensalidade: cobrada pela rotina no início de cada ciclo do contrato —
+  Mensal; Trimestral (R$ 15 de desconto no total); Semestral (R$ 30);
+  Anual (8%). O ciclo é escolhido no painel INOVAS > Mensalidades e repasses.
+- Quem não usa pagamento online paga a mensalidade por fora; a INOVAS
+  registra o pagamento no mesmo painel (botão "Registrar pagamento").
+- Contador: com a taxa de 1,5%, a INOVAS passa a ter receita de comissão
+  (intermediação) além da mensalidade. Confirme CNAE e tributação.
 
 ## 5. Cada restaurante (atuais e novos)
 

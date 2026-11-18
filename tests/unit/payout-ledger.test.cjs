@@ -128,3 +128,39 @@ test("formas de pagamento online e taxa estimada só com configuração", () => 
     else process.env.INOVAS_PAYMENT_FEE_ESTIMATES = saved;
   }
 });
+
+test("taxa INOVAS (1,5%): linha própria, por pedido e descontada do repasse", () => {
+  const { computePlatformFeeCents } = require("../../lib/payout-ledger.cjs");
+  assert.equal(computePlatformFeeCents(10000), 150);
+  assert.equal(computePlatformFeeCents(5850), 88);
+  const statement = buildWeeklyStatement({
+    period,
+    entries: [
+      { type: "SALE", method: "credit_card", amountCents: 10000, orderId: "o9", occurredAt: at(16) },
+      { type: "PROCESSING_FEE", method: "credit_card", amountCents: 349, orderId: "o9", occurredAt: at(16) },
+      { type: "PLATFORM_FEE", amountCents: 150, orderId: "o9", occurredAt: at(16) },
+    ],
+  });
+  assert.equal(statement.totals.platformFeesCents, 150);
+  assert.equal(statement.netCents, 10000 - 349 - 150);
+  assert.ok(statement.lines.some((line) => line.label === "Taxa INOVAS (1,5% das vendas online)" && line.amountCents === -150));
+  assert.equal(statement.orders[0].platformFeeCents, 150);
+  assert.equal(statement.orders[0].netCents, 9501);
+});
+
+test("divisão na Stone: taxa INOVAS vai direto para o recebedor da INOVAS", () => {
+  const { buildSplit } = require("../../lib/payment-provider.cjs");
+  const saved = process.env.PAGARME_PLATFORM_RECIPIENT_ID;
+  try {
+    delete process.env.PAGARME_PLATFORM_RECIPIENT_ID;
+    assert.deepEqual(buildSplit({ amountCents: 10000, recipientId: "re_rest", platformFeeCents: 150 }).map((rule) => [rule.recipient_id, rule.type, rule.amount]), [["re_rest", "percentage", 100]]);
+    process.env.PAGARME_PLATFORM_RECIPIENT_ID = "re_inovas";
+    const split = buildSplit({ amountCents: 10000, recipientId: "re_rest", platformFeeCents: 150 });
+    assert.deepEqual(split.map((rule) => [rule.recipient_id, rule.type, rule.amount]), [["re_rest", "flat", 9850], ["re_inovas", "flat", 150]]);
+    assert.equal(split[0].options.charge_processing_fee, true);
+    assert.equal(split[1].options.charge_processing_fee, false);
+  } finally {
+    if (saved === undefined) delete process.env.PAGARME_PLATFORM_RECIPIENT_ID;
+    else process.env.PAGARME_PLATFORM_RECIPIENT_ID = saved;
+  }
+});

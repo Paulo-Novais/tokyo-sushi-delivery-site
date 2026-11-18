@@ -94,8 +94,10 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   const statement = (await (await owner.api.get("/api/admin/payouts/statement")).json()).statement;
   expect(statement.totals.grossSalesCents).toBe(5850);
   expect(statement.totals.feesCents).toBe(58);
+  expect(statement.totals.platformFeesCents).toBe(88);
+  expect(statement.netCents).toBe(5850 - 58 - 88);
   expect(statement.lines.map((line) => line.label)).toEqual(
-    expect.arrayContaining(["Vendas Pix (1 pedido)", "Taxa Pix"])
+    expect.arrayContaining(["Vendas Pix (1 pedido)", "Taxa Pix", "Taxa INOVAS (1,5% das vendas online)"])
   );
 
   // Tela de volta do cliente: banner de aprovado.
@@ -114,6 +116,9 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
   expect(cancelBody.onlineRefund).toMatchObject({ refunded: true });
   const afterRefund = (await (await owner.api.get("/api/admin/payouts/statement")).json()).statement;
   expect(afterRefund.totals.refundsCents).toBe(5850);
+  // Taxa INOVAS devolvida; só a taxa da operadora fica.
+  expect(afterRefund.totals.creditsCents).toBe(88);
+  expect(afterRefund.netCents).toBe(-58);
   expect((await (await site.get(`/api/payments/status?payment=${checkout.paymentId}`)).json()).status).toBe("REFUNDED");
 
   // VR/VA recusado: nenhum pedido criado.

@@ -55,3 +55,24 @@ test("rotina: fecha a semana anterior, transfere e não repete a transferência"
   const statement = await payouts.getWeeklyStatement(options, { weekKey: "2026-11-16" });
   assert.equal(statement.status, "PAID");
 });
+
+test("mensalidade: lançada uma vez por mês, só com contrato ativo", async () => {
+  const { chargeMonthlySubscription } = require(path.join(workspaceRoot, "lib/payout-runner.cjs"));
+  const tenantContext = buildTenantContext(
+    { host: "runner-b.local", restaurantKey: "runner-b", restaurantName: "B", matched: true, resolutionMode: "local-validation", multiRestaurantActive: true },
+    { source: "test:runner" }
+  );
+  const options = { tenantContext };
+  const account = { restaurantKey: "runner-b" };
+  const active = async () => ({ status: "ACTIVE", planName: "Profissional", monthlyValue: 199 });
+  const now = new Date("2026-12-02T12:07:00Z");
+  assert.equal(await chargeMonthlySubscription(account, options, now, { getBilling: active }), 19900);
+  assert.equal(await chargeMonthlySubscription(account, options, new Date("2026-12-09T12:07:00Z"), { getBilling: active }), null);
+  assert.equal(
+    await chargeMonthlySubscription(account, options, new Date("2027-01-06T12:07:00Z"), { getBilling: async () => ({ status: "TRIAL", monthlyValue: 199 }) }),
+    null
+  );
+  const statement = await payouts.getWeeklyStatement(options, { weekKey: "2026-11-30" });
+  assert.deepEqual(statement.lines.map((line) => line.label), ["Mensalidade INOVAS · Dezembro/2026 · Plano Profissional"]);
+  assert.equal(statement.netCents, -19900);
+});

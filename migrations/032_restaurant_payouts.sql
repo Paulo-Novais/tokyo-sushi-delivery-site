@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS restaurant_ledger_entries (
   restaurant_id TEXT NOT NULL,
   restaurant_key TEXT NOT NULL,
   entry_type TEXT NOT NULL CHECK (entry_type IN (
-    'SALE', 'PROCESSING_FEE', 'REFUND', 'CHARGEBACK', 'SUBSCRIPTION', 'DEBT', 'CREDIT'
+    'SALE', 'PROCESSING_FEE', 'PLATFORM_FEE', 'REFUND', 'CHARGEBACK', 'SUBSCRIPTION', 'DEBT', 'CREDIT'
   )),
   payment_method TEXT NOT NULL DEFAULT '' CHECK (char_length(payment_method) <= 40),
   amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),

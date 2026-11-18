@@ -3356,3 +3356,36 @@ dialog.sys-dialog {
 .sys-page-actions + .sys-toolbar {
   margin-top: 16px;
 }
+
+/* Pagamentos e repasses (detalhe do restaurante) */
+.sys-pay-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+.sys-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.sys-pay-grid label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+.sys-pay-grid .is-wide {
+  grid-column: 1 / -1;
+}
+.sys-pay-form button {
+  justify-self: start;
+}
+
+.sys-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 12px;
+}

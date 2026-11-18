@@ -16,6 +16,7 @@
   const ROUTES = Object.freeze({
     overview: { key: "overview", label: "Visão geral", permission: "system.dashboard.view", endpoint: "/api/system/overview" },
     restaurants: { key: "restaurants", label: "Restaurantes", permission: "system.restaurants.view", endpoint: "/api/system/restaurants" },
+    billing: { key: "billing", label: "Mensalidades e repasses", permission: "system.billing.view", endpoint: "/api/system/billing" },
     support: { key: "support", label: "Suporte", permission: "system.support.start", endpoint: "/api/system/support" },
     audit: { key: "audit", label: "Auditoria", permission: "system.audit.view", endpoint: "/api/system/audit" },
   });
@@ -629,6 +630,301 @@
     }
   };
 
+  // ---------- Pagamentos e repasses do restaurante (pagamento online) ----------
+  const sysPayments = { byKey: {}, loading: {} };
+  const PAY_STATUS = {
+    NOT_SUBMITTED: ["Conta bancária não cadastrada", "crit"],
+    PENDING: ["Conta em análise", "warn"],
+    ACTIVE: ["Conta ativa", "ok"],
+    REFUSED: ["Conta recusada", "crit"],
+  };
+  const PAYOUT_STATUS = {
+    SCHEDULED: ["Agendado", "warn"],
+    NOTHING_TO_PAY: ["Nada a repassar", "neutral"],
+    PAID: ["Pago", "ok"],
+    FAILED: ["Falhou", "crit"],
+  };
+  const brl = (cents) => (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const dayLabel = (iso) => {
+    const date = new Date(`${String(iso).slice(0, 10)}T12:00:00-03:00`);
+    return Number.isFinite(date.getTime()) ? date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "";
+  };
+
+  const loadSysPayments = async (key) => {
+    if (!key || sysPayments.loading[key]) return;
+    sysPayments.loading[key] = true;
+    try {
+      const [account, payouts] = await Promise.all([
+        requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/payment-account`),
+        requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/payouts`),
+      ]);
+      sysPayments.byKey[key] = { account: account.data || {}, payouts: payouts.data || {}, error: "" };
+    } catch (error) {
+      sysPayments.byKey[key] = {
+        error: error.code === "payouts_not_configured" || error.code === "online_payment_disabled"
+          ? "Pagamento online ainda não ativado (falta aplicar as atualizações do banco)."
+          : error.message,
+      };
+    } finally {
+      sysPayments.loading[key] = false;
+      const slot = document.querySelector(`[data-sys-payments="${CSS.escape(key)}"]`);
+      if (slot) slot.innerHTML = renderSysPayments(key);
+    }
+  };
+
+  const renderSysPayments = (key) => {
+    const entry = sysPayments.byKey[key];
+    if (!entry) {
+      void loadSysPayments(key);
+      return '<h3 class="sys-subhead">Pagamentos e repasses</h3><p class="sys-hint">Carregando…</p>';
+    }
+    if (entry.error) {
+      return `<h3 class="sys-subhead">Pagamentos e repasses</h3><p class="sys-hint">${escapeHtml(entry.error)}</p>`;
+    }
+    const settings = entry.account.settings || {};
+    const [accountLabel, accountTone] = PAY_STATUS[settings.status] || PAY_STATUS.NOT_SUBMITTED;
+    const methods = (settings.methods || []).filter((method) => (settings.enabledMethods || []).includes(method.id));
+    const statement = entry.payouts.statement || {};
+    const payouts = (entry.payouts.payouts || []).slice(0, 6);
+    const canManage = hasPermission("system.billing.manage");
+    const bank = settings.bankAccount;
+    return `
+      <h3 class="sys-subhead">Pagamentos e repasses</h3>
+      <dl class="sys-facts">
+        <div class="sys-fact"><span>Conta de recebimento</span>${statusPill(accountLabel, accountTone, { dot: false })}</div>
+        <div class="sys-fact"><span>Conta bancária</span><strong>${bank ? `${escapeHtml(bank.holderName)}<br><small class="sys-hint">${escapeHtml(bank.holderDocument)} · banco ${escapeHtml(bank.bankCode)} · ag. ${escapeHtml(bank.branch)} · conta ${escapeHtml(bank.account)}</small>` : "Não cadastrada"}</strong></div>
+        <div class="sys-fact"><span>Formas online ativas</span><strong>${methods.length ? escapeHtml(methods.map((method) => method.shortLabel).join(", ")) : "Nenhuma"}</strong></div>
+        <div class="sys-fact"><span>Código do recebedor</span><strong>${escapeHtml(entry.account.recipientId || "—")}</strong></div>
+        <div class="sys-fact"><span>Semana atual (até agora)</span><strong>${escapeHtml(brl(statement.netCents))}${Number(statement.carryOverCents || 0) < 0 ? ' <small class="sys-hint">(saldo devedor)</small>' : ""}</strong></div>
+      </dl>
+      <div class="sys-table-wrap"><table class="sys-table" aria-label="Repasses"><thead><tr><th>Semana</th><th>Repasse</th><th>Valor</th><th>Situação</th><th></th></tr></thead><tbody>
+        ${payouts.length
+          ? payouts
+              .map((payout) => {
+                const [label, tone] = PAYOUT_STATUS[payout.status] || [payout.status, "neutral"];
+                return `<tr><td>${escapeHtml(dayLabel(payout.weekKey))}</td><td>${escapeHtml(dayLabel(payout.payoutDate))}</td><td>${escapeHtml(brl(payout.payoutCents))}</td><td>${statusPill(label, tone, { dot: false })}</td><td>${
+                  payout.status === "FAILED" && canManage
+                    ? `<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-sys-pay-retry="${escapeHtml(key)}" data-week="${escapeHtml(payout.weekKey)}">Tentar de novo</button>`
+                    : ""
+                }</td></tr>`;
+              })
+              .join("")
+          : '<tr><td colspan="5">Nenhum repasse fechado ainda.</td></tr>'}
+      </tbody></table></div>
+      ${canManage
+        ? `<form class="sys-pay-form" data-sys-pay-entry="${escapeHtml(key)}">
+            <strong>Lançar no extrato do restaurante</strong>
+            <div class="sys-pay-grid">
+              <label><span>Tipo</span><select class="sys-select" name="type"><option value="DEBT">Débito (desconta do repasse)</option><option value="CREDIT">Crédito (soma no repasse)</option><option value="SUBSCRIPTION">Mensalidade</option></select></label>
+              <label><span>Valor (R$)</span><input class="sys-input" name="amount" inputmode="decimal" placeholder="0,00" required /></label>
+              <label class="is-wide"><span>Descrição (aparece para o restaurante)</span><input class="sys-input" name="description" maxlength="120" placeholder="Ex.: Taxa de adesão (1/3)" required /></label>
+            </div>
+            <button class="sys-btn sys-btn-primary sys-btn-sm" type="submit">Lançar</button>
+          </form>
+          <form class="sys-pay-form" data-sys-pay-recipient="${escapeHtml(key)}">
+            <strong>Vincular recebedor da Stone/Pagar.me</strong>
+            <p class="sys-hint">Use quando o cadastro ficar "em análise" e for concluído no painel da Pagar.me.</p>
+            <div class="sys-pay-grid"><label class="is-wide"><span>Código do recebedor (re_...)</span><input class="sys-input" name="recipientId" value="${escapeHtml(entry.account.recipientId || "")}" /></label></div>
+            <button class="sys-btn sys-btn-secondary sys-btn-sm" type="submit">Salvar recebedor</button>
+          </form>`
+        : ""}`;
+  };
+
+  const refreshSysPayments = (key) => {
+    delete sysPayments.byKey[key];
+    const slot = document.querySelector(`[data-sys-payments="${CSS.escape(key)}"]`);
+    if (slot) slot.innerHTML = renderSysPayments(key);
+  };
+
+  document.addEventListener("submit", async (event) => {
+    const entryForm = event.target.closest("[data-sys-pay-entry]");
+    const recipientForm = event.target.closest("[data-sys-pay-recipient]");
+    if (!entryForm && !recipientForm) return;
+    event.preventDefault();
+    const form = entryForm || recipientForm;
+    const key = entryForm ? entryForm.dataset.sysPayEntry : recipientForm.dataset.sysPayRecipient;
+    const data = new FormData(form);
+    try {
+      if (entryForm) {
+        const amountCents = Math.round(Number(String(data.get("amount") || "").replace(/\./g, "").replace(",", ".")) * 100);
+        if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error("Informe um valor maior que zero.");
+        await requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/ledger`, {
+          method: "POST",
+          body: JSON.stringify({
+            type: data.get("type"),
+            amountCents,
+            description: String(data.get("description") || "").trim(),
+            idempotencyKey: `painel:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`,
+          }),
+        });
+        notify("Lançamento feito. Aparece no extrato do restaurante.");
+      } else {
+        await requestJson(`/api/system/restaurants/${encodeURIComponent(key)}/payment-account`, {
+          method: "POST",
+          body: JSON.stringify({ recipientId: String(data.get("recipientId") || "").trim() }),
+        });
+        notify("Recebedor salvo.");
+      }
+      refreshSysPayments(key);
+    } catch (error) {
+      notify(error.message || "Não foi possível salvar.");
+    }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const retry = event.target.closest("[data-sys-pay-retry]");
+    if (!retry) return;
+    retry.disabled = true;
+    try {
+      const result = await requestJson(`/api/system/restaurants/${encodeURIComponent(retry.dataset.sysPayRetry)}/payouts`, {
+        method: "POST",
+        body: JSON.stringify({ action: "retry", weekKey: retry.dataset.week }),
+      });
+      notify(result.data?.status === "PAID" ? "Repasse pago." : "O repasse falhou de novo. Confira a conta bancária do restaurante.");
+    } catch (error) {
+      notify(error.message || "Não foi possível tentar de novo.");
+    }
+    refreshSysPayments(retry.dataset.sysPayRetry);
+  });
+
+  // ---------- Mensalidades e repasses (todos os restaurantes) ----------
+  const BILLING_SITUATION = {
+    PAID_UP: ["Em dia", "ok"],
+    DUE: ["A vencer", "warn"],
+    OVERDUE: ["Em atraso", "crit"],
+    CONTRACT_TRIAL: ["Em teste", "neutral"],
+    CONTRACT_BLOCKED: ["Bloqueado", "crit"],
+    CONTRACT_CANCELED: ["Cancelado", "neutral"],
+    CONTRACT_EXPIRED: ["Contrato vencido", "crit"],
+  };
+  const billingFilter = { value: "" };
+  const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");
+
+  const renderBillingRows = (data) => {
+    const rows = (data.restaurants || []).filter((row) => !billingFilter.value || row.situation === billingFilter.value);
+    const canManage = hasPermission("system.billing.manage");
+    if (!rows.length) return renderEmpty("Nenhum restaurante neste filtro", "Troque o filtro para ver os demais.");
+    const canPlan = hasPermission("system.plans.manage");
+    const cycleOption = (row, key, label) => {
+      const monthly = row.monthlyValueCents;
+      const months = { MONTHLY: 1, QUARTERLY: 3, SEMIANNUAL: 6, ANNUAL: 12 }[key];
+      const gross = monthly * months;
+      const discount = key === "ANNUAL" ? Math.round(gross * 0.08) : key === "MONTHLY" ? 0 : 500 * months;
+      return `<option value="${key}" ${row.billingCycle === key ? "selected" : ""}>${label} · ${brl(gross - discount)}${discount ? ` (−${brl(discount)})` : ""}</option>`;
+    };
+    return `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Mensalidades"><thead><tr><th>Restaurante</th><th>Plano</th><th>Mensalidade</th><th>Ciclo de cobrança</th><th>Situação</th><th>Devendo</th><th>Última cobrança</th><th>Último pagamento</th><th></th></tr></thead><tbody>
+      ${rows
+        .map((row) => {
+          const [label, tone] = BILLING_SITUATION[row.situation] || [row.situation, "neutral"];
+          return `<tr data-billing-row="${escapeHtml(row.restaurantKey)}">
+            <td data-label="Restaurante"><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.restaurantKey)}${row.onlinePayment ? " · pagamento online" : ""}</small></td>
+            <td data-label="Plano">${escapeHtml(translatePlan(row.plan))}</td>
+            <td data-label="Mensalidade">${escapeHtml(brl(row.monthlyValueCents))}</td>
+            <td data-label="Ciclo de cobrança">${
+              canPlan
+                ? `<select class="sys-select" data-billing-cycle="${escapeHtml(row.restaurantKey)}" aria-label="Ciclo de cobrança de ${escapeHtml(row.name)}">${cycleOption(row, "MONTHLY", "Mensal")}${cycleOption(row, "QUARTERLY", "Trimestral")}${cycleOption(row, "SEMIANNUAL", "Semestral")}${cycleOption(row, "ANNUAL", "Anual")}</select>`
+                : `${escapeHtml(row.cycleCharge?.label || "Mensal")} · ${escapeHtml(brl(row.cycleCharge?.totalCents))}`
+            }</td>
+            <td data-label="Situação">${statusPill(label, tone, { dot: false })}</td>
+            <td data-label="Devendo"><strong>${row.owedCents ? escapeHtml(brl(row.owedCents)) : "—"}</strong>${row.owedCents && row.onlinePayment ? '<small class="sys-hint">desconta do repasse</small>' : ""}</td>
+            <td data-label="Última cobrança">${escapeHtml(formatDate(row.lastChargeAt))}</td>
+            <td data-label="Último pagamento">${escapeHtml(formatDate(row.lastPaymentAt))}</td>
+            <td>${
+              canManage && row.owedCents
+                ? `<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-pay="${escapeHtml(row.restaurantKey)}" data-owed="${row.owedCents}">Registrar pagamento</button>`
+                : ""
+            }</td>
+          </tr>`;
+        })
+        .join("")}
+    </tbody></table></div>`;
+  };
+
+  const renderBilling = (data) => {
+    const summary = data.summary || {};
+    app.innerHTML = `
+      ${renderHead({
+        eyebrow: "Plataforma",
+        title: "Mensalidades e repasses",
+        description: "Quem está em dia e quem está em atraso com a mensalidade INOVAS. Quem usa pagamento online tem a mensalidade descontada do repasse semanal; os demais pagam por fora e o pagamento é registrado aqui.",
+      })}
+      ${data.ledgerAvailable === false ? `<div class="sys-note">${icon("warning", 18)}<span>O extrato ainda não está ativo no banco (faltam as atualizações 032–034). Os valores devidos aparecem depois disso.</span></div>` : ""}
+      <section class="sys-kpis">
+        <article class="sys-kpi"><span>Em dia</span><strong>${escapeHtml(String(summary.paidUp ?? 0))}</strong><small>de ${escapeHtml(String(summary.total ?? 0))} restaurantes</small></article>
+        <article class="sys-kpi"><span>Em atraso</span><strong>${escapeHtml(String(summary.overdue ?? 0))}</strong><small>${escapeHtml(String(summary.due ?? 0))} a vencer</small></article>
+        <article class="sys-kpi"><span>Total devido</span><strong>${escapeHtml(brl(summary.owedCents))}</strong><small>somando todos</small></article>
+        <article class="sys-kpi"><span>Receita mensal</span><strong>${escapeHtml(brl(summary.monthlyRevenueCents))}</strong><small>contratos ativos</small></article>
+      </section>
+      <div class="sys-filters" role="group" aria-label="Filtrar por situação">
+        ${[["", "Todos"], ["OVERDUE", "Em atraso"], ["DUE", "A vencer"], ["PAID_UP", "Em dia"]]
+          .map(([value, label]) => `<button type="button" class="sys-btn sys-btn-sm ${billingFilter.value === value ? "sys-btn-primary" : "sys-btn-secondary"}" data-billing-filter="${value}" aria-pressed="${billingFilter.value === value}">${label}</button>`)
+          .join("")}
+      </div>
+      <div data-billing-list>${renderBillingRows(data)}</div>`;
+  };
+
+  // Ciclo de cobrança: mensal, trimestral (−R$ 15), semestral (−R$ 30), anual (−8%).
+  document.addEventListener("change", async (event) => {
+    const select = event.target.closest("[data-billing-cycle]");
+    if (!select) return;
+    select.disabled = true;
+    try {
+      await requestJson("/api/admin/master/subscription", {
+        method: "POST",
+        body: JSON.stringify({ restaurantKey: select.dataset.billingCycle, billingCycle: select.value }),
+      }).catch(async (error) => {
+        // A rota do Gestor responde no formato antigo ({ ok }); só falha de verdade conta.
+        if (error.status && error.status >= 400) throw error;
+      });
+      notify("Ciclo de cobrança atualizado. A próxima cobrança já usa o novo valor.");
+      state.data = (await requestJson("/api/system/billing")).data;
+      renderBilling(state.data);
+    } catch (error) {
+      notify(error.message || "Não foi possível mudar o ciclo.");
+      select.disabled = false;
+    }
+  });
+
+  document.addEventListener("click", async (event) => {
+    const filter = event.target.closest("[data-billing-filter]");
+    if (filter && state.data) {
+      billingFilter.value = filter.dataset.billingFilter;
+      renderBilling(state.data);
+      return;
+    }
+    const pay = event.target.closest("[data-billing-pay]");
+    if (!pay) return;
+    const owed = Number(pay.dataset.owed || 0);
+    const typed = window.prompt(
+      `Valor recebido (R$). Devendo: ${brl(owed)}`,
+      (owed / 100).toFixed(2).replace(".", ",")
+    );
+    if (typed === null) return;
+    const amountCents = Math.round(Number(String(typed).replace(/\./g, "").replace(",", ".")) * 100);
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      notify("Valor inválido.");
+      return;
+    }
+    pay.disabled = true;
+    try {
+      await requestJson(`/api/system/restaurants/${encodeURIComponent(pay.dataset.billingPay)}/ledger`, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "CREDIT",
+          amountCents,
+          description: "Pagamento da mensalidade recebido",
+          idempotencyKey: `mensalidade-paga:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`,
+        }),
+      });
+      notify("Pagamento registrado.");
+      state.data = (await requestJson("/api/system/billing")).data;
+      renderBilling(state.data);
+    } catch (error) {
+      notify(error.message || "Não foi possível registrar.");
+      pay.disabled = false;
+    }
+  });
+
   const renderRestaurantDetail = (restaurant) => {
     if (!restaurant) {
       return `<aside class="sys-card sys-detail">${renderEmpty("Nenhum restaurante selecionado", "Clique em uma linha da lista para ver os detalhes.")}</aside>`;
@@ -668,6 +964,7 @@
             <div class="sys-fact"><span>Backup</span>${backup && !["OK", "HEALTHY", "CURRENT", "SUCCESS"].includes(backup) ? statusPill(backup === "UNKNOWN" ? "Não aferido" : "Atenção", backup === "UNKNOWN" ? "neutral" : "warn", { dot: false }) : statusPill("OK", "ok", { dot: false })}</div>
           </dl>
         </div>
+        ${hasPermission("system.billing.view") ? `<div data-sys-payments="${escapeHtml(restaurant.restaurantKey)}">${renderSysPayments(restaurant.restaurantKey)}</div>` : ""}
         <div class="sys-note">${icon("lock", 18)}<span>Pedidos, clientes e financeiro deste restaurante não aparecem aqui. Para ver, abra uma sessão de suporte; o motivo fica registrado.</span></div>
         <div class="sys-action-stack">
           ${canSupport
@@ -1088,7 +1385,7 @@
 
   /* ---------- roteamento ---------- */
 
-  const renderers = { overview: renderOverview, restaurants: renderRestaurants, support: renderSupport, audit: renderAudit };
+  const renderers = { overview: renderOverview, restaurants: renderRestaurants, billing: renderBilling, support: renderSupport, audit: renderAudit };
 
   const firstAllowedRoute = () => Object.values(ROUTES).find((route) => hasPermission(route.permission));
 
