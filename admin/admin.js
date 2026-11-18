@@ -7339,6 +7339,140 @@ const getFinanceHourly = (snapshot) => {
   return buckets.slice(first, last + 1);
 };
 
+// Repasse do pagamento online (modelo iFood): extrato da semana com tudo
+// discriminado (vendas por forma, taxas, devoluções, mensalidade, débitos) e
+// o valor que cai na conta do restaurante no dia do repasse.
+const payoutState = { week: "", statement: null, loading: false, hidden: false, error: "", showOrders: false };
+const PAYOUT_STATUS_LABEL = {
+  OPEN: ["Semana em andamento", "is-warn"],
+  SCHEDULED: ["Repasse agendado", "is-ok"],
+  NOTHING_TO_PAY: ["Nada a repassar", "is-warn"],
+  PAID: ["Repasse pago", "is-ok"],
+  FAILED: ["Falha no repasse", "is-bad"],
+};
+const payoutMoney = (cents) => formatMoney(Number(cents || 0) / 100);
+const payoutDateLabel = (isoDate, options = { day: "2-digit", month: "2-digit" }) => {
+  const date = new Date(`${String(isoDate).slice(0, 10)}T12:00:00-03:00`);
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString("pt-BR", options) : "";
+};
+const shiftPayoutWeek = (weekKey, deltaWeeks) => {
+  const date = new Date(`${weekKey}T12:00:00-03:00`);
+  date.setUTCDate(date.getUTCDate() + deltaWeeks * 7);
+  return date.toISOString().slice(0, 10);
+};
+
+const loadPayoutStatement = async (week = payoutState.week) => {
+  payoutState.loading = true;
+  try {
+    const query = week ? `?week=${encodeURIComponent(week)}` : "";
+    const payload = await fetchJson(`/api/admin/payouts/statement${query}`);
+    payoutState.statement = payload.statement || null;
+    payoutState.week = payload.statement?.period?.weekKey || week;
+    // Restaurante que ainda não usa pagamento online: Financeiro fica como antes.
+    // (só na primeira carga: navegar para uma semana vazia não esconde o bloco).
+    if (!week) payoutState.hidden = payload.hasActivity === false;
+    payoutState.error = "";
+  } catch (error) {
+    // Pagamento online ainda não ativado (ou sem permissão): bloco escondido.
+    if (["payouts_not_configured", "admin_permission_denied"].includes(error.errorCode) || error.status === 403) {
+      payoutState.hidden = true;
+    } else {
+      payoutState.error = error.message || "Não foi possível carregar o repasse.";
+    }
+  } finally {
+    payoutState.loading = false;
+    if (adminState.activeSection === "finance") renderPayoutInto();
+  }
+};
+
+const renderPayoutBlock = () => {
+  if (payoutState.hidden) return "";
+  const statement = payoutState.statement;
+  if (!statement) {
+    return `<section class="gx-payout" data-admin-payout aria-label="Repasse do pagamento online">
+      <div class="gx-payout-head"><h2>Repasse do pagamento online</h2></div>
+      <p class="gx-fin-muted">${escapeHtml(payoutState.error || "Carregando o extrato…")}</p>
+    </section>`;
+  }
+  const period = statement.period || {};
+  const [statusLabel, statusTone] = PAYOUT_STATUS_LABEL[statement.status] || PAYOUT_STATUS_LABEL.OPEN;
+  const lines = Array.isArray(statement.lines) ? statement.lines : [];
+  const orders = Array.isArray(statement.orders) ? statement.orders : [];
+  const carry = Number(statement.carryOverCents || 0);
+  const isCurrent = statement.status === "OPEN";
+  const amountLine = (cents) =>
+    `<span class="${cents < 0 ? "gx-fin-bad" : ""}">${cents < 0 ? "− " : ""}${escapeHtml(payoutMoney(Math.abs(cents)))}</span>`;
+  return `<section class="gx-payout" data-admin-payout aria-label="Repasse do pagamento online">
+    <div class="gx-payout-head">
+      <div>
+        <h2>Repasse do pagamento online</h2>
+        <p class="gx-fin-muted">Semana ${escapeHtml(payoutDateLabel(period.weekKey))} a ${escapeHtml(payoutDateLabel(period.lastDay))} · repasse em ${escapeHtml(payoutDateLabel(period.payoutDate, { weekday: "long", day: "2-digit", month: "2-digit" }))}</p>
+      </div>
+      <div class="gx-payout-nav">
+        <button type="button" class="gx-fin-chip is-ghost" data-payout-week="-1" aria-label="Semana anterior">‹</button>
+        <button type="button" class="gx-fin-chip is-ghost" data-payout-week="1" aria-label="Próxima semana">›</button>
+      </div>
+    </div>
+    <div class="gx-payout-total">
+      <span class="gx-payout-status ${statusTone}">${escapeHtml(statusLabel)}</span>
+      <strong>${escapeHtml(payoutMoney(statement.payoutCents))}</strong>
+      <span class="gx-fin-muted">${isCurrent ? "previsto até agora" : "valor do repasse"}</span>
+      ${carry < 0 ? `<span class="gx-fin-bad">Saldo devedor para a próxima semana: ${escapeHtml(payoutMoney(Math.abs(carry)))}</span>` : ""}
+    </div>
+    ${
+      lines.length
+        ? `<table class="gx-payout-lines">
+            <tbody>
+              ${lines.map((line) => `<tr><td>${escapeHtml(line.label)}</td><td>${amountLine(Number(line.amountCents || 0))}</td></tr>`).join("")}
+            </tbody>
+            <tfoot><tr><th>Total da semana</th><th>${amountLine(Number(statement.netCents || 0))}</th></tr></tfoot>
+          </table>`
+        : '<p class="gx-fin-muted">Nenhuma venda online nesta semana.</p>'
+    }
+    ${
+      orders.length
+        ? `<button type="button" class="gx-fin-chip is-ghost" data-payout-orders>${payoutState.showOrders ? "Esconder" : "Ver"} pedidos (${orders.length})</button>
+          ${
+            payoutState.showOrders
+              ? `<div class="gx-payout-orders"><table>
+                  <thead><tr><th>Pedido</th><th>Forma</th><th>Valor</th><th>Taxa</th><th>Devolução</th><th>Líquido</th></tr></thead>
+                  <tbody>${orders
+                    .map(
+                      (row) => `<tr>
+                        <td>${escapeHtml(row.orderPublicId || row.orderId || "—")}</td>
+                        <td>${escapeHtml(row.methodLabel || "")}</td>
+                        <td>${escapeHtml(payoutMoney(row.grossCents))}</td>
+                        <td>${row.feeCents ? `− ${escapeHtml(payoutMoney(row.feeCents))}` : "—"}</td>
+                        <td>${row.refundCents ? `− ${escapeHtml(payoutMoney(row.refundCents))}` : "—"}</td>
+                        <td>${amountLine(Number(row.netCents || 0))}</td>
+                      </tr>`
+                    )
+                    .join("")}</tbody>
+                </table></div>`
+              : ""
+          }`
+        : ""
+    }
+  </section>`;
+};
+
+const renderPayoutInto = () => {
+  const node = document.querySelector("[data-admin-payout-slot]");
+  if (node) node.innerHTML = renderPayoutBlock();
+};
+
+document.addEventListener("click", (event) => {
+  const weekButton = event.target.closest?.("[data-payout-week]");
+  if (weekButton && payoutState.week) {
+    void loadPayoutStatement(shiftPayoutWeek(payoutState.week, Number(weekButton.dataset.payoutWeek)));
+    return;
+  }
+  if (event.target.closest?.("[data-payout-orders]")) {
+    payoutState.showOrders = !payoutState.showOrders;
+    renderPayoutInto();
+  }
+});
+
 const renderFinanceModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
 
@@ -7415,6 +7549,7 @@ const renderFinanceModule = () => {
 
   moduleRoot.innerHTML = `
     ${header}
+    <div data-admin-payout-slot>${renderPayoutBlock()}</div>
     <section class="gx-fin-toolbar" aria-label="Período e exportações">
       <div class="gx-fin-periods" role="group" aria-label="Período">
         ${periodOptions
@@ -15094,6 +15229,7 @@ const loadFinance = async ({ silent = false } = {}) => {
     }
 
     const payload = await fetchJson(`/api/admin/finance?${query.toString()}`);
+    if (!payoutState.statement && !payoutState.loading && !payoutState.hidden) void loadPayoutStatement();
 
     adminState.financeSnapshot = payload;
     void loadFinanceCompare(payload);

@@ -6885,7 +6885,8 @@ html body.admin-body.admin-body .gx-fin-link {
 .gx-fin-bad { color: var(--gx-fin-red); font-weight: 700; }
 .gx-fin-warn { color: var(--gx-fin-amber); font-weight: 700; }
 
-.gx-fin-badge {
+.gx-fin-badge,
+.gx-payout-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -6895,7 +6896,8 @@ html body.admin-body.admin-body .gx-fin-link {
   font-weight: 700;
 }
 
-.gx-fin-badge::before {
+.gx-fin-badge::before,
+.gx-payout-status::before {
   content: "";
   width: 7px;
   height: 7px;
@@ -6903,9 +6905,9 @@ html body.admin-body.admin-body .gx-fin-link {
   background: currentColor;
 }
 
-.gx-fin-badge.is-warn { background: color-mix(in srgb, var(--gx-fin-amber) 16%, transparent); color: var(--gx-fin-amber); }
-.gx-fin-badge.is-ok { background: color-mix(in srgb, var(--gx-fin-green) 14%, transparent); color: var(--gx-fin-green); }
-.gx-fin-badge.is-bad { background: color-mix(in srgb, var(--gx-fin-red) 14%, transparent); color: var(--gx-fin-red); }
+.gx-fin-badge.is-warn, .gx-payout-status.is-warn { background: color-mix(in srgb, var(--gx-fin-amber) 16%, transparent); color: var(--gx-fin-amber); }
+.gx-fin-badge.is-ok, .gx-payout-status.is-ok { background: color-mix(in srgb, var(--gx-fin-green) 14%, transparent); color: var(--gx-fin-green); }
+.gx-fin-badge.is-bad, .gx-payout-status.is-bad { background: color-mix(in srgb, var(--gx-fin-red) 14%, transparent); color: var(--gx-fin-red); }
 
 /* Fechamento */
 .gx-fin-closing {
@@ -8618,3 +8620,72 @@ html body.admin-body.admin-body .gx-crm-campaign-list small { color: var(--gx-in
 body[data-pdv-blocked] [data-admin-detail-panel],
 body[data-pdv-blocked] [data-orders-drawer-backdrop] { display: none !important; }
 body[data-pdv-blocked] .admin-workspace { grid-template-columns: minmax(0, 1fr) !important; }
+
+/* Repasse do pagamento online (Financeiro) */
+.gx-payout {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--gx-border, #e5e7eb);
+  border-radius: 14px;
+  background: var(--gx-surface, transparent);
+}
+.gx-payout-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gx-payout-head h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+.gx-payout-head p {
+  margin: 0;
+}
+.gx-payout-nav {
+  display: flex;
+  gap: 6px;
+}
+.gx-payout-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin: 14px 0 10px;
+}
+.gx-payout-total strong {
+  font-size: 28px;
+  line-height: 1.1;
+}
+.gx-payout-lines,
+.gx-payout-orders table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.gx-payout-lines td,
+.gx-payout-lines th,
+.gx-payout-orders td,
+.gx-payout-orders th {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--gx-border, #e5e7eb);
+  text-align: left;
+}
+.gx-payout-lines td:last-child,
+.gx-payout-lines th:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+.gx-payout-lines tfoot th {
+  border-bottom: 0;
+  font-size: 15px;
+}
+.gx-payout-orders {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+.gx-payout-orders td:nth-child(n + 3),
+.gx-payout-orders th:nth-child(n + 3) {
+  text-align: right;
+  white-space: nowrap;
+}
