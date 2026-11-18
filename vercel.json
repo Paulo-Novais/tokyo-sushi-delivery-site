@@ -12,6 +12,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/payments/:path*",
+      "destination": "/api/customer/__payments/:path*"
+    },
+    {
       "source": "/robots.txt",
       "has": [
         {

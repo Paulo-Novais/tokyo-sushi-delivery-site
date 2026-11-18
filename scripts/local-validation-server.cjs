@@ -70,7 +70,7 @@ const restaurantAuthApi = require(path.join(
   "[...action].js"
 ));
 const customerApi = require(path.join(workspaceRoot, "api", "customer", "[...action].js"));
-const paymentsApi = require(path.join(workspaceRoot, "api", "payments", "[...action].js"));
+
 const catalogApi = require(path.join(workspaceRoot, "api", "catalog.js"));
 const orderCreateApi = require(path.join(workspaceRoot, "api", "orders", "create.js"));
 const whatsappCodeApi = require(path.join(workspaceRoot, "api", "auth", "send-whatsapp-code.js"));
@@ -429,7 +429,7 @@ const handleApi = async (req, res, pathname) => {
   if (pathname.startsWith("/api/support")) return runApi(supportApi, req, res);
   if (pathname.startsWith("/api/admin")) return runApi(adminApi, req, res);
   if (pathname.startsWith("/api/customer")) return runApi(customerApi, req, res);
-  if (pathname.startsWith("/api/payments")) return runApi(paymentsApi, req, res);
+  if (pathname.startsWith("/api/payments")) return runApi(customerApi, req, res);
   if (pathname === "/api/orders/create") return runApi(orderCreateApi, req, res);
   if (pathname === "/api/catalog") return runApi(catalogApi, req, res);
   if (pathname === "/api/reviews") {
