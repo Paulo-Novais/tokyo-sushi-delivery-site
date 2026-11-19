@@ -1,6 +1,6 @@
-# Aplica no banco de PRODUÇÃO (Neon) as atualizações 030 a 034:
-# caixa sem duplicar, "Gestor aberto", extrato/repasse, pagamento online e
-# permissões. Só roda à mão (Actions > Aplicar atualizações do banco > Run
+# Aplica no banco de PRODUÇÃO (Neon) as atualizações 030 a 035:
+# caixa sem duplicar, "Gestor aberto", extrato/repasse, pagamento online,
+# permissões e integrações (iFood/99Food/Keeta). Só roda à mão (Actions > Aplicar atualizações do banco > Run
 # workflow), com a confirmação digitada e o GO do Paulo.
 #
 # Precisa do segredo MIGRATION_DATABASE_URL (Settings > Secrets and variables
@@ -9,14 +9,15 @@
 #
 # Antes de rodar: crie um backup no Neon (Branches > Create branch) e deixe
 # o app do Gestor aberto no restaurante (a 031 liga a regra "Gestor aberto").
-# Para desfazer: rode os arquivos .rollback.sql de 034 a 030 no SQL Editor.
+# Para desfazer: rode os arquivos .rollback.sql de 035 a 030 no SQL Editor.
+# Todas são seguras para rodar de novo (já aplicadas não mudam nada).
 name: Aplicar atualizações do banco
 
 on:
   workflow_dispatch:
     inputs:
       confirmar:
-        description: 'Digite APLICAR-030-034 para confirmar (banco de PRODUÇÃO)'
+        description: 'Digite APLICAR-030-035 para confirmar (banco de PRODUÇÃO)'
         required: true
         type: string
 
@@ -28,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Conferir confirmação
-        if: ${{ inputs.confirmar != 'APLICAR-030-034' }}
+        if: ${{ inputs.confirmar != 'APLICAR-030-035' }}
         run: |
           echo "::error::Confirmação incorreta. Nada foi feito."
           exit 1
@@ -43,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar cliente PostgreSQL
         run: sudo apt-get install -y -qq postgresql-client >/dev/null
-      - name: Aplicar 030 a 034
+      - name: Aplicar 030 a 035
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
         run: |
@@ -52,7 +53,8 @@ jobs:
             031_restaurant_presence \
             032_restaurant_payouts \
             033_online_payments \
-            034_payments_runtime_grants; do
+            034_payments_runtime_grants \
+            035_channel_accounts; do
             echo "== $file"
             set +e
             psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "migrations/$file.sql" > saida.txt 2>&1
@@ -72,5 +74,6 @@ jobs:
             SELECT tablename || ': ok' FROM pg_tables
             WHERE schemaname = 'public' AND tablename IN (
               'cash_register_operations', 'restaurant_presence', 'restaurant_ledger_entries',
-              'restaurant_payouts', 'online_payments', 'restaurant_payment_accounts')
+              'restaurant_payouts', 'online_payments', 'restaurant_payment_accounts',
+              'restaurant_channel_accounts')
             ORDER BY 1;"

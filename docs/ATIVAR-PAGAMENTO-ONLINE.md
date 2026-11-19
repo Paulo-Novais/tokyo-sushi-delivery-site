@@ -15,10 +15,11 @@ no código ou em documentos: só na Vercel e no painel da Pagar.me.
    3. `migrations/032_restaurant_payouts.sql`
    4. `migrations/033_online_payments.sql`
    5. `migrations/034_payments_runtime_grants.sql`
+   6. `migrations/035_channel_accounts.sql`
    (Avisos "does not exist, skipping" são normais. A 034 deve mostrar
    "Permissoes concedidas para ...".)
 3. Se algo der errado: rode os arquivos `.rollback.sql` na ordem inversa
-   (034 → 030) ou volte para a branch de backup.
+   (035 → 030) ou volte para a branch de backup.
 
 ⚠️ A 031 liga a regra "Gestor aberto": sem o Gestor (app) aberto no
 restaurante, o site para de aceitar pedidos. Rode com o app aberto no Tokyo.
