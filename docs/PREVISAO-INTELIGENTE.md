@@ -61,6 +61,41 @@ se ajustam ao jeito daquele restaurante. Com isso o dono passa a confiar nos nú
 5. **Giro do estoque:** o que gira rápido (manter sempre) e o que gira devagar
    (comprar menos, com mais frequência).
 
+## Objetivo principal: nem falta, nem sobra (pedido do Paulo, 19/11)
+
+Tudo na previsão serve para evitar **ruptura** (faltar e perder venda) e
+**excesso** (sobrar, vencer, dinheiro parado), de qualquer tipo:
+ingrediente, embalagem, bebida e prato pronto.
+
+Como o sistema faz isso:
+
+- **Faixa ideal de estoque por item:** um mínimo e um máximo calculados, e não
+  fixos. O **mínimo** cobre o uso previsto até a próxima entrega, mais a folga
+  do dia de pico. O **máximo** não passa do que se usa antes de vencer.
+  Abaixo do mínimo, o risco é de ruptura; acima do máximo, de excesso.
+- **"Dura até quando":** cada item mostra para quantos dias o estoque dá, no
+  ritmo previsto. Exemplo: "Salmão: dá até sexta 20h; a entrega é sábado → vai faltar".
+- **Aviso antes de acontecer:** o alerta de ruptura sai com antecedência
+  suficiente para comprar a tempo, contando o prazo de entrega do fornecedor.
+  O alerta de excesso sai antes de vencer, com tempo de vender.
+- **Perecível compra pouco e mais vezes:** para itens que vencem rápido (peixe,
+  folhas), a sugestão divide a compra em entregas menores.
+- **Primeiro o que vence primeiro:** o sistema indica qual lote usar antes, para não perder validade.
+- **Sem vender o que não dá para fazer:** quando um ingrediente zera, os
+  pratos que dependem dele são pausados no site e no iFood automaticamente, e
+  voltam quando a compra entra. O cliente não pede algo que vai ser cancelado.
+- **Excesso vira venda:** o que está sobrando entra em promoção para os
+  clientes que gostam daqueles pratos, antes de vencer (ver acima).
+- **Placar de ruptura e excesso:** todo mês o dono vê quantas vezes faltou,
+  quanto deixou de vender, quanto sobrou e quanto foi perdido, comparando com
+  o mês anterior. Assim ele enxerga a melhora.
+
+**Honestidade com o dono:** nenhuma previsão acerta 100% (chuva, evento
+inesperado). O sistema mira em **quase nunca faltar** os itens principais, sem
+encher o estoque. O dono escolhe o quanto quer de folga por item: "nunca pode
+faltar" (salmão) ou "pode faltar às vezes" (item raro). O resultado aparece no
+placar mensal.
+
 ## Sempre com gráfico (pedido do Paulo, 19/11)
 
 Toda sugestão inteligente aparece com um gráfico no mesmo padrão, para o dono
