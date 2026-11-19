@@ -10642,7 +10642,7 @@ const renderPaymentSettingsBody = () => {
             <input type="checkbox" data-pay-method="${escapeHtml(method.id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""} />
             <span class="gx-pay-method-text">
               <strong>${escapeHtml(method.label)}</strong>
-              <small>${method.availableOnPlatform ? `Taxa da operadora: ${escapeHtml(formatFeeLabel(method.fee))} · Taxa INOVAS: ${escapeHtml(formatPlatformFee(data, method.id))}` : "Em breve na sua região"}</small>
+              <small>${method.availableOnPlatform ? `Taxa da operadora: ${escapeHtml(formatFeeLabel(method.fee))} · Taxa INOVAS: ${escapeHtml(formatPlatformFee(data, method.id))}` : "Em breve"}</small>
             </span>
             <span class="gx-pay-switch" aria-hidden="true"></span>
           </label>`;

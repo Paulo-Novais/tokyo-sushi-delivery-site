@@ -68,6 +68,8 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 
 ## Feito em 19/11/2026
 
+- [x] Cadastro novo de restaurante no Painel INOVAS (8 etapas): CNPJ/CEP automáticos, categoria (Delivery/Restaurante/Super), plano + ciclo + adicional de nota fiscal (R$ 49,90, mensalidade soma sozinha), site, domínio, pagamento online (Pix e crédito). Falta: tela de nota fiscal no Gestor (certificado, CSC, códigos) e a emissão.
+
 - [x] Tela de Pedidos: abas Delivery/Salão, origem (INOVAS, iFood, Uber,
       99Food, Keeta), filtro, "Aceite em X min", alerta de cancelamento.
 - [x] Banco de produção atualizado (030 a 035). Sem backup prévio (volta: arquivos .rollback.sql ou restauração do Neon até ~15h de 19/11). Próximas: backup ANTES.

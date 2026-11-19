@@ -42,7 +42,7 @@ ambiente de testes (sandbox). Anote as taxas de cada forma.
 | `PAGARME_API_URL` | só no teste: `https://sdx-api.pagar.me/core/v5` (no real, apague) |
 | `PAGARME_WEBHOOK_TOKEN` | uma senha longa inventada (20+ letras e números) |
 | `CRON_SECRET` | outra senha longa inventada (repasse de quarta-feira) |
-| `PAGARME_CHECKOUT_METHODS` | `credit_card,debit_card,pix,voucher` (tire o que a Pagar.me não liberar) |
+| `PAGARME_CHECKOUT_METHODS` | opcional; padrão `credit_card,pix` (o split de marketplace da Pagar.me não aceita débito nem VR/VA) |
 | `PAGARME_PLATFORM_RECIPIENT_ID` | código do recebedor da própria INOVAS na Pagar.me (`re_...`): a taxa INOVAS de 1,5% cai direto nele em cada venda |
 | `INOVAS_PLATFORM_FEE_BPS` | opcional: taxa INOVAS em centésimos de % (padrão `150` = 1,5%) |
 | `INOVAS_PAYMENT_FEE_ESTIMATES` | taxas do contrato, ex.: `{"pix":{"percentBps":99},"credit_card":{"percentBps":349},"debit_card":{"percentBps":149},"meal_voucher":{"percentBps":600}}` (99 = 0,99%) |

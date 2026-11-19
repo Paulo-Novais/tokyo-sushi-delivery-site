@@ -33,19 +33,20 @@ test("Master cadastra, suspende, reativa e vincula domínio pela tela Restaurant
   await page.goto("/system#restaurants");
   await page.getByRole("button", { name: "+ Novo restaurante" }).click();
   const form = page.locator("[data-restaurant-form=create]");
-  await form.getByLabel("Nome do restaurante").fill(name);
+  await form.getByLabel("Nome do restaurante (fantasia)").fill(name);
   await expect(form.getByLabel("Endereço INOVAS")).toHaveValue(`pizzaria-${slug}`);
   await form.getByLabel("Endereço INOVAS").fill(slug);
-  await form.getByLabel("CNPJ ou CPF (MEI)").fill(String(Date.now()).slice(-11).padStart(11, "1"));
-  await form.getByLabel("Nome do responsável").fill("Responsável Teste");
-  await form.getByLabel("E-mail do responsável (login do Gestor)").fill(`dono@${slug}.test`);
-  await form.getByLabel("Senha inicial do responsável").fill("SenhaInicial123");
+  await form.getByLabel("CNPJ (ou CPF do MEI)").fill(String(Date.now()).slice(-11).padStart(11, "1"));
+  await form.getByLabel("Nome completo").fill("Responsável Teste");
+  await form.getByLabel("E-mail (login do Gestor)").fill(`dono@${slug}.test`);
+  await form.getByLabel("Senha inicial").fill("SenhaInicial123");
   await form.getByLabel("WhatsApp do restaurante").fill("16 99999-0000");
   await form.getByLabel("Rua").fill("Rua Teste");
-  await form.getByLabel("Número").fill("100");
+  await form.getByLabel("Número", { exact: true }).fill("100");
   await form.getByLabel("Cidade").fill("Franca");
   await form.getByLabel("Estado (UF)").fill("SP");
   await form.getByLabel("CEP").fill("14400-000");
+  await form.getByLabel("O dono aceitou o contrato INOVAS e a política de taxas.").check();
   await form.getByRole("button", { name: "Cadastrar e publicar site" }).click();
   await expect(page.locator("[data-system-toast]")).toContainText(`inovasfood.com.br/${slug}`);
 
@@ -147,5 +148,90 @@ test("Suporte com acesso total: Gestor do restaurante como proprietário, gravad
     data: { settings: { restaurantName: "Depois de encerrar" } },
   });
   expect(afterRevoke.status()).not.toBe(200);
+  expect(pageErrors).toEqual([]);
+});
+
+test("Cadastro novo: CNPJ preenche a empresa, categoria pelo volume, nota fiscal e total do plano", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const slug = uniqueSlug();
+
+  await page.goto("/system/login.html");
+  await page.getByLabel("E-mail").fill(login);
+  await page.getByLabel("Senha").fill(password);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/system\/?$/);
+  await page.goto("/system#restaurants");
+  await page.getByRole("button", { name: "+ Novo restaurante" }).click();
+  const form = page.locator("[data-restaurant-form=create]");
+
+  // As 8 etapas aparecem no índice.
+  await expect(form.locator("[data-wiz-step]")).toHaveCount(8);
+
+  // CNPJ: busca na Receita (provedor de teste) e preenche empresa e endereço.
+  const cnpj = `11${String(Date.now()).slice(-10)}81`.slice(0, 14);
+  await form.getByLabel("CNPJ (ou CPF do MEI)").fill(cnpj);
+  await form.locator('[data-wiz-lookup="cnpj"]').click();
+  await expect(form.locator("[data-wiz-lookup-status]")).toContainText("Encontrado");
+  await expect(form.getByLabel("Razão social")).toHaveValue("EMPRESA TESTE ALIMENTOS LTDA");
+  await expect(form.getByLabel("Nome do restaurante (fantasia)")).toHaveValue("Sushi Teste");
+  await expect(form.getByLabel("Cidade")).toHaveValue("RIBEIRAO PRETO");
+  await expect(form.getByLabel("Regime de impostos")).toHaveValue("SIMPLES");
+  await form.getByLabel("Endereço INOVAS").fill(slug);
+
+  // Categoria sugerida pelo volume: 160 pedidos/dia -> Super Restaurante.
+  await form.getByLabel("Pedidos por dia (média)").fill("160");
+  await expect(form.locator('input[name="category"][value="SUPER"]')).toBeChecked();
+  await form.getByLabel("Salão (mesas e garçom)").check();
+
+  // Plano Profissional + nota fiscal: R$ 149,90 + R$ 49,90.
+  const addon = form.locator('input[name="addons"][value="nfce"]');
+  await addon.check();
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 199,80/mês");
+  await expect(form.locator("[data-wiz-nfce-provider]")).toHaveText("Brasil NFe (ilimitada)");
+  // Essencial não tem nota fiscal nem domínio próprio.
+  await form.locator('input[name="plan"][value="START"]').check();
+  await expect(addon).toBeDisabled();
+  await expect(form.getByLabel("Domínio próprio (opcional)")).toBeDisabled();
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 49,90/mês");
+  await form.locator('input[name="plan"][value="BUSINESS"]').check();
+  await addon.check();
+  // Trimestral: R$ 5 a menos por mês.
+  await form.getByLabel("Ciclo de cobrança").selectOption("QUARTERLY");
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 584,40 a cada 3 meses");
+
+  // Senha gerada pelo sistema.
+  await form.getByRole("button", { name: "Gerar" }).click();
+  expect((await form.getByLabel("Senha inicial").inputValue()).length).toBeGreaterThanOrEqual(10);
+  await form.getByLabel("Nome completo").fill("Dono Teste");
+  await form.getByLabel("CPF do dono").fill("529.982.247-25");
+  await form.getByLabel("E-mail (login do Gestor)").fill(`dono@${slug}.test`);
+  await form.getByLabel("WhatsApp do restaurante").fill("16 98888-0000");
+  await form.getByLabel("Número", { exact: true }).fill("100");
+  await expect(form.locator("[data-wiz-summary]")).toContainText("Super Restaurante");
+  await expect(form.locator("[data-wiz-summary]")).toContainText(`inovasfood.com.br/${slug}`);
+  await page.screenshot({ path: test.info().outputPath("cadastro-novo.png"), fullPage: true });
+
+  // Sem aceitar o contrato não envia.
+  await form.getByRole("button", { name: "Cadastrar e publicar site" }).click();
+  await expect(form).toBeVisible();
+  await form.getByLabel("O dono aceitou o contrato INOVAS e a política de taxas.").check();
+  await form.getByRole("button", { name: "Cadastrar e publicar site" }).click();
+  await expect(page.locator("[data-system-toast]")).toContainText(`inovasfood.com.br/${slug}`);
+
+  // Gravado: categoria, nota fiscal e mensalidade = plano + adicional.
+  const restaurants = await page.evaluate(async () => (await (await fetch("/api/system/restaurants", { credentials: "same-origin" })).json()));
+  const list = restaurants.data?.restaurants || restaurants.restaurants || [];
+  const created = list.find((entry) => entry.slug === slug || entry.restaurantKey === slug);
+  expect(created, JSON.stringify(list.map((entry) => entry.slug))).toBeTruthy();
+  expect(created.category).toBe("SUPER");
+  expect(created.fiscalProvider).toBe("brasilnfe");
+  expect(created.addons).toEqual(["nfce"]);
+  const billing = await page.evaluate(async () => (await (await fetch("/api/system/billing", { credentials: "same-origin" })).json()));
+  const contracts = billing.data?.contracts || billing.contracts || billing.data?.restaurants || billing.restaurants || [];
+  const contract = contracts.find((entry) => entry.restaurantKey === slug);
+  expect(contract, JSON.stringify(Object.keys(billing.data || billing))).toBeTruthy();
+  expect(contract.monthlyValueCents).toBe(19980);
+  expect(contract.billingCycle).toBe("QUARTERLY");
   expect(pageErrors).toEqual([]);
 });

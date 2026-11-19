@@ -467,9 +467,10 @@
       .replace(/^-+|-+$/g, "")
       .slice(0, 60);
 
-  const openDialog = (html) => {
+  const openDialog = (html, { wide = false } = {}) => {
     if (!dialog) return;
     dialog.innerHTML = html;
+    dialog.classList.toggle("is-wide", wide);
     dialog.showModal();
   };
 
@@ -484,33 +485,282 @@
       .map((plan) => `<option value="${plan}" ${normalize(selected) === plan ? "selected" : ""}>${escapeHtml(translatePlan(plan))}</option>`)
       .join("");
 
+  // ---------- Cadastro novo de restaurante (8 etapas numa tela só) ----------
+  const WIZ_PLANS = [
+    ["FREE", "Grátis", 0, "até 50 pedidos/mês"],
+    ["START", "Essencial", 49.9, "site + pedidos"],
+    ["BUSINESS", "Profissional", 149.9, "salão, estoque, financeiro"],
+    ["PRO", "Completo", 219.9, "tudo + domínio próprio"],
+  ];
+  const WIZ_ADDON_PLANS = ["BUSINESS", "PRO"];
+  const WIZ_NFCE_PRICE = 49.9;
+  const WIZ_CATEGORIES = [
+    ["DELIVERY", "Delivery", "até 50/dia", "Só entrega e retirada (dark kitchen, lanchonete).", "Conta compartilhada INOVAS"],
+    ["RESTAURANT", "Restaurante", "50 a 120/dia", "Salão + delivery + retirada. Caixa, mesas e app do garçom.", "Conta compartilhada INOVAS"],
+    ["SUPER", "Super Restaurante", "+120/dia", "Alto volume, almoço e jantar.", "Brasil NFe (ilimitada)"],
+  ];
+  const WIZ_CYCLES = [
+    ["MONTHLY", "Mensal", 1],
+    ["QUARTERLY", "Trimestral", 3],
+    ["SEMIANNUAL", "Semestral", 6],
+    ["ANNUAL", "Anual", 12],
+  ];
+  const WIZ_COLORS = [["#c8102e", "Vermelho"], ["#ff6a00", "Laranja"], ["#0f766e", "Verde"], ["#1d4ed8", "Azul"], ["#111827", "Preto"]];
+  const wizMoney = (value) => `R$ ${Number(value || 0).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+  // Igual a lib/billing-cycles.cjs: trimestral e semestral R$ 5 a menos por mês; anual 8%.
+  const wizCycleCharge = (monthly, cycle) => {
+    const months = (WIZ_CYCLES.find((entry) => entry[0] === cycle) || WIZ_CYCLES[0])[2];
+    const cents = Math.round(monthly * 100) * months;
+    if (cycle === "QUARTERLY" || cycle === "SEMIANNUAL") return Math.max(0, cents - 500 * months) / 100;
+    if (cycle === "ANNUAL") return Math.round(cents * 0.92) / 100;
+    return cents / 100;
+  };
+  const wizSuggestCategory = (orders, dining) => (orders > 120 ? "SUPER" : orders > 50 || dining ? "RESTAURANT" : "DELIVERY");
+
+  const renderCreateWizard = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const steps = [
+      ["empresa", "Empresa", "CNPJ, endereço, impostos"],
+      ["dono", "Dono", "Acesso ao Gestor"],
+      ["categoria", "Categoria", "Delivery, Restaurante ou Super"],
+      ["plano", "Plano e cobrança", "Plano, ciclo, adicionais"],
+      ["site", "Site e domínio", "Endereço e cor"],
+      ["nota", "Nota fiscal", "Serviço e próximos passos"],
+      ["pagamento", "Pagamento online", "Pix e crédito"],
+      ["revisao", "Revisão", "Contrato e publicar"],
+    ];
+    const box = (id, title, sub, body) =>
+      `<section class="sys-wiz-section" id="wiz-${id}" data-wiz-section="${id}"><div class="sys-wiz-head"><h3>${escapeHtml(title)}</h3>${sub ? `<p>${escapeHtml(sub)}</p>` : ""}</div>${body}</section>`;
+    return `
+      <form class="sys-dialog-form sys-wiz" data-restaurant-form="create">
+        ${dialogHead("Painel INOVAS · cadastro", "Novo restaurante")}
+        <div class="sys-wiz-layout">
+          <nav class="sys-wiz-nav" aria-label="Etapas do cadastro">
+            ${steps.map(([id, title, sub], index) => `<a href="#wiz-${id}" data-wiz-step="${id}"><span class="sys-wiz-dot">${index + 1}</span><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(sub)}</small></span></a>`).join("")}
+          </nav>
+          <div class="sys-wiz-body">
+            ${box("empresa", "1. Empresa", "Digite o CNPJ e clique em Buscar: razão social e endereço vêm da Receita.", `
+              <div class="sys-wiz-grid">
+                <label class="sys-field"><span>CNPJ (ou CPF do MEI)</span><span class="sys-wiz-inline"><input class="sys-input" name="document" required inputmode="numeric" autocomplete="off" /><button class="sys-btn sys-btn-secondary" type="button" data-wiz-lookup="cnpj">Buscar</button></span></label>
+                ${field("Nome do restaurante (fantasia)", '<input class="sys-input" name="name" required maxlength="120" data-slug-source />')}
+                ${field("Razão social", '<input class="sys-input" name="legalName" maxlength="180" />')}
+                ${field("Inscrição estadual", '<input class="sys-input" name="stateRegistration" maxlength="40" inputmode="numeric" />', "Necessária para a nota fiscal. Deixe vazio se for isento.")}
+                ${field("Regime de impostos", '<select class="sys-select" name="taxRegime"><option value="SIMPLES">Simples Nacional</option><option value="MEI">MEI</option><option value="PRESUMIDO">Lucro Presumido</option><option value="REAL">Lucro Real</option></select>')}
+                ${field("WhatsApp do restaurante", '<input class="sys-input" name="whatsapp" required inputmode="tel" placeholder="16 99999-9999" />')}
+              </div>
+              <div class="sys-wiz-grid is-address">
+                <label class="sys-field"><span>CEP</span><span class="sys-wiz-inline"><input class="sys-input" name="postalCode" required inputmode="numeric" /><button class="sys-btn sys-btn-secondary" type="button" data-wiz-lookup="cep">Buscar</button></span></label>
+                ${field("Rua", '<input class="sys-input" name="street" required />')}
+                ${field("Número", '<input class="sys-input" name="number" required />')}
+                ${field("Complemento", '<input class="sys-input" name="complement" />')}
+                ${field("Bairro", '<input class="sys-input" name="neighborhood" />')}
+                ${field("Cidade", '<input class="sys-input" name="city" required />')}
+                ${field("Estado (UF)", '<input class="sys-input" name="state" required maxlength="2" />')}
+              </div>
+              <p class="sys-hint" data-wiz-lookup-status hidden></p>`)}
+            ${box("dono", "2. Dono (acesso ao Gestor)", "O dono entra no Gestor com este e-mail. Mande a senha inicial pelo WhatsApp e peça para trocar no primeiro acesso.", `
+              <div class="sys-wiz-grid">
+                ${field("Nome completo", '<input class="sys-input" name="ownerName" required maxlength="160" />')}
+                ${field("CPF do dono", '<input class="sys-input" name="ownerCpf" inputmode="numeric" />', "Para o contrato e o recebedor do pagamento online.")}
+                ${field("E-mail (login do Gestor)", '<input class="sys-input" type="email" name="email" required />')}
+                <label class="sys-field"><span>Senha inicial</span><span class="sys-wiz-inline"><input class="sys-input" type="text" name="password" required minlength="10" autocomplete="new-password" spellcheck="false" /><button class="sys-btn sys-btn-secondary" type="button" data-wiz-generate-password>Gerar</button></span><small class="sys-hint">Mínimo de 10 caracteres.</small></label>
+              </div>`)}
+            ${box("categoria", "3. Categoria", "Define as telas do restaurante e, por baixo, o serviço de nota fiscal mais barato. O restaurante não vê essa escolha.", `
+              <div class="sys-wiz-grid">
+                ${field("Pedidos por dia (média)", '<input class="sys-input" type="number" min="0" max="5000" name="expectedDailyOrders" value="40" />', "Acima de 120 por dia, o sistema sugere Super Restaurante.")}
+                <fieldset class="sys-wiz-checks"><legend>Como atende</legend>
+                  <label><input type="checkbox" name="serviceModes" value="delivery" checked />Delivery</label>
+                  <label><input type="checkbox" name="serviceModes" value="pickup" checked />Retirada</label>
+                  <label><input type="checkbox" name="serviceModes" value="dining" />Salão (mesas e garçom)</label>
+                  <label><input type="checkbox" name="serviceModes" value="twoShifts" />Almoço e jantar</label>
+                </fieldset>
+              </div>
+              <div class="sys-wiz-cards" role="radiogroup" aria-label="Categoria">
+                ${WIZ_CATEGORIES.map(([key, label, tag, desc, nfe]) => `
+                  <label class="sys-wiz-card" data-wiz-category-card="${key}">
+                    <input type="radio" name="category" value="${key}" ${key === "DELIVERY" ? "checked" : ""} />
+                    <span class="sys-wiz-card-top"><strong>${escapeHtml(label)}</strong><em>${escapeHtml(tag)}</em></span>
+                    <span>${escapeHtml(desc)}</span>
+                    <small>Nota fiscal: <b>${escapeHtml(nfe)}</b></small>
+                  </label>`).join("")}
+              </div>
+              <p class="sys-hint" data-wiz-category-hint></p>`)}
+            ${box("plano", "4. Plano e cobrança", "", `
+              <div class="sys-wiz-cards is-plans" role="radiogroup" aria-label="Plano">
+                ${WIZ_PLANS.map(([key, label, price, sub]) => `
+                  <label class="sys-wiz-card">
+                    <input type="radio" name="plan" value="${key}" ${key === "BUSINESS" ? "checked" : ""} />
+                    <strong>${escapeHtml(label)}</strong>
+                    <span class="sys-wiz-price">${escapeHtml(wizMoney(price))}</span>
+                    <small>${escapeHtml(sub)}</small>
+                  </label>`).join("")}
+              </div>
+              <div class="sys-wiz-grid">
+                <label class="sys-field"><span>Ciclo de cobrança</span><select class="sys-select" name="billingCycle" data-wiz-cycle>${WIZ_CYCLES.map(([key, label]) => `<option value="${key}">${escapeHtml(label)}</option>`).join("")}</select></label>
+                ${field("Início do contrato", `<input class="sys-input" type="date" name="adhesionDate" value="${today}" required />`)}
+              </div>
+              <label class="sys-wiz-addon" data-wiz-addon="nfce">
+                <span><input type="checkbox" name="addons" value="nfce" /><span><strong>Nota fiscal automática (NFC-e)</strong><small data-wiz-addon-note>Profissional e Completo · notas ilimitadas para o restaurante</small></span></span>
+                <strong>+ ${escapeHtml(wizMoney(WIZ_NFCE_PRICE))}/mês</strong>
+              </label>
+              <div class="sys-wiz-total"><span data-wiz-total-label>Total</span><strong data-wiz-total>—</strong></div>`)}
+            ${box("site", "5. Site e domínio", "O site entra no ar assim que o cadastro termina.", `
+              <div class="sys-wiz-grid">
+                <label class="sys-field"><span>Endereço INOVAS</span><span class="sys-wiz-prefix"><span>inovasfood.com.br/</span><input class="sys-input" name="slug" required pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" minlength="3" maxlength="60" data-slug-target /></span><small class="sys-hint" data-wiz-slug-status></small></label>
+                <label class="sys-field" data-wiz-domain><span>Domínio próprio (opcional)</span><input class="sys-input" name="customDomain" placeholder="www.restaurante.com.br" /><small class="sys-hint" data-wiz-domain-note>Incluído no Completo. Nos outros planos, vincule depois no detalhe do restaurante (+ R$ 40/mês).</small></label>
+              </div>
+              <fieldset class="sys-wiz-colors"><legend>Cor principal do site</legend>
+                ${WIZ_COLORS.map(([hex, label], index) => `<label><input type="radio" name="primaryColor" value="${hex}" ${index === 0 ? "checked" : ""} /><span style="background:${hex}" aria-hidden="true"></span>${escapeHtml(label)}</label>`).join("")}
+              </fieldset>
+              <p class="sys-hint">Logo e foto de capa: o dono envia em Gestor → Configurações → Aparência.</p>`)}
+            ${box("nota", "6. Nota fiscal (NFC-e)", "", `
+              <div class="sys-wiz-info" data-wiz-nfce-off>Sem nota fiscal automática. Dá para ligar depois, nos planos Profissional e Completo.</div>
+              <div class="sys-wiz-info is-on" data-wiz-nfce-on hidden>
+                <strong>Serviço: <span data-wiz-nfce-provider>—</span></strong>
+                <span>O dono completa no Gestor: certificado digital A1 (arquivo .pfx e senha), CSC da Sefaz e os códigos fiscais do cardápio (sugeridos pelo sistema, conferidos pelo contador dele). A nota só começa a sair depois disso.</span>
+              </div>`)}
+            ${box("pagamento", "7. Pagamento online e repasse", "A conta bancária é do dono: ele cadastra em Gestor → Configurações → Pagamentos (obrigatório).", `
+              <div class="sys-wiz-pay">
+                <div><strong>Pix</strong><small>Taxa INOVAS 0%</small></div>
+                <div><strong>Crédito</strong><small>Taxa INOVAS 1,5%</small></div>
+                <div class="is-soon"><strong>Débito e VR/VA</strong><small>Em breve · aceitos na entrega</small></div>
+              </div>
+              <p class="sys-hint">Repasse toda quarta-feira, com extrato de vendas, taxas e mensalidade.</p>`)}
+            ${box("revisao", "8. Revisão e contrato", "", `
+              <dl class="sys-wiz-summary" data-wiz-summary></dl>
+              <label class="sys-wiz-accept"><input type="checkbox" name="contractAccepted" required />O dono aceitou o contrato INOVAS e a política de taxas.</label>
+              <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>`)}
+          </div>
+        </div>
+        <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn sys-btn-primary" type="submit">Cadastrar e publicar site</button></div>
+      </form>`;
+  };
+
+  // Atualiza sugestão de categoria, total, nota fiscal e resumo enquanto digita.
+  const updateCreateWizard = (form) => {
+    if (!form || form.dataset.restaurantForm !== "create" || !form.classList.contains("sys-wiz")) return;
+    const get = (name) => form.elements[name];
+    const orders = Number(get("expectedDailyOrders")?.value || 0);
+    const modes = [...form.querySelectorAll('input[name="serviceModes"]:checked')].map((input) => input.value);
+    const suggested = wizSuggestCategory(orders, modes.includes("dining"));
+    if (!form.dataset.categoryTouched) {
+      const radio = form.querySelector(`input[name="category"][value="${suggested}"]`);
+      if (radio) radio.checked = true;
+    }
+    const category = form.querySelector('input[name="category"]:checked')?.value || suggested;
+    const hint = form.querySelector("[data-wiz-category-hint]");
+    if (hint) {
+      const label = (WIZ_CATEGORIES.find((entry) => entry[0] === suggested) || [])[1];
+      hint.textContent = category === suggested ? `Sugerido pelo volume: ${label}.` : `Sugerido pelo volume: ${label}. Você escolheu outra categoria.`;
+    }
+    const plan = form.querySelector('input[name="plan"]:checked')?.value || "BUSINESS";
+    const planPrice = (WIZ_PLANS.find((entry) => entry[0] === plan) || [])[2] || 0;
+    const addonAllowed = WIZ_ADDON_PLANS.includes(plan);
+    const addonInput = form.querySelector('input[name="addons"][value="nfce"]');
+    if (addonInput) {
+      addonInput.disabled = !addonAllowed;
+      if (!addonAllowed) addonInput.checked = false;
+      form.querySelector("[data-wiz-addon]")?.classList.toggle("is-disabled", !addonAllowed);
+    }
+    const nfce = Boolean(addonInput?.checked);
+    const monthly = planPrice + (nfce ? WIZ_NFCE_PRICE : 0);
+    const cycle = get("billingCycle")?.value || "MONTHLY";
+    const cycleEntry = WIZ_CYCLES.find((entry) => entry[0] === cycle) || WIZ_CYCLES[0];
+    const charge = wizCycleCharge(monthly, cycle);
+    const totalNode = form.querySelector("[data-wiz-total]");
+    const totalLabel = form.querySelector("[data-wiz-total-label]");
+    if (totalNode) totalNode.textContent = cycle === "MONTHLY" ? `${wizMoney(monthly)}/mês` : `${wizMoney(charge)} a cada ${cycleEntry[2]} meses`;
+    if (totalLabel) totalLabel.textContent = cycle === "MONTHLY" ? "Total mensal" : `Total ${cycleEntry[1].toLowerCase()} (com desconto)`;
+    const domainField = form.querySelector("[data-wiz-domain]");
+    const domainInput = get("customDomain");
+    if (domainInput) {
+      domainInput.disabled = plan !== "PRO";
+      if (plan !== "PRO") domainInput.value = "";
+    }
+    domainField?.classList.toggle("is-disabled", plan !== "PRO");
+    const providerLabel = category === "SUPER" ? "Brasil NFe (ilimitada)" : "Conta compartilhada INOVAS";
+    form.querySelector("[data-wiz-nfce-off]")?.toggleAttribute("hidden", nfce);
+    form.querySelector("[data-wiz-nfce-on]")?.toggleAttribute("hidden", !nfce);
+    const providerNode = form.querySelector("[data-wiz-nfce-provider]");
+    if (providerNode) providerNode.textContent = providerLabel;
+    const slug = slugify(get("slug")?.value || "");
+    const taken = slug && (state.data?.restaurants || []).some((restaurant) => [restaurant.slug, restaurant.restaurantKey].includes(slug));
+    const slugStatus = form.querySelector("[data-wiz-slug-status]");
+    if (slugStatus) {
+      slugStatus.textContent = !slug ? "" : taken ? "Já está em uso. Escolha outro." : `Site: inovasfood.com.br/${slug}`;
+      slugStatus.classList.toggle("is-error", Boolean(taken));
+    }
+    const summary = form.querySelector("[data-wiz-summary]");
+    if (summary) {
+      const rows = [
+        ["Restaurante", get("name")?.value || "—"],
+        ["Categoria", (WIZ_CATEGORIES.find((entry) => entry[0] === category) || [])[1] || "—"],
+        ["Plano", `${(WIZ_PLANS.find((entry) => entry[0] === plan) || [])[1]} · ${cycleEntry[1].toLowerCase()}`],
+        ["Adicionais", nfce ? "Nota fiscal automática" : "Nenhum"],
+        ["Cobrança", totalNode?.textContent || "—"],
+        ["Site", slug ? `inovasfood.com.br/${slug}` : "—"],
+        ["Domínio próprio", get("customDomain")?.value || "Não"],
+        ["Nota fiscal", nfce ? providerLabel : "Desligada"],
+        ["Dono", get("email")?.value || "—"],
+      ];
+      summary.innerHTML = rows.map(([key, value]) => `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+    }
+  };
+
+  const runWizardLookup = async (form, kind) => {
+    const status = form.querySelector("[data-wiz-lookup-status]");
+    const show = (text, isError = false) => {
+      if (!status) return;
+      status.hidden = false;
+      status.textContent = text;
+      status.classList.toggle("is-error", isError);
+    };
+    const value = onlyDigits(form.elements[kind === "cnpj" ? "document" : "postalCode"]?.value);
+    show(kind === "cnpj" ? "Buscando CNPJ na Receita…" : "Buscando CEP…");
+    try {
+      const payload = await requestJson(`/api/system/lookup/${kind}/${value}`);
+      const result = (payload.data || payload)[kind] || {};
+      const set = (name, next) => {
+        const input = form.elements[name];
+        if (input && next && !input.value) input.value = next;
+      };
+      const address = kind === "cnpj" ? result.address || {} : result;
+      if (kind === "cnpj") {
+        set("legalName", result.legalName);
+        if (result.tradeName && !form.elements.name.value) {
+          form.elements.name.value = result.tradeName;
+          form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (result.mei) form.elements.taxRegime.value = "MEI";
+        else if (result.simples) form.elements.taxRegime.value = "SIMPLES";
+        set("number", address.number);
+        set("complement", address.complement);
+      }
+      set("postalCode", address.postalCode);
+      set("street", address.street);
+      set("neighborhood", address.neighborhood);
+      set("city", address.city);
+      set("state", address.state);
+      show(kind === "cnpj" ? `Encontrado: ${result.legalName || "empresa"}${result.status ? ` · situação ${result.status}` : ""}. Confira os dados.` : "Endereço preenchido. Confira o número.");
+      updateCreateWizard(form);
+    } catch (error) {
+      show(error.message || "Não foi possível buscar agora. Preencha à mão.", true);
+    }
+  };
+
+  const generateWizardPassword = () => {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    const bytes = new Uint32Array(14);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+  };
+
   const openRestaurantDialog = (action, key) => {
     const restaurant = findRestaurant(key);
     if (action === "create") {
-      const today = new Date().toISOString().slice(0, 10);
-      return openDialog(`
-        <form class="sys-dialog-form" data-restaurant-form="create">
-          ${dialogHead("Plataforma · cadastro", "Novo restaurante")}
-          <div class="sys-dialog-body sys-form-grid">
-            ${field("Nome do restaurante", '<input class="sys-input" name="name" required maxlength="120" data-slug-source />')}
-            ${field("Endereço INOVAS", '<input class="sys-input" name="slug" required pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" minlength="3" maxlength="60" data-slug-target />', "O site entra no ar em inovasfood.com.br/<endereço> assim que o cadastro termina.")}
-            ${field("CNPJ ou CPF (MEI)", '<input class="sys-input" name="document" required inputmode="numeric" />')}
-            ${field("Plano", `<select class="sys-select" name="plan">${planOptions("PRO")}</select>`)}
-            ${field("Nome do responsável", '<input class="sys-input" name="ownerName" required maxlength="160" />')}
-            ${field("E-mail do responsável (login do Gestor)", '<input class="sys-input" type="email" name="email" required />')}
-            ${field("Senha inicial do responsável", '<input class="sys-input" type="password" name="password" required minlength="10" autocomplete="new-password" />', "Mínimo de 10 caracteres. Peça para trocar no primeiro acesso.")}
-            ${field("WhatsApp do restaurante", '<input class="sys-input" name="whatsapp" required inputmode="tel" placeholder="16 99999-9999" />')}
-            ${field("Rua", '<input class="sys-input" name="street" required />')}
-            ${field("Número", '<input class="sys-input" name="number" required />')}
-            ${field("Bairro", '<input class="sys-input" name="neighborhood" />')}
-            ${field("Cidade", '<input class="sys-input" name="city" required />')}
-            ${field("Estado (UF)", '<input class="sys-input" name="state" required maxlength="2" />')}
-            ${field("CEP", '<input class="sys-input" name="postalCode" required inputmode="numeric" />')}
-            <input type="hidden" name="adhesionDate" value="${today}" />
-            <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
-          </div>
-          <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn sys-btn-primary" type="submit">Cadastrar e publicar site</button></div>
-        </form>`);
+      openDialog(renderCreateWizard(), { wide: true });
+      updateCreateWizard(dialog?.querySelector('form[data-restaurant-form="create"]'));
+      return;
     }
     if (!restaurant) return;
     const name = escapeHtml(restaurant.name);
@@ -587,15 +837,28 @@
         const slug = slugify(data.slug);
         const phone = onlyDigits(data.whatsapp);
         const whatsapp = phone.startsWith("55") ? phone : `55${phone}`;
+        const formData = new FormData(form);
+        const serviceModes = formData.getAll("serviceModes");
+        const addons = formData.getAll("addons");
+        const address = {
+          street: data.street, number: data.number, complement: data.complement || "", neighborhood: data.neighborhood,
+          city: data.city, state: String(data.state || "").toUpperCase(), postalCode: onlyDigits(data.postalCode),
+        };
         const payload = {
           restaurantName: data.name, tradeName: data.name, name: data.name,
           slug, restaurantKey: slug, document: onlyDigits(data.document),
-          ownerFullName: data.ownerName, email: data.email,
+          companyName: data.legalName || "", stateRegistration: data.stateRegistration || "", taxRegime: data.taxRegime,
+          ownerFullName: data.ownerName, ownerDocument: onlyDigits(data.ownerCpf), email: data.email,
           city: data.city, postalCode: onlyDigits(data.postalCode), establishmentNumber: data.number,
-          registration: { legalName: data.name, document: onlyDigits(data.document), city: data.city, state: data.state },
+          registration: { legalName: data.legalName || data.name, document: onlyDigits(data.document), city: data.city, state: data.state },
           phone: whatsapp, whatsapp, adhesionDate: data.adhesionDate,
-          address: { street: data.street, number: data.number, neighborhood: data.neighborhood, city: data.city, state: String(data.state || "").toUpperCase(), postalCode: onlyDigits(data.postalCode) },
-          plan: data.plan, subscriptionStatus: "ACTIVE",
+          address,
+          category: data.category, expectedDailyOrders: Number(data.expectedDailyOrders || 0), serviceModes,
+          plan: data.plan, billingCycle: data.billingCycle, addons, subscriptionStatus: "ACTIVE",
+          ...(data.customDomain ? { customDomain: String(data.customDomain).trim().toLowerCase() } : {}),
+          appearance: { primaryColor: data.primaryColor || "" },
+          pickupEnabled: serviceModes.includes("pickup"),
+          delivery: { deliveriesEnabled: serviceModes.includes("delivery") },
           adminUser: { login: data.email, email: data.email, name: data.ownerName, password: data.password },
         };
         const response = await fetch("/api/admin/master/onboard-restaurant", {
@@ -1492,7 +1755,31 @@
     row.click();
   });
 
+  // Cadastro novo: buscar CNPJ/CEP, gerar senha e recalcular a tela.
+  document.addEventListener("click", (event) => {
+    const lookup = event.target.closest?.("[data-wiz-lookup]");
+    if (lookup) {
+      event.preventDefault();
+      void runWizardLookup(lookup.form || lookup.closest("form"), lookup.dataset.wizLookup);
+      return;
+    }
+    const generate = event.target.closest?.("[data-wiz-generate-password]");
+    if (generate) {
+      event.preventDefault();
+      const input = generate.closest("form")?.elements.password;
+      if (input) input.value = generateWizardPassword();
+    }
+  });
+  const onWizardChange = (event) => {
+    const form = event.target.closest?.("form.sys-wiz");
+    if (!form) return;
+    if (event.target.name === "category") form.dataset.categoryTouched = "true";
+    updateCreateWizard(form);
+  };
+  document.addEventListener("change", onWizardChange);
+
   document.addEventListener("input", (event) => {
+    if (event.target.closest?.("form.sys-wiz")) setTimeout(() => updateCreateWizard(event.target.closest("form.sys-wiz")), 0);
     if (event.target.matches("[data-slug-source]")) {
       const target = event.target.form?.querySelector("[data-slug-target]");
       if (target && !target.dataset.touched) target.value = slugify(event.target.value);
