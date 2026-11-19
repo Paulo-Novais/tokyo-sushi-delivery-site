@@ -46,6 +46,6 @@ Atualizada em 19/11/2026. Marque `[x]` quando terminar.
 
 - [x] Tela de Pedidos: abas Delivery/Salão, origem (INOVAS, iFood, Uber,
       99Food, Keeta), filtro, "Aceite em X min", alerta de cancelamento.
-- [x] Banco de produção atualizado (030 a 035). Backup no Neon: confirmar se foi criado.
+- [x] Banco de produção atualizado (030 a 035). Sem backup prévio (volta: arquivos .rollback.sql ou restauração do Neon até ~15h de 19/11). Próximas: backup ANTES.
 - [x] Senhas internas na Vercel (`PAGARME_WEBHOOK_TOKEN`, `CRON_SECRET`).
 - [x] Senha do banco retirada da Vercel (produção); fica só no GitHub.
