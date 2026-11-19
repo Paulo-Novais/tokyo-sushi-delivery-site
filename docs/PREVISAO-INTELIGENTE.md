@@ -61,6 +61,44 @@ se ajustam ao jeito daquele restaurante. Com isso o dono passa a confiar nos nú
 5. **Giro do estoque:** o que gira rápido (manter sempre) e o que gira devagar
    (comprar menos, com mais frequência).
 
+## Sempre com gráfico (pedido do Paulo, 19/11)
+
+Toda sugestão inteligente aparece com um gráfico no mesmo padrão, para o dono
+entender sem ler números. São quatro partes na mesma linha do tempo:
+
+1. **Como era:** o histórico real em linha cheia (vendas, uso do ingrediente
+   ou estoque), comparado com a semana passada, o mês passado e o ano passado
+   (em linhas mais claras).
+2. **Rupturas e excesso:**
+   - **ruptura** (faltou: prato pausado ou estoque zerado) marcada em vermelho;
+     o gráfico mostra quanto deixou de vender ("faltou salmão no sábado: ~R$ 640 perdidos");
+   - **excesso** (sobrou: estoque acima do necessário ou item vencido) marcado
+     em amarelo, com o dinheiro parado ou perdido.
+3. **O que o sistema orienta:** a recomendação em destaque em cima do gráfico.
+   Exemplos:
+   - "compre 12 kg até quinta";
+   - "não compre cream cheese esta semana";
+   - "faça promoção do Hot Roll".
+4. **Projeção:** linha tracejada para frente, com uma faixa de "mínimo e
+   máximo provável" e duas linhas: **seguindo a orientação** e **sem fazer nada**.
+   Assim o dono vê o ganho de seguir a sugestão.
+
+Vale para todos os tipos de sugestão:
+
+| Sugestão | O gráfico mostra |
+|---|---|
+| Previsão de vendas | Vendas por dia: real, semana/mês/ano passado e projeção |
+| Compra de mercadoria | Estoque do ingrediente: real, rupturas, excesso, compra sugerida e estoque projetado |
+| Estoque parado | Dias sem saída e dinheiro parado; projeção com e sem promoção |
+| Margem por prato | Custo e margem ao longo do tempo; projeção com e sem reajuste |
+| Clientes prestes a sumir | Intervalo de cada cliente entre pedidos; quem passou do normal |
+| Equipe e horários | Pedidos por hora previstos x equipe escalada |
+| Meta do mês | Faturamento acumulado x meta, com a projeção de fechamento |
+| Acerto da previsão | Previsto x vendido, semana a semana (mostra que o sistema está acertando) |
+
+Antes de programar, fazer um **esboço visual** dessas telas para o Paulo
+aprovar, como foi feito com a tela de Pedidos e o cadastro.
+
 ## Outras sugestões inteligentes para os donos
 
 - **Margem por prato:**
