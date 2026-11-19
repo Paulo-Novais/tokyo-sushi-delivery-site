@@ -12559,9 +12559,8 @@ const renderPdvAppRequired = () => {
             ? `<button type="button" class="gx-pdv-required-download" data-pdv-update-now>Atualizar agora</button>
                <small data-pdv-update-status>O app fecha, instala e abre sozinho. O login continua salvo.</small>`
             : `<ol class="gx-pdv-update-steps">
-                 <li>No canto de <strong>baixo à esquerda</strong> do app, clique em <strong>Verificar atualização</strong>.</li>
-                 <li>Clique em <strong>Atualizar agora</strong>.</li>
-                 <li>O app fecha, instala e abre sozinho. O login continua salvo.</li>
+                 <li>No <strong>topo do app</strong>, clique em <strong>Atualizar para…</strong> (se não aparecer, clique em <strong>Verificar atualização</strong>, no canto de baixo à esquerda).</li>
+                 <li>O app baixa, fecha, instala e abre sozinho. O login continua salvo.</li>
                </ol>
                <small>Não apareceu a atualização? Feche o app e abra de novo: ele confere sozinho ao abrir.</small>`
         }
