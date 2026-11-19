@@ -21,6 +21,7 @@ const { createCredentialStore } = require("./credentials");
 const { createElectronCookieStore } = require("./electron-cookie-store");
 const GESTOR_APP_CSS = require("./gestor-view.css.js");
 const { createUpdater } = require("./updater");
+const { createSiteWatcher, shouldReloadNow } = require("./site-watch");
 const {
   ALLOWED_GESTOR_SECTIONS,
   MODULE_HINTS,
@@ -237,6 +238,10 @@ const createGestorView = () => {
     }, 1000);
   });
   contents.on("before-input-event", (event, input) => handleShortcut(event, input));
+  // Clique, rolagem e toque também contam como "operador mexendo".
+  contents.on("input-event", () => {
+    lastInputAt = Date.now();
+  });
   return gestorView;
 };
 
@@ -464,7 +469,41 @@ const setZoom = (factor) => {
   gestorView?.webContents.setZoomFactor(value);
 };
 
+/* ---------------- Site publicado de novo: recarrega o Gestor ---------------- */
+
+let lastInputAt = Date.now();
+let pendingSiteReload = false;
+let siteWatcher = null;
+
+const isGestorVisible = () =>
+  Boolean(gestorView) && state.phase === "app" && isGestorModule(state.activeModule);
+
+const reloadGestorIfIdle = () => {
+  if (!gestorView || state.phase !== "app") return;
+  if (!shouldReloadNow({ pending: pendingSiteReload, lastInputAt, now: Date.now(), gestorVisible: isGestorVisible() })) return;
+  pendingSiteReload = false;
+  debug("recarregando o Gestor (site publicado de novo)");
+  gestorView.webContents.reloadIgnoringCache();
+};
+
+const startSiteWatcher = () => {
+  siteWatcher = createSiteWatcher({
+    fetchImpl: (url, options) => net.fetch(url, options),
+    getUrl: () => (state.phase === "app" ? `${config.getServerUrl()}/admin/admin.js` : ""),
+    onChange: () => {
+      pendingSiteReload = true;
+      reloadGestorIfIdle();
+    },
+    log: (...args) => debug("site-watch", ...args),
+  });
+  siteWatcher.start();
+  // Confere a cada 15 s se o operador já parou para aplicar o recarregamento.
+  const idleTimer = setInterval(reloadGestorIfIdle, 15 * 1000);
+  if (typeof idleTimer.unref === "function") idleTimer.unref();
+};
+
 const handleShortcut = (event, input) => {
+  lastInputAt = Date.now();
   if (input.type !== "keyDown") return;
   const ctrl = input.control || input.meta;
   if (input.key === "F5" || (ctrl && input.key.toLowerCase() === "r")) {
@@ -711,6 +750,7 @@ app.whenReady().then(async () => {
   });
   updater.start();
   config = createConfig({ directory: app.getPath("userData") });
+  startSiteWatcher();
   credentials = createCredentialStore({
     safeStorage,
     directory: app.getPath("userData"),
