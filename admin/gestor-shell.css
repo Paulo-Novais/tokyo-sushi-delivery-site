@@ -9098,3 +9098,42 @@ html body.admin-body[data-admin-theme="dark"] .gx-origin.is-uber { background: #
   font-weight: 700;
   cursor: pointer;
 }
+
+/* App INOVAS PDV desatualizado: passo a passo para atualizar. */
+.gx-pdv-required.is-update { border-color: #fed7aa; }
+.gx-pdv-required.is-update .gx-pdv-required-chip { background: #ffedd5; color: #9a3412; }
+.gx-pdv-required button.gx-pdv-required-download { border: 0; cursor: pointer; font: inherit; }
+.gx-pdv-update-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: #111827; font-size: 15px; line-height: 1.45; }
+
+/* Faixa de atualização do app INOVAS PDV (dentro do app). */
+.gx-pdv-update-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 12px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #7c2d12;
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.15);
+  font-size: 14px;
+}
+.gx-pdv-update-banner small { display: block; color: #9a3412; }
+.gx-pdv-update-banner button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #d9480f;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

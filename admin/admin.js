@@ -12492,6 +12492,48 @@ const renderSystemGlobalFilters = () => {
 // o aviso com o botão de baixar o app (quando a regra estiver ligada).
 const GESTOR_PDV_DOWNLOAD_URL =
   "https://github.com/Paulo-Novais/tokyo-sushi-delivery-site/releases/download/gestor-pdv/INOVAS-PDV-Setup.exe";
+// App INOVAS PDV: a partir da 0.3.1 o app oferece window.InovasPDV
+// (versão e atualizar). App 0.2.0 roda no Electron sem se identificar.
+const getPdvAppBridge = () =>
+  typeof window !== "undefined" && window.InovasPDV && typeof window.InovasPDV.updateNow === "function" ? window.InovasPDV : null;
+const isInsideOutdatedPdvApp = () => {
+  const userAgent = String(navigator.userAgent || "");
+  return /\bElectron\//.test(userAgent) && !/\bInovasPDV\/\d/.test(userAgent);
+};
+// Faixa "Nova versão do app" (app 0.3.1+): pergunta ao app se há atualização
+// baixada e mostra o botão "Atualizar agora" no topo do Gestor.
+const syncPdvAppUpdateBanner = async () => {
+  const bridge = getPdvAppBridge();
+  if (!bridge || typeof bridge.getUpdate !== "function" || !document.body) return;
+  let info = null;
+  try {
+    info = await bridge.getUpdate();
+  } catch {
+    return;
+  }
+  let banner = document.querySelector("[data-pdv-update-banner]");
+  if (!info?.available) {
+    banner?.remove();
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.className = "gx-pdv-update-banner";
+    banner.setAttribute("data-pdv-update-banner", "");
+    banner.setAttribute("role", "status");
+    document.body.appendChild(banner);
+  }
+  banner.innerHTML = `
+    <span><strong>Nova versão do app INOVAS PDV (${escapeHtml(info.available)}).</strong> <small data-pdv-update-status>Instala em menos de 1 minuto; o login continua salvo.</small></span>
+    <button type="button" data-pdv-update-now>Atualizar agora</button>`;
+};
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    void syncPdvAppUpdateBanner();
+    window.setInterval(() => void syncPdvAppUpdateBanner(), 5 * 60 * 1000);
+  });
+}
+
 const isPdvAppBlockedSection = () =>
   adminState.pdvAppBlocked === true && ["orders", "cash-register"].includes(adminState.activeSection);
 
@@ -12503,6 +12545,29 @@ const renderPdvAppRequired = () => {
   if (detailRoot) detailRoot.innerHTML = "";
   if (!moduleRoot) return;
   const area = adminState.activeSection === "cash-register" ? "Caixa e Comandas" : "Pedidos";
+  // Aberto dentro de um app INOVAS PDV antigo (0.2.0, que ainda não se
+  // identifica): em vez de "baixar o app", pede para atualizar.
+  if (isInsideOutdatedPdvApp()) {
+    const bridge = getPdvAppBridge();
+    moduleRoot.innerHTML = `
+      <section class="gx-pdv-required is-update" data-pdv-app-update>
+        <span class="gx-pdv-required-chip">Atualização obrigatória</span>
+        <h2>Atualize o app INOVAS PDV</h2>
+        <p>Seu app está numa versão antiga e por isso ainda não abre ${escapeHtml(area)}. A versão nova já está disponível e instala em menos de 1 minuto.</p>
+        ${
+          bridge
+            ? `<button type="button" class="gx-pdv-required-download" data-pdv-update-now>Atualizar agora</button>
+               <small data-pdv-update-status>O app fecha, instala e abre sozinho. O login continua salvo.</small>`
+            : `<ol class="gx-pdv-update-steps">
+                 <li>No canto de <strong>baixo à esquerda</strong> do app, clique em <strong>Verificar atualização</strong>.</li>
+                 <li>Clique em <strong>Atualizar agora</strong>.</li>
+                 <li>O app fecha, instala e abre sozinho. O login continua salvo.</li>
+               </ol>
+               <small>Não apareceu a atualização? Feche o app e abra de novo: ele confere sozinho ao abrir.</small>`
+        }
+      </section>`;
+    return;
+  }
   moduleRoot.innerHTML = `
     <section class="gx-pdv-required" data-pdv-app-required>
       <span class="gx-pdv-required-chip">Somente no app</span>
@@ -13657,6 +13722,27 @@ document.addEventListener("click", (event) => {
     adminState.ordersStage = getOrdersStage() === value ? "all" : value;
     renderDashboardStats();
     renderBoard();
+    return;
+  }
+  const updateButton = event.target.closest?.("[data-pdv-update-now]");
+  if (updateButton) {
+    const bridge = getPdvAppBridge();
+    const status = document.querySelector("[data-pdv-update-status]");
+    updateButton.disabled = true;
+    updateButton.textContent = "Baixando a atualização…";
+    Promise.resolve(bridge?.updateNow())
+      .then((result) => {
+        if (result && result.ok === false && status) {
+          status.textContent = result.message || "Ainda não há versão nova para instalar. Tente de novo em alguns minutos.";
+          updateButton.disabled = false;
+          updateButton.textContent = "Atualizar agora";
+        }
+      })
+      .catch(() => {
+        if (status) status.textContent = "Não foi possível atualizar agora. Feche e abra o app.";
+        updateButton.disabled = false;
+        updateButton.textContent = "Atualizar agora";
+      });
     return;
   }
   const viewButton = event.target.closest?.("[data-orders-view]");
