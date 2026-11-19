@@ -86,14 +86,13 @@
       <span class="pill">PDV</span>
       <span class="top-restaurant" id="top-restaurant"></span>
       <span class="grow"></span>
+      <!-- Só aparece quando há versão nova: um botão "Atualizar para X". -->
       <div class="update" id="update" role="status" aria-live="polite" hidden>
-        <span class="update-copy">
-          <strong id="update-title">Nova versão <span id="update-version"></span></strong>
-          <small id="update-hint">O app fecha e abre de novo sozinho. Se deixar para depois, atualiza ao fechar.</small>
+        <button type="button" class="update-btn" id="update-now" title="O app fecha, instala e abre de novo sozinho. O login continua salvo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg>
+          <span id="update-label">Atualizar para <span id="update-version"></span></span>
           <span class="update-bar" id="update-bar" hidden><i id="update-bar-fill"></i></span>
-        </span>
-        <button type="button" class="btn btn-primary" id="update-now">Atualizar agora</button>
-        <button type="button" class="btn" id="update-later">Mais tarde</button>
+        </button>
       </div>
       <span class="conn" id="conn" data-state="ok"><i></i><span id="conn-label">Conectado neste computador</span></span>
       <div class="operator">
@@ -109,12 +108,6 @@
     <div class="body">
       <nav class="side" aria-label="Menu do PDV">
         <div id="nav-items"></div>
-        <p class="side-foot">Painel, relatórios, financeiro e configurações ficam no Gestor (site), só para dono e gerente.</p>
-        <div class="side-version">
-          <span>Versão <strong id="side-version"></strong></span>
-          <button type="button" class="link-btn" id="update-check">Verificar atualização</button>
-          <small id="update-check-status" role="status" aria-live="polite"></small>
-        </div>
       </nav>
 
       <main class="main">
