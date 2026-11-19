@@ -7,14 +7,30 @@ Atualizada em 19/11/2026. Marque `[x]` quando terminar.
 - [ ] **Revisar toda a estrutura do sistema**: código, banco, segurança,
       isolamento entre restaurantes, testes instáveis, desempenho e pontos
       frágeis. Resultado: relatório com o que corrigir, em ordem.
-- [ ] **MenuDino e Consumer**: levantar serviços, planos, preços e taxas atuais.
-- [ ] **Saipos**: levantar serviços, planos, preços e taxas atuais.
-- [ ] **iFood (para o restaurante)**: Gestor de Pedidos, cardápio próprio,
+- [x] **MenuDino e Consumer**: levantar serviços, planos, preços e taxas atuais.
+- [x] **Saipos**: levantar serviços, planos, preços e taxas atuais.
+- [x] **iFood (para o restaurante)**: Gestor de Pedidos, cardápio próprio,
       entregas, taxas e o que oferecem.
-- [ ] **Comparação de todos com o INOVAS**: tabela lado a lado (funções,
+- [x] **Comparação de todos com o INOVAS**: tabela lado a lado (funções,
       preço, taxas), onde ganhamos e onde perdemos.
-- [ ] **Lista de prioridade do que acrescentar**: ordenada por importância
+- [x] **Lista de prioridade do que acrescentar**: ordenada por importância
       (ganho para o restaurante x esforço).
+
+Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
+
+## Próximos recursos (ordem de prioridade)
+
+1. [ ] Emissão de NFC-e
+2. [ ] Robô de WhatsApp (avisos automáticos do pedido)
+3. [ ] Fidelidade / cashback
+4. [ ] KDS (tela da cozinha)
+5. [ ] QR code na mesa
+6. [ ] App do entregador com rastreio
+7. [ ] Ficha técnica no estoque
+8. [ ] Maquininha integrada (TEF/Stone)
+9. [ ] Totem de autoatendimento
+10. [ ] App na loja (começar por PWA)
+11. [ ] Várias lojas na mesma conta
 
 ## Ativação (depende de terceiros)
 
