@@ -9137,3 +9137,12 @@ html body.admin-body[data-admin-theme="dark"] .gx-origin.is-uber { background: #
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Menu "Recebendo pedidos ▾" (Fechar Gestor por): a caixa do topo cortava o
+   menu (overflow: hidden) e os cartões do Painel ficavam por cima dele. */
+html body.admin-body .admin-main-topbar { position: relative; z-index: 40; }
+html body.admin-body .admin-main-intro:has(.gx-presence-menu) { overflow: visible !important; }
+html body.admin-body .gx-presence { z-index: 50; }
+html body.admin-body .gx-presence-menu { z-index: 200; }
+html body.admin-body .gx-presence-menu { width: 300px; }
+html body.admin-body .gx-presence-option { white-space: nowrap; font-size: 12.5px; }
