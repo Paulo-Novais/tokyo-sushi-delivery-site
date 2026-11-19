@@ -1,0 +1,76 @@
+:root {
+  --c-bg: #f6f3f0;
+  --c-card: #ffffff;
+  --c-ink: #1b1b1f;
+  --c-muted: #5f5b58;
+  --c-line: #e4ddd7;
+  --c-brand: #e4560f;
+  --c-brand-ink: #ffffff;
+  --c-error-bg: #fde8e4;
+  --c-error-ink: #7a1c0d;
+  --c-ok-bg: #e7f6ec;
+  --c-ok-ink: #14532d;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  background: radial-gradient(900px 500px at 15% -10%, rgba(228, 86, 15, 0.12), transparent 70%), var(--c-bg);
+  color: var(--c-ink);
+  font: 16px/1.5 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.conta-shell { display: flex; justify-content: center; align-items: flex-start; padding: 40px 16px; }
+.conta-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  box-shadow: 0 18px 40px rgba(27, 27, 31, 0.08);
+}
+.conta-head { text-align: center; margin-bottom: 18px; }
+.conta-logo { height: 56px; width: auto; }
+.conta-tag { margin: 10px 0 2px; color: var(--c-brand); font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.conta-head h1 { margin: 0; font-size: 26px; line-height: 1.2; }
+.conta-sub { margin: 6px 0 0; color: var(--c-muted); }
+.conta-alert { border-radius: 12px; padding: 10px 14px; margin: 0 0 14px; font-size: 14px; background: var(--c-error-bg); color: var(--c-error-ink); }
+.conta-alert.is-ok { background: var(--c-ok-bg); color: var(--c-ok-ink); }
+.conta-form { display: grid; gap: 12px; }
+.conta-form label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.conta-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 400;
+  background: #fff;
+  color: var(--c-ink);
+}
+.conta-form input:focus { outline: 3px solid rgba(228, 86, 15, 0.25); border-color: var(--c-brand); }
+.conta-primary, .conta-secondary, .conta-google {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.conta-primary { border: 0; background: var(--c-brand); color: var(--c-brand-ink); }
+.conta-primary[disabled], .conta-google[disabled] { opacity: 0.6; cursor: progress; }
+.conta-secondary { border: 1px solid var(--c-line); background: #fff; color: var(--c-ink); }
+.conta-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid var(--c-line); background: #fff; color: var(--c-ink);
+}
+.conta-divider { display: flex; align-items: center; gap: 12px; color: var(--c-muted); font-size: 13px; margin: 16px 0; }
+.conta-divider::before, .conta-divider::after { content: ""; flex: 1; height: 1px; background: var(--c-line); }
+.conta-links { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 14px; flex-wrap: wrap; }
+.conta-links a { color: var(--c-brand); font-weight: 600; text-decoration: none; }
+.conta-links a:hover { text-decoration: underline; }
+.conta-foot { margin: 20px 0 0; color: var(--c-muted); font-size: 13px; text-align: center; }
+.conta-foot a { color: var(--c-brand); }
+@media (max-width: 400px) { .conta-card { padding: 22px 16px 18px; } .conta-shell { padding-top: 20px; } }

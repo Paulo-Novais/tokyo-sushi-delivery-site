@@ -10,6 +10,7 @@ import identityDomainStore from "./lib/identity-domain-store.cjs";
 import tenantSql from "./lib/tenant-sql.cjs";
 import publicSurfacePolicy from "./lib/public-surface-policy.cjs";
 import premiumSiteRoutes from "./lib/premium-site-routes.cjs";
+import customerAuthHost from "./lib/customer-auth-host.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -478,6 +479,23 @@ export default async function middleware(request) {
   }
   const policyHost = getRequestPolicyHost(request, url);
   const rawHost = getRawRequestHost(request, url);
+
+  // Login central do cliente (ex.: login.inovasfood.com.br): só as telas e
+  // rotas do login do cliente. Gestor, Sistema e sites de restaurante não
+  // abrem por este endereço.
+  const loginHost = customerAuthHost.getCustomerAuthHost();
+  if (loginHost && normalizeTenantHost(rawHost) === loginHost) {
+    if (pathname === "/" || pathname === "") {
+      return Response.redirect(new URL("/conta/entrar", request.url), 302);
+    }
+    if (customerAuthHost.isCustomerAuthHostPath(pathname)) {
+      return next();
+    }
+    return new Response("Not Found", {
+      status: 404,
+      headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
   const hostClassification = classifyDomainHost(rawHost);
   const hostKind = classifyTenantHost(policyHost);
   const hostResolution =

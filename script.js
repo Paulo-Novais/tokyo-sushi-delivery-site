@@ -6118,6 +6118,10 @@ const ACCOUNT_ICON_MARKUP = `
 `;
 
 const getAuthProviderLabel = (provider) => {
+  if (provider === "conta") {
+    return "Conta INOVAS (Google ou e-mail)";
+  }
+
   if (provider === "phone") {
     return "Telefone verificado por WhatsApp";
   }
@@ -8957,6 +8961,87 @@ const updateAuthTriggers = () => {
   syncHeaderOrderCta();
 };
 
+// ---------- Login do cliente (Google ou e-mail e senha) ----------
+const CUSTOMER_ME_ENDPOINT = "/api/customer/me";
+const CUSTOMER_EXCHANGE_ENDPOINT = "/api/customer/auth/exchange";
+const customerAccountState = { loginUrl: "", restaurantKey: "", synced: false };
+
+const buildCustomerLoginUrl = (mode = "entrar") => {
+  if (!customerAccountState.loginUrl || !customerAccountState.restaurantKey) return "";
+  const url = new URL(customerAccountState.loginUrl, window.location.href);
+  const back = new URL(window.location.href);
+  back.searchParams.delete("login_code");
+  url.searchParams.set("r", customerAccountState.restaurantKey);
+  url.searchParams.set("volta", back.toString());
+  if (mode && mode !== "entrar") url.searchParams.set("modo", mode);
+  return url.toString();
+};
+
+const renderCustomerAccountEntry = () => {
+  const loginHref = buildCustomerLoginUrl("entrar");
+  const signupHref = buildCustomerLoginUrl("criar");
+  const disabled = !loginHref;
+  return `
+    <div class="auth-panel-head">
+      <p class="section-tag">${escapeHtml(getPublicAuthAccessLabel())}</p>
+      <h2 id="auth-title">Entre para fazer seu pedido</h2>
+      <p>Use sua conta Google ou seu e-mail e senha. Voce continua conectado neste aparelho ate clicar em Sair.</p>
+    </div>
+    <div class="auth-form">
+      <a class="button button-primary full-width" data-conta-entrar href="${escapeHtml(loginHref || "#")}"${disabled ? ' aria-disabled="true"' : ""}>Entrar com Google ou e-mail</a>
+      <a class="button button-outline full-width" data-conta-criar href="${escapeHtml(signupHref || "#")}"${disabled ? ' aria-disabled="true"' : ""}>Criar conta</a>
+    </div>
+    ${
+      disabled
+        ? '<div class="auth-message auth-message-note">Carregando o login... tente de novo em instantes.</div>'
+        : ""
+    }
+    ${authState.message ? `<div class="auth-message auth-message-note">${escapeHtml(authState.message)}</div>` : ""}
+    ${authState.error ? `<div class="auth-message auth-message-error">${escapeHtml(authState.error)}</div>` : ""}
+  `;
+};
+
+// Ao abrir a página: troca o código que voltou do login central (?login_code=)
+// pela sessão deste restaurante e confere no servidor quem está logado.
+const syncCustomerSessionFromServer = async () => {
+  const current = new URL(window.location.href);
+  const loginCode = current.searchParams.get("login_code");
+  if (loginCode) {
+    current.searchParams.delete("login_code");
+    window.history.replaceState(window.history.state, "", current.toString());
+    try {
+      await postJsonWithTimeout(CUSTOMER_EXCHANGE_ENDPOINT, { code: loginCode }, 10000);
+    } catch (error) {
+      authState.error = error?.message || "Nao foi possivel concluir o login. Tente de novo.";
+    }
+  }
+  try {
+    const data = await getJsonWithTimeout(CUSTOMER_ME_ENDPOINT, 10000);
+    customerAccountState.loginUrl = data.loginUrl || "";
+    customerAccountState.restaurantKey = data.restaurantKey || "";
+    if (data.authenticated && data.customer) {
+      saveAuthProfile({
+        id: "conta",
+        name: data.customer.name || "Cliente",
+        email: data.customer.email || "",
+        phone: data.customer.phone || "",
+        provider: "conta",
+      });
+      if (loginCode) authState.message = "";
+    } else {
+      clearAuthProfile();
+    }
+  } catch (error) {
+    // Sem resposta: mantém a tela como está; o pedido confere a sessão no servidor.
+  }
+  customerAccountState.synced = true;
+  updateAuthTriggers();
+  renderAuthPanel();
+  renderCart();
+  prefillProfileForms();
+  if (loginCode && loadAuthProfile() && loadCart().length) openCart();
+};
+
 const renderAuthPanel = () => {
   const panel = document.querySelector("[data-auth-panel]");
   const profile = loadAuthProfile();
@@ -8973,7 +9058,7 @@ const renderAuthPanel = () => {
       <div class="auth-panel-head">
         <p class="section-tag">Login ativo</p>
         <h2 id="auth-title">Seus dados ja estao prontos</h2>
-        <p>Seu atendimento e seus pedidos pelo WhatsApp agora podem sair com identificacao completa.</p>
+        <p>Voce continua conectado neste aparelho ate clicar em Sair.</p>
       </div>
 
       <div class="auth-profile-card glass-card">
@@ -9008,7 +9093,6 @@ const renderAuthPanel = () => {
       </div>
 
       <div class="auth-profile-actions">
-        <button class="button button-primary" type="button" data-auth-edit>Editar dados</button>
         <button class="button button-outline" type="button" data-auth-logout>Sair</button>
       </div>
 
@@ -9019,6 +9103,15 @@ const renderAuthPanel = () => {
       }
     `;
 
+    schedulePortugueseUiRefresh();
+    return;
+  }
+
+  // Login novo (19/11/2026): Google ou e-mail e senha, no login central da
+  // INOVAS. O formulário antigo (código no WhatsApp) fica desativado.
+  if (!profile) {
+    panel.dataset.authView = "conta";
+    panel.innerHTML = renderCustomerAccountEntry();
     schedulePortugueseUiRefresh();
     return;
   }
@@ -11873,6 +11966,13 @@ const submitCartOrder = async () => {
     );
     await refreshCustomerTrackingState({ renderPage: true });
   } catch (error) {
+    if (error?.code === "customer_login_required" || error?.code === "customer_phone_required") {
+      clearAuthProfile();
+      updateAuthTriggers();
+      setCartOrderNotice("Entre na sua conta para enviar o pedido. Seu carrinho continua salvo.", "error");
+      openAuth("entry");
+      return;
+    }
     const fallbackTriggered = shouldUseManualWhatsappOrderFallback(error)
       ? triggerManualWhatsappOrderFallback({
           cart,
@@ -13658,7 +13758,17 @@ const handleDocumentClick = (event) => {
 
   const authLogoutButton = event.target.closest("[data-auth-logout]");
   if (authLogoutButton) {
-    void postJsonWithTimeout(CUSTOMER_LOGOUT_ENDPOINT, {}, 8000).catch(() => {});
+    void postJsonWithTimeout(CUSTOMER_LOGOUT_ENDPOINT, {}, 8000)
+      .then((data) => {
+        // Sai também do login central e volta para esta página.
+        if (data?.centralLogoutUrl) {
+          const url = new URL(data.centralLogoutUrl, window.location.href);
+          url.searchParams.set("volta", window.location.href);
+          if (customerAccountState.restaurantKey) url.searchParams.set("r", customerAccountState.restaurantKey);
+          window.location.assign(url.toString());
+        }
+      })
+      .catch(() => {});
     clearAuthProfile();
     clearCustomerClientToken();
     customerTrackingState.loading = false;
@@ -13908,7 +14018,7 @@ initComboHeroImages();
 renderDeliveryHistory();
 renderOrderHistoryPage();
 renderTrackingPage();
-void refreshCustomerTrackingState({ renderPage: true });
+void syncCustomerSessionFromServer().finally(() => refreshCustomerTrackingState({ renderPage: true }));
 void loadReviewPage();
 prefillProfileForms();
 setupReveal();
