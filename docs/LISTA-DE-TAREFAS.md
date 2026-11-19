@@ -40,6 +40,19 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 - Maquininha integrada no salão: é do restaurante; online já temos.
 - Várias lojas na mesma conta: cada restaurante tem contrato próprio.
 
+## Revisão dos planos e preços (a fazer depois — decisões do Paulo, 19/11/2026)
+
+- [ ] **Essencial: R$ 109,90/mês** (hoje R$ 49,90), com **primeiro mês por R$ 49,90**.
+- [ ] **Domínio próprio é adicional à parte** em todos os planos (hoje aparece
+      "incluso" no Completo: site de vendas, cadastro do Painel INOVAS e
+      cobrança).
+- [ ] **Nota fiscal automática é adicional à parte** (já é + R$ 49,90; confirmar
+      valor e em quais planos).
+- [ ] Revisar o que cada plano oferece e os valores (Grátis, Essencial,
+      Profissional, Completo), e depois atualizar juntos: página de planos
+      (inovas.html/index.html), cadastro do Painel INOVAS, tabela de planos do
+      servidor e textos de economia/comparação.
+
 ## Ativação (depende de terceiros)
 
 - [ ] **Pagar.me (Stone)** — aguardando a Stone liberar a conta.
