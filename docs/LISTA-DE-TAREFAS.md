@@ -23,17 +23,21 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 **Agora**
 1. [ ] **Emissão de NFC-e automática** (por serviço pronto de notas).
 2. [ ] **KDS (tela da cozinha)** — replicar o projeto parecido que já existe.
+3. [ ] **Previsão inteligente de vendas e compras** (pedido do Paulo, 19/11):
+       comparar semana/mês/ano, lista de compras pronta, estoque parado virando
+       promoção, margem por prato. Proposta: `docs/PREVISAO-INTELIGENTE.md`.
+       Precisa antes: histórico do estoque (entradas com custo) e ficha técnica simplificada.
 
 **Mais à frente**
-3. [ ] **Ficha técnica** (custo de cada prato) — complexo, mas útil para o restaurante.
-4. [ ] **QR code na mesa** caindo na comanda do Caixa — não descartado.
-5. [ ] **Central de entrega INOVAS** (estilo Uber): app do entregador ligado
+4. [ ] **Ficha técnica** (custo de cada prato) — sobe de prioridade: é a base da previsão de compras.
+5. [ ] **QR code na mesa** caindo na comanda do Caixa — não descartado.
+6. [ ] **Central de entrega INOVAS** (estilo Uber): app do entregador ligado
        ao site, acompanhamento em tempo real do entregador que pega o pedido
        no restaurante parceiro, e entregador sob demanda para quem pedir.
-6. [ ] **Fidelidade/cashback por conta da INOVAS** (hoje o restaurante já
+7. [ ] **Fidelidade/cashback por conta da INOVAS** (hoje o restaurante já
        faz pela tela de clientes/cupons).
-7. [ ] **App na loja** — para o garçom entrar no restaurante.
-8. [ ] Totem de autoatendimento — a avaliar.
+8. [ ] **App na loja** — para o garçom entrar no restaurante.
+9. [ ] Totem de autoatendimento — a avaliar.
 
 **Fora do escopo**
 - Robô de WhatsApp: o site já mostra o andamento do pedido.
