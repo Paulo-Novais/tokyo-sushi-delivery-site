@@ -93,9 +93,9 @@ test("Home: Economia calcula plano, domínio e comissão do app", async ({ page 
   await page.locator("[data-calc-share]").fill("5");
   await expect(page.locator("[data-calc-month]")).toHaveText("R$ 0");
 
-  // "trocar" avança o plano: Profissional -> Completo (domínio próprio já incluso).
+  // "trocar" avança o plano: Profissional -> Completo; domínio próprio é à parte (+ R$ 40).
   await page.locator("[data-calc-swap]").click();
-  await expect(price).toHaveText("R$ 219,90");
+  await expect(price).toHaveText("R$ 259,90");
   await expect(page.locator("[data-builder-desc]")).toHaveText("Plano Completo · domínio próprio incluso");
 });
 

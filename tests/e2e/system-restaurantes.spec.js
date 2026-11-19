@@ -216,10 +216,10 @@ test("Cadastro novo: CNPJ preenche a empresa, categoria pelo volume, nota fiscal
   await addon.check();
   await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 199,80/mês");
   await expect(form.locator("[data-wiz-nfce-provider]")).toHaveText("Brasil NFe (ilimitada)");
-  // Essencial não tem nota fiscal nem domínio próprio.
+  // Essencial não tem nota fiscal; domínio próprio é adicional em qualquer plano pago.
   await form.locator('input[name="plan"][value="START"]').check();
   await expect(addon).toBeDisabled();
-  await expect(form.getByLabel("Domínio próprio (opcional)")).toBeDisabled();
+  await expect(form.getByLabel("Domínio próprio (opcional)")).toBeEnabled();
   await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 49,90/mês");
   await form.locator('input[name="plan"][value="BUSINESS"]').check();
   await addon.check();

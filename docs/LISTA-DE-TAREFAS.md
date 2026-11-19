@@ -43,7 +43,7 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 ## Revisão dos planos e preços (a fazer depois — decisões do Paulo, 19/11/2026)
 
 - [ ] **Essencial: R$ 109,90/mês** (hoje R$ 49,90), com **primeiro mês por R$ 49,90**.
-- [ ] **Domínio próprio é adicional à parte** em todos os planos (hoje aparece
+- [x] **Domínio próprio é adicional à parte** em todos os planos (feito 19/11: site, calculadora e cadastro) (hoje aparece
       "incluso" no Completo: site de vendas, cadastro do Painel INOVAS e
       cobrança).
 - [ ] **Nota fiscal automática é adicional à parte** (já é + R$ 49,90; confirmar

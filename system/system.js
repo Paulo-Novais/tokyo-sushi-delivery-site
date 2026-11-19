@@ -490,7 +490,7 @@
     ["FREE", "Grátis", 0, "até 50 pedidos/mês"],
     ["START", "Essencial", 49.9, "site + pedidos"],
     ["BUSINESS", "Profissional", 149.9, "salão, estoque, financeiro"],
-    ["PRO", "Completo", 219.9, "tudo + domínio próprio"],
+    ["PRO", "Completo", 219.9, "tudo + usuários ilimitados"],
   ];
   const WIZ_ADDON_PLANS = ["BUSINESS", "PRO"];
   const WIZ_NFCE_PRICE = 49.9;
@@ -610,7 +610,7 @@
             ${box("site", "5. Site e domínio", "O site entra no ar assim que o cadastro termina.", `
               <div class="sys-wiz-grid">
                 <label class="sys-field"><span>Endereço INOVAS</span><span class="sys-wiz-prefix"><span>inovasfood.com.br/</span><input class="sys-input" name="slug" required pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" minlength="3" maxlength="60" data-slug-target /></span><small class="sys-hint" data-wiz-slug-status></small></label>
-                <label class="sys-field" data-wiz-domain><span>Domínio próprio (opcional)</span><input class="sys-input" name="customDomain" placeholder="www.restaurante.com.br" /><small class="sys-hint" data-wiz-domain-note>Incluído no Completo. Nos outros planos, vincule depois no detalhe do restaurante (+ R$ 40/mês).</small></label>
+                <label class="sys-field" data-wiz-domain><span>Domínio próprio (opcional)</span><input class="sys-input" name="customDomain" placeholder="www.restaurante.com.br" /><small class="sys-hint" data-wiz-domain-note>Adicional de R$ 40/mês (planos pagos). Fica "aguardando DNS" até o dono apontar o domínio.</small></label>
               </div>
               <fieldset class="sys-wiz-colors"><legend>Cor principal do site</legend>
                 ${WIZ_COLORS.map(([hex, label], index) => `<label><input type="radio" name="primaryColor" value="${hex}" ${index === 0 ? "checked" : ""} /><span style="background:${hex}" aria-hidden="true"></span>${escapeHtml(label)}</label>`).join("")}
@@ -676,11 +676,13 @@
     if (totalLabel) totalLabel.textContent = cycle === "MONTHLY" ? "Total mensal" : `Total ${cycleEntry[1].toLowerCase()} (com desconto)`;
     const domainField = form.querySelector("[data-wiz-domain]");
     const domainInput = get("customDomain");
+    // Domínio próprio é adicional (+ R$ 40/mês) em qualquer plano pago.
+    const domainAllowed = plan !== "FREE";
     if (domainInput) {
-      domainInput.disabled = plan !== "PRO";
-      if (plan !== "PRO") domainInput.value = "";
+      domainInput.disabled = !domainAllowed;
+      if (!domainAllowed) domainInput.value = "";
     }
-    domainField?.classList.toggle("is-disabled", plan !== "PRO");
+    domainField?.classList.toggle("is-disabled", !domainAllowed);
     const providerLabel = category === "SUPER" ? "Brasil NFe (ilimitada)" : "Conta compartilhada INOVAS";
     form.querySelector("[data-wiz-nfce-off]")?.toggleAttribute("hidden", nfce);
     form.querySelector("[data-wiz-nfce-on]")?.toggleAttribute("hidden", !nfce);
