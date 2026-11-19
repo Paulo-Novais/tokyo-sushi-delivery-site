@@ -85,7 +85,7 @@ Como o sistema faz isso:
   pratos que dependem dele são pausados no site e no iFood automaticamente, e
   voltam quando a compra entra. O cliente não pede algo que vai ser cancelado.
 - **Excesso vira venda:** o que está sobrando entra em promoção para os
-  clientes que gostam daqueles pratos, antes de vencer (ver acima).
+  clientes que gostam daqueles pratos, antes de vencer (ver "O que o dono vê", item 4).
 - **Placar de ruptura e excesso:** todo mês o dono vê quantas vezes faltou,
   quanto deixou de vender, quanto sobrou e quanto foi perdido, comparando com
   o mês anterior. Assim ele enxerga a melhora.
