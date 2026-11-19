@@ -71,8 +71,10 @@ test("versão nova: baixa, confere e avisa; Atualizar agora roda o instalador si
     onChange: (state) => changes.push(state),
   });
   const state = await updater.check();
-  assert.deepEqual(state, { version: "0.3.0", visible: true });
-  assert.deepEqual(changes.at(-1), { version: "0.3.0", visible: true });
+  assert.deepEqual(state, { version: "0.3.0", visible: true, phase: "ready", progress: 100 });
+  assert.deepEqual(changes.at(-1), { version: "0.3.0", visible: true, phase: "ready", progress: 100 });
+  // Durante o download a tela recebeu o progresso.
+  assert.ok(changes.some((change) => change?.phase === "downloading"));
   assert.equal(updater.installNow(), true);
   assert.equal(spawn.calls.length, 1);
   assert.deepEqual(spawn.calls[0].args, ["/S", "--updated", "--force-run"]);
@@ -92,9 +94,9 @@ test("Mais tarde: esconde o aviso e instala ao fechar (obrigatória)", async () 
     now: () => clock,
   });
   await updater.check();
-  assert.deepEqual(updater.later(), { version: "0.2.1", visible: false });
+  assert.deepEqual(updater.later(), { version: "0.2.1", visible: false, phase: "ready", progress: 100 });
   clock += 3 * 60 * 60 * 1000;
-  assert.deepEqual(updater.getState(), { version: "0.2.1", visible: true }, "aviso volta depois de um tempo");
+  assert.deepEqual(updater.getState(), { version: "0.2.1", visible: true, phase: "ready", progress: 100 }, "aviso volta depois de um tempo");
   assert.equal(updater.installOnQuit(), true);
   assert.deepEqual(spawn.calls[0].args, ["/S", "--updated"], "ao fechar: instala sem reabrir");
 });
@@ -128,4 +130,18 @@ test("desligado (fora do Windows instalado): não consulta nada", async () => {
   const updater = createUpdater({ currentVersion: "0.2.0", downloadDir: tempDir(), enabled: false, fetchImpl, spawnImpl: fakeSpawn() });
   assert.equal(await updater.check(), null);
   assert.equal(fetchImpl.calls.length, 0);
+});
+
+test("Verificar atualização: diz se já está na versão nova ou se deu erro", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pdv-upd-"));
+  const same = createUpdater({ currentVersion: "0.3.0", downloadDir: dir, enabled: true, fetchImpl: fakeFetch(goodManifest("0.3.0")), spawnImpl: fakeSpawn() });
+  assert.deepEqual(await same.checkNow(), { status: "uptodate" });
+  const broken = createUpdater({ currentVersion: "0.3.0", downloadDir: dir, enabled: true, fetchImpl: async () => ({ ok: false, status: 404 }), spawnImpl: fakeSpawn() });
+  assert.deepEqual(await broken.checkNow(), { status: "error" });
+  const newer = createUpdater({ currentVersion: "0.3.0", downloadDir: dir, enabled: true, fetchImpl: fakeFetch(goodManifest("0.3.2")), spawnImpl: fakeSpawn() });
+  const result = await newer.checkNow();
+  assert.equal(result.status, "ready");
+  assert.equal(result.update.version, "0.3.2");
+  const off = createUpdater({ currentVersion: "0.3.0", downloadDir: dir, enabled: false });
+  assert.deepEqual(await off.checkNow(), { status: "disabled" });
 });

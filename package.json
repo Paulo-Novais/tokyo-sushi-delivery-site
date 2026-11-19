@@ -1,7 +1,7 @@
 {
   "name": "inovas-pdv",
   "productName": "INOVAS PDV",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "App INOVAS PDV: Pedidos, Caixa e Comandas e Cardápio do restaurante, com o mesmo login do Gestor.",
   "main": "src/main/main.js",
   "private": true,

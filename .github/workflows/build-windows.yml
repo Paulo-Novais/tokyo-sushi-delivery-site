@@ -101,6 +101,27 @@ jobs:
             }, null, 2));
           "
           cat novo/versao.json
+          # latest.yml: o app 0.2.0 (build antigo) procura a versão nova neste
+          # arquivo (formato do electron-builder, sha512 em base64).
+          node -e "
+            const fs = require('fs'); const crypto = require('crypto');
+            const data = fs.readFileSync('novo/INOVAS-PDV-Setup.exe');
+            const sha512 = crypto.createHash('sha512').update(data).digest('base64');
+            const version = require('./package.json').version;
+            fs.writeFileSync('novo/latest.yml', [
+              'version: ' + version,
+              'files:',
+              '  - url: INOVAS-PDV-Setup.exe',
+              '    sha512: ' + sha512,
+              '    size: ' + data.length,
+              'path: INOVAS-PDV-Setup.exe',
+              'sha512: ' + sha512,
+              \"releaseDate: '\" + new Date().toISOString() + \"'\",
+              '',
+            ].join('\\n'));
+          "
+          cat novo/latest.yml
+          gh release upload "$TAG" novo/latest.yml --clobber
           gh release upload "$TAG" novo/versao.json --clobber
           gh release edit "$TAG" --title "INOVAS PDV (Gestor para Windows) $VERSION" --notes "Instalador do app INOVAS PDV $VERSION para Windows (Pedidos, Caixa e Comandas, Cardápio), com o mesmo login do Gestor. A versão anterior fica em INOVAS-PDV-Setup-anterior.exe."
           sha256sum novo/INOVAS-PDV-Setup.exe

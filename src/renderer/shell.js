@@ -66,6 +66,7 @@
     current = state;
     document.body.dataset.phase = state.phase;
     $("#app-version").textContent = state.version ? `v${state.version}` : "";
+    $("#side-version").textContent = state.version || "";
 
     // Abertura / sem conexão
     if (state.phase === "starting" || state.phase === "connecting") {
@@ -105,6 +106,22 @@
       const update = state.update && state.update.visible ? state.update : null;
       $("#update").hidden = !update;
       $("#update-version").textContent = update ? update.version : "";
+      // Barra de progresso: baixando (com %), pronta (botões) e instalando.
+      const phase = update?.phase || "ready";
+      const busy = phase === "downloading" || phase === "installing";
+      $("#update-title").firstChild.textContent =
+        phase === "downloading" ? "Baixando versão " : phase === "installing" ? "Instalando versão " : "Nova versão ";
+      $("#update-hint").textContent =
+        phase === "downloading"
+          ? `${update.progress || 0}% · pode continuar usando o app`
+          : phase === "installing"
+            ? "O app fecha e abre de novo sozinho em instantes."
+            : "O app fecha e abre de novo sozinho. Se deixar para depois, atualiza ao fechar.";
+      $("#update-bar").hidden = !busy;
+      $("#update-bar").classList.toggle("is-indeterminate", phase === "installing");
+      $("#update-bar-fill").style.width = phase === "downloading" ? `${update.progress || 0}%` : "100%";
+      $("#update-now").hidden = busy;
+      $("#update-later").hidden = busy;
       renderNav(state);
       renderSteps(state);
       const onCardapio = state.activeModule === "cardapio";
@@ -259,6 +276,29 @@
     $("#update-now").disabled = true;
     $("#update-later").disabled = true;
     await pdv.updateNow();
+  });
+  $("#update-check").addEventListener("click", async () => {
+    const button = $("#update-check");
+    const status = $("#update-check-status");
+    button.disabled = true;
+    status.textContent = "Verificando…";
+    try {
+      const result = await pdv.updateCheck();
+      status.textContent =
+        result.status === "uptodate"
+          ? "Você já está na versão mais nova."
+          : result.status === "ready"
+            ? "Versão nova pronta. Clique em Atualizar agora, lá em cima."
+            : result.status === "downloading"
+              ? "Baixando a versão nova… acompanhe lá em cima."
+              : result.status === "disabled"
+                ? "A atualização automática funciona no app instalado no Windows."
+                : "Não foi possível verificar agora. Confira a internet e tente de novo.";
+    } catch {
+      status.textContent = "Não foi possível verificar agora. Tente de novo.";
+    } finally {
+      button.disabled = false;
+    }
   });
   $("#update-later").addEventListener("click", async () => {
     await pdv.updateLater();

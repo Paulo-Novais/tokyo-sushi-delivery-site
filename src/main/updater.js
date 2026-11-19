@@ -18,7 +18,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
-const { Readable } = require("node:stream");
+const { Readable, Transform } = require("node:stream");
 const { pipeline } = require("node:stream/promises");
 
 const RELEASE_BASE_URL = "https://github.com/Paulo-Novais/tokyo-sushi-delivery-site/releases/download/gestor-pdv";
@@ -80,18 +80,34 @@ const createUpdater = ({
     remindAt: 0,
     checking: false,
     installing: false,
+    downloading: null, // { version, received, total } enquanto baixa
+    lastCheck: "", // "uptodate" | "error" | "" (resultado da última verificação)
   };
   let installerPath = null;
   let timer = null;
   let firstTimer = null;
 
-  const publicState = () =>
-    state.available
-      ? {
-          version: state.available.version,
-          visible: now() >= state.remindAt,
-        }
-      : null;
+  // phase: "downloading" (com progress 0-100), "ready" ou "installing".
+  const publicState = () => {
+    if (state.available) {
+      return {
+        version: state.available.version,
+        visible: state.installing || now() >= state.remindAt,
+        phase: state.installing ? "installing" : "ready",
+        progress: 100,
+      };
+    }
+    if (state.downloading) {
+      const { version, received, total } = state.downloading;
+      return {
+        version,
+        visible: true,
+        phase: "downloading",
+        progress: total > 0 ? Math.min(99, Math.floor((received / total) * 100)) : 0,
+      };
+    }
+    return null;
+  };
 
   const emit = () => onChange(publicState());
 
@@ -102,7 +118,22 @@ const createUpdater = ({
     const partial = `${target}.part`;
     const response = await fetchImpl(`${releaseBaseUrl}/${manifest.file}`, { cache: "no-store" });
     if (!response.ok || !response.body) throw new Error(`download ${response.status}`);
-    await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(partial));
+    // Conta os bytes para a barra de progresso (avisa a tela no máximo 4x/s).
+    state.downloading = { version: manifest.version, received: 0, total: manifest.size };
+    emit();
+    let lastEmit = 0;
+    const counter = new Transform({
+      transform(chunk, _encoding, callback) {
+        state.downloading.received += chunk.length;
+        if (now() - lastEmit >= 250) {
+          lastEmit = now();
+          emit();
+        }
+        callback(null, chunk);
+      },
+    });
+    const body = typeof response.body.getReader === "function" ? Readable.fromWeb(response.body) : response.body;
+    await pipeline(body, counter, fs.createWriteStream(partial));
     const digest = await sha256OfFile(partial);
     if (digest !== manifest.sha256 || fs.statSync(partial).size !== manifest.size) {
       fs.rmSync(partial, { force: true });
@@ -120,17 +151,26 @@ const createUpdater = ({
       if (!response.ok) throw new Error(`versao.json ${response.status}`);
       const manifest = validateManifest(await response.json());
       if (!manifest) throw new Error("versao.json inválido");
-      if (compareVersions(manifest.version, currentVersion) <= 0) return publicState();
+      if (compareVersions(manifest.version, currentVersion) <= 0) {
+        state.lastCheck = "uptodate";
+        return publicState();
+      }
       if (state.available?.version === manifest.version) return publicState();
       installerPath = await download(manifest);
       state.available = { version: manifest.version };
       state.remindAt = 0;
+      state.lastCheck = "";
       log("atualização pronta", manifest.version);
       emit();
     } catch (error) {
+      state.lastCheck = "error";
       log("verificação de atualização falhou", error?.message || String(error));
     } finally {
       state.checking = false;
+      if (state.downloading) {
+        state.downloading = null;
+        emit();
+      }
     }
     return publicState();
   };
@@ -138,6 +178,7 @@ const createUpdater = ({
   const runInstaller = ({ relaunch }) => {
     if (!installerPath || state.installing) return false;
     state.installing = true;
+    emit();
     // /S silencioso. --updated e --force-run são do instalador do
     // electron-builder: --force-run abre o app de novo ao terminar.
     const args = ["/S", "--updated", ...(relaunch ? ["--force-run"] : [])];
@@ -171,6 +212,14 @@ const createUpdater = ({
     },
     check,
     getState: publicState,
+    // Botão "Verificar atualização": diz o que aconteceu.
+    async checkNow() {
+      if (!enabled) return { status: "disabled" };
+      if (state.checking || state.downloading) return { status: "downloading", update: publicState() };
+      const update = await check();
+      if (update) return { status: update.phase, update };
+      return { status: state.lastCheck || "uptodate" };
+    },
     // "Atualizar agora": devolve true se o instalador foi aberto (o app deve fechar).
     installNow: () => runInstaller({ relaunch: true }),
     // "Mais tarde": esconde o aviso por um tempo; instala ao fechar o app.

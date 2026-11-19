@@ -586,22 +586,34 @@ const registerIpc = () => {
   // O Gestor pergunta se há versão nova do app (para mostrar a faixa de atualizar).
   ipcMain.handle("gestor:update-state", (event) => {
     if (!gestorView || event.sender !== gestorView.webContents) throw new Error("Origem não autorizada.");
-    const current = updater?.getState?.() || {};
-    return { version: app.getVersion(), available: current.available?.version || "" };
+    const current = updater?.getState?.() || null;
+    return {
+      version: app.getVersion(),
+      available: current?.phase === "ready" ? current.version : "",
+      phase: current?.phase || "",
+      progress: current?.progress || 0,
+    };
   });
   // Botão "Atualizar agora" dentro do próprio Gestor (window.InovasPDV.updateNow).
   ipcMain.handle("gestor:update-now", async (event) => {
     if (!gestorView || event.sender !== gestorView.webContents) throw new Error("Origem não autorizada.");
     if (!updater) return { ok: false, message: "Atualização indisponível neste computador." };
     let current = updater.getState();
-    if (!current?.available) current = await updater.check();
-    if (!current?.available) {
+    if (current?.phase !== "ready") current = await updater.check();
+    if (current?.phase !== "ready") {
       return { ok: false, message: "Você já está na versão mais nova, ou a atualização ainda está baixando. Tente de novo em 1 minuto." };
     }
     if (!updater.installNow()) return { ok: false, message: "Não foi possível abrir o instalador. Feche e abra o app." };
     setState({ phase: "starting", message: "Atualizando o INOVAS PDV… o app abre de novo sozinho." });
     setTimeout(() => app.quit(), 600);
     return { ok: true };
+  });
+  // "Verificar atualização" no menu do app: confere na hora e diz o resultado.
+  handle("pdv:update-check", async () => {
+    if (!updater) return { status: "disabled" };
+    const result = await updater.checkNow();
+    setState({ update: updater.getState() });
+    return result;
   });
   handle("pdv:update-later", () => {
     setState({ update: updater?.later() || null });

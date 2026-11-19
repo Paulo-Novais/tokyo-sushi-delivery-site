@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("pdv", {
   reload: () => ipcRenderer.invoke("pdv:reload"),
   updateNow: () => ipcRenderer.invoke("pdv:update-now"),
   updateLater: () => ipcRenderer.invoke("pdv:update-later"),
+  updateCheck: () => ipcRenderer.invoke("pdv:update-check"),
   retry: () => ipcRenderer.invoke("pdv:retry"),
   setServer: (url) => ipcRenderer.invoke("pdv:set-server", { url }),
   listCatalog: () => ipcRenderer.invoke("pdv:catalog:list"),
