@@ -18,19 +18,27 @@ Atualizada em 19/11/2026. Marque `[x]` quando terminar.
 
 Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 
-## Próximos recursos (ordem de prioridade)
+## Próximos recursos (decisão do Paulo, 19/11/2026)
 
-1. [ ] Emissão de NFC-e
-2. [ ] Robô de WhatsApp (avisos automáticos do pedido)
-3. [ ] Fidelidade / cashback
-4. [ ] KDS (tela da cozinha)
-5. [ ] QR code na mesa
-6. [ ] App do entregador com rastreio
-7. [ ] Ficha técnica no estoque
-8. [ ] Maquininha integrada (TEF/Stone)
-9. [ ] Totem de autoatendimento
-10. [ ] App na loja (começar por PWA)
-11. [ ] Várias lojas na mesma conta
+**Agora**
+1. [ ] **Emissão de NFC-e automática** (por serviço pronto de notas).
+2. [ ] **KDS (tela da cozinha)** — replicar o projeto parecido que já existe.
+
+**Mais à frente**
+3. [ ] **Ficha técnica** (custo de cada prato) — complexo, mas útil para o restaurante.
+4. [ ] **QR code na mesa** caindo na comanda do Caixa — não descartado.
+5. [ ] **Central de entrega INOVAS** (estilo Uber): app do entregador ligado
+       ao site, acompanhamento em tempo real do entregador que pega o pedido
+       no restaurante parceiro, e entregador sob demanda para quem pedir.
+6. [ ] **Fidelidade/cashback por conta da INOVAS** (hoje o restaurante já
+       faz pela tela de clientes/cupons).
+7. [ ] **App na loja** — para o garçom entrar no restaurante.
+8. [ ] Totem de autoatendimento — a avaliar.
+
+**Fora do escopo**
+- Robô de WhatsApp: o site já mostra o andamento do pedido.
+- Maquininha integrada no salão: é do restaurante; online já temos.
+- Várias lojas na mesma conta: cada restaurante tem contrato próprio.
 
 ## Ativação (depende de terceiros)
 
