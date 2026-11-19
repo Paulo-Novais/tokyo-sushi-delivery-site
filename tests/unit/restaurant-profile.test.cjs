@@ -69,3 +69,12 @@ test("consulta de CNPJ recusa número errado e trata serviço fora do ar", async
   const missing = async () => ({ ok: false, status: 404, json: async () => ({}) });
   await assert.rejects(() => lookupCnpj("11222333000181", missing), (error) => error.errorCode === "lookup_not_found");
 });
+
+test("consulta de CNPJ traz situação, telefone e sócios; recusa CNPJ com dígito errado", async () => {
+  const company = mapCnpj({ cnpj: "11222333000181", descricao_situacao_cadastral: "BAIXADA", ddd_telefone_1: "16 3333-0000", qsa: [{ nome_socio: "MARIA" }, { nome_socio: "JOSE" }] });
+  assert.equal(company.active, false);
+  assert.equal(company.phone, "1633330000");
+  assert.deepEqual(company.partners, ["MARIA", "JOSE"]);
+  assert.equal(mapCnpj({ descricao_situacao_cadastral: "Ativa" }).active, true);
+  await assert.rejects(() => lookupCnpj("11222333000182"), (error) => error.errorCode === "invalid_cnpj");
+});

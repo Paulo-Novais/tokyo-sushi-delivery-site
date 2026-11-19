@@ -3663,3 +3663,19 @@ dialog.sys-dialog.is-wide {
   .sys-wiz-nav a { flex: none; }
   .sys-wiz-nav small { display: none; }
 }
+
+.sys-wiz-cnpj { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
+.sys-wiz-cnpj .sys-input[name="document"] { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+.sys-wiz-receita {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #14532d;
+  font-size: 13px;
+}
+.sys-wiz-receita strong { font-size: 14px; }
+.sys-wiz-receita.is-blocked { border-color: #fecaca; background: #fef2f2; color: #7f1d1d; }

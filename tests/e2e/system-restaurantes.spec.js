@@ -7,6 +7,19 @@ const login = process.env.E2E_ADMIN_LOGIN;
 const password = process.env.E2E_ADMIN_PASSWORD;
 const baseURL = process.env.BASE_URL || process.env.VALIDATION_BASE_URL || "http://127.0.0.1:3000";
 
+// CNPJ válido (dígitos verificadores certos) e único por teste.
+const validCnpj = (prefix = "") => {
+  const base = `${prefix}${Date.now()}${Math.floor(Math.random() * 1e6)}`.replace(/\D/g, "").slice(-12).padStart(12, "1");
+  const head = `${prefix}${base}`.slice(0, 12);
+  const digit = (numbers) => {
+    const weights = numbers.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const rest = weights.reduce((sum, weight, index) => sum + Number(numbers[index]) * weight, 0) % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  const first = digit(head);
+  return `${head}${first}${digit(`${head}${first}`)}`;
+};
+
 const uniqueSlug = () => `teste-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const publicStatus = async (path) => {
@@ -36,7 +49,10 @@ test("Master cadastra, suspende, reativa e vincula domínio pela tela Restaurant
   await form.getByLabel("Nome do restaurante (fantasia)").fill(name);
   await expect(form.getByLabel("Endereço INOVAS")).toHaveValue(`pizzaria-${slug}`);
   await form.getByLabel("Endereço INOVAS").fill(slug);
-  await form.getByLabel("CNPJ (ou CPF do MEI)").fill(String(Date.now()).slice(-11).padStart(11, "1"));
+  await form.locator('input[name="document"]').fill(validCnpj("12"));
+  await expect(form.locator("[data-wiz-receita]")).toContainText("ATIVA");
+  await form.getByLabel("Nome do restaurante (fantasia)").fill(name);
+  await form.getByLabel("Endereço INOVAS").fill(slug);
   await form.getByLabel("Nome completo").fill("Responsável Teste");
   await form.getByLabel("E-mail (login do Gestor)").fill(`dono@${slug}.test`);
   await form.getByLabel("Senha inicial").fill("SenhaInicial123");
@@ -168,11 +184,22 @@ test("Cadastro novo: CNPJ preenche a empresa, categoria pelo volume, nota fiscal
   // As 8 etapas aparecem no índice.
   await expect(form.locator("[data-wiz-step]")).toHaveCount(8);
 
-  // CNPJ: busca na Receita (provedor de teste) e preenche empresa e endereço.
-  const cnpj = `11${String(Date.now()).slice(-10)}81`.slice(0, 14);
-  await form.getByLabel("CNPJ (ou CPF do MEI)").fill(cnpj);
-  await form.locator('[data-wiz-lookup="cnpj"]').click();
-  await expect(form.locator("[data-wiz-lookup-status]")).toContainText("Encontrado");
+  // CNPJ inválido: avisa e não busca.
+  const cnpjInput = form.locator('input[name="document"]');
+  await cnpjInput.fill("11111111111111");
+  await expect(form.locator("[data-wiz-lookup-status]")).toContainText("CNPJ inválido");
+  // CNPJ baixado na Receita (provedor de teste: começa com 99): bloqueia.
+  await cnpjInput.fill(validCnpj("99"));
+  await expect(form.locator("[data-wiz-receita]")).toContainText("BAIXADA");
+  await expect(form.locator("[data-wiz-receita]")).toContainText("bloqueado");
+  // CNPJ ativo: busca sozinho (sem clicar) e preenche empresa, endereço e sócio.
+  const cnpj = validCnpj("13");
+  await cnpjInput.fill(cnpj);
+  await expect(cnpjInput).toHaveValue(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/);
+  await expect(form.locator("[data-wiz-lookup-status]")).toContainText("Encontrado na Receita");
+  await expect(form.locator("[data-wiz-receita]")).toContainText("ATIVA");
+  await expect(form.getByLabel("Nome completo")).toHaveValue("JOAO DA SILVA TESTE");
+  await expect(form.getByLabel("WhatsApp do restaurante")).toHaveValue("1633330000");
   await expect(form.getByLabel("Razão social")).toHaveValue("EMPRESA TESTE ALIMENTOS LTDA");
   await expect(form.getByLabel("Nome do restaurante (fantasia)")).toHaveValue("Sushi Teste");
   await expect(form.getByLabel("Cidade")).toHaveValue("RIBEIRAO PRETO");

@@ -539,9 +539,12 @@
             ${steps.map(([id, title, sub], index) => `<a href="#wiz-${id}" data-wiz-step="${id}"><span class="sys-wiz-dot">${index + 1}</span><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(sub)}</small></span></a>`).join("")}
           </nav>
           <div class="sys-wiz-body">
-            ${box("empresa", "1. Empresa", "Digite o CNPJ e clique em Buscar: razão social e endereço vêm da Receita.", `
+            ${box("empresa", "1. Empresa", "Comece pelo CNPJ (MEI também tem): os dados da Receita Federal são preenchidos sozinhos.", `
+              <div class="sys-wiz-cnpj">
+                <label class="sys-field"><span>CNPJ</span><span class="sys-wiz-inline"><input class="sys-input" name="document" required inputmode="numeric" autocomplete="off" maxlength="18" placeholder="00.000.000/0000-00" data-wiz-cnpj /><button class="sys-btn sys-btn-secondary" type="button" data-wiz-lookup="cnpj">Buscar de novo</button></span></label>
+                <div class="sys-wiz-receita" data-wiz-receita hidden></div>
+              </div>
               <div class="sys-wiz-grid">
-                <label class="sys-field"><span>CNPJ (ou CPF do MEI)</span><span class="sys-wiz-inline"><input class="sys-input" name="document" required inputmode="numeric" autocomplete="off" /><button class="sys-btn sys-btn-secondary" type="button" data-wiz-lookup="cnpj">Buscar</button></span></label>
                 ${field("Nome do restaurante (fantasia)", '<input class="sys-input" name="name" required maxlength="120" data-slug-source />')}
                 ${field("Razão social", '<input class="sys-input" name="legalName" maxlength="180" />')}
                 ${field("Inscrição estadual", '<input class="sys-input" name="stateRegistration" maxlength="40" inputmode="numeric" />', "Necessária para a nota fiscal. Deixe vazio se for isento.")}
@@ -720,32 +723,94 @@
     try {
       const payload = await requestJson(`/api/system/lookup/${kind}/${value}`);
       const result = (payload.data || payload)[kind] || {};
-      const set = (name, next) => {
+      // Dados da empresa vêm da Receita (sobrescreve); do dono, só se vazio.
+      const set = (name, next, { overwrite = kind === "cnpj" } = {}) => {
         const input = form.elements[name];
-        if (input && next && !input.value) input.value = next;
+        if (input && next && (overwrite || !input.value)) input.value = next;
       };
       const address = kind === "cnpj" ? result.address || {} : result;
       if (kind === "cnpj") {
         set("legalName", result.legalName);
-        if (result.tradeName && !form.elements.name.value) {
-          form.elements.name.value = result.tradeName;
+        const fantasy = result.tradeName || result.legalName;
+        if (fantasy && !form.elements.name.value) {
+          form.elements.name.value = fantasy.replace(/\b\w+/g, (word) => word.charAt(0) + word.slice(1).toLowerCase());
           form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
         }
         if (result.mei) form.elements.taxRegime.value = "MEI";
         else if (result.simples) form.elements.taxRegime.value = "SIMPLES";
         set("number", address.number);
         set("complement", address.complement);
+        set("whatsapp", result.phone, { overwrite: false });
+        set("ownerName", (result.partners || [])[0], { overwrite: false });
+        form.dataset.cnpjChecked = onlyDigits(result.cnpj || value);
+        form.dataset.cnpjBlocked = result.active === false ? result.status || "irregular" : "";
+        const card = form.querySelector("[data-wiz-receita]");
+        if (card) {
+          card.hidden = false;
+          card.classList.toggle("is-blocked", result.active === false);
+          card.innerHTML = `
+            <strong>${escapeHtml(result.legalName || "Empresa")}</strong>
+            <span>Situação na Receita: <b>${escapeHtml(result.status || "—")}</b>${result.mei ? " · MEI" : result.simples ? " · Simples Nacional" : ""}</span>
+            ${result.mainActivity ? `<span>Atividade: ${escapeHtml(result.mainActivity)}</span>` : ""}
+            ${(result.partners || []).length ? `<span>Sócios: ${escapeHtml(result.partners.join(", "))}</span>` : ""}
+            ${result.active === false ? "<span><b>Este CNPJ não está ativo. O cadastro fica bloqueado.</b></span>" : ""}`;
+        }
       }
       set("postalCode", address.postalCode);
       set("street", address.street);
       set("neighborhood", address.neighborhood);
       set("city", address.city);
       set("state", address.state);
-      show(kind === "cnpj" ? `Encontrado: ${result.legalName || "empresa"}${result.status ? ` · situação ${result.status}` : ""}. Confira os dados.` : "Endereço preenchido. Confira o número.");
+      show(kind === "cnpj" ? (result.active === false ? `CNPJ com situação ${result.status} na Receita.` : `Encontrado na Receita: ${result.legalName || "empresa"}. Confira os dados abaixo.`) : "Endereço preenchido. Confira o número.", result.active === false);
       updateCreateWizard(form);
     } catch (error) {
       show(error.message || "Não foi possível buscar agora. Preencha à mão.", true);
     }
+  };
+
+  const isValidCnpjDigits = (cnpj) => {
+    if (!/^\d{14}$/.test(cnpj) || /^(\d)\1{13}$/.test(cnpj)) return false;
+    const calc = (length) => {
+      const weights = length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+      const rest = weights.reduce((total, weight, index) => total + Number(cnpj[index]) * weight, 0) % 11;
+      return rest < 2 ? 0 : 11 - rest;
+    };
+    return calc(12) === Number(cnpj[12]) && calc(13) === Number(cnpj[13]);
+  };
+  const formatCnpj = (digits) =>
+    digits
+      .slice(0, 14)
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+
+  // Digitou os 14 números: confere e busca na Receita sozinho.
+  const onWizardCnpjInput = (input) => {
+    const form = input.form;
+    const digits = onlyDigits(input.value).slice(0, 14);
+    const formatted = formatCnpj(digits);
+    if (input.value !== formatted) input.value = formatted;
+    const status = form.querySelector("[data-wiz-lookup-status]");
+    if (digits.length < 14) {
+      form.dataset.cnpjChecked = "";
+      form.dataset.cnpjBlocked = "";
+      if (status) status.hidden = true;
+      return;
+    }
+    if (!isValidCnpjDigits(digits)) {
+      if (status) {
+        status.hidden = false;
+        status.textContent = "CNPJ inválido. Confira os números.";
+        status.classList.add("is-error");
+      }
+      return;
+    }
+    if (form.dataset.cnpjChecked === digits || form.dataset.cnpjLookingUp === digits) return;
+    form.dataset.cnpjLookingUp = digits;
+    void runWizardLookup(form, "cnpj").finally(() => {
+      form.dataset.cnpjLookingUp = "";
+    });
   };
 
   const generateWizardPassword = () => {
@@ -834,6 +899,8 @@
     try {
       let message = "Alteração salva e registrada na auditoria.";
       if (kind === "create") {
+        if (!isValidCnpjDigits(onlyDigits(data.document))) throw new Error("Informe um CNPJ válido para criar o cadastro.");
+        if (form.dataset.cnpjBlocked) throw new Error(`CNPJ com situação ${form.dataset.cnpjBlocked} na Receita. Não é possível cadastrar.`);
         const slug = slugify(data.slug);
         const phone = onlyDigits(data.whatsapp);
         const whatsapp = phone.startsWith("55") ? phone : `55${phone}`;
@@ -846,7 +913,7 @@
         };
         const payload = {
           restaurantName: data.name, tradeName: data.name, name: data.name,
-          slug, restaurantKey: slug, document: onlyDigits(data.document),
+          slug, restaurantKey: slug, document: onlyDigits(data.document), requireCnpj: true,
           companyName: data.legalName || "", stateRegistration: data.stateRegistration || "", taxRegime: data.taxRegime,
           ownerFullName: data.ownerName, ownerDocument: onlyDigits(data.ownerCpf), email: data.email,
           city: data.city, postalCode: onlyDigits(data.postalCode), establishmentNumber: data.number,
@@ -1779,6 +1846,7 @@
   document.addEventListener("change", onWizardChange);
 
   document.addEventListener("input", (event) => {
+    if (event.target.matches?.("[data-wiz-cnpj]")) onWizardCnpjInput(event.target);
     if (event.target.closest?.("form.sys-wiz")) setTimeout(() => updateCreateWizard(event.target.closest("form.sys-wiz")), 0);
     if (event.target.matches("[data-slug-source]")) {
       const target = event.target.form?.querySelector("[data-slug-target]");
