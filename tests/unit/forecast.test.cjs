@@ -111,3 +111,67 @@ test("telefone para WhatsApp", () => {
   assert.equal(normalizePhoneForWhatsapp("5511988887777"), "5511988887777");
   assert.equal(normalizePhoneForWhatsapp("123"), "");
 });
+
+// ---- Fase 2: ficha técnica, lucro por prato e matéria-prima ----
+const { dishKey } = require("../../lib/forecast.cjs");
+
+const costItems = [
+  { id: "salmao", name: "Salmão", unit: "kg", quantity: 2, minimumQuantity: 3, unitCost: 80, expiration: {} },
+  { id: "arroz", name: "Arroz", unit: "kg", quantity: 50, minimumQuantity: 5, unitCost: 10, expiration: {} },
+  { id: "cream", name: "Cream cheese", unit: "kg", quantity: 6, minimumQuantity: 1, unitCost: 40, expiration: {} },
+];
+const costRecipes = [
+  { key: dishKey("Combinado Kumo"), dishName: "Combinado Kumo", ingredients: [{ itemId: "salmao", quantity: 0.2 }, { itemId: "arroz", quantity: 0.2 }], packagingCost: 2 },
+  { key: dishKey("Hot Roll"), dishName: "Hot Roll", ingredients: [{ itemId: "cream", quantity: 0.4 }, { itemId: "salmao", quantity: 0.05 }], packagingCost: 1 },
+];
+const costOrders = () => {
+  const orders = [];
+  for (let d = 1; d <= 60; d += 1) {
+    orders.push({ createdAt: at(d), status: "Finalizado", total: 100, channel: "site", items: [{ name: "Combinado Kumo", quantity: 1, totalPrice: 72 }] });
+    orders.push({ createdAt: at(d, 21), status: "Finalizado", total: 20, channel: "ifood", items: [{ name: "Hot Roll", quantity: 1, totalPrice: 20 }] });
+    orders.push({ createdAt: at(d, 19), status: "Finalizado", total: 30, channel: "site", items: [{ name: "Yakissoba", quantity: 1, totalPrice: 30 }] });
+  }
+  return orders;
+};
+
+test("lucro por prato: custo da ficha, taxa do canal e prejuízo", () => {
+  const result = buildForecast({ orders: costOrders(), now: NOW, inventoryItems: costItems, recipes: costRecipes, costSettings: { channelFees: { site: 0, ifood: 27 } } });
+  const kumo = result.profit.rows.find((r) => r.name === "Combinado Kumo");
+  const hot = result.profit.rows.find((r) => r.name === "Hot Roll");
+  // Kumo: 0,2×80 + 0,2×10 + 2 = 20 de custo; preço 72 no site (sem taxa) → lucro 52 por unidade.
+  assert.equal(kumo.unitCost, 20);
+  assert.equal(kumo.unitProfit, 52);
+  assert.equal(kumo.qty, 30);
+  // Hot Roll no iFood: 0,4×40 + 0,05×80 + 1 = 21 de custo; 20 − 27% de taxa − 21 = prejuízo.
+  assert.equal(hot.unitCost, 21);
+  assert.ok(hot.profit < 0);
+  assert.equal(hot.tone, "bad");
+  assert.ok(hot.targetPrice > 20);
+  assert.equal(result.profit.losing, 1);
+  assert.ok(result.profit.followTotal > result.profit.currentTotal);
+  // Prato sem ficha aparece separado.
+  assert.deepEqual(result.profit.withoutRecipe.map((r) => r.name), ["Yakissoba"]);
+});
+
+test("matéria-prima: consumo previsto, faltas e perdas do histórico", () => {
+  const movements = [
+    { at: at(10), itemId: "salmao", mode: "remove", amount: 3, quantityAfter: 0, unitCost: 80 },
+    { at: at(10, 22), itemId: "salmao", mode: "remove", amount: 0, quantityAfter: 0, unitCost: 80 },
+    { at: at(20), itemId: "cream", mode: "loss", amount: 1.5, quantityAfter: 6, unitCost: 40 },
+  ];
+  const result = buildForecast({ orders: costOrders(), now: NOW, inventoryItems: costItems, recipes: costRecipes, movements });
+  const salmao = result.rawMaterials.rows.find((r) => r.itemId === "salmao");
+  const cream = result.rawMaterials.rows.find((r) => r.itemId === "cream");
+  // 7 dias: 7 Kumo × 0,2 + 7 Hot Roll × 0,05 = 1,75 kg; tem 2, mínimo 3 → comprar 2,75.
+  assert.equal(salmao.need7, 1.75);
+  assert.equal(salmao.toBuy, 2.75);
+  assert.equal(salmao.ruptures, 1, "zerou 2 vezes no mesmo dia conta 1");
+  assert.equal(salmao.kind, "more");
+  assert.equal(cream.lossValue, 60);
+  assert.equal(cream.kind, "less");
+  assert.equal(result.rawMaterials.lossValue60, 60);
+});
+
+test("chave do prato igual à do estoque (acentos e espaços)", () => {
+  assert.equal(dishKey("  Teppan  Salmão "), "teppan-salmao");
+});

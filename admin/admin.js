@@ -819,6 +819,10 @@ const adminState = {
   isLoadingForecast: false,
   forecastData: null,
   forecastError: "",
+  forecastNotice: "",
+  recipeBook: null,
+  recipeEditor: null,
+  feesOpen: false,
   reportKey: "peak",
   inventoryDrawer: "",
   inventoryMove: null,
@@ -1439,6 +1443,7 @@ const normalizeInventoryItem = (item = {}) => {
     unit: String(item.unit || "unidade").trim(),
     minimumQuantity: Number(item.minimumQuantity || 0),
     expirationDate: String(item.expirationDate || "").trim(),
+    unitCost: Number(item.unitCost || 0),
     source: String(item.source || "manual").trim(),
     createdAt: String(item.createdAt || "").trim(),
     updatedAt: String(item.updatedAt || "").trim(),
@@ -8851,18 +8856,22 @@ const closeInventoryDrawer = () => {
 const getInventoryMovePreview = (item, move) => {
   const amount = Math.max(0, Number(normalizeDecimalInput(move.amount)) || 0);
   const next = move.mode === "add" ? Number(item.quantity || 0) + amount : Math.max(0, Number(item.quantity || 0) - amount);
+  if (move.mode === "loss") {
+    return `Fica com <b>${escapeHtml(formatInventoryQuantity(next))} ${escapeHtml(item.unit)}</b>. A perda entra no histórico de sobras da Previsão.`;
+  }
   return `Fica com <b>${escapeHtml(formatInventoryQuantity(next))} ${escapeHtml(item.unit)}</b> depois de confirmar`;
 };
 
 const renderInventoryMovePanel = (detailRoot, item) => {
   const move = adminState.inventoryMove;
   const isAdd = move.mode === "add";
+  const isLoss = move.mode === "loss";
   const isBusy = Boolean(adminState.inventoryBusyKey);
   detailRoot.innerHTML = `
     <div class="gx-inv-move">
       <header class="gx-inv-move-head">
         <div>
-          <small>${isAdd ? "Entrada de estoque" : "Baixa de estoque"}</small>
+          <small>${isAdd ? "Entrada de estoque" : isLoss ? "Perda ou descarte" : "Baixa de estoque"}</small>
           <h2>${escapeHtml(item.name)}</h2>
           <p>Em estoque agora: <b>${escapeHtml(formatInventoryQuantity(item.quantity))} ${escapeHtml(item.unit)}</b></p>
         </div>
@@ -8870,9 +8879,10 @@ const renderInventoryMovePanel = (detailRoot, item) => {
       </header>
       <div class="gx-inv-tabs" role="tablist">
         <button type="button" role="tab" aria-selected="${isAdd}" data-inv-move-mode="add">Entrada</button>
-        <button type="button" role="tab" aria-selected="${!isAdd}" data-inv-move-mode="remove">Baixa</button>
+        <button type="button" role="tab" aria-selected="${move.mode === "remove"}" data-inv-move-mode="remove">Baixa</button>
+        <button type="button" role="tab" aria-selected="${isLoss}" data-inv-move-mode="loss">Perda</button>
       </div>
-      <form class="gx-inv-move-form" data-inventory-adjust-form data-inventory-adjust-mode="${isAdd ? "add" : "remove"}">
+      <form class="gx-inv-move-form" data-inventory-adjust-form data-inventory-adjust-mode="${move.mode}">
         <input type="hidden" name="itemId" value="${escapeHtml(item.id)}" />
         <span class="gx-inv-field-label">Quantidade</span>
         <div class="gx-inv-stepper">
@@ -8886,7 +8896,7 @@ const renderInventoryMovePanel = (detailRoot, item) => {
             : ""
         }
         <p class="gx-inv-preview" data-inv-preview>${getInventoryMovePreview(item, move)}</p>
-        <button type="submit" class="gx-inv-btn is-primary gx-inv-confirm" ${isBusy ? "disabled" : ""}>${isAdd ? "Confirmar entrada" : "Confirmar baixa"}</button>
+        <button type="submit" class="gx-inv-btn is-primary gx-inv-confirm" ${isBusy ? "disabled" : ""}>${isAdd ? "Confirmar entrada" : isLoss ? "Registrar perda" : "Confirmar baixa"}</button>
       </form>
       ${adminState.actionMessage && adminState.actionTone === "error" ? `<div class="admin-feedback is-error">${escapeHtml(adminState.actionMessage)}</div>` : ""}
     </div>`;
@@ -8909,7 +8919,8 @@ document.addEventListener("click", (event) => {
   }
   const modeButton = target.closest("[data-inv-move-mode]");
   if (modeButton && adminState.inventoryMove) {
-    adminState.inventoryMove.mode = modeButton.dataset.invMoveMode === "remove" ? "remove" : "add";
+    const requested = modeButton.dataset.invMoveMode;
+    adminState.inventoryMove.mode = requested === "remove" || requested === "loss" ? requested : "add";
     renderOrderDetails();
     return;
   }
@@ -9808,11 +9819,7 @@ const renderForecastInventory = (inventory) => {
     </section>`;
 };
 
-const renderForecastProfit = () => `
-  <section class="gx-res-card gx-fc-card">
-    <div class="gx-fc-card-head"><div><h3>Lucro e prejuízo de cada prato</h3><p>Preço − matéria-prima − taxa do canal − embalagem, vezes o que vendeu.</p></div><span class="gx-fc-pill">em breve</span></div>
-    <div class="gx-rep-soon"><strong>Precisa da ficha técnica</strong><span>Para saber quanto cada prato custa, o sistema precisa saber quanto de cada ingrediente vai nele. Esse cadastro é o próximo passo.</span></div>
-  </section>`;
+
 
 const renderForecastCustomers = (customers) => {
   const list = customers?.customers || [];
@@ -9947,9 +9954,385 @@ const renderForecastToday = (today) => {
     </section>`;
 };
 
+// ---- Fase 2: ficha técnica, lucro por prato e matéria-prima ----
+const FC_FEE_CHANNELS = Object.freeze([
+  ["site", "Site próprio"],
+  ["ifood", "iFood"],
+  ["99food", "99Food"],
+  ["keeta", "Keeta"],
+  ["ubereats", "Uber Eats"],
+]);
+
+const canEditRecipes = () => hasAdminPermission("inventory_edit");
+
+const loadRecipeBook = async () => {
+  try {
+    const payload = await fetchJson("/api/admin/inventory/costs");
+    adminState.recipeBook = { recipes: payload.recipes || [], settings: payload.settings || {}, items: payload.items || [] };
+  } catch (error) {
+    adminState.recipeBook = { recipes: [], settings: {}, items: [], error: error.message || "Não foi possível carregar a ficha técnica." };
+  }
+};
+
+const fcDishKey = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 160);
+
+const openRecipeEditor = async (dishName) => {
+  if (!adminState.recipeBook) await loadRecipeBook();
+  const existing = (adminState.recipeBook.recipes || []).find((recipe) => recipe.key === fcDishKey(dishName));
+  adminState.recipeEditor = {
+    dishName,
+    packagingCost: existing?.packagingCost ? String(existing.packagingCost).replace(".", ",") : "",
+    ingredients: existing?.ingredients?.length
+      ? existing.ingredients.map((entry) => ({ itemId: entry.itemId, quantity: String(entry.quantity).replace(".", ",") }))
+      : [{ itemId: "", quantity: "" }],
+    message: "",
+    busy: false,
+    justChanged: true,
+  };
+  renderModuleContent();
+  window.requestAnimationFrame(() => document.querySelector("[data-recipe-editor]")?.scrollIntoView({ block: "center", behavior: "smooth" }));
+};
+
+const readRecipeEditorForm = () => {
+  const editor = adminState.recipeEditor;
+  const form = document.querySelector("[data-recipe-editor]");
+  if (!editor || !form) return;
+  editor.packagingCost = form.querySelector("[name=packagingCost]")?.value || "";
+  editor.ingredients = Array.from(form.querySelectorAll("[data-recipe-row]")).map((row) => ({
+    itemId: row.querySelector("select")?.value || "",
+    quantity: row.querySelector("input")?.value || "",
+  }));
+};
+
+const computeRecipeCost = (editor) => {
+  const itemById = new Map((adminState.recipeBook?.items || []).map((item) => [item.id, item]));
+  let cost = Number(normalizeDecimalInput(editor.packagingCost)) || 0;
+  let missingCost = false;
+  editor.ingredients.forEach((entry) => {
+    const item = itemById.get(entry.itemId);
+    const qty = Number(normalizeDecimalInput(entry.quantity)) || 0;
+    if (item && qty > 0) {
+      if (!item.unitCost) missingCost = true;
+      cost += qty * Number(item.unitCost || 0);
+    }
+  });
+  return { cost, missingCost, itemById };
+};
+
+const recipeCostHtml = ({ cost, missingCost }) =>
+  `Custo do prato: <b>${escapeHtml(fcMoney(cost))}</b>${missingCost ? ' · <em class="gx-fc-warn-text">algum item está sem custo: preencha em Cardápio › Estoque</em>' : ""}`;
+
+const recipeUnitHtml = (item) =>
+  item ? `${escapeHtml(item.unit)} · ${item.unitCost ? `${escapeHtml(fcMoney(item.unitCost))}/${escapeHtml(item.unit)}` : "sem custo"}` : "";
+
+// Atualiza só o custo e as unidades, sem redesenhar a tela (não perde foco nem clique).
+const refreshRecipeEditorCost = () => {
+  readRecipeEditorForm();
+  const editor = adminState.recipeEditor;
+  const form = document.querySelector("[data-recipe-editor]");
+  if (!editor || !form) return;
+  const result = computeRecipeCost(editor);
+  const foot = form.querySelector("[data-recipe-cost]");
+  if (foot) foot.innerHTML = recipeCostHtml(result);
+  form.querySelectorAll("[data-recipe-row]").forEach((row, index) => {
+    const label = row.querySelector("[data-recipe-unit]");
+    if (label) label.innerHTML = recipeUnitHtml(result.itemById.get(editor.ingredients[index]?.itemId));
+  });
+};
+
+const renderRecipeEditor = () => {
+  const editor = adminState.recipeEditor;
+  if (!editor) return "";
+  const items = (adminState.recipeBook?.items || []).slice().sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const costResult = computeRecipeCost(editor);
+  const itemById = costResult.itemById;
+  return `
+    <form class="gx-fc-recipe" data-recipe-editor>
+      <div class="gx-fc-card-head">
+        <div><h4>Ficha técnica: ${escapeHtml(editor.dishName)}</h4><p>Quanto de cada matéria-prima vai em <b>1 unidade</b> do prato, na unidade do estoque (ex.: 0,12 kg).</p></div>
+        <button type="button" class="gx-fc-link" data-recipe-cancel>Fechar</button>
+      </div>
+      <div class="gx-fc-recipe-rows">
+        ${editor.ingredients
+          .map((entry, index) => {
+            const item = itemById.get(entry.itemId);
+            return `<div class="gx-fc-recipe-row" data-recipe-row>
+              <select aria-label="Matéria-prima ${index + 1}">
+                <option value="">Escolha a matéria-prima</option>
+                ${items.map((option) => `<option value="${escapeHtml(option.id)}"${option.id === entry.itemId ? " selected" : ""}>${escapeHtml(option.name)} (${escapeHtml(option.unit)})</option>`).join("")}
+              </select>
+              <input inputmode="decimal" placeholder="quantidade" value="${escapeHtml(entry.quantity)}" aria-label="Quantidade ${index + 1}" />
+              <span class="gx-fc-muted" data-recipe-unit>${recipeUnitHtml(item)}</span>
+              <button type="button" class="gx-fc-link" data-recipe-remove="${index}" aria-label="Remover linha">Remover</button>
+            </div>`;
+          })
+          .join("")}
+      </div>
+      <button type="button" class="gx-fc-link" data-recipe-add>+ Adicionar matéria-prima</button>
+      <label class="gx-fc-recipe-pack">Embalagem e descartáveis por unidade (R$) <input name="packagingCost" inputmode="decimal" value="${escapeHtml(editor.packagingCost)}" placeholder="0,00" /></label>
+      <div class="gx-fc-recipe-foot">
+        <span data-recipe-cost>${recipeCostHtml(costResult)}</span>
+        <button type="submit" class="admin-button admin-button-primary" ${editor.busy ? "disabled" : ""}>Salvar ficha</button>
+      </div>
+      ${editor.message ? `<div class="admin-feedback ${editor.messageTone === "error" ? "is-error" : ""}">${escapeHtml(editor.message)}</div>` : ""}
+    </form>`;
+};
+
+const saveRecipeEditor = async () => {
+  readRecipeEditorForm();
+  const editor = adminState.recipeEditor;
+  if (!editor) return;
+  editor.busy = true;
+  editor.message = "";
+  renderModuleContent();
+  try {
+    const payload = await fetchJson("/api/admin/inventory/save-recipe", {
+      method: "POST",
+      body: JSON.stringify({
+        dishName: editor.dishName,
+        packagingCost: normalizeDecimalInput(editor.packagingCost),
+        ingredients: editor.ingredients
+          .filter((entry) => entry.itemId)
+          .map((entry) => ({ itemId: entry.itemId, quantity: normalizeDecimalInput(entry.quantity) })),
+      }),
+    });
+    adminState.recipeBook = { ...(adminState.recipeBook || {}), recipes: payload.recipes || [] };
+    adminState.recipeEditor = null;
+    adminState.forecastNotice = payload.message || "Ficha técnica salva.";
+    await loadForecast();
+  } catch (error) {
+    editor.busy = false;
+    editor.message = error.message || "Não foi possível salvar a ficha técnica.";
+    editor.messageTone = "error";
+    renderModuleContent();
+  }
+};
+
+const saveChannelFees = async (form) => {
+  const channelFees = {};
+  FC_FEE_CHANNELS.forEach(([key]) => {
+    const value = form.querySelector(`[name="fee-${key}"]`)?.value;
+    if (value !== undefined) channelFees[key] = normalizeDecimalInput(value);
+  });
+  try {
+    await fetchJson("/api/admin/inventory/save-cost-settings", { method: "POST", body: JSON.stringify({ channelFees }) });
+    adminState.forecastNotice = "Taxas dos canais salvas.";
+    adminState.feesOpen = false;
+    await loadForecast();
+  } catch (error) {
+    adminState.forecastNotice = error.message || "Não foi possível salvar as taxas.";
+    renderModuleContent();
+  }
+};
+
+const renderChannelFeesForm = (settings = {}) => {
+  if (!adminState.feesOpen) return "";
+  const fees = settings.channelFees || {};
+  return `<form class="gx-fc-fees" data-channel-fees>
+    <span>Taxa que cada canal cobra sobre o valor do pedido (%):</span>
+    ${FC_FEE_CHANNELS.map(([key, label]) => `<label>${escapeHtml(label)} <input name="fee-${key}" inputmode="decimal" value="${escapeHtml(String(fees[key] ?? 0).replace(".", ","))}" /></label>`).join("")}
+    <button type="submit" class="admin-button admin-button-primary">Salvar taxas</button>
+  </form>`;
+};
+
+const renderForecastProfit = (profit = {}, recipes = {}) => {
+  const rows = profit.rows || [];
+  const missing = profit.withoutRecipe || [];
+  const editable = canEditRecipes();
+  const head = `
+    <div class="gx-fc-card-head">
+      <div><h3>Lucro e prejuízo de cada prato: últimos 30 dias</h3><p>Preço − matéria-prima (ficha técnica) − taxa do canal − embalagem, vezes o que vendeu.</p></div>
+      ${
+        profit.hasRecipes
+          ? `<div class="gx-fc-pills">
+              <span class="gx-fc-pill">30 dias antes: ${escapeHtml(fcMoneyShort(profit.previousTotal))}</span>
+              <span class="gx-fc-pill">últimos 30 dias: ${escapeHtml(fcMoneyShort(profit.currentTotal))}</span>
+              <span class="gx-fc-pill is-brand">seguindo a orientação: ${escapeHtml(fcMoneyShort(profit.followTotal))}</span>
+            </div>`
+          : ""
+      }
+    </div>`;
+  const maxPos = Math.max(1, ...rows.map((row) => Math.max(row.profit, row.previousProfit || 0)));
+  const maxNeg = Math.max(0, ...rows.map((row) => Math.max(-row.profit, -(row.previousProfit || 0))));
+  const zero = maxNeg > 0 ? Math.min(35, Math.max(14, (maxNeg / (maxNeg + maxPos)) * 100)) : 2;
+  const pos = (value) => zero + (value >= 0 ? (value / maxPos) * (76 - zero) : (value / Math.max(1, maxNeg)) * (zero - 2));
+  const chart = rows.length
+    ? `<div class="gx-fc-profit">
+        <div class="gx-fc-profit-row is-head"><span>Prato</span><span>Vendidos</span><span>← prejuízo · lucro no período →</span><span>Por unidade</span><span>Orientação</span></div>
+        ${rows
+          .map((row) => {
+            const neg = row.profit < 0;
+            const left = Math.min(pos(row.profit), zero);
+            const width = Math.max(0.6, Math.abs(pos(row.profit) - zero));
+            const prev = row.previousProfit;
+            const prevLeft = prev === null ? 0 : Math.min(pos(prev), zero);
+            const prevWidth = prev === null ? 0 : Math.abs(pos(prev) - zero);
+            return `<div class="gx-fc-profit-row${neg ? " is-loss" : ""}">
+              <strong>${escapeHtml(row.name)}${row.missingCost ? ' <em class="gx-fc-warn-text" title="Algum ingrediente sem custo">*</em>' : ""}</strong>
+              <span>${row.qty}</span>
+              <div class="gx-fc-profit-bar" style="--zero:${zero.toFixed(1)}%">
+                ${prev === null ? "" : `<i class="is-prev" style="left:${prevLeft.toFixed(1)}%;width:${prevWidth.toFixed(1)}%" title="30 dias antes: ${escapeHtml(fcMoney(prev))}"></i>`}
+                <i class="${neg ? "is-neg" : "is-pos"}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></i>
+                <b style="${neg ? `right:${(100 - left + 1).toFixed(1)}%` : `left:${(Math.max(pos(row.profit), prev === null ? 0 : pos(prev)) + 1).toFixed(1)}%`}">${escapeHtml(fcMoney(row.profit))}</b>
+              </div>
+              <span class="${neg ? "gx-fc-neg" : ""}">${escapeHtml(fcMoney(row.unitProfit))}<small>custo ${escapeHtml(fcMoney(row.unitCost))}</small></span>
+              <span class="gx-fc-tip is-${row.tone}">${escapeHtml(row.tip)}${editable ? ` <button type="button" class="gx-fc-link" data-recipe-edit="${escapeHtml(row.name)}">ficha</button>` : ""}</span>
+            </div>`;
+          })
+          .join("")}
+      </div>
+      ${fcLegend([["is-pos-key", "Lucro"], ["is-neg-key", "Prejuízo"], ["is-prev-key", "30 dias antes (como era)"]])}
+      ${
+        profit.losing
+          ? fcGuide(`${profit.losing} ${profit.losing === 1 ? "prato dá" : "pratos dão"} prejuízo. Ajustando os pratos marcados para 30% de margem, o lucro do período vai de ${fcMoney(profit.currentTotal)} para cerca de ${fcMoney(profit.followTotal)}.`, { tone: "is-danger" })
+          : fcGuide(`Nenhum prato com ficha dá prejuízo. ${rows.some((row) => row.tone === "warn") ? "Os de margem baixa podem ser reajustados." : ""}`)
+      }`
+    : `<div class="gx-rep-soon"><strong>Cadastre a ficha técnica dos pratos</strong><span>Para cada prato, diga quanto de cada matéria-prima vai nele. Com o custo de cada item do estoque, o sistema calcula o lucro ou prejuízo de cada venda. Comece pelos mais vendidos abaixo.</span></div>`;
+  const missingList = missing.length
+    ? `<div class="gx-fc-missing">
+        <span>${missing.length} ${missing.length === 1 ? "prato vendido está" : "pratos vendidos estão"} sem ficha técnica:</span>
+        <div>${missing
+          .slice(0, 16)
+          .map((row) =>
+            editable
+              ? `<button type="button" class="gx-fc-chip" data-recipe-edit="${escapeHtml(row.name)}">${escapeHtml(row.name)} <small>${row.qty}×</small></button>`
+              : `<span class="gx-fc-chip">${escapeHtml(row.name)} <small>${row.qty}×</small></span>`
+          )
+          .join("")}</div>
+      </div>`
+    : "";
+  const feesButton = editable
+    ? `<button type="button" class="gx-fc-link" data-fees-toggle>${adminState.feesOpen ? "Fechar taxas" : "Taxas dos canais (iFood, 99Food...)"}</button>`
+    : "";
+  return `<section class="gx-res-card gx-fc-card" data-forecast-profit>${head}${chart}${missingList}${renderRecipeEditor()}<div class="gx-fc-row-actions">${feesButton}</div>${renderChannelFeesForm(recipes.settings)}</section>`;
+};
+
+const renderForecastRawMaterials = (raw = {}, fallback = {}) => {
+  const rows = raw.rows || [];
+  if (!rows.length) return renderForecastInventory(fallback);
+  const maxLoss = Math.max(1, ...rows.map((row) => row.lossValue));
+  const maxRup = Math.max(1, ...rows.map((row) => row.ruptures));
+  const more = rows.filter((row) => row.kind === "more").map((row) => row.name);
+  const less = rows.filter((row) => row.kind === "less").map((row) => row.name);
+  const months = raw.monthly || [];
+  const topMonth = Math.max(1, ...months.map((m) => Math.max(m.ruptures * 100, m.lossValue)));
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Matéria-prima: comprar mais ou menos</h3><p>Últimos 60 dias. À esquerda, quantas vezes zerou (ruptura). À direita, o que foi perdido ou jogado fora (excesso). A compra considera a previsão de vendas × ficha técnica dos próximos 7 dias.</p></div>
+        <div class="gx-fc-pills"><span class="gx-fc-pill is-danger">${raw.ruptures60} ${raw.ruptures60 === 1 ? "falta" : "faltas"}</span><span class="gx-fc-pill is-warn">${escapeHtml(fcMoney(raw.lossValue60))} perdidos</span></div>
+      </div>
+      <div class="gx-fc-mp">
+        <div class="gx-fc-mp-line is-head"><span>Matéria-prima</span><span>Faltou ←</span><span>→ Sobrou / perdeu</span><span>Orientação de compra</span></div>
+        ${rows
+          .slice(0, 14)
+          .map(
+            (row) => `<div class="gx-fc-mp-line">
+              <div><strong>${escapeHtml(row.name)}</strong><small>tem ${escapeHtml(formatInventoryQuantity(row.quantity))} ${escapeHtml(row.unit)}${row.need7 ? ` · usa ${escapeHtml(formatInventoryQuantity(row.need7))} em 7 dias` : ""}</small></div>
+              <div class="gx-fc-div is-left"><i style="width:${((row.ruptures / maxRup) * 62).toFixed(1)}%"></i><b style="right:calc(${((row.ruptures / maxRup) * 62).toFixed(1)}% + 6px)">${row.ruptures ? `${row.ruptures}×` : "—"}</b></div>
+              <div class="gx-fc-div is-right"><i style="width:${((row.lossValue / maxLoss) * 62).toFixed(1)}%"></i><b style="left:calc(${((row.lossValue / maxLoss) * 62).toFixed(1)}% + 6px)">${row.lossValue ? escapeHtml(fcMoney(row.lossValue)) : "—"}</b></div>
+              <span class="gx-fc-mp-tip is-${row.kind}">${row.kind === "more" ? "▲" : row.kind === "less" ? "▼" : "●"} ${escapeHtml(row.tip)}</span>
+            </div>`
+          )
+          .join("")}
+      </div>
+      <div class="gx-fc-grid2 is-tight">
+        <div class="gx-fc-months">
+          <h4>Faltas e perdas por mês</h4>
+          <div class="gx-fc-months-bars">
+            ${months
+              .map(
+                (m) => `<div><div class="gx-fc-months-pair"><i class="is-rup" style="height:${Math.max(3, (m.ruptures * 100 / topMonth) * 110).toFixed(0)}px" title="${m.ruptures} falta(s)"></i><i class="is-loss" style="height:${Math.max(3, (m.lossValue / topMonth) * 110).toFixed(0)}px" title="${escapeHtml(fcMoney(m.lossValue))} perdidos"></i></div><span>${escapeHtml(m.label)}</span><small>${m.ruptures} · ${escapeHtml(fcMoneyShort(m.lossValue))}</small></div>`
+              )
+              .join("")}
+          </div>
+          ${fcLegend([["is-rup-key", "Faltas (vezes que zerou)"], ["is-loss-key", "Perdas (R$)"]])}
+        </div>
+        ${fcGuide(
+          [more.length ? `Comprar mais: ${more.slice(0, 4).join(", ")}.` : "", less.length ? `Comprar menos: ${less.slice(0, 4).join(", ")}.` : "", !more.length && !less.length ? "Estoque na medida: manter as compras." : ""]
+            .filter(Boolean)
+            .join(" ")
+        )}
+      </div>
+      ${raw.hasMovements ? "" : `<p class="gx-fc-note">O histórico de faltas e perdas começa a contar a partir de agora: registre entradas, baixas e perdas em Cardápio › Estoque.</p>`}
+    </section>`;
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || adminState.activeSection !== "forecast") return;
+  const edit = target.closest("[data-recipe-edit]");
+  if (edit) {
+    void openRecipeEditor(edit.dataset.recipeEdit);
+    return;
+  }
+  if (target.closest("[data-recipe-cancel]")) {
+    adminState.recipeEditor = null;
+    renderModuleContent();
+    return;
+  }
+  if (target.closest("[data-recipe-add]")) {
+    readRecipeEditorForm();
+    adminState.recipeEditor.ingredients.push({ itemId: "", quantity: "" });
+    adminState.recipeEditor.justChanged = true;
+    renderModuleContent();
+    return;
+  }
+  const remove = target.closest("[data-recipe-remove]");
+  if (remove) {
+    readRecipeEditorForm();
+    adminState.recipeEditor.ingredients.splice(Number(remove.dataset.recipeRemove), 1);
+    if (!adminState.recipeEditor.ingredients.length) adminState.recipeEditor.ingredients.push({ itemId: "", quantity: "" });
+    adminState.recipeEditor.justChanged = true;
+    renderModuleContent();
+    return;
+  }
+  if (target.closest("[data-fees-toggle]")) {
+    adminState.feesOpen = !adminState.feesOpen;
+    renderModuleContent();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || adminState.activeSection !== "forecast" || !target.closest("[data-recipe-editor]")) return;
+  refreshRecipeEditorCost();
+});
+
+document.addEventListener("input", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || adminState.activeSection !== "forecast" || !target.closest("[data-recipe-editor]")) return;
+  refreshRecipeEditorCost();
+});
+
+document.addEventListener("submit", (event) => {
+  const form = event.target instanceof HTMLFormElement ? event.target : null;
+  if (!form || adminState.activeSection !== "forecast") return;
+  if (form.matches("[data-recipe-editor]")) {
+    event.preventDefault();
+    void saveRecipeEditor();
+  } else if (form.matches("[data-channel-fees]")) {
+    event.preventDefault();
+    void saveChannelFees(form);
+  }
+});
+
 const renderForecastModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
   if (!moduleRoot) return;
+  // Guarda o que já foi digitado na ficha antes de redesenhar a tela.
+  // (exceto quando a própria ação acabou de mudar a ficha).
+  if (adminState.recipeEditor && !adminState.recipeEditor.justChanged) readRecipeEditorForm();
+  if (adminState.recipeEditor) adminState.recipeEditor.justChanged = false;
   const header = renderResultsHeader("forecast");
   const data = adminState.forecastData;
   if (adminState.forecastError && !data) {
@@ -9964,9 +10347,12 @@ const renderForecastModule = () => {
   const sales = data.sales || {};
   const k = sales.kpis || {};
   const tips = sales.tips || [];
+  const notice = adminState.forecastNotice;
+  adminState.forecastNotice = "";
   moduleRoot.innerHTML = `
     ${header}
     <div class="gx-fc">
+      ${notice ? `<div class="admin-feedback">${escapeHtml(notice)}</div>` : ""}
       ${
         !data.hasEnoughHistory
           ? `<div class="admin-feedback">A previsão fica precisa com pelo menos 2 semanas de pedidos. Hoje o sistema tem ${data.salesDays} ${data.salesDays === 1 ? "dia" : "dias"} com vendas.</div>`
@@ -9987,9 +10373,9 @@ const renderForecastModule = () => {
         <article class="gx-fc-kpi is-accent"><span>Acerto da previsão</span><strong class="gx-fc-kpi-value">${k.accuracyPct === null || k.accuracyPct === undefined ? "—" : `${k.accuracyPct}%`}</strong><small>média das últimas semanas</small></article>
       </div>
       ${renderForecastSales(sales)}
-      ${renderForecastInventory(data.inventory)}
+      ${renderForecastRawMaterials(data.rawMaterials, data.inventory)}
+      ${renderForecastProfit(data.profit, data.recipes)}
       ${renderForecastCustomers(data.customers)}
-      ${renderForecastProfit()}
       <div class="gx-fc-grid2">
         ${renderForecastMonth(data.month)}
         ${renderForecastToday(data.todayAlert)}
@@ -15154,9 +15540,13 @@ const renderInventoryDetails = () => {
           <span>Quantidade mínima</span>
           <input class="admin-input" name="minimumQuantity" type="number" min="0" step="0.001" value="${escapeHtml(String(draftItem.minimumQuantity || 0))}" />
         </label>
-        <label class="admin-field admin-field-wide">
+        <label class="admin-field">
           <span>Validade</span>
           <input class="admin-input" name="expirationDate" type="date" value="${escapeHtml(draftItem.expirationDate || "")}" />
+        </label>
+        <label class="admin-field">
+          <span>Custo por unidade (R$)</span>
+          <input class="admin-input" name="unitCost" inputmode="decimal" value="${escapeHtml(draftItem.unitCost ? String(draftItem.unitCost).replace(".", ",") : "")}" placeholder="ex.: 79,90 por kg" data-inventory-unit-cost />
         </label>
         <datalist id="inventory-category-options">
           ${snapshot.categories.map((category) => `<option value="${escapeHtml(category)}"></option>`).join("")}
@@ -17632,6 +18022,7 @@ const saveInventoryItem = async (form) => {
         unit: String(formData.get("unit") || "").trim(),
         minimumQuantity: normalizeDecimalInput(formData.get("minimumQuantity")),
         expirationDate: String(formData.get("expirationDate") || "").trim(),
+        unitCost: normalizeDecimalInput(formData.get("unitCost")),
       }),
     });
 

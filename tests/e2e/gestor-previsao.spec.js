@@ -68,3 +68,58 @@ test("Previsão: tela no Gestor e dados isolados por restaurante", async ({ page
   await page.locator('.gx-res-tabs [data-results-tab="reports"]').click();
   await expect(page.locator(".gx-res-head h2")).toHaveText("Relatórios");
 });
+
+test("Ficha técnica e perdas: salvas por restaurante, sem misturar", async () => {
+  test.setTimeout(120_000);
+  const master = await loginMaster();
+  const a = await onboardRestaurant(master.api, { key: uniqueKey("ficha-a"), name: "Ficha A", ownerPassword: "OwnerFichaA123!" });
+  const b = await onboardRestaurant(master.api, { key: uniqueKey("ficha-b"), name: "Ficha B", ownerPassword: "OwnerFichaB123!" });
+  await master.api.dispose();
+  const ownerA = await loginTenantOwner(a);
+  const ownerB = await loginTenantOwner(b);
+  const origin = { headers: { Origin: process.env.BASE_URL || "http://127.0.0.1:3000" } };
+
+  const costsA = await (await ownerA.api.get("/api/admin/inventory/costs")).json();
+  const salmao = costsA.items.find((item) => item.name === "Salmão");
+  expect(salmao).toBeTruthy();
+
+  // Custo por unidade no item do estoque.
+  const saved = await ownerA.api.post("/api/admin/inventory/save-item", {
+    ...origin,
+    data: { itemId: salmao.id, name: salmao.name, category: salmao.category, quantity: 5, minimumQuantity: 2, unit: "kg", unitCost: "79,90" },
+  });
+  expect(saved.status()).toBe(200);
+  expect((await saved.json()).item.unitCost).toBe(79.9);
+
+  // Ficha técnica no restaurante A.
+  const recipe = await ownerA.api.post("/api/admin/inventory/save-recipe", {
+    ...origin,
+    data: { dishName: "Combinado Teste", packagingCost: 2, ingredients: [{ itemId: salmao.id, quantity: 0.2 }] },
+  });
+  expect(recipe.status()).toBe(200);
+
+  // Perda registrada vira histórico.
+  const loss = await ownerA.api.post("/api/admin/inventory/adjust-stock", { ...origin, data: { itemId: salmao.id, mode: "loss", amount: 1 } });
+  expect(loss.status()).toBe(200);
+  expect((await loss.json()).item.quantity).toBe(4);
+
+  // B não vê a ficha nem o custo de A e não consegue usar item de A.
+  const costsB = await (await ownerB.api.get("/api/admin/inventory/costs")).json();
+  expect(costsB.recipes).toHaveLength(0);
+  expect(costsB.items.find((item) => item.name === "Salmão").unitCost).toBe(0);
+  const crossRecipe = await ownerB.api.post("/api/admin/inventory/save-recipe", {
+    ...origin,
+    data: { dishName: "Invasão", ingredients: [{ itemId: `${salmao.id}-nao-existe`, quantity: 1 }] },
+  });
+  expect(crossRecipe.status()).toBe(400);
+
+  const forecastA = (await (await ownerA.api.get("/api/admin/forecast")).json()).forecast;
+  const forecastB = (await (await ownerB.api.get("/api/admin/forecast")).json()).forecast;
+  expect(forecastA.recipes.count).toBe(1);
+  expect(forecastB.recipes.count).toBe(0);
+  expect(forecastA.rawMaterials.lossValue60).toBeCloseTo(79.9, 1);
+  expect(forecastB.rawMaterials.lossValue60).toBe(0);
+
+  await ownerA.api.dispose();
+  await ownerB.api.dispose();
+});
