@@ -68,6 +68,7 @@ const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "promotions", label: "Promoções", helper: "Campanhas e cupons" },
   { key: "metrics", label: "Métricas", helper: "Performance por admin" },
   { key: "reports", label: "Relatórios", helper: "Indicadores" },
+  { key: "forecast", label: "Previsão", helper: "Vendas, clientes e compras" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
   { key: "reviews", label: "Avaliações", helper: "Feedback do cliente" },
   { key: "settings", label: "Configurações", helper: "Ajustes do sistema" },
@@ -106,6 +107,7 @@ const IMPLEMENTED_SECTIONS = new Set([
   "finance",
   "metrics",
   "reports",
+  "forecast",
   "inventory",
   "settings",
   "users",
@@ -121,6 +123,7 @@ const SECTION_PERMISSION_MAP = Object.freeze({
   promotions: "promotions_view",
   metrics: "reports_view",
   reports: "reports_view",
+  forecast: "reports_view",
   inventory: "inventory_view",
   finance: "financial_view",
   reviews: "reviews_view",
@@ -140,6 +143,7 @@ const SECTION_MENU_VISIBILITY_MAP = Object.freeze({
   promotions: "menu_promotions_view",
   metrics: "menu_metrics_view",
   reports: "menu_reports_view",
+  forecast: "menu_reports_view",
   finance: "menu_financial_view",
   reviews: "menu_reviews_view",
   settings: "menu_settings_view",
@@ -154,6 +158,7 @@ const SECTION_FEATURE_MAP = Object.freeze({
   promotions: "promotions",
   metrics: "advancedReports",
   reports: "advancedReports",
+  forecast: "advancedReports",
   inventory: "inventory",
   finance: "finance",
   reviews: "reviews",
@@ -343,6 +348,12 @@ const SECTION_TITLES = {
     description: "Leitura gerencial baseada na trilha real de auditoria e nos pedidos do período.",
     focus: "Indicadores vivos da operação",
   },
+  forecast: {
+    chip: "Previsão inteligente",
+    title: "Previsão de vendas, clientes e compras",
+    description: "O que deve vender, quem está pedindo menos e o que comprar.",
+    focus: "Previsão inteligente",
+  },
   reports: {
     chip: "Relatórios operacionais",
     title: "Performance do turno e gargalos",
@@ -397,6 +408,8 @@ const NAV_ICON_SVGS = {
     '<svg viewBox="0 0 24 24" fill="none"><path d="M4 19h16M7 15l3-3 3 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="15" r="1"/><circle cx="10" cy="12" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/></svg>',
   reports:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M5 19V9M12 19V5M19 19v-7M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  forecast:
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M4 18l5-6 4 3 7-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2.5"/></svg>',
   audit:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3zm0 6v3l2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   inventory:
@@ -803,6 +816,9 @@ const adminState = {
   resultsFilters: { period: "7d", startDate: "", endDate: "" },
   resultsData: null,
   isLoadingResults: false,
+  isLoadingForecast: false,
+  forecastData: null,
+  forecastError: "",
   reportKey: "peak",
   inventoryDrawer: "",
   inventoryMove: null,
@@ -4285,7 +4301,7 @@ const NAV_GROUPS = Object.freeze([
   { key: "operacao", label: "Operação", sections: ["orders", "scheduled", "deliveries"] },
   { key: "cardapio", label: "Cardápio", sections: ["menu", "inventory"] },
   { key: "clientes", label: "Clientes", sections: ["customers", "promotions", "reviews"] },
-  { key: "resultados", label: "Resultados", sections: ["metrics", "finance", "reports"] },
+  { key: "resultados", label: "Resultados", sections: ["metrics", "finance", "reports", "forecast"] },
   { key: "ajustes", label: "Ajustes", sections: ["settings", "users", "audit"] },
 ]);
 
@@ -8969,6 +8985,7 @@ const RESULTS_TABS = Object.freeze([
   ["metrics", "Resumo"],
   ["finance", "Financeiro"],
   ["reports", "Relatórios"],
+  ["forecast", "Previsão"],
 ]);
 const RESULTS_WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const RESULTS_PAYMENT_TONES = Object.freeze({ pix: "is-pix", cartao: "is-card", dinheiro: "is-cash", online_outros: "is-other" });
@@ -9030,6 +9047,7 @@ const loadResults = async () => {
 const RESULTS_SUBTITLES = Object.freeze({
   metrics: "Como o restaurante está indo, sem tabela gigante.",
   reports: "Escolha um relatório para ver os detalhes.",
+  forecast: "O que deve vender, quem está pedindo menos e o que comprar. Calculado com os pedidos do restaurante.",
 });
 
 const renderResultsHeader = (activeTab, { subtitle } = {}) => {
@@ -9050,7 +9068,7 @@ const renderResultsHeader = (activeTab, { subtitle } = {}) => {
       </div>
     </header>
     ${
-        activeTab !== "finance"
+        !["finance", "forecast"].includes(activeTab)
           ? `<div class="gx-res-toolbar"><div class="gx-res-periods" role="group" aria-label="Período">
               ${RESULTS_PERIODS.map(
                 ([key, label]) =>
@@ -9061,7 +9079,7 @@ const renderResultsHeader = (activeTab, { subtitle } = {}) => {
           : ""
       }
     ${
-      activeTab !== "finance" && filters.period === "custom"
+      !["finance", "forecast"].includes(activeTab) && filters.period === "custom"
         ? `<form class="gx-res-custom" data-results-custom>
             <label>De <input type="date" name="startDate" value="${escapeHtml(filters.startDate)}" required /></label>
             <label>Até <input type="date" name="endDate" value="${escapeHtml(filters.endDate)}" required /></label>
@@ -9587,6 +9605,398 @@ document.addEventListener("click", (event) => {
     window.setTimeout(() => document.body.classList.remove("gx-printing-report"), 500);
   }
 });
+
+// ===================== Previsão inteligente =====================
+const loadForecast = async () => {
+  if (adminState.isLoadingForecast) return;
+  adminState.isLoadingForecast = true;
+  if (adminState.activeSection === "forecast") renderModuleContent();
+  try {
+    const payload = await fetchJson("/api/admin/forecast");
+    adminState.forecastData = payload.forecast || null;
+    adminState.forecastError = "";
+  } catch (error) {
+    if (error.status === 401) {
+      redirectToLogin();
+      return;
+    }
+    adminState.forecastError = error.message || "Não foi possível calcular a previsão.";
+  } finally {
+    adminState.isLoadingForecast = false;
+    if (adminState.activeSection === "forecast") renderModuleContent();
+  }
+};
+
+const fcMoney = (value) => formatMoney(Number(value || 0));
+const fcMoneyShort = (value) => {
+  const n = Number(value || 0);
+  return n >= 1000 ? `R$ ${(n / 1000).toFixed(1).replace(".", ",")} mil` : fcMoney(n);
+};
+const fcPct = (value, { suffix = "" } = {}) => {
+  if (value === null || value === undefined) return `<strong class="gx-fc-kpi-value is-flat">—</strong>`;
+  const tone = value > 0 ? "is-up" : value < 0 ? "is-down" : "is-flat";
+  return `<strong class="gx-fc-kpi-value ${tone}">${value > 0 ? "+" : ""}${value}%${suffix}</strong>`;
+};
+
+// Gráfico de linhas em SVG. series: [{ values:[n|null], className, dashed }]; band: {low:[], high:[]}
+const fcLineChart = ({ count, maxValue, series = [], band = null, todayIndex = -1, height = 260, labels = [], yFormat = fcMoneyShort, ariaLabel = "" }) => {
+  const W = 1000;
+  const H = height;
+  const L = 8;
+  const R = W - 8;
+  const T = 12;
+  const B = H - 8;
+  const max = Math.max(1, maxValue);
+  const x = (i) => L + ((R - L) * i) / Math.max(1, count - 1);
+  const y = (v) => B - ((B - T) * v) / max;
+  const path = (values) => {
+    let d = "";
+    let pen = false;
+    values.forEach((v, i) => {
+      if (v === null || v === undefined || Number.isNaN(v)) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
+      pen = true;
+    });
+    return d;
+  };
+  let bandPath = "";
+  if (band) {
+    const idx = band.high.map((v, i) => (v === null || v === undefined ? -1 : i)).filter((i) => i >= 0);
+    if (idx.length > 1) {
+      bandPath = idx.map((i, k) => `${k ? "L" : "M"}${x(i).toFixed(1)} ${y(band.high[i]).toFixed(1)}`).join(" ");
+      bandPath += " " + [...idx].reverse().map((i) => `L${x(i).toFixed(1)} ${y(band.low[i]).toFixed(1)}`).join(" ") + " Z";
+    }
+  }
+  const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => `M${L} ${y(max * f).toFixed(1)} L${R} ${y(max * f).toFixed(1)}`).join(" ");
+  const todayX = todayIndex >= 0 ? x(todayIndex) : null;
+  const pct = (px, total) => ((px / total) * 100).toFixed(2);
+  const yTicks = [0.5, 1].map((f) => `<span class="gx-fc-ytick" style="top:${pct(y(max * f), H)}%">${escapeHtml(yFormat(max * f))}</span>`).join("");
+  const step = Math.max(1, Math.ceil(labels.length / 8));
+  const xTicks = labels
+    .map((label, i) => (i % step === 0 || i === todayIndex ? `<span class="gx-fc-xtick${i === todayIndex ? " is-today" : ""}" style="left:${pct(x(i), W)}%">${escapeHtml(i === todayIndex ? "Hoje" : label)}</span>` : ""))
+    .join("");
+  return `
+    <div class="gx-fc-chart" style="--h:${H}px">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(ariaLabel)}">
+        ${todayX !== null ? `<rect class="gx-fc-future" x="${todayX.toFixed(1)}" y="${T}" width="${(R - todayX).toFixed(1)}" height="${B - T}"></rect>` : ""}
+        <path class="gx-fc-grid" d="${grid}"></path>
+        ${bandPath ? `<path class="gx-fc-band" d="${bandPath}"></path>` : ""}
+        ${series.map((s) => `<path class="gx-fc-line ${s.className}" d="${path(s.values)}"></path>`).join("")}
+        ${todayX !== null ? `<path class="gx-fc-today" d="M${todayX.toFixed(1)} ${T} L${todayX.toFixed(1)} ${B}"></path>` : ""}
+      </svg>
+      ${yTicks}
+    </div>
+    <div class="gx-fc-xaxis">${xTicks}</div>`;
+};
+
+const fcLegend = (items) =>
+  `<div class="gx-fc-legend">${items.map(([className, label]) => `<span><i class="gx-fc-key ${className}"></i>${escapeHtml(label)}</span>`).join("")}</div>`;
+
+const fcGuide = (text, { tone = "" } = {}) =>
+  `<div class="gx-fc-guide ${tone}"><span>${tone === "is-danger" ? "ATENÇÃO" : "ORIENTAÇÃO"}</span><strong>${escapeHtml(text)}</strong></div>`;
+
+const fcWhatsappLink = (customer) => {
+  if (!customer.whatsapp) return "";
+  const first = String(customer.name || "").trim().split(/\s+/)[0] || "";
+  const restaurant = String(adminState.adminRestaurantName || "").trim();
+  const message = `Oi${first ? `, ${first}` : ""}! Sentimos sua falta${restaurant ? ` aqui no ${restaurant}` : ""}. ${
+    customer.favorite ? `Que tal pedir seu ${customer.favorite} hoje?` : "Que tal pedir hoje?"
+  }`;
+  return `https://wa.me/${encodeURIComponent(customer.whatsapp)}?text=${encodeURIComponent(message)}`;
+};
+
+const renderForecastSales = (sales) => {
+  const days = sales.days || [];
+  const todayIndex = days.findIndex((d) => d.isToday);
+  const max = Math.max(
+    1,
+    ...days.map((d) => Math.max(d.revenue || 0, d.lastWeek || 0, d.lastYear || 0, d.high || 0, d.forecast || 0))
+  ) * 1.08;
+  const hasLastYear = days.some((d) => d.lastYear > 0);
+  const history = days.map((d, i) => (i <= todayIndex ? (i === todayIndex ? d.forecast ?? d.revenue : d.revenue) : null));
+  const forecast = days.map((d, i) => (i >= todayIndex ? d.forecast : null));
+  if (todayIndex > 0) forecast[todayIndex - 1] = days[todayIndex - 1].revenue;
+  const k = sales.kpis || {};
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Vendas por dia: como foi e para onde vai</h3><p>Últimos 28 dias e previsão dos próximos 14. A faixa laranja é o mínimo e o máximo provável.</p></div>
+        ${fcLegend([
+          ["is-history", "Vendido"],
+          ["is-lastweek", "Semana passada"],
+          ...(hasLastYear ? [["is-lastyear", "Ano passado"]] : []),
+          ["is-forecast", "Previsão"],
+          ["is-band", "Faixa provável"],
+        ])}
+      </div>
+      ${fcLineChart({
+        count: days.length,
+        maxValue: max,
+        todayIndex,
+        labels: days.map((d) => d.label),
+        band: { low: days.map((d) => d.low), high: days.map((d) => d.high) },
+        series: [
+          ...(hasLastYear ? [{ values: days.map((d) => d.lastYear), className: "is-lastyear" }] : []),
+          { values: days.map((d) => d.lastWeek), className: "is-lastweek" },
+          { values: history.map((v, i) => (i < todayIndex ? v : null)), className: "is-history" },
+          { values: forecast, className: "is-forecast" },
+        ],
+        ariaLabel: "Vendas por dia nos últimos 28 dias e previsão dos próximos 14",
+      })}
+    </section>
+    <div class="gx-fc-grid2">
+      <section class="gx-res-card gx-fc-card">
+        <div class="gx-fc-card-head"><div><h3>${sales.peak ? `${escapeHtml(sales.peak.weekdayName[0].toUpperCase() + sales.peak.weekdayName.slice(1))} ${escapeHtml(sales.peak.label.slice(4))}: o que vai sair` : "Pratos previstos"}</h3><p>Dia mais forte da semana que vem. Quantidade média desse dia nas últimas 6 semanas.</p></div></div>
+        ${
+          sales.dishes?.length
+            ? `<div class="gx-rep-table gx-fc-table" role="table">
+                <div class="gx-rep-tr is-head" role="row"><span>Prato</span><span>Previsto</span><span>Por quê</span></div>
+                ${sales.dishes.map((d) => `<div class="gx-rep-tr" role="row"><span>${escapeHtml(d.name)}</span><span><b>${d.forecastQty}</b></span><span>${escapeHtml(d.reason)}</span></div>`).join("")}
+              </div>`
+            : `<p class="gx-res-empty">Ainda não há pedidos suficientes desse dia da semana.</p>`
+        }
+      </section>
+      <section class="gx-res-card gx-fc-card">
+        <div class="gx-fc-card-head"><div><h3>Acerto da previsão</h3><p>Previsto x vendido, semana a semana (refeito só com o que se sabia antes).</p></div></div>
+        ${
+          sales.accuracy?.length
+            ? (() => {
+                const top = Math.max(1, ...sales.accuracy.map((w) => Math.max(w.predicted, w.actual)));
+                return `<div class="gx-fc-acc">${sales.accuracy
+                  .map(
+                    (w) => `<div class="gx-fc-acc-col"><span class="gx-fc-acc-pct">${w.pct === null ? "—" : `${w.pct}%`}</span><div class="gx-fc-acc-bars"><i class="is-pred" style="height:${((w.predicted / top) * 100).toFixed(1)}%" title="Previsto ${escapeHtml(fcMoney(w.predicted))}"></i><i class="is-real" style="height:${((w.actual / top) * 100).toFixed(1)}%" title="Vendido ${escapeHtml(fcMoney(w.actual))}"></i></div><span class="gx-fc-acc-label">${escapeHtml(w.label)}</span></div>`
+                  )
+                  .join("")}</div>${fcLegend([["is-pred-key", "Previsto"], ["is-real-key", "Vendido"]])}`;
+              })()
+            : `<p class="gx-res-empty">O acerto aparece depois de 2 semanas de pedidos.</p>`
+        }
+        ${k.accuracyPct !== null && k.accuracyPct !== undefined ? `<p class="gx-fc-note">Média de acerto: <b>${k.accuracyPct}%</b>. Quanto mais pedidos, mais precisa fica.</p>` : ""}
+      </section>
+    </div>`;
+};
+
+const renderForecastInventory = (inventory) => {
+  const more = inventory?.buyMore || [];
+  const less = inventory?.buyLess || [];
+  const row = (item, kind) => `
+    <div class="gx-fc-mp-row">
+      <div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(
+        kind === "more"
+          ? `tem ${item.quantity} ${item.unit} · mínimo ${item.minimum} ${item.unit}`
+          : `tem ${item.quantity} ${item.unit} · ${item.text}`
+      )}</small></div>
+      <span class="gx-fc-mp-tip ${kind === "more" ? "is-more" : "is-less"}">${kind === "more" ? `▲ Comprar · ${escapeHtml(item.text)}` : "▼ Não comprar agora · usar primeiro"}</span>
+    </div>`;
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Matéria-prima: comprar mais ou menos</h3><p>Com o estoque de hoje: o que está perto de faltar (ruptura) e o que está sobrando ou perto de vencer (excesso).</p></div>
+        <div class="gx-fc-pills"><span class="gx-fc-pill is-danger">${more.length} para comprar</span><span class="gx-fc-pill is-warn">${less.length} para não comprar</span></div>
+      </div>
+      ${
+        more.length || less.length
+          ? `<div class="gx-fc-grid2 is-tight">
+              <div class="gx-fc-mp-col"><h4 class="is-danger">Vai faltar</h4>${more.length ? more.slice(0, 8).map((item) => row(item, "more")).join("") : `<p class="gx-res-empty">Nada perto de faltar.</p>`}</div>
+              <div class="gx-fc-mp-col"><h4 class="is-warn">Está sobrando ou vencendo</h4>${less.length ? less.slice(0, 8).map((item) => row(item, "less")).join("") : `<p class="gx-res-empty">Nada sobrando ou vencendo.</p>`}</div>
+            </div>`
+          : `<p class="gx-res-empty">${inventory?.tracked ? "Todo o estoque está na faixa certa." : "Cadastre o estoque mínimo dos itens em Cardápio › Estoque para o sistema avisar o que comprar."}</p>`
+      }
+      <p class="gx-fc-note">Próximo passo: com a ficha técnica (quanto de cada ingrediente vai em cada prato), o sistema calcula o consumo pela previsão de vendas, mostra o histórico de faltas e sobras e diz quanto comprar de cada item.</p>
+    </section>`;
+};
+
+const renderForecastProfit = () => `
+  <section class="gx-res-card gx-fc-card">
+    <div class="gx-fc-card-head"><div><h3>Lucro e prejuízo de cada prato</h3><p>Preço − matéria-prima − taxa do canal − embalagem, vezes o que vendeu.</p></div><span class="gx-fc-pill">em breve</span></div>
+    <div class="gx-rep-soon"><strong>Precisa da ficha técnica</strong><span>Para saber quanto cada prato custa, o sistema precisa saber quanto de cada ingrediente vai nele. Esse cadastro é o próximo passo.</span></div>
+  </section>`;
+
+const renderForecastCustomers = (customers) => {
+  const list = customers?.customers || [];
+  const monthly = customers?.monthly || [];
+  const proj = customers?.projection || { withAction: [], withoutAction: [] };
+  const count = monthly.length + 2;
+  const hist = monthly.map((m) => m.orders);
+  const lastIdx = monthly.length - 1;
+  const withA = Array(count).fill(null);
+  const withoutA = Array(count).fill(null);
+  if (lastIdx >= 0) {
+    withA[lastIdx] = hist[lastIdx];
+    withoutA[lastIdx] = hist[lastIdx];
+    proj.withAction.forEach((v, i) => (withA[lastIdx + 1 + i] = v));
+    proj.withoutAction.forEach((v, i) => (withoutA[lastIdx + 1 + i] = v));
+  }
+  const max = Math.max(1, ...hist, ...proj.withAction, ...proj.withoutAction) * 1.15;
+  const scaleMax = Math.max(1, ...list.map((c) => c.beforeMonthly)) * 1.1;
+  const p = (v) => (4 + (v / scaleMax) * 90).toFixed(1);
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Clientes com frequência caindo</h3><p>Ainda pedem, mas bem menos que antes. Antes = média dos 3 meses anteriores. Agora = últimos 30 dias.</p></div>
+        ${list.length ? `<span class="gx-fc-pill is-danger">${customers.count} ${customers.count === 1 ? "cliente caiu" : "clientes caíram"} mais da metade · −${escapeHtml(fcMoney(customers.lostRevenueMonth))} por mês</span>` : ""}
+      </div>
+      ${
+        list.length
+          ? `<div class="gx-fc-cust">
+              <div class="gx-fc-cust-list">
+                <div class="gx-fc-cust-row is-head"><span>Cliente</span><span>Pedidos por mês: antes → agora</span><span>Último pedido</span><span></span></div>
+                ${list
+                  .slice(0, 12)
+                  .map((c) => {
+                    const link = fcWhatsappLink(c);
+                    return `<div class="gx-fc-cust-row">
+                      <div><strong>${escapeHtml(c.name)}</strong><small>${escapeHtml(c.favorite ? `pede ${c.favorite}` : "")}</small></div>
+                      <div class="gx-fc-dumb" aria-label="Antes ${c.beforeMonthly} por mês, agora ${c.nowMonthly}">
+                        <i class="gx-fc-dumb-line" style="left:${p(c.nowMonthly)}%;width:${(p(c.beforeMonthly) - p(c.nowMonthly)).toFixed(1)}%"></i>
+                        <i class="gx-fc-dumb-dot is-before" style="left:${p(c.beforeMonthly)}%"></i>
+                        <i class="gx-fc-dumb-dot is-now" style="left:${p(c.nowMonthly)}%"></i>
+                        <b class="is-before" style="left:${p(c.beforeMonthly)}%">${String(c.beforeMonthly).replace(".", ",")}</b>
+                        <b class="is-now" style="left:${p(c.nowMonthly)}%">${c.nowMonthly}</b>
+                      </div>
+                      <span>há ${c.lastOrderDays} ${c.lastOrderDays === 1 ? "dia" : "dias"}</span>
+                      ${link ? `<a class="gx-fc-wa" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : `<span class="gx-fc-muted">sem telefone</span>`}
+                    </div>`;
+                  })
+                  .join("")}
+              </div>
+              <div class="gx-fc-cust-side">
+                <h4>Pedidos por mês desses clientes</h4>
+                ${fcLineChart({
+                  count,
+                  maxValue: max,
+                  height: 200,
+                  todayIndex: lastIdx,
+                  labels: [...monthly.map((m) => m.label), "+30d", "+60d"],
+                  yFormat: (v) => String(Math.round(v)),
+                  series: [
+                    { values: [...hist, null, null], className: "is-history" },
+                    { values: withoutA, className: "is-nothing" },
+                    { values: withA, className: "is-forecast" },
+                  ],
+                  ariaLabel: "Pedidos por mês dos clientes com frequência caindo, com projeção",
+                })}
+                ${fcLegend([["is-history", "Como foi"], ["is-forecast", "Mandando mensagem (estimativa)"], ["is-nothing", "Sem fazer nada"]])}
+                ${fcGuide("Mande uma mensagem com o prato favorito de cada um. Comece por quem pedia mais. O botão abre o WhatsApp com o texto pronto.")}
+              </div>
+            </div>`
+          : `<p class="gx-res-empty">Nenhum cliente frequente diminuiu os pedidos. Ótimo sinal.</p>`
+      }
+    </section>`;
+};
+
+const renderForecastMonth = (month) => {
+  const count = month.daysInMonth;
+  const actual = month.actual;
+  const lastIdx = actual.reduce((acc, v, i) => (v !== null ? i : acc), -1);
+  const projected = month.projected.map((v, i) => (i === lastIdx ? actual[i] : v));
+  const max = Math.max(1, ...month.lastMonth, ...month.projected.filter((v) => v !== null), ...actual.filter((v) => v !== null)) * 1.1;
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Fechamento do mês (${escapeHtml(month.label)})</h3><p>Acumulado até ontem e previsão até o último dia, comparado com o mês passado.</p></div>
+        <span class="gx-fc-pill ${month.vsLastMonthPct >= 0 ? "is-ok" : "is-danger"}">previsto ${escapeHtml(fcMoneyShort(month.projectedClose))}${month.vsLastMonthPct !== null ? ` (${month.vsLastMonthPct > 0 ? "+" : ""}${month.vsLastMonthPct}%)` : ""}</span>
+      </div>
+      ${fcLineChart({
+        count,
+        maxValue: max,
+        height: 200,
+        todayIndex: lastIdx + 1 < count ? lastIdx + 1 : -1,
+        labels: Array.from({ length: count }, (_, i) => String(i + 1)),
+        series: [
+          { values: month.lastMonth, className: "is-lastweek" },
+          { values: actual, className: "is-history" },
+          { values: projected, className: "is-forecast" },
+        ],
+        ariaLabel: "Faturamento acumulado do mês com previsão e mês passado",
+      })}
+      ${fcLegend([["is-history", "Este mês"], ["is-forecast", "Previsão"], ["is-lastweek", "Mês passado"]])}
+      <p class="gx-fc-note">Até agora: <b>${escapeHtml(fcMoney(month.actualToDate))}</b> · mês passado inteiro: <b>${escapeHtml(fcMoney(month.lastMonthTotal))}</b>.</p>
+    </section>`;
+};
+
+const renderForecastToday = (today) => {
+  const series = today.series || [];
+  if (!series.length) {
+    return `<section class="gx-res-card gx-fc-card"><div class="gx-fc-card-head"><div><h3>Hoje x o normal</h3><p>Pedidos por hora comparados com o normal de ${escapeHtml(today.weekdayName)}.</p></div></div><p class="gx-res-empty">Ainda sem histórico desse dia da semana.</p></section>`;
+  }
+  const max = Math.max(1, ...series.map((h) => Math.max(h.high, h.actual || 0))) * 1.15;
+  return `
+    <section class="gx-res-card gx-fc-card">
+      <div class="gx-fc-card-head">
+        <div><h3>Hoje x o normal</h3><p>Pedidos por hora de hoje comparados com o normal de ${escapeHtml(today.weekdayName)}.</p></div>
+        ${today.alert ? `<span class="gx-fc-pill is-danger">fora do normal</span>` : `<span class="gx-fc-pill is-ok">dentro do normal</span>`}
+      </div>
+      ${fcLineChart({
+        count: series.length,
+        maxValue: max,
+        height: 180,
+        labels: series.map((h) => `${h.hour}h`),
+        yFormat: (v) => String(Math.round(v)),
+        band: { low: series.map((h) => h.low), high: series.map((h) => h.high) },
+        series: [
+          { values: series.map((h) => h.expected), className: "is-lastweek" },
+          { values: series.map((h) => h.actual), className: "is-history" },
+        ],
+        ariaLabel: "Pedidos por hora de hoje contra a faixa normal",
+      })}
+      ${fcLegend([["is-history", "Hoje"], ["is-band-gray", "Faixa normal"]])}
+      ${today.alert ? fcGuide(`${today.alert.title}. ${today.alert.text}`, { tone: "is-danger" }) : ""}
+    </section>`;
+};
+
+const renderForecastModule = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  if (!moduleRoot) return;
+  const header = renderResultsHeader("forecast");
+  const data = adminState.forecastData;
+  if (adminState.forecastError && !data) {
+    moduleRoot.innerHTML = `${header}<div class="admin-feedback is-error">${escapeHtml(adminState.forecastError)}</div>`;
+    return;
+  }
+  if (!data) {
+    moduleRoot.innerHTML = `${header}<div class="admin-empty-state admin-empty-state-soft admin-empty-state-loading"><strong>Calculando a previsão</strong><span>Lendo os pedidos dos últimos meses.</span></div>`;
+    if (!adminState.isLoadingForecast) void loadForecast();
+    return;
+  }
+  const sales = data.sales || {};
+  const k = sales.kpis || {};
+  const tips = sales.tips || [];
+  moduleRoot.innerHTML = `
+    ${header}
+    <div class="gx-fc">
+      ${
+        !data.hasEnoughHistory
+          ? `<div class="admin-feedback">A previsão fica precisa com pelo menos 2 semanas de pedidos. Hoje o sistema tem ${data.salesDays} ${data.salesDays === 1 ? "dia" : "dias"} com vendas.</div>`
+          : ""
+      }
+      <section class="gx-fc-banner" aria-label="O que o sistema orienta">
+        <div class="gx-fc-banner-copy">
+          <span>O QUE O SISTEMA ORIENTA</span>
+          <strong>${escapeHtml(tips[0] || "Sem destaque para esta semana: o movimento previsto está dentro do normal.")}</strong>
+        </div>
+        ${tips.length > 1 ? `<ul>${tips.slice(1).map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
+      </section>
+      <div class="gx-fc-kpis">
+        <article class="gx-fc-kpi"><span>Previsão próximos 7 dias</span><strong class="gx-fc-kpi-value">${escapeHtml(fcMoney(k.next7))}</strong><small>faixa provável ${escapeHtml(fcMoney(k.next7Low))} a ${escapeHtml(fcMoney(k.next7High))}</small></article>
+        <article class="gx-fc-kpi"><span>x últimos 7 dias</span>${fcPct(k.vsLastWeekPct)}<small>${escapeHtml(fcMoney(k.lastWeek))} vendidos</small></article>
+        <article class="gx-fc-kpi"><span>x mesma semana do mês passado</span>${fcPct(k.vsLastMonthPct)}<small>${escapeHtml(fcMoney(k.lastMonthSame))}</small></article>
+        <article class="gx-fc-kpi"><span>x mesma semana do ano passado</span>${fcPct(k.vsLastYearPct)}<small>${k.lastYearSame > 0 ? escapeHtml(fcMoney(k.lastYearSame)) : "sem pedidos no ano passado"}</small></article>
+        <article class="gx-fc-kpi is-accent"><span>Acerto da previsão</span><strong class="gx-fc-kpi-value">${k.accuracyPct === null || k.accuracyPct === undefined ? "—" : `${k.accuracyPct}%`}</strong><small>média das últimas semanas</small></article>
+      </div>
+      ${renderForecastSales(sales)}
+      ${renderForecastInventory(data.inventory)}
+      ${renderForecastCustomers(data.customers)}
+      ${renderForecastProfit()}
+      <div class="gx-fc-grid2">
+        ${renderForecastMonth(data.month)}
+        ${renderForecastToday(data.todayAlert)}
+      </div>
+      <p class="gx-fc-note">Calculado em ${escapeHtml(new Date(data.generatedAt).toLocaleString("pt-BR"))} com os pedidos não cancelados. É uma estimativa: serve para orientar, não é garantia.</p>
+    </div>`;
+};
 
 const renderAuditModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
@@ -12422,6 +12832,11 @@ const renderModuleContentBody = () => {
 
   if (adminState.activeSection === "reports") {
     renderReportsV2();
+    return;
+  }
+
+  if (adminState.activeSection === "forecast") {
+    renderForecastModule();
     return;
   }
 
@@ -17015,7 +17430,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
       selectedIdForLoad &&
       hasAdminPermission("orders_view") &&
       hasPlanFeatureForSection("orders") &&
-      !["customers", "dashboard", "deliveries", "inventory", "settings", "users"].includes(adminState.activeSection)
+      !["customers", "dashboard", "deliveries", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection)
     ) {
       await loadOrderDetails(selectedIdForLoad, {
         showLoading: !orderStillExists || !adminState.selectedOrder || selectedIdForLoad !== nextSelectedId,
@@ -17619,7 +18034,7 @@ const initDashboardPage = () => {
       updateSidebarMeta();
 
       if (
-        !["customers", "dashboard", "inventory"].includes(adminState.activeSection) &&
+        !["customers", "dashboard", "forecast", "inventory"].includes(adminState.activeSection) &&
         adminState.selectedOrderId &&
         adminState.selectedOrder?.id !== adminState.selectedOrderId
       ) {
@@ -17672,6 +18087,7 @@ const initDashboardPage = () => {
         nextSection === "finance" ||
         nextSection === "cash-register" ||
         nextSection === "reports" ||
+        nextSection === "forecast" ||
         nextSection === "metrics" ||
         nextSection === "inventory" ||
         nextSection === "menu" ||
@@ -17721,6 +18137,10 @@ const initDashboardPage = () => {
         await loadMetrics();
       }
 
+      if (nextSection === "forecast") {
+        await loadForecast();
+      }
+
       if (nextSection === "scheduled") {
         await loadScheduledOrders({ preserveSelection: true });
       }
@@ -17758,7 +18178,7 @@ const initDashboardPage = () => {
       }
 
       if (
-        !["cash-register", "customers", "dashboard", "deliveries", "inventory", "settings", "users"].includes(adminState.activeSection) &&
+        !["cash-register", "customers", "dashboard", "deliveries", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection) &&
         adminState.selectedOrderId &&
         adminState.selectedOrder?.id !== adminState.selectedOrderId
       ) {
