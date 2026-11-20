@@ -134,6 +134,42 @@ const extractCookieValue = (setCookieHeader, cookieName) => {
   return decodeURIComponent(match.slice(cookieName.length + 1));
 };
 
+// Login novo do cliente (19/11/2026): conta no login central (e-mail e senha)
+// + código de uso único trocado pela sessão do restaurante. O login por
+// código no WhatsApp está desativado.
+const customerIdentity = require("../lib/customer-identity.cjs");
+const loginCustomerInProcess = async (customer, clientIp) => {
+  const auth = await customerIdentity.getCustomerAuth();
+  const authBase = customerIdentity.getAuthBaseUrl();
+  const email = `${customer.id}@stage3.test`;
+  await auth.handler(
+    new Request(`${authBase}/api/customer/identity/sign-up/email`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: new URL(authBase).origin, "x-forwarded-for": clientIp },
+      body: JSON.stringify({ name: customer.name, phone: customer.phone, email, password: "SenhaStage3-2026!" }),
+    })
+  );
+  const user = (await (await auth.$context).internalAdapter.findUserByEmail(email)).user;
+  const me = await runHandler(customerActionHandler, {
+    method: "GET",
+    url: "http://localhost:3000/api/customer/me",
+    headers: buildPublicJsonHeaders({ clientIp }),
+  });
+  const code = await customerIdentity.createHandoffCode({
+    user,
+    restaurantKey: me.res.payload.restaurantKey,
+    returnUrl: new URL("http://localhost:3000/"),
+  });
+  const exchange = await runHandler(customerActionHandler, {
+    method: "POST",
+    url: "http://localhost:3000/api/customer/auth/exchange",
+    headers: buildPublicJsonHeaders({ clientIp }),
+    body: JSON.stringify({ code }),
+  });
+  assert.equal(exchange.res.statusCode, 200, "O cliente deve entrar pelo login novo.");
+  return mergeCookieHeader("", exchange.res.headers["Set-Cookie"]);
+};
+
 const buildPublicJsonHeaders = ({
   origin = "http://localhost:3000",
   clientIp = "203.0.113.10",
@@ -258,7 +294,10 @@ const run = async () => {
   process.env.CUSTOMER_AUTH_RATE_LIMIT_WINDOW_MS = "60000";
   process.env.CUSTOMER_AUTH_START_MAX_REQUESTS = "10";
   process.env.CUSTOMER_AUTH_VERIFY_MAX_REQUESTS = "10";
+  // Regra "Gestor aberto" (migration 031) fora deste teste, como no servidor local.
+  process.env.INOVAS_PRESENCE_ENFORCE = "prefix:presenca-";
   delete process.env.DATABASE_URL;
+  delete process.env.CUSTOMER_AUTH_DATABASE_URL;
   delete process.env.WHATSAPP_ACCESS_TOKEN;
   delete process.env.WHATSAPP_PHONE_NUMBER_ID;
   delete process.env.WHATSAPP_VERIFY_TEMPLATE_NAME;
@@ -274,11 +313,24 @@ const run = async () => {
     profileId: customerB.id,
   });
 
+  // Pedido sem login: recusado.
+  const anonymousOrder = await runHandler(createOrderHandler, {
+    method: "POST",
+    url: "http://localhost:3000/api/orders/create",
+    headers: buildPublicJsonHeaders({ clientIp: "203.0.113.20" }),
+    body: JSON.stringify(buildSampleOrderPayload({ ...customerA, productId: "carpaccio-salmao", productName: "Carpaccio de Salmao" })),
+  });
+  assert.equal(anonymousOrder.res.statusCode, 401, "Pedido sem cliente logado deve ser recusado.");
+
+  let customerACookies = await loginCustomerInProcess(customerA, "203.0.113.61");
+  let customerBCookies = await loginCustomerInProcess(customerB, "203.0.113.62");
+
   const createdOrderA = await runHandler(createOrderHandler, {
     method: "POST",
     url: "http://localhost:3000/api/orders/create",
     headers: buildPublicJsonHeaders({
       clientIp: "203.0.113.21",
+      cookie: customerACookies,
       extraHeaders: {
         "x-tokyo-customer-client-token": "device-create-a",
         "x-tokyo-customer-key": customerKeyA,
@@ -292,10 +344,10 @@ const run = async () => {
       })
     ),
   });
-  assert.equal(createdOrderA.res.statusCode, 200, "O pedido do cliente A deve ser criado.");
+  assert.equal(createdOrderA.res.statusCode, 200, `O pedido do cliente A deve ser criado. ${JSON.stringify(createdOrderA.res.payload)}`);
   assert.ok(
-    String(createdOrderA.res.headers["Set-Cookie"] || "").includes(customerAuth.CUSTOMER_SESSION_COOKIE_NAME),
-    "A criacao do pedido deve devolver uma sessao publica do cliente separada do admin."
+    !String(createdOrderA.res.headers["Set-Cookie"] || "").includes(customerAuth.CUSTOMER_SESSION_COOKIE_NAME),
+    "A criacao do pedido NAO pode mais emitir sessao do cliente (a sessao vem do login)."
   );
 
   const createdOrderB = await runHandler(createOrderHandler, {
@@ -303,6 +355,7 @@ const run = async () => {
     url: "http://localhost:3000/api/orders/create",
     headers: buildPublicJsonHeaders({
       clientIp: "203.0.113.22",
+      cookie: customerBCookies,
       extraHeaders: {
         "x-tokyo-customer-client-token": "device-create-b",
         "x-tokyo-customer-key": customerKeyB,
@@ -339,60 +392,17 @@ const run = async () => {
     adminSessionToken
   )}`;
 
-  let customerACookies = "";
   const trackingClientTokenA = "device-track-a";
-  const loginStartA = await runHandler(customerAuthActionHandler, {
+  // Login por código no WhatsApp: desativado.
+  const legacyLoginStart = await runHandler(customerAuthActionHandler, {
     method: "POST",
     url: "http://localhost:3000/api/customer/auth/start",
-    headers: buildPublicJsonHeaders({
-      clientIp: "203.0.113.61",
-      extraHeaders: {
-        "x-tokyo-customer-client-token": trackingClientTokenA,
-      },
-    }),
-    body: JSON.stringify({
-      name: customerA.name,
-      phone: customerA.phone,
-    }),
+    headers: buildPublicJsonHeaders({ clientIp: "203.0.113.61" }),
+    body: JSON.stringify({ name: customerA.name, phone: customerA.phone }),
   });
-  assert.equal(loginStartA.res.statusCode, 200, "O login do cliente deve iniciar com sucesso.");
-  assert.equal(
-    loginStartA.res.payload?.deliveryMode,
-    "device-preview",
-    "No ambiente local, o login deve expor um codigo provisorio sem depender do WhatsApp real."
-  );
-  assert.match(
-    String(loginStartA.res.payload?.previewCode || ""),
-    /^\d{6}$/,
-    "O codigo provisorio local deve ter 6 digitos."
-  );
-  customerACookies = mergeCookieHeader(customerACookies, loginStartA.res.headers["Set-Cookie"]);
-  assert.ok(
-    customerACookies.includes(`${customerAuth.CUSTOMER_LOGIN_CHALLENGE_COOKIE_NAME}=`),
-    "O inicio do login deve guardar um desafio temporario separado da sessao final do cliente."
-  );
-
-  const loginVerifyA = await runHandler(customerAuthActionHandler, {
-    method: "POST",
-    url: "http://localhost:3000/api/customer/auth/verify",
-    headers: buildPublicJsonHeaders({
-      clientIp: "203.0.113.61",
-      cookie: customerACookies,
-      extraHeaders: {
-        "x-tokyo-customer-client-token": trackingClientTokenA,
-      },
-    }),
-    body: JSON.stringify({
-      code: loginStartA.res.payload.previewCode,
-    }),
-  });
-  assert.equal(loginVerifyA.res.statusCode, 200, "O codigo do cliente deve validar com sucesso.");
-  customerACookies = mergeCookieHeader(customerACookies, loginVerifyA.res.headers["Set-Cookie"]);
-  const customerSessionTokenA = extractCookieValue(
-    loginVerifyA.res.headers["Set-Cookie"],
-    customerAuth.CUSTOMER_SESSION_COOKIE_NAME
-  );
-  assert.ok(customerSessionTokenA, "A verificacao deve emitir a sessao final do cliente.");
+  assert.equal(legacyLoginStart.res.statusCode, 410, "O login por codigo no WhatsApp deve estar desativado.");
+  const customerSessionTokenA = extractCookieValue(customerACookies.split("; "), customerAuth.CUSTOMER_RESTAURANT_SESSION_COOKIE_NAME);
+  assert.ok(customerSessionTokenA, "O login novo deve emitir a sessao do cliente no restaurante.");
   assert.equal(
     adminAuth.verifyAdminSessionToken(customerSessionTokenA),
     null,
@@ -402,10 +412,6 @@ const run = async () => {
     customerAuth.verifyCustomerSessionToken(adminSessionToken),
     null,
     "A sessao admin nao pode ser reconhecida como sessao do cliente."
-  );
-  assert.ok(
-    !customerACookies.includes(`${customerAuth.CUSTOMER_LOGIN_CHALLENGE_COOKIE_NAME}=`),
-    "O desafio temporario precisa ser limpo depois que o login do cliente conclui."
   );
 
   const activeOrderA = await runHandler(customerActionHandler, {
@@ -448,49 +454,42 @@ const run = async () => {
     "Mesmo forçando um orderId na URL, a area publica deve continuar presa ao pedido do proprio cliente."
   );
 
-  const wrongCustomerKeyAttempt = await runHandler(customerActionHandler, {
+  const noSessionAttempt = await runHandler(customerActionHandler, {
     method: "GET",
     url: "http://localhost:3000/api/customer/orders/active",
     headers: buildCustomerTrackingHeaders({
-      customerKey: customerKeyB,
+      customerKey: customerKeyA,
       clientToken: trackingClientTokenA,
-      cookie: customerACookies,
       clientIp: "203.0.113.61",
     }),
   });
   assert.equal(
-    wrongCustomerKeyAttempt.res.payload?.authenticated,
+    noSessionAttempt.res.payload?.authenticated,
     false,
-    "Trocar o customer key no cabecalho deve invalidar a sessao publica do cliente."
+    "Sem a sessao do login, mandar o telefone no cabecalho nao identifica o cliente."
   );
   assert.equal(
-    wrongCustomerKeyAttempt.res.payload?.order,
+    noSessionAttempt.res.payload?.order,
     null,
-    "Nao deve haver nenhum pedido exposto quando a posse do pedido nao confere."
+    "Nao deve haver nenhum pedido exposto sem a sessao do cliente."
   );
 
-  const wrongOriginLoginStart = await runHandler(customerAuthActionHandler, {
+  const wrongOriginExchange = await runHandler(customerAuthActionHandler, {
     method: "POST",
-    url: "https://tokyosushidelivery.com.br/api/customer/auth/start",
+    url: "http://localhost:3000/api/customer/auth/exchange",
     headers: buildPublicJsonHeaders({
       origin: "https://site-malicioso.example",
       clientIp: "203.0.113.91",
-      extraHeaders: {
-        "x-tokyo-customer-client-token": "device-malicious",
-      },
     }),
-    body: JSON.stringify({
-      name: customerA.name,
-      phone: customerA.phone,
-    }),
+    body: JSON.stringify({ code: "qualquer-codigo" }),
   });
   assert.equal(
-    wrongOriginLoginStart.res.statusCode,
+    wrongOriginExchange.res.statusCode,
     403,
     "A rota publica de login do cliente nao deve aceitar origens nao autorizadas."
   );
 
-  const adminApiWithoutAdminCookie = middleware(
+  const adminApiWithoutAdminCookie = await middleware(
     new Request("http://localhost:3000/api/admin/orders/list", {
       headers: {
         cookie: customerACookies,
@@ -503,7 +502,7 @@ const run = async () => {
     "A sessao do cliente nao pode abrir as APIs administrativas."
   );
 
-  const adminPageWithoutAdminCookie = middleware(
+  const adminPageWithoutAdminCookie = await middleware(
     new Request("http://localhost:3000/admin/", {
       headers: {
         cookie: customerACookies,
@@ -552,38 +551,7 @@ const run = async () => {
     "O historico publico deve ser sincronizado com o mesmo registro que o admin alterou."
   );
 
-  let customerBCookies = "";
   const trackingClientTokenB = "device-track-b";
-  const loginStartB = await runHandler(customerAuthActionHandler, {
-    method: "POST",
-    url: "http://localhost:3000/api/customer/auth/start",
-    headers: buildPublicJsonHeaders({
-      clientIp: "203.0.113.62",
-      extraHeaders: {
-        "x-tokyo-customer-client-token": trackingClientTokenB,
-      },
-    }),
-    body: JSON.stringify({
-      name: customerB.name,
-      phone: customerB.phone,
-    }),
-  });
-  customerBCookies = mergeCookieHeader(customerBCookies, loginStartB.res.headers["Set-Cookie"]);
-  const loginVerifyB = await runHandler(customerAuthActionHandler, {
-    method: "POST",
-    url: "http://localhost:3000/api/customer/auth/verify",
-    headers: buildPublicJsonHeaders({
-      clientIp: "203.0.113.62",
-      cookie: customerBCookies,
-      extraHeaders: {
-        "x-tokyo-customer-client-token": trackingClientTokenB,
-      },
-    }),
-    body: JSON.stringify({
-      code: loginStartB.res.payload.previewCode,
-    }),
-  });
-  customerBCookies = mergeCookieHeader(customerBCookies, loginVerifyB.res.headers["Set-Cookie"]);
 
   const activeOrderB = await runHandler(customerActionHandler, {
     method: "GET",

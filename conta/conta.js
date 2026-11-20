@@ -13,18 +13,18 @@
   const resetToken = (params.get("token") || "").trim();
 
   const $ = (selector) => document.querySelector(selector);
-  const views = Array.from(document.querySelectorAll("[data-conta-view]"));
+  const $$ = (selector) => Array.from(document.querySelectorAll(selector));
   const alertBox = $("[data-conta-alert]");
-  const state = { providers: [], busy: false };
+  const state = { providers: [], busy: false, tab: "entrar", safeReturn: "" };
 
   const TITLES = {
-    entrar: ["Conta para pedidos", "Entrar", "Use sua conta Google ou seu e-mail e senha."],
-    criar: ["Conta para pedidos", "Criar conta", "Uma conta só para pedir em todos os restaurantes INOVAS."],
-    esqueci: ["Recuperar acesso", "Esqueci minha senha", "Enviamos um link para você criar uma nova senha."],
-    "nova-senha": ["Recuperar acesso", "Criar nova senha", "Escolha uma senha com pelo menos 8 caracteres."],
-    telefone: ["Quase pronto", "Seu telefone", "Só uma vez: o restaurante usa para falar com você sobre o pedido."],
-    conectado: ["Conta para pedidos", "Você está conectado", "Volte ao site do restaurante para fazer seu pedido."],
-    carregando: ["Conta para pedidos", "Um instante…", ""],
+    entrar: ["Que bom te ver!", "Entre para pedir e acompanhar seus pedidos."],
+    criar: ["Crie sua conta", "Leva menos de 1 minuto. Seus endereços e pedidos ficam salvos."],
+    esqueci: ["Recuperar senha", "Informe o e-mail da sua conta. Vamos enviar um link para você criar uma senha nova."],
+    "nova-senha": ["Criar nova senha", "Escolha uma senha com pelo menos 8 caracteres."],
+    telefone: ["Seu WhatsApp", "Só uma vez: o restaurante usa para avisar sobre o seu pedido."],
+    conectado: ["Você está conectado", "Volte ao site do restaurante para fazer seu pedido."],
+    carregando: ["Um instante…", "Levando você de volta ao restaurante."],
   };
 
   const MESSAGES = {
@@ -34,11 +34,11 @@
     PASSWORD_TOO_SHORT: "A senha precisa ter pelo menos 8 caracteres.",
     PASSWORD_TOO_LONG: "A senha está longa demais.",
     INVALID_EMAIL: "Confira o e-mail.",
-    invalid_phone: "Informe um telefone com DDD.",
+    invalid_phone: "Informe o WhatsApp com DDD.",
     invalid_name: "Informe seu nome.",
     INVALID_TOKEN: "O link expirou ou já foi usado. Peça um novo.",
     customer_return_url_forbidden: "Não foi possível voltar ao restaurante. Abra o site do restaurante e entre de novo.",
-    customer_phone_required: "Informe seu telefone para continuar.",
+    customer_phone_required: "Informe seu WhatsApp para continuar.",
   };
 
   const showAlert = (message, ok = false) => {
@@ -47,15 +47,46 @@
     alertBox.classList.toggle("is-ok", Boolean(ok));
   };
 
-  const show = (name) => {
-    views.forEach((view) => { view.hidden = view.dataset.contaView !== name; });
-    const [tag, title, sub] = TITLES[name] || TITLES.entrar;
-    $("[data-conta-tag]").textContent = tag;
+  const setTitles = (key) => {
+    const [title, sub] = TITLES[key] || TITLES.entrar;
     $("[data-conta-title]").textContent = title;
     $("[data-conta-sub]").textContent = sub;
     document.title = `${title} · INOVAS Food`;
-    const first = document.querySelector(`[data-conta-view="${name}"] input`);
-    if (first) first.focus();
+  };
+
+  const replayAnimation = () => {
+    const body = $("[data-conta-body]");
+    body.classList.remove("tk-swap");
+    void body.offsetWidth;
+    body.classList.add("tk-swap");
+  };
+
+  // name: acesso (com aba entrar/criar), esqueci, nova-senha, telefone, conectado, carregando
+  const show = (name, { focus = true } = {}) => {
+    const view = name === "entrar" || name === "criar" ? "acesso" : name;
+    if (name === "entrar" || name === "criar") state.tab = name;
+    $$("[data-conta-view]").forEach((node) => { node.hidden = node.dataset.contaView !== view; });
+    $$("[data-conta-tab]").forEach((tab) => {
+      const on = tab.dataset.contaTab === state.tab;
+      tab.classList.toggle("is-on", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    $('[data-conta-form="entrar"]').hidden = state.tab !== "entrar";
+    $('[data-conta-form="criar"]').hidden = state.tab !== "criar";
+    $(".tk-terms").hidden = view !== "acesso";
+    setTitles(view === "acesso" ? state.tab : view);
+    replayAnimation();
+    if (focus) {
+      const target = document.querySelector(`[data-conta-view="${view}"] form:not([hidden]) input`);
+      if (target && window.matchMedia("(min-width: 881px)").matches) target.focus();
+    }
+  };
+
+  const shake = (node) => {
+    if (!node) return;
+    node.classList.remove("tk-shake");
+    void node.offsetWidth;
+    node.classList.add("tk-shake");
   };
 
   const request = async (url, { method = "GET", body } = {}) => {
@@ -87,6 +118,7 @@
       await task();
     } catch (error) {
       showAlert(error.message);
+      shake(form);
     } finally {
       state.busy = false;
       if (button) button.disabled = false;
@@ -101,40 +133,66 @@
     return url;
   };
 
-  // Logado: pede o telefone se faltar; depois volta ao restaurante.
+  // Endereço de volta conferido pelo servidor (só do próprio restaurante).
+  const loadSafeReturn = async () => {
+    if (!restaurantKey || !returnUrl) return "";
+    const data = await request(`${ACCOUNT}/return-url?${new URLSearchParams({ r: restaurantKey, volta: returnUrl })}`).catch(() => null);
+    state.safeReturn = (data && data.url) || "";
+    return state.safeReturn;
+  };
+
+  // Logado: pede o WhatsApp se faltar; depois volta ao restaurante.
   const continueToRestaurant = async () => {
     const me = await request(`${ACCOUNT}/me`);
     if (!me.authenticated) { show("entrar"); return; }
     if (me.user && me.user.needsPhone) { show("telefone"); return; }
     if (!restaurantKey || !returnUrl) { show("conectado"); return; }
-    show("carregando");
+    show("carregando", { focus: false });
     const data = await request(`${ACCOUNT}/handoff`, { method: "POST", body: { restaurantKey, returnUrl } });
     window.location.replace(data.redirectUrl);
   };
 
-  const bindForms = () => {
-    document.querySelectorAll("[data-conta-go]").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        showAlert("");
-        show(link.dataset.contaGo);
-      });
-    });
+  const bind = () => {
+    $$("[data-conta-tab]").forEach((tab) => tab.addEventListener("click", () => { showAlert(""); show(tab.dataset.contaTab); }));
+    $$("[data-conta-go]").forEach((link) => link.addEventListener("click", () => { showAlert(""); show(link.dataset.contaGo); }));
 
-    $("[data-conta-google]").addEventListener("click", (event) =>
-      withBusy(null, async () => {
-        event.currentTarget && (event.currentTarget.disabled = true);
-        const data = await request(`${API}/sign-in/social`, {
-          method: "POST",
-          body: {
-            provider: "google",
-            callbackURL: selfUrl({ continuar: "1" }).toString(),
-            errorCallbackURL: selfUrl({ erro: "google" }).toString(),
-          },
-        });
-        if (data.url) window.location.assign(data.url);
+    $$("[data-conta-eye]").forEach((eye) =>
+      eye.addEventListener("click", () => {
+        const input = eye.parentElement.querySelector("input");
+        const visible = input.type === "text";
+        input.type = visible ? "password" : "text";
+        eye.classList.toggle("is-on", !visible);
+        eye.setAttribute("aria-label", visible ? "Mostrar senha" : "Esconder senha");
       })
     );
+
+    $$("[data-conta-voltar]").forEach((button) =>
+      button.addEventListener("click", async () => {
+        const back = state.safeReturn || (await loadSafeReturn());
+        if (back) window.location.assign(back);
+        else if (window.history.length > 1) window.history.back();
+      })
+    );
+
+    $("[data-conta-google]").addEventListener("click", (event) => {
+      const button = event.currentTarget;
+      withBusy(null, async () => {
+        button.disabled = true;
+        try {
+          const data = await request(`${API}/sign-in/social`, {
+            method: "POST",
+            body: {
+              provider: "google",
+              callbackURL: selfUrl({ continuar: "1" }).toString(),
+              errorCallbackURL: selfUrl({ erro: "google" }).toString(),
+            },
+          });
+          if (data.url) window.location.assign(data.url);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
 
     $('[data-conta-form="entrar"]').addEventListener("submit", (event) => {
       event.preventDefault();
@@ -155,6 +213,7 @@
       withBusy(form, async () => {
         const email = form.email.value.trim();
         const password = form.password.value;
+        if (!form.name.value.trim()) throw new Error(MESSAGES.invalid_name);
         if (password.length < 8) throw new Error(MESSAGES.PASSWORD_TOO_SHORT);
         await request(`${API}/sign-up/email`, {
           method: "POST",
@@ -218,8 +277,9 @@
   };
 
   const start = async () => {
-    bindForms();
+    bind();
     const mode = params.get("modo") || "";
+    show("carregando", { focus: false });
     try {
       const me = await request(`${ACCOUNT}/me`);
       state.providers = me.providers || [];
@@ -229,8 +289,8 @@
 
       if (mode === "sair") {
         if (me.authenticated) await request(`${API}/sign-out`, { method: "POST", body: {} }).catch(() => {});
-        const back = await request(`${ACCOUNT}/return-url?${new URLSearchParams({ r: restaurantKey, volta: returnUrl })}`).catch(() => null);
-        if (back && back.url) { window.location.replace(back.url); return; }
+        const back = await loadSafeReturn();
+        if (back) { window.location.replace(back); return; }
         show("entrar");
         showAlert("Você saiu da conta neste aparelho.", true);
         return;

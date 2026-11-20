@@ -13,6 +13,8 @@ export const runtimeTablePrivileges = Object.freeze({
   catalog_runtime_state: ["SELECT", "INSERT", "UPDATE"],
   customer_crm_profiles: ["SELECT", "INSERT", "UPDATE"],
   customer_reviews: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  // Login do cliente (036): sessão por restaurante; sem DELETE (sair só marca revoked_at).
+  customer_sessions: ["SELECT", "INSERT", "UPDATE"],
   customers: ["SELECT", "INSERT", "UPDATE"],
   delivery_settings: ["SELECT", "INSERT", "UPDATE"],
   dining_order_batches: ["SELECT", "INSERT"],
