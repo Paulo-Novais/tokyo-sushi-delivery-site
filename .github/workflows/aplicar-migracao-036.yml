@@ -1,0 +1,61 @@
+# Aplica no banco de PRODUÇÃO (Neon) a atualização 036: login do cliente
+# (Google ou e-mail e senha) e sessões do cliente por restaurante.
+# Só roda à mão (Actions > Aplicar atualização 036 > Run workflow), com a
+# confirmação digitada e o GO do Paulo. Não altera nenhuma tabela existente.
+#
+# Antes de rodar: backup no Neon (Branches > Create branch).
+# Depois de rodar: dar senha ao usuário inovas_customer_auth com
+# scripts/configure-customer-auth-database-role.mjs (ver docs/LOGIN-CLIENTE.md).
+# Para desfazer: migrations/036_customer_login.rollback.sql no SQL Editor
+# (apaga as contas de login dos clientes; pedidos e clientes não são tocados).
+name: Aplicar atualização 036 (login do cliente)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Digite APLICAR-036 para confirmar (banco de PRODUÇÃO)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir confirmação
+        if: ${{ inputs.confirmar != 'APLICAR-036' }}
+        run: |
+          echo "::error::Confirmação incorreta. Nada foi feito."
+          exit 1
+      - name: Conferir segredo
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          if [ -z "$MIGRATION_DATABASE_URL" ]; then
+            echo "::error::Falta o segredo MIGRATION_DATABASE_URL. Nada foi feito."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Aplicar 036
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f migrations/036_customer_login.sql
+      - name: Conferir resultado
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -t -c "
+            SELECT tablename || ': ok' FROM pg_tables
+            WHERE schemaname = 'public' AND tablename IN (
+              'customer_auth_users', 'customer_auth_sessions', 'customer_auth_accounts',
+              'customer_auth_verifications', 'customer_auth_rate_limits', 'customer_sessions')
+            ORDER BY 1;"
+          psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -t -c "
+            SELECT 'inovas_customer_auth: superuser=' || rolsuper || ' bypassrls=' || rolbypassrls
+            FROM pg_roles WHERE rolname = 'inovas_customer_auth';"
