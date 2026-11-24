@@ -35,6 +35,14 @@ process.env.INOVAS_PRESENCE_ENFORCE = process.env.INOVAS_PRESENCE_ENFORCE || "pr
 process.env.INOVAS_PAYMENT_PROVIDER = process.env.INOVAS_PAYMENT_PROVIDER || "fake";
 process.env.INOVAS_CHANNELS_PROVIDER = process.env.INOVAS_CHANNELS_PROVIDER || "fake";
 process.env.INOVAS_LOOKUP_API_URL = process.env.INOVAS_LOOKUP_API_URL || "fake";
+// Login do cliente: login central em outra origem (localhost x 127.0.0.1),
+// como login.inovasfood.com.br x site do restaurante.
+process.env.CUSTOMER_AUTH_URL = process.env.CUSTOMER_AUTH_URL || `http://localhost:${port}`;
+// E-mails do login (esqueci a senha) vão para uma caixa de saída que os testes leem.
+process.env.INOVAS_CUSTOMER_OUTBOX_FILE =
+  process.env.INOVAS_CUSTOMER_OUTBOX_FILE || path.join(workspaceRoot, ".data", `customer-outbox-${port}.json`);
+// Login do cliente: "Entrar com Google" simulado (só testes locais).
+if (process.env.INOVAS_FAKE_GOOGLE !== "0") require("./fake-google-oauth.cjs").installFakeGoogle();
 // Pedidos e Caixa só no app INOVAS PDV: aqui só para restaurantes "somenteapp-*".
 process.env.INOVAS_REQUIRE_PDV_APP = process.env.INOVAS_REQUIRE_PDV_APP || "prefix:somenteapp-";
 process.env.ADMIN_LOGIN = adminLogin;
@@ -268,6 +276,7 @@ const protectSystemHtml = async (req, res, pathname) => {
 const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
+  if (pathname === "/conta/entrar" || pathname === "/conta/entrar/") return "/conta/entrar.html";
   if (pathname === "/garcom" || pathname === "/garcom/") return "/garcom.html";
   if (pathname === "/login") return "/admin/login.html";
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";

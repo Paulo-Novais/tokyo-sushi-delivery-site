@@ -281,8 +281,66 @@ const orderPayload = (label) => ({
   deliveryQuote: null,
 });
 
+// ---------- Cliente logado (login novo: e-mail e senha no login central) ----------
+// Desde 19/11/2026 o pedido no site exige cliente logado no restaurante. Este
+// ajudante cria (ou reaproveita) a conta do cliente no login central, gera o
+// código de uso único para o restaurante e troca pela sessão do restaurante.
+const extractRestaurantSessionCookie = (response) =>
+  response
+    .headersArray()
+    .filter((header) => header.name.toLowerCase() === "set-cookie")
+    .map((header) => header.value.split(";")[0])
+    .find((pair) => pair.startsWith("inovas_cliente_sessao=")) || "";
+
+// Login central do cliente: no servidor local é http://localhost:<porta>
+// (outra origem que não 127.0.0.1, como login.inovasfood.com.br em produção).
+const customerAuthOrigin =
+  process.env.CUSTOMER_AUTH_URL || baseURL.replace("://127.0.0.1", "://localhost");
+
+const loginCustomerForRestaurant = async ({
+  host,
+  label = uniqueKey("cliente"),
+  name = `Cliente ${label}`,
+  phone = "(11) 96666-1111",
+  email = `cliente-${label}@tenant.test`.toLowerCase(),
+  password = "SenhaCliente2026!",
+} = {}) => {
+  const central = await createApiContext({ origin: customerAuthOrigin });
+  try {
+    await central.post("/api/customer/identity/sign-up/email", { data: { name, phone, email, password } });
+    const signIn = await central.post("/api/customer/identity/sign-in/email", { data: { email, password } });
+    expect(signIn.status(), `login do cliente ${email}`).toBe(200);
+    // O teste fala com 127.0.0.1 e informa o restaurante no x-forwarded-host (sem porta).
+    const restaurantOrigin = `${new URL(baseURL).protocol}//${host}`;
+    const handoff = await central.post("/api/customer/account/handoff", {
+      data: { restaurantKey: host.replace(/\.localhost$/, ""), returnUrl: `${restaurantOrigin}/` },
+    });
+    const handoffBody = await handoff.json();
+    expect(handoff.status(), `codigo do login ${JSON.stringify(handoffBody)}`).toBe(200);
+    const code = new URL(handoffBody.redirectUrl).searchParams.get("login_code");
+    const site = await createApiContext({ host, origin: restaurantOrigin });
+    try {
+      const exchange = await site.post("/api/customer/auth/exchange", { data: { code } });
+      expect(exchange.status(), "troca do codigo pela sessao do restaurante").toBe(200);
+      return { cookie: extractRestaurantSessionCookie(exchange), name, phone, email, password };
+    } finally {
+      await site.dispose();
+    }
+  } finally {
+    await central.dispose();
+  }
+};
+
+// Contexto de API do site do restaurante com o cliente já logado.
+const createCustomerApiContext = async ({ host, label, ...profile } = {}) => {
+  const login = await loginCustomerForRestaurant({ host, label, ...profile });
+  const api = await createApiContext({ host, cookie: login.cookie });
+  api.customerLogin = login;
+  return api;
+};
+
 const createPublicOrder = async ({ host, label }) => {
-  const api = await createApiContext({ host });
+  const api = await createCustomerApiContext({ host, label });
 
   try {
     const response = await api.post("/api/orders/create", {
@@ -321,14 +379,17 @@ const expectNoHorizontalOverflow = async (page) => {
 module.exports = {
   baseURL,
   buildRestaurantPayload,
+  customerAuthOrigin,
   createAdminUser,
   createApiContext,
+  createCustomerApiContext,
   createPublicOrder,
   createTenantBrowserContext,
   expectNoHorizontalOverflow,
   hostForKey,
   isVercelPreview,
   loginAdmin,
+  loginCustomerForRestaurant,
   loginMaster,
   loginTenantOwner,
   onboardRestaurant,

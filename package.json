@@ -59,13 +59,17 @@
     "validate:v1-3-platform-local": "node scripts/validate-v1-3-platform-local.mjs",
     "validate:responsive-platform-local": "node scripts/validate-responsive-platform-local.mjs",
     "validate:cash-register-local": "node scripts/validate-cash-register-local.mjs",
-    "validate:runtime-schema-boundary-local": "node scripts/validate-runtime-schema-boundary-local.mjs"
+    "validate:runtime-schema-boundary-local": "node scripts/validate-runtime-schema-boundary-local.mjs",
+    "validate:customer-login-migration": "node scripts/validate-customer-login-migration.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@vercel/functions": "^3.4.3"
+    "@node-rs/argon2": "2.2.2",
+    "@vercel/functions": "^3.4.3",
+    "better-auth": "1.7.18"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "@playwright/test": "^1.59.1"
   }
 }

@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 const {
   baseURL,
   createApiContext,
+  createCustomerApiContext,
   createTenantBrowserContext,
   loginMaster,
   loginTenantOwner,
@@ -26,7 +27,8 @@ test("Pagamento online: Pix aprovado vira pedido pago; cancelar devolve; recusad
     ownerPassword: "OwnerPagOnline123!",
   });
   const owner = await loginTenantOwner(restaurant);
-  const site = await createApiContext({ host: restaurant.host });
+  // Pagamento online exige cliente logado no restaurante.
+  const site = await createCustomerApiContext({ host: restaurant.host, label: `pag-${restaurant.key}` });
 
   // Sem conta bancária e sem escolha do dono: o site não oferece pagamento online.
   expect((await (await site.get("/api/payments/methods")).json()).enabled).toBe(false);

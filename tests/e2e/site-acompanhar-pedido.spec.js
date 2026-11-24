@@ -34,6 +34,20 @@ const openTracking = async (page, state) => {
     localStorage.setItem("tokyo_sushi_profile", JSON.stringify({ name: "Ana Cliente", phone: "16999990000", email: "" }));
     localStorage.setItem("tokyo_customer_client_token", "teste-token-acompanhar");
   });
+  // Cliente logado (login novo): o site confere a sessão em /api/customer/me.
+  await page.route("**/api/customer/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        authenticated: true,
+        customer: { name: "Ana Cliente", phone: "16999990000", email: "" },
+        loginUrl: "http://localhost:3000/conta/entrar",
+        restaurantKey: "default",
+      }),
+    })
+  );
   await page.route("**/api/customer/orders/active**", (route) => {
     state.calls += 1;
     return route.fulfill({

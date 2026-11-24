@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 const {
   baseURL,
   createApiContext,
+  createCustomerApiContext,
   hostForKey,
   loginMaster,
   loginTenantOwner,
@@ -15,7 +16,7 @@ const {
 // No servidor de testes local a regra vale para restaurantes "presenca-*".
 
 const tryOrder = async (host, label) => {
-  const api = await createApiContext({ host });
+  const api = await createCustomerApiContext({ host, label });
   try {
     const response = await api.post("/api/orders/create", {
       headers: { Origin: baseURL, Referer: `${baseURL}/` },

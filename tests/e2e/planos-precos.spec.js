@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 const {
   baseURL,
   createApiContext,
+  loginCustomerForRestaurant,
   loginMaster,
   onboardRestaurant,
   orderPayload,
@@ -25,8 +26,11 @@ test("Plano Grátis: aceita 50 pedidos no mês e recusa o 51º com aviso", async
   });
   expect(activate.status(), JSON.stringify(await activate.json())).toBe(200);
 
+  // Pedido no site exige cliente logado: um cliente faz os pedidos de teste
+  // (cada pedido sai de um endereço IP diferente, como clientes diferentes).
+  const customer = await loginCustomerForRestaurant({ host: restaurant.host, label: `gratis-${restaurant.key}` });
   const placeOrder = async (index) => {
-    const api = await createApiContext({ host: restaurant.host });
+    const api = await createApiContext({ host: restaurant.host, cookie: customer.cookie });
     try {
       const response = await api.post("/api/orders/create", {
         headers: { Origin: baseURL, Referer: `${baseURL}/` },

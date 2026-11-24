@@ -1,11 +1,8 @@
 const { withRequestTiming } = require("../../lib/request-timing.cjs");
 const {
-  createCustomerSessionToken,
-  hasCustomerSessionConfig,
-  readCustomerClientToken,
-  readCustomerKeyHeader,
-  serializeCustomerSessionCookie,
-} = require("../../lib/customer-auth.cjs");
+  applySessionToOrderPayload,
+  requireCustomerOrderSession,
+} = require("../../lib/customer-order-session.cjs");
 const { json, parseJsonBody } = require("../../lib/http.cjs");
 const { assertPublicOrderRequest } = require("../../lib/request-guard.cjs");
 const {
@@ -40,8 +37,10 @@ module.exports = withRequestTiming(async (req, res) => {
     const tenantContext = await getRequestTenantContext(req, {
       source: "public:orders:create",
     });
-    const payload = parseJsonBody(req.body, { strict: true });
-    const { normalizedOrder, result } = await runWithDatabaseScope(
+    // Pedido só com cliente logado neste restaurante; nome/telefone/e-mail vêm da sessão.
+    const customerSession = await requireCustomerOrderSession(req, tenantContext);
+    const payload = applySessionToOrderPayload(parseJsonBody(req.body, { strict: true }), customerSession);
+    const { result } = await runWithDatabaseScope(
       {
         audience: "public",
         tenantId: tenantContext.tenantId,
@@ -54,23 +53,9 @@ module.exports = withRequestTiming(async (req, res) => {
         return createOrderWithRetry(payload, tenantContext);
       }
     );
+    // A sessão NÃO é mais criada aqui (antes, quem fazia pedido com um
+    // telefone ganhava a sessão daquele telefone).
     const responseHeaders = {};
-    const customerClientToken = readCustomerClientToken(req);
-    const customerKeyHeader = readCustomerKeyHeader(req);
-
-    if (
-      hasCustomerSessionConfig() &&
-      customerClientToken &&
-      customerKeyHeader &&
-      customerKeyHeader === normalizedOrder.customer.key
-    ) {
-      const sessionToken = createCustomerSessionToken({
-        customerKey: normalizedOrder.customer.key,
-        clientToken: customerClientToken,
-        restaurantKey: tenantContext.restaurantKey,
-      });
-      responseHeaders["Set-Cookie"] = serializeCustomerSessionCookie(sessionToken, req);
-    }
 
     return json(res, 200, {
       ok: true,

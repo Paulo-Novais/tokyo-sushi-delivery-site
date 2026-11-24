@@ -2,6 +2,7 @@
 // layout em /<slug> com a própria identidade e sem enxergar dados do Tokyo.
 const { test, expect, request } = require("@playwright/test");
 const {
+  loginCustomerForRestaurant,
   loginMaster,
   loginTenantOwner,
   onboardRestaurant,
@@ -27,10 +28,11 @@ const PREMIUM_SETTINGS = (name) => ({
   },
 });
 
-const publicApiFor = (slug) =>
+const publicApiFor = (slug, cookie = "") =>
   request.newContext({
     baseURL,
     extraHTTPHeaders: {
+      ...(cookie ? { cookie } : {}),
       "x-inovas-restaurant-slug": slug,
       origin: baseURL,
       referer: `${baseURL}/${slug}`,
@@ -169,8 +171,12 @@ test.describe("Modelo Premium por slug", () => {
   });
 
   test("mesmo telefone em dois restaurantes: pedidos e avaliações não se misturam", async () => {
-    const apiA = await publicApiFor(tenantA.key);
-    const apiB = await publicApiFor(tenantB.key);
+    // A MESMA pessoa (mesmo e-mail e telefone) logada nos dois restaurantes.
+    const sameCustomer = { phone: SAME_PHONE, email: `mesmo-${tenantA.key}@cliente.test`, name: "Cliente Mesmo Telefone" };
+    const loginA = await loginCustomerForRestaurant({ host: `${tenantA.key}.localhost`, ...sameCustomer });
+    const loginB = await loginCustomerForRestaurant({ host: `${tenantB.key}.localhost`, ...sameCustomer });
+    const apiA = await publicApiFor(tenantA.key, loginA.cookie);
+    const apiB = await publicApiFor(tenantB.key, loginB.cookie);
     try {
       const orderA = await (await apiA.post("/api/orders/create", { data: orderPayload("a") })).json();
       const orderB = await (await apiB.post("/api/orders/create", { data: orderPayload("b") })).json();
