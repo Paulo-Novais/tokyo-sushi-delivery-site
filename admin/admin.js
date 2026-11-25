@@ -13413,6 +13413,21 @@ if (typeof window !== "undefined") {
   });
 }
 
+const sendBrowserRestaurantToDashboard = () => {
+  adminState.activeSection = "dashboard";
+  ensureActiveSectionAllowed();
+  if (["orders", "cash-register"].includes(adminState.activeSection)) {
+    adminState.activeSection =
+      getVisibleNavSections().find((section) => IMPLEMENTED_SECTIONS.has(section.key) && !["orders", "cash-register"].includes(section.key))?.key ||
+      "dashboard";
+  }
+  try {
+    window.history.replaceState(null, "", "/admin/?section=dashboard");
+  } catch (error) {
+    // Sem histórico: segue só trocando a tela.
+  }
+};
+
 const isPdvAppBlockedSection = () =>
   adminState.pdvAppBlocked === true && ["orders", "cash-register"].includes(adminState.activeSection);
 
@@ -17662,14 +17677,27 @@ const loadInitialAdminSession = async () => {
   if (adminState.pdvAppBlocked) syncOrderAlertBanner();
   adminState.isRestaurantUser = session.admin?.userScope === "RESTAURANT";
   renderSupportAccessBanner(session.admin?.support || null);
+  const isBrowserRestaurant =
+    adminState.isRestaurantUser && session.pdvApp?.isApp !== true && !isInsideOutdatedPdvApp() && !getPdvAppBridge();
+  const requestedSection = new URLSearchParams(window.location.search).get("section");
   if (
     getRequestedCashRegisterView() &&
+    !adminState.pdvAppBlocked &&
     IMPLEMENTED_SECTIONS.has("cash-register") &&
     canAccessAdminSection("cash-register")
   ) {
     adminState.activeSection = "cash-register";
   } else {
+    // Restaurante no navegador (site INOVAS): a tela inicial é o Painel.
+    if (isBrowserRestaurant && !requestedSection) adminState.activeSection = "dashboard";
     ensureActiveSectionAllowed();
+  }
+  if (
+    isBrowserRestaurant &&
+    (isPdvAppBlockedSection() ||
+      (adminState.pdvAppBlocked && (["orders", "cash-register"].includes(requestedSection) || getRequestedCashRegisterView())))
+  ) {
+    sendBrowserRestaurantToDashboard();
   }
   renderSectionChrome();
   renderSidebarNav();
@@ -17681,10 +17709,10 @@ const loadInitialAdminSession = async () => {
 const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
   ensureActiveSectionAllowed();
 
-  if (isPdvAppBlockedSection()) {
-    renderSectionChrome();
-    renderModuleContent();
-    return;
+  // No navegador, Pedidos e Caixa não abrem (só no app INOVAS PDV): vai
+  // para o Painel.
+  if (isPdvAppBlockedSection() && !isInsideOutdatedPdvApp() && !getPdvAppBridge()) {
+    sendBrowserRestaurantToDashboard();
   }
 
   // Fora do plano: mostra a tela "mude de plano" sem buscar dados.
