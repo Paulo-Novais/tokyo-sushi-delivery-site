@@ -260,6 +260,10 @@
       "destination": "/api/customer/[...action]?action=account/:action"
     },
     {
+      "source": "/api/customer/delivery/:action",
+      "destination": "/api/customer/[...action]?action=delivery/:action"
+    },
+    {
       "source": "/api/customer/me",
       "destination": "/api/customer/[...action]?action=me"
     },

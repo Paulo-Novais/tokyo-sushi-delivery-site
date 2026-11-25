@@ -2303,22 +2303,26 @@ const lookupCepData = async (cep) => {
   const timeoutId = window.setTimeout(() => controller.abort(), DELIVERY_CEP_LOOKUP_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+    // CEP pelo servidor do restaurante (o navegador não fala com o ViaCEP).
+    const response = await fetch(`/api/customer/delivery/cep?cep=${encodeURIComponent(cep)}`, {
       method: "GET",
       signal: controller.signal,
+      headers: { Accept: "application/json" },
     });
+    const payload = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      throw new Error("Falha ao consultar o CEP.");
+    if (!response.ok || !payload?.address) {
+      throw new Error(payload?.error || "Nao foi possivel consultar esse CEP agora.");
     }
 
-    const payload = await response.json();
-
-    if (payload?.erro) {
-      throw new Error("CEP nao encontrado.");
-    }
-
-    return payload;
+    // Mesmo formato que o resto do site já usa.
+    return {
+      cep: payload.address.cep,
+      logradouro: payload.address.street,
+      bairro: payload.address.neighborhood,
+      localidade: payload.address.city,
+      uf: payload.address.state,
+    };
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("A consulta do CEP demorou demais para responder.");
@@ -2362,6 +2366,10 @@ const syncDeliveryCepLookup = async (form, force = false) => {
 
     fillDeliveryAddressFromCep(form, cepData);
     form.dataset.deliveryCepResolved = cepDigits;
+    const numberField = form.elements?.namedItem("delivery_number");
+    if (numberField && !numberField.value && document.activeElement === cepField && window.matchMedia?.("(min-width: 900px)").matches) {
+      numberField.focus();
+    }
     setDeliveryCepFeedback(
       form,
       cepData.logradouro
@@ -5386,8 +5394,11 @@ const getCartCheckoutValidation = (
   };
 };
 
+// Sacola ampla (computador): o fechamento do pedido fica sempre aberto ao lado dos itens.
+const isCartWideLayout = () => Boolean(window.matchMedia?.("(min-width: 1024px)").matches);
+
 const setCartCheckoutExpanded = (expanded) => {
-  cartUiState.checkoutExpanded = Boolean(expanded);
+  cartUiState.checkoutExpanded = Boolean(expanded) || isCartWideLayout();
 
   const shell = document.querySelector("[data-cart-checkout-shell]");
   const panel = document.querySelector("[data-cart-checkout-panel]");
@@ -5463,7 +5474,7 @@ const syncCartCheckoutDock = ({
     return;
   }
 
-  if (cart.length === 0 && cartUiState.checkoutExpanded) {
+  if (cart.length === 0 && cartUiState.checkoutExpanded && !isCartWideLayout()) {
     setCartCheckoutExpanded(false);
   } else {
     setCartCheckoutExpanded(cartUiState.checkoutExpanded);
@@ -7585,10 +7596,15 @@ const isPublicPickupEnabled = () => getRestaurantSettings().deliveryBase?.pickup
 const isPublicDeliveryEnabled = () => getRestaurantSettings().deliveryBase?.deliveryEnabled !== false;
 const getConfiguredPublicStoreCoordinates = () => {
   const deliveryBase = getRestaurantSettings().deliveryBase || {};
+  const isBlank = (value) => value === null || value === undefined || String(value).trim() === "";
+  if (isBlank(deliveryBase.latitude) || isBlank(deliveryBase.longitude)) {
+    return null;
+  }
   const latitude = Number(deliveryBase.latitude);
   const longitude = Number(deliveryBase.longitude);
 
   if (
+    !(latitude === 0 && longitude === 0) &&
     Number.isFinite(latitude) &&
     Number.isFinite(longitude) &&
     latitude >= -90 &&
@@ -7844,7 +7860,7 @@ const syncRestaurantCopy = (settings) => {
     footerHours.textContent = `Funcionamento: ${businessHours}`;
   }
 
-  const deliveryOriginNote = document.querySelector(".delivery-origin-note span");
+  const deliveryOriginNote = document.querySelector(".delivery-origin-note span, [data-dl-origin]");
   if (deliveryOriginNote) {
     deliveryOriginNote.textContent = address;
   }
@@ -10746,6 +10762,7 @@ const createCartShell = () => {
             <h2 id="cart-title">Sua sacola</h2>
             <span class="cart-title-total" data-cart-total>R$ 0,00</span>
           </div>
+          <button class="cart-keep-shopping" type="button" data-cart-close>&larr; Continuar escolhendo</button>
           <button class="cart-close" type="button" data-cart-close aria-label="Fechar sacola">&times;</button>
         </div>
         <div class="cart-drawer-body">
@@ -12240,22 +12257,36 @@ const geocodeDeliveryAddress = async (address, fallbackMessage) => {
     origin: getCurrentPageOrigin(),
     address,
   });
-  const { Geocoder } = await google.maps.importLibrary("geocoding");
-  const geocoder = new Geocoder();
-  const response = await withGoogleMapsTimeout(
-    geocoder.geocode({
-      address,
-      region: GOOGLE_MAPS_REGION,
-    }),
-    fallbackMessage
-  );
-  const result = response?.results?.[0];
+  // Localização pelo servidor (a chave do Google fica só no servidor).
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), GOOGLE_MAPS_REQUEST_TIMEOUT_MS);
+  let payload = {};
+  try {
+    const response = await fetch(`/api/customer/delivery/geocode?endereco=${encodeURIComponent(address)}`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw createDeliveryEstimateError(payload?.error || fallbackMessage);
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") throw createDeliveryEstimateError(fallbackMessage);
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+  const location = payload?.location;
+  const result = location
+    ? { formatted_address: location.formattedAddress, partial_match: location.partialMatch, geometry: { location: { lat: location.lat, lng: location.lng } } }
+    : null;
 
   if (!result?.geometry?.location) {
     logDeliveryDebug("geocode-empty-result", {
       origin: getCurrentPageOrigin(),
       address,
-      response,
+      payload,
     });
     throw createDeliveryEstimateError(
       "O Google Maps nao conseguiu localizar esse endereco com precisao suficiente."
@@ -12477,61 +12508,367 @@ const saveDeliveryEstimate = (estimate, profile = loadAuthProfile()) => {
   saveDeliveryHistory(quotes);
 };
 
+const formatDeliveryKmShort = (value) => `${String(Number(Number(value || 0).toFixed(1))).replace(".", ",")} km`;
+
+const DL_TILE_ICONS = {
+  bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8zM9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  cart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2 11h11l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>',
+  rain: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4 4 0 0 1 .5-8 5 5 0 0 1 9.5 1.5A3.5 3.5 0 0 1 17 15H7z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+};
+
+const getDeliveryFreeShippingInfo = (estimate) => {
+  const freeShipping = getDeliverySettings().freeShipping || {};
+  const minimum = Number(freeShipping.minimumOrder || 0);
+  if (!freeShipping.enabled || !(minimum > 0)) {
+    return null;
+  }
+  if (estimate?.freeShippingApplied) {
+    return { done: true, percent: 100, text: "Frete grátis aplicado no seu pedido." };
+  }
+  const subtotal = Number(getCartTotalAmount(loadCart(), loadCartAddons()) || 0);
+  const missing = Math.max(0, minimum - subtotal);
+  if (subtotal <= 0) {
+    return { done: false, percent: 0, text: `Frete grátis em pedidos acima de ${formatPrice(minimum)}.` };
+  }
+  return {
+    done: false,
+    percent: Math.min(100, Math.round((subtotal / minimum) * 100)),
+    text: `Faltam ${formatPrice(missing)} para o frete grátis.`,
+  };
+};
+
 const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
   if (!resultNode) {
     return;
   }
 
   const isManual = isManualDeliveryQuote(estimate);
-  const feeLabel = getDeliveryQuoteFeeText(estimate);
-  const summaryLabel = isManual ? "Modo provisorio ativo" : "Estimativa atual";
-  const addressLabel = estimate.geocodedAddress || estimate.destinationLabel || "";
-  const metaLines = isManual
-    ? [
-        "Endereco salvo",
-        addressLabel,
-        estimate.routeBand,
-        estimate.freeShippingApplied ? "Frete gratis aplicado" : `Taxa minima: ${feeLabel}`,
-        estimate.minimumOrderMessage,
-        `Prazo: ${estimate.totalEstimateText || DELIVERY_MANUAL_TIME_TEXT}`,
-      ]
-    : [
-        "Distancia calculada",
-        estimate.distanceText,
-        estimate.routeBand,
-        estimate.freeShippingApplied ? "Frete gratis aplicado" : "",
-        estimate.minimumOrderMessage,
-        `Preparo: ${estimate.preparationTimeText}`,
-        `Deslocamento: ${estimate.travelTimeText}`,
-        `Prazo total: ${estimate.totalEstimateText}`,
-      ];
-  const visibleMetaLines = metaLines.filter(Boolean);
+  const feeLabel = estimate.freeShippingApplied ? "Grátis" : formatPrice(Number(estimate.fee || 0));
+  const addressLabel = [estimate.street, estimate.houseNumber].filter(Boolean).join(", ") || estimate.destinationLabel || "";
+  const timeText = String(estimate.totalEstimateText || "").replace(/^Entrega estimada entre\s*/i, "").replace(/\s*minutos$/i, " min");
+  const free = isManual ? null : getDeliveryFreeShippingInfo(estimate);
+  const pickupLink = isPublicPickupEnabled()
+    ? '<p class="dl-res-alt">Prefere buscar? <a href="./cardapio.html#catalogo">Retire na loja</a></p>'
+    : "";
 
   resultNode.innerHTML = `
-    <div class="delivery-summary">
-      <div class="delivery-top">
-        <div>
-          <span class="section-tag">${summaryLabel}</span>
-          <strong>${feeLabel}</strong>
-        </div>
-        <span class="catalog-badge">${escapeHtml(estimate.routeBand)}</span>
+    <div class="dl-res" data-dl-result-state="${isManual ? "manual" : "ok"}">
+      <div class="dl-res-fee">
+        <div><small>${isManual ? "Taxa a partir de" : "Taxa de entrega"}</small><strong>${escapeHtml(feeLabel)}</strong></div>
+        ${isManual ? "" : `<div class="dl-res-time">${escapeHtml(timeText)}<small>${escapeHtml(estimate.distanceText || "")} da loja</small></div>`}
       </div>
-
-      <p>${escapeHtml(
+      ${
         isManual
-          ? "Seu endereco foi salvo mesmo sem o Google Maps. O atendimento confirma taxa final e prazo no WhatsApp."
-          : `Endereco confirmado: ${addressLabel}.`
-      )}</p>
-
-      <div class="delivery-meta">
-        ${visibleMetaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
-      </div>
-
-      <ul class="delivery-route">
-        ${estimate.routeSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
-      </ul>
+          ? '<div class="dl-res-warn">Endereço salvo. A loja confirma a taxa final e o prazo quando receber o seu pedido.</div>'
+          : `<div class="dl-res-ok">✓ Entregamos${addressLabel ? ` na ${escapeHtml(addressLabel)}` : " no seu endereço"}</div>`
+      }
+      ${estimate.minimumOrderMessage ? `<div class="dl-res-warn">${escapeHtml(estimate.minimumOrderMessage)}</div>` : ""}
+      ${free ? `<div class="dl-res-free">${escapeHtml(free.text)}<div class="dl-res-bar"><b style="width:${free.percent}%"></b></div></div>` : ""}
+      <a class="dl-btn dl-btn-primary" href="./cardapio.html#catalogo">Ver cardápio e pedir</a>
+      ${pickupLink}
     </div>
   `;
+
+  const sticky = document.querySelector("[data-dl-sticky]");
+  if (sticky) {
+    const stickyFee = sticky.querySelector("[data-dl-sticky-fee]");
+    if (stickyFee) stickyFee.textContent = feeLabel;
+    sticky.hidden = false;
+  }
+  renderDeliveryPageExtras(estimate);
+};
+
+const renderDeliveryErrorCard = (resultNode, message, reason = "") => {
+  if (!resultNode) {
+    return;
+  }
+  const isOutOfArea = /radius|neighborhood|area|distance/i.test(String(reason || ""));
+  const title = reason === "paused" ? "Entrega pausada agora" : isOutOfArea ? "Ainda não entregamos aí" : "Confira o endereço";
+  const pickup = isPublicPickupEnabled() && (isOutOfArea || reason === "paused")
+    ? '<a class="dl-btn dl-btn-ghost" href="./cardapio.html#catalogo">Pedir para retirar na loja</a>'
+    : "";
+  resultNode.innerHTML = `
+    <div class="dl-res" data-dl-result-state="error">
+      <div class="dl-res-error"><strong>${escapeHtml(title)}</strong><br />${escapeHtml(message)}</div>
+      ${pickup}
+    </div>
+  `;
+  const sticky = document.querySelector("[data-dl-sticky]");
+  if (sticky) sticky.hidden = true;
+  renderDeliveryMap(null);
+};
+
+// Mantido para compatibilidade: a página nova não mostra etapas.
+const setDeliveryStepsState = () => {};
+
+const DL_ZONE_COLORS = ["#34d399", "#facc15", "#fb923c", "#e53935", "#c084fc", "#60a5fa"];
+const DL_MAP_STORE = { x: 62, y: 60 };
+const DL_MAP_MAX_R = 46;
+
+const DL_RIDER_SVG = `<svg viewBox="-8 -14 82 64" aria-hidden="true">
+  <circle class="puff" cx="4" cy="38" r="2.4" fill="#cfc6c8"/><circle class="puff b" cx="4" cy="38" r="2.4" fill="#cfc6c8"/>
+  <ellipse cx="33" cy="46.5" rx="27" ry="2.6" fill="rgba(0,0,0,.45)"/>
+  <g class="bob">
+    <rect x="1" y="2" width="19" height="17" rx="2.5" fill="#c62828"/><rect x="1" y="2" width="19" height="4.5" rx="2" fill="#e53935"/><rect x="1" y="12" width="19" height="2" fill="#8e1b1b"/>
+    <circle cx="10.5" cy="9.3" r="2.4" fill="#fff"/><circle cx="10.5" cy="9.3" r="1.1" fill="#c62828"/><rect x="18" y="16" width="6" height="2.4" rx="1" fill="#3a3a3a"/>
+    <path d="M5 37C5 28 12 24.5 21 24.5L31 25C33.5 29 32 35.5 27.5 37Z" fill="#e53935"/>
+    <path d="M8 33C10 29 14 27.5 20 27.5" fill="none" stroke="#ff8a80" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M13 24.8Q20 20.6 29.5 23.2L30 25.5L13 25.5Z" fill="#1d1d22"/>
+    <path d="M27 35.5L43 35.5L45 38L26 38Z" fill="#b71c1c"/>
+    <path d="M41.5 37L46.5 17.5Q47.5 14.8 50.5 15.6L51.5 16.2L47 37.5Z" fill="#e53935"/>
+    <path d="M49.5 15.5L46.5 10.5M45 10.5L48.5 10" stroke="#2b2b2f" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="51.8" cy="18" r="2.2" fill="#ffe082"/>
+    <path d="M45 37.5Q52 31.5 59 37.5" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>
+    <path d="M24 22L36 25.5L38.5 34" fill="none" stroke="#2b3550" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M36.5 34.5L42 34.5" stroke="#111" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M20.5 23.5C19 16 22 9.5 28.5 7.5L32.5 8.5C34.5 14 33 19.5 29.5 23.5Z" fill="#23232b"/>
+    <path d="M24 9.6C26.5 14 27.5 18.5 26.8 23.2" fill="none" stroke="#e53935" stroke-width="1.6"/>
+    <path d="M30.5 10.5L38.5 15L45.5 10.8" fill="none" stroke="#23232b" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="45.8" cy="10.6" r="2.1" fill="#111"/>
+    <rect x="28" y="4" width="4" height="4.5" rx="1.5" fill="#c98f6b"/>
+    <path d="M23.5 -1C23.5 -8.5 36.5 -9.5 37.5 -1.5L37.5 2.5L25 3.5C23.8 2.6 23.5 1 23.5 -1Z" fill="#e53935"/>
+    <path d="M30.5 -3.5L37.6 -3L37.6 1.8L31.5 1.6Z" fill="#20262e"/>
+  </g>
+  <g class="wheel"><circle cx="15" cy="40" r="6.6" fill="#141416"/><circle cx="15" cy="40" r="3.6" fill="#bdbdbd"/><path d="M15 36.4V43.6M11.4 40H18.6" stroke="#6b6b6b" stroke-width="1"/><circle cx="15" cy="40" r="1.2" fill="#e53935"/></g>
+  <g class="wheel"><circle cx="52" cy="40" r="6.6" fill="#141416"/><circle cx="52" cy="40" r="3.6" fill="#bdbdbd"/><path d="M52 36.4V43.6M48.4 40H55.6" stroke="#6b6b6b" stroke-width="1"/><circle cx="52" cy="40" r="1.2" fill="#e53935"/></g>
+</svg>`;
+
+const DL_PIN_STORE = '<svg viewBox="0 0 24 24"><path d="M4 10l8-6 8 6v10H4z"/><path d="M10 20v-5h4v5"/></svg>';
+const DL_PIN_HOME = '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg>';
+
+// Caminho em "ruas" (só retas e curvas arredondadas) entre dois pontos.
+const buildDeliveryStreetPath = (from, to) => {
+  const midX = from.x + (to.x - from.x) * 0.45;
+  const midY = from.y + (to.y - from.y) * 0.55;
+  const points = [from, { x: midX, y: from.y }, { x: midX, y: midY }, { x: to.x, y: midY }, to];
+  let d = `M${from.x.toFixed(2)} ${from.y.toFixed(2)}`;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const corner = points[index];
+    const next = points[index + 1];
+    const inLength = Math.hypot(corner.x - previous.x, corner.y - previous.y);
+    const outLength = Math.hypot(next.x - corner.x, next.y - corner.y);
+    const radius = Math.min(4, inLength / 2, outLength / 2);
+    if (radius < 0.2) continue;
+    const before = { x: corner.x - ((corner.x - previous.x) / inLength) * radius, y: corner.y - ((corner.y - previous.y) / inLength) * radius };
+    const after = { x: corner.x + ((next.x - corner.x) / outLength) * radius, y: corner.y + ((next.y - corner.y) / outLength) * radius };
+    d += ` L${before.x.toFixed(2)} ${before.y.toFixed(2)} Q${corner.x.toFixed(2)} ${corner.y.toFixed(2)} ${after.x.toFixed(2)} ${after.y.toFixed(2)}`;
+  }
+  return `${d} L${to.x.toFixed(2)} ${to.y.toFixed(2)}`;
+};
+
+let deliveryMapAnimationToken = 0;
+
+const renderDeliveryMap = (estimate) => {
+  const map = document.querySelector("[data-dl-map]");
+  if (!map) {
+    return;
+  }
+  const token = ++deliveryMapAnimationToken;
+  const bands = getActiveDeliveryBands();
+  const radiusKm = getPublicMaxDeliveryRadiusKm();
+  const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
+  const topKm = Math.max(
+    radiusKm || 0,
+    ...bands.map((band) => (hasMax(band) ? Number(band.maxKm) : Number(band.minKm || 0) + 3)),
+    1
+  );
+  const storeLabel = escapeHtml(getPublicRestaurantName() || "Loja");
+  const youKm = estimate && !isManualDeliveryQuote(estimate) && Number.isFinite(Number(estimate.distanceKm)) ? Number(estimate.distanceKm) : null;
+  const S = DL_MAP_STORE;
+
+  let svg = "";
+  for (let x = 8; x < 160; x += 22) svg += `<path class="street" stroke-width="${x % 44 === 8 ? 3.4 : 2.2}" d="M${x} 0V100"/>`;
+  for (let y = 10; y < 100; y += 18) svg += `<path class="street" stroke-width="${y % 36 === 10 ? 3.4 : 2.2}" d="M0 ${y}H160"/>`;
+  (bands.length ? bands : [{ maxKm: topKm }]).forEach((band, index) => {
+    const km = hasMax(band) ? Number(band.maxKm) : topKm;
+    const r = Math.max(6, Math.sqrt(Math.min(1, km / topKm)) * DL_MAP_MAX_R);
+    const color = DL_ZONE_COLORS[index % DL_ZONE_COLORS.length];
+    svg += `<circle class="zone" cx="${S.x}" cy="${S.y}" r="${r.toFixed(2)}" stroke="${color}" fill="${color}" fill-opacity=".035"/>`;
+  });
+
+  let you = null;
+  let route = "";
+  if (youKm !== null) {
+    const r = Math.max(22, Math.sqrt(Math.min(1, youKm / topKm)) * DL_MAP_MAX_R);
+    const angle = (-30 * Math.PI) / 180;
+    you = { x: S.x + Math.cos(angle) * r, y: S.y + Math.sin(angle) * r };
+    route = buildDeliveryStreetPath(S, you);
+    svg += `<path class="road" d="${route}"/><path class="trail" d="${route}"/>`;
+  }
+
+  const pct = (point) => `left:${((point.x / 160) * 100).toFixed(2)}%;top:${point.y.toFixed(2)}%`;
+  map.innerHTML = `
+    <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${svg}</svg>
+    <div class="dl-map-sweep" style="${pct(S)}"></div>
+    <div class="dl-pin is-store" style="${pct(S)}"><label>${storeLabel}</label><div class="dl-pin-head">${DL_PIN_STORE}</div><div class="dl-pin-base"></div></div>
+    ${
+      you
+        ? `<div class="dl-pin is-you" style="${pct(you)}"><label>Você · ${escapeHtml(formatDeliveryKmShort(youKm))}</label><div class="dl-pin-head">${DL_PIN_HOME}</div><div class="dl-pin-base"></div><i class="dl-pin-ring"></i></div>
+           <div class="dl-rider" style="${pct(S)}"><span class="dl-rider-eta"></span><div class="tilt"><div class="flip">${DL_RIDER_SVG}</div></div></div>
+           <div class="dl-map-toast">Chegou!</div>`
+        : '<div class="dl-map-hint">Calcule para ver o caminho até você</div>'
+    }
+  `;
+  map.setAttribute(
+    "aria-label",
+    you ? `Mapa: o entregador sai da loja e percorre ${formatDeliveryKmShort(youKm)} até o seu endereço` : "Mapa da área de entrega a partir da loja"
+  );
+  if (!you) {
+    return;
+  }
+
+  const path = map.querySelector(".trail");
+  const rider = map.querySelector(".dl-rider");
+  const tilt = rider.querySelector(".tilt");
+  const eta = rider.querySelector(".dl-rider-eta");
+  const toast = map.querySelector(".dl-map-toast");
+  const youPin = map.querySelector(".dl-pin.is-you");
+  const total = path.getTotalLength();
+  path.style.strokeDasharray = String(total);
+  path.style.strokeDashoffset = String(total);
+  const maxMinutes = Number(getDeliverySettings().deliveryTime?.maxMinutes || 0) || 45;
+
+  // Tabela de movimento: devagar nas curvas, acelera na saída e freia na chegada.
+  const N = 300;
+  const points = [];
+  const heads = [];
+  for (let index = 0; index <= N; index += 1) points.push(path.getPointAtLength((total * index) / N));
+  for (let index = 0; index <= N; index += 1) {
+    const a = points[Math.max(0, index - 3)];
+    const b = points[Math.min(N, index + 3)];
+    heads.push(Math.atan2(b.y - a.y, b.x - a.x));
+  }
+  const wrap = (value) => {
+    let angle = value;
+    while (angle > Math.PI) angle -= 2 * Math.PI;
+    while (angle < -Math.PI) angle += 2 * Math.PI;
+    return angle;
+  };
+  const speeds = heads.map((_, index) => {
+    const turn = Math.abs(wrap(heads[Math.min(N, index + 8)] - heads[Math.max(0, index - 8)]));
+    const f = index / N;
+    let v = 1 - 0.55 * Math.min(1, turn / (Math.PI / 2));
+    v *= Math.min(1, 0.25 + (f / 0.08) * 0.75);
+    v *= Math.min(1, 0.15 + ((1 - f) / 0.12) * 0.85);
+    return Math.max(0.12, v);
+  });
+  const times = [0];
+  for (let index = 1; index <= N; index += 1) times.push(times[index - 1] + 2 / (speeds[index] + speeds[index - 1]));
+  const T = times[N];
+  const lengthAt = (u) => {
+    const t = u * T;
+    let lo = 0;
+    let hi = N;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= t) lo = mid; else hi = mid;
+    }
+    const k = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
+    return { len: (total * (lo + k)) / N, index: lo };
+  };
+
+  let dir = 1;
+  let angleDeg = 0;
+  const place = (u, dt = 16) => {
+    const { len, index } = lengthAt(Math.min(1, u));
+    const point = path.getPointAtLength(len);
+    rider.style.left = `${((point.x / 160) * 100).toFixed(2)}%`;
+    rider.style.top = `${point.y.toFixed(2)}%`;
+    const heading = heads[Math.min(N, index)];
+    const previousDir = dir;
+    if (Math.abs(Math.cos(heading)) > 0.12) dir = Math.cos(heading) < 0 ? -1 : 1;
+    rider.classList.toggle("is-left", dir < 0);
+    const target = (wrap(heading - (dir < 0 ? Math.PI : 0)) * 180) / Math.PI;
+    if (dir !== previousDir) angleDeg = target;
+    angleDeg += ((wrap(((target - angleDeg) * Math.PI) / 180) * 180) / Math.PI) * Math.min(1, dt / 90);
+    tilt.style.transform = `rotate(${angleDeg.toFixed(2)}deg)`;
+    path.style.strokeDashoffset = String(total - len);
+    eta.textContent = u >= 1 ? "Entregue" : `${Math.max(1, Math.ceil(maxMinutes * (1 - u)))} min`;
+  };
+
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    place(1);
+    rider.classList.add("is-stopped");
+    return;
+  }
+  const DUR = 7000;
+  const HOLD = 2200;
+  let start = null;
+  let previous = null;
+  const frame = (ts) => {
+    if (token !== deliveryMapAnimationToken || !map.isConnected) return;
+    if (start === null) start = ts;
+    const dt = previous === null ? 16 : ts - previous;
+    previous = ts;
+    const elapsed = ts - start;
+    if (elapsed < DUR) {
+      rider.classList.remove("is-stopped");
+      toast.classList.remove("is-on");
+      youPin.classList.remove("is-arrived");
+      rider.style.opacity = String(Math.min(1, elapsed / 300));
+      place(elapsed / DUR, dt);
+    } else if (elapsed < DUR + HOLD) {
+      place(1, dt);
+      rider.classList.add("is-stopped");
+      toast.classList.add("is-on");
+      youPin.classList.add("is-arrived");
+      rider.style.opacity = String(elapsed > DUR + HOLD - 400 ? (DUR + HOLD - elapsed) / 400 : 1);
+    } else {
+      start = ts;
+      dir = 1;
+      angleDeg = 0;
+    }
+    window.requestAnimationFrame(frame);
+  };
+  window.requestAnimationFrame(frame);
+};
+
+const renderDeliveryPageExtras = (estimate = null) => {
+  if (!document.querySelector(".dl-page")) {
+    return;
+  }
+
+  const timeChip = document.querySelector("[data-dl-chip-time]");
+  if (timeChip) {
+    timeChip.textContent = getDeliveryTimeText();
+  }
+
+  const quote = estimate || getLatestSavedDeliveryQuote(loadAuthProfile());
+  const youKm = quote && !isManualDeliveryQuote(quote) && Number.isFinite(Number(quote.distanceKm)) ? Number(quote.distanceKm) : null;
+  const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
+  const bands = getActiveDeliveryBands();
+
+  const kms = document.querySelector("[data-dl-kms]");
+  if (kms) {
+    kms.innerHTML = bands
+      .map((band) => {
+        const isYou = youKm !== null && youKm >= Number(band.minKm || 0) && (!hasMax(band) || youKm <= Number(band.maxKm));
+        const fee = Number(band.customerFee ?? band.fee ?? 0);
+        const label = hasMax(band) ? `até ${formatDeliveryKmShort(band.maxKm)}` : getDeliveryBandLabel(band);
+        return `<span class="${isYou ? "is-you" : ""}">${escapeHtml(label)}<b>${escapeHtml(fee > 0 ? formatPrice(fee) : "Grátis")}</b></span>`;
+      })
+      .join("");
+  }
+
+  const tiles = document.querySelector("[data-dl-tiles]");
+  if (tiles) {
+    const items = [];
+    if (isPublicPickupEnabled()) items.push(["bag", "Retirada na loja", `Sem taxa. ${getPickupEstimateText()}`]);
+    items.push(["clock", "Agendar", "Peça agora ou escolha um horário no carrinho."]);
+    const radiusKm = getPublicMaxDeliveryRadiusKm();
+    if (radiusKm > 0) items.push(["pin", "Até onde vamos", `Entregamos até ${formatDeliveryKmShort(radiusKm)} da loja.`]);
+    const free = getDeliverySettings().freeShipping || {};
+    if (free.enabled && Number(free.minimumOrder) > 0) items.push(["cart", "Frete grátis", `Em pedidos acima de ${formatPrice(Number(free.minimumOrder))}.`]);
+    items.push(["rain", "Dias de chuva", "O prazo pode aumentar um pouco."]);
+    tiles.innerHTML = items
+      .map(([icon, title, text]) => `<div class="dl-tile"><b>${DL_TILE_ICONS[icon]}${escapeHtml(title)}</b>${escapeHtml(text)}</div>`)
+      .join("");
+  }
+
+  renderDeliveryMap(quote && !isManualDeliveryQuote(quote) ? quote : null);
 };
 
 const calculateDeliveryEstimate = async ({
@@ -12586,19 +12923,6 @@ const calculateDeliveryEstimate = async ({
   });
 
   try {
-    await loadGoogleMapsApi();
-  } catch (error) {
-    console.error("[delivery] maps-init-error", error);
-    throw createDeliveryEstimateError(
-      normalizeGoogleMapsErrorMessage(
-        error,
-        "Nao foi possivel inicializar o Google Maps para calcular a distancia."
-      ),
-      ""
-    );
-  }
-
-  try {
     const customerGeocode = await geocodeDeliveryAddress(
       destinationAddress,
       "O Google Maps demorou demais para localizar o endereco do cliente."
@@ -12636,6 +12960,9 @@ const calculateDeliveryEstimate = async ({
       partialMatch: customerGeocode.partialMatch,
     });
   } catch (error) {
+    if (error?.preventManualFallback) {
+      throw error;
+    }
     console.error("[delivery] distance-calc-error", {
       origin: getCurrentPageOrigin(),
       destinationAddress,
@@ -12672,6 +12999,7 @@ const renderDeliveryHistory = () => {
         }</span>
       </div>
     `;
+    renderDeliveryPageExtras();
     schedulePortugueseUiRefresh();
     return;
   }
@@ -12697,6 +13025,7 @@ const renderDeliveryHistory = () => {
     )
     .join("");
 
+  renderDeliveryPageExtras();
   schedulePortugueseUiRefresh();
 };
 
@@ -12728,8 +13057,7 @@ const submitDeliveryForm = async (form) => {
     setResultCardState(resultNode, "error");
 
     if (resultNode) {
-      resultNode.innerHTML =
-        "<p>Informe rua, CEP valido e numero da casa para calcular a distancia da entrega.</p>";
+      renderDeliveryErrorCard(resultNode, "Informe o CEP, a rua e o número da casa para calcular.");
     }
 
     schedulePortugueseUiRefresh();
@@ -12738,13 +13066,13 @@ const submitDeliveryForm = async (form) => {
 
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = "Calculando rota...";
+    submitButton.textContent = "Calculando...";
   }
 
   if (resultNode) {
     setResultCardState(resultNode, "");
     resultNode.innerHTML =
-      "<p>Calculando a entrega automaticamente. Se o Google Maps nao responder, o site salva seu endereco em modo provisorio.</p>";
+      '<div class="dl-empty"><strong>Calculando a sua entrega...</strong><span>Leva só alguns segundos.</span></div>';
   }
 
   schedulePortugueseUiRefresh();
@@ -12773,9 +13101,11 @@ const submitDeliveryForm = async (form) => {
       setResultCardState(resultNode, "error");
 
       if (resultNode) {
-        resultNode.innerHTML = `<p>${escapeHtml(
-          error.userMessage || error.message || "Entrega indisponivel para este endereco."
-        )}</p>`;
+        renderDeliveryErrorCard(
+          resultNode,
+          error.userMessage || error.message || "Entrega indisponível para este endereço.",
+          error.deliveryReason || ""
+        );
       }
 
       schedulePortugueseUiRefresh();
@@ -12818,6 +13148,7 @@ const submitDeliveryForm = async (form) => {
       submitButton.disabled = false;
       submitButton.textContent = "Calcular entrega";
     }
+    setDeliveryStepsState(form);
   }
 };
 
@@ -13648,6 +13979,10 @@ const handleDocumentFocusOut = (event) => {
     return;
   }
 
+  if (event.target.name === "delivery_number" || event.target.name === "delivery_cep") {
+    setDeliveryStepsState(event.target.closest("[data-delivery-form]"));
+  }
+
   if (event.target.name !== "delivery_cep") {
     return;
   }
@@ -14010,6 +14345,10 @@ const handleDocumentClick = (event) => {
 
 document.addEventListener("click", handleDocumentClick);
 document.addEventListener("input", handleDocumentInput);
+window.matchMedia?.("(min-width: 1024px)").addEventListener?.("change", () => {
+  if (!isCartWideLayout()) cartUiState.checkoutExpanded = false;
+  syncCartCheckoutDock();
+});
 document.addEventListener("focusout", handleDocumentFocusOut);
 document.addEventListener("submit", handleDocumentSubmit);
 window.addEventListener(
