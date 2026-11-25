@@ -277,6 +277,7 @@ const resolveStaticPathname = (pathname) => {
   if (pathname === "/") return "/index.html";
   if (pathname === "/inovas") return "/inovas.html";
   if (pathname === "/conta/entrar" || pathname === "/conta/entrar/") return "/conta/entrar.html";
+  if (pathname === "/privacidade" || pathname === "/termos") return `${pathname}.html`;
   if (pathname === "/garcom" || pathname === "/garcom/") return "/garcom.html";
   if (pathname === "/login") return "/admin/login.html";
   if (pathname === "/admin" || pathname === "/admin/") return "/admin/index.html";
