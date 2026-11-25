@@ -145,3 +145,16 @@ input, button { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .tk-floaty, .tk-floaty2, .tk-cglow, .tk-live, .tk-prog::after, .tk-modal, .tk-swap { animation: none; }
 }
+
+/* Minha conta */
+.tk-profile { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--tk-line); border-radius: 16px; background: rgba(255, 255, 255, 0.03); }
+.tk-profile-top { display: flex; align-items: center; gap: 12px; }
+.tk-profile-top strong { display: block; font-size: 16px; color: var(--tk-ink); }
+.tk-profile-top small { color: var(--tk-soft); font-size: 12.5px; }
+.tk-avatar { flex: none; width: 46px; height: 46px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--tk-red); color: #fff; font-weight: 800; }
+.tk-profile-list { display: grid; gap: 10px; margin: 0; }
+.tk-profile-list div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.tk-profile-list dt { font-size: 12px; color: var(--tk-soft); }
+.tk-profile-list dd { margin: 0; font-weight: 700; color: var(--tk-ink); overflow-wrap: anywhere; }
+[data-conta-view="perfil"] { display: grid; gap: 12px; }
+[data-conta-view="perfil"][hidden] { display: none; }

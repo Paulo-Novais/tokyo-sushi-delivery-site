@@ -24,6 +24,7 @@
     "nova-senha": ["Criar nova senha", "Escolha uma senha com pelo menos 8 caracteres."],
     telefone: ["Seu WhatsApp", "Só uma vez: o restaurante usa para avisar sobre o seu pedido."],
     conectado: ["Você está conectado", "Volte ao site do restaurante para fazer seu pedido."],
+    perfil: ["Sua conta", "Você continua conectado neste aparelho até clicar em Sair."],
     carregando: ["Um instante…", "Levando você de volta ao restaurante."],
   };
 
@@ -267,6 +268,24 @@
       });
     });
 
+    $("[data-conta-voltar-restaurante]").addEventListener("click", () => withBusy(null, continueToRestaurant));
+
+    // Sair: o restaurante encerra a sessão dele e depois passa aqui para sair do login central.
+    $("[data-conta-perfil-sair]").addEventListener("click", () =>
+      withBusy(null, async () => {
+        const back = await loadSafeReturn();
+        if (back) {
+          const url = new URL(back);
+          url.searchParams.set("sair_conta", "1");
+          window.location.replace(url.toString());
+          return;
+        }
+        await request(`${API}/sign-out`, { method: "POST", body: {} });
+        show("entrar");
+        showAlert("Você saiu da conta neste aparelho.", true);
+      })
+    );
+
     $("[data-conta-sair]").addEventListener("click", () =>
       withBusy(null, async () => {
         await request(`${API}/sign-out`, { method: "POST", body: {} });
@@ -303,6 +322,19 @@
       if (params.get("erro") === "google") {
         show("entrar");
         showAlert("Não foi possível entrar com o Google. Tente de novo ou use e-mail e senha.");
+        return;
+      }
+      if (mode === "conta" && me.authenticated && !(me.user && me.user.needsPhone)) {
+        const user = me.user || {};
+        const name = String(user.name || "Cliente");
+        const digits = String(user.phone || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+        $("[data-conta-perfil-nome]").textContent = name;
+        $("[data-conta-perfil-iniciais]").textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join("");
+        $("[data-conta-perfil-email]").textContent = user.email || "—";
+        $("[data-conta-perfil-telefone]").textContent = digits.length === 11
+          ? `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+          : digits.length === 10 ? `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}` : digits || "—";
+        show("perfil");
         return;
       }
       if (me.authenticated) { await continueToRestaurant(); return; }

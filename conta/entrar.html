@@ -186,6 +186,22 @@
             </div>
 
             <!-- Conectado (aberto direto, sem restaurante) -->
+            <!-- Minha conta (quem já está conectado, vindo de qualquer restaurante) -->
+            <div class="tk-view" data-conta-view="perfil" hidden>
+              <div class="tk-profile">
+                <div class="tk-profile-top">
+                  <span class="tk-avatar" data-conta-perfil-iniciais aria-hidden="true"></span>
+                  <div><strong data-conta-perfil-nome></strong><small>Conta INOVAS Food</small></div>
+                </div>
+                <dl class="tk-profile-list">
+                  <div><dt>E-mail</dt><dd data-conta-perfil-email></dd></div>
+                  <div><dt>WhatsApp</dt><dd data-conta-perfil-telefone></dd></div>
+                </dl>
+              </div>
+              <button class="tk-pbtn" type="button" data-conta-voltar-restaurante>Voltar ao restaurante</button>
+              <button class="tk-sbtn" type="button" data-conta-perfil-sair>Sair da conta</button>
+            </div>
+
             <div class="tk-view" data-conta-view="conectado" hidden>
               <button class="tk-sbtn" type="button" data-conta-sair>Sair desta conta</button>
             </div>

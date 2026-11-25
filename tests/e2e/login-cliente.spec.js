@@ -98,8 +98,12 @@ test("navegador: criar conta no login central, voltar ao restaurante e fazer ped
 
   // Sair: derruba a sessão no restaurante e no login central, e volta ao site.
   await page.keyboard.press("Escape"); // fecha a sacola
+  // Conectado: "Entrar/conta" abre a tela "Sua conta" do INOVAS (a mesma em todo restaurante).
   await page.locator("[data-auth-open]").first().click();
-  await page.locator("[data-auth-logout]").click();
+  await expect(page).toHaveURL(new RegExp(`^${customerAuthOrigin}/conta/entrar`));
+  await expect(page.locator("[data-conta-title]")).toHaveText("Sua conta");
+  await expect(page.locator("[data-conta-perfil-email]")).toHaveText(email);
+  await page.locator("[data-conta-perfil-sair]").click();
   await page.waitForURL(new RegExp(`^${baseURL}/${restaurantA.key}/cardapio`));
   await expect(page.locator("[data-auth-label]").first()).toHaveText("Entrar");
 });
