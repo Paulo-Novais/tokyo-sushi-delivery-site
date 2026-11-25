@@ -9019,6 +9019,14 @@ const syncCustomerSessionFromServer = async () => {
     const data = await getJsonWithTimeout(CUSTOMER_ME_ENDPOINT, 10000);
     customerAccountState.loginUrl = data.loginUrl || "";
     customerAccountState.restaurantKey = data.restaurantKey || "";
+    // "Sair da conta" na tela do INOVAS: encerra aqui e depois no login central.
+    if (current.searchParams.get("sair_conta") === "1") {
+      current.searchParams.delete("sair_conta");
+      window.history.replaceState(window.history.state, "", current.toString());
+      customerAccountState.synced = true;
+      performCustomerLogout();
+      return;
+    }
     if (data.authenticated && data.customer) {
       saveAuthProfile({
         id: "conta",
@@ -9374,6 +9382,44 @@ const renderAuthPanel = () => {
   schedulePortugueseUiRefresh();
 };
 
+// Sair: encerra a sessão deste restaurante e depois a do login central.
+const performCustomerLogout = () => {
+  void postJsonWithTimeout(CUSTOMER_LOGOUT_ENDPOINT, {}, 8000)
+    .then((data) => {
+      // Sai também do login central e volta para esta página.
+      if (data?.centralLogoutUrl) {
+        const url = new URL(data.centralLogoutUrl, window.location.href);
+        url.searchParams.set("volta", window.location.href);
+        if (customerAccountState.restaurantKey) url.searchParams.set("r", customerAccountState.restaurantKey);
+        window.location.assign(url.toString());
+      }
+    })
+    .catch(() => {});
+  clearAuthProfile();
+  clearCustomerClientToken();
+  customerTrackingState.loading = false;
+  customerTrackingState.loaded = true;
+  customerTrackingState.authenticated = false;
+  customerTrackingState.activeOrder = null;
+  authState.view = "entry";
+  authState.socialProvider = null;
+  authState.socialStatus = "idle";
+  authState.editing = false;
+  authState.phoneCodeStatus = "idle";
+  authState.error = "";
+  authState.message = "Voce saiu da conta neste aparelho.";
+  authState.draft = {};
+  updateAuthTriggers();
+  renderAuthPanel();
+  renderCart();
+  renderDeliveryHistory();
+  renderOrderHistoryPage();
+  renderTrackingPage();
+  void loadReviewPage();
+  prefillProfileForms();
+  return;
+};
+
 const openAuth = (view = null, pendingHref = "") => {
   const shell = document.querySelector("[data-auth-shell]");
 
@@ -9388,6 +9434,15 @@ const openAuth = (view = null, pendingHref = "") => {
 
   if (view) {
     authState.view = view;
+  }
+
+  // Já conectado: a tela "Sua conta" do INOVAS (a mesma em todos os restaurantes).
+  if (loadAuthProfile()) {
+    const accountHref = buildCustomerLoginUrl("conta");
+    if (accountHref) {
+      window.location.assign(accountHref);
+      return;
+    }
   }
 
   if (!loadAuthProfile()) {
@@ -13765,39 +13820,7 @@ const handleDocumentClick = (event) => {
 
   const authLogoutButton = event.target.closest("[data-auth-logout]");
   if (authLogoutButton) {
-    void postJsonWithTimeout(CUSTOMER_LOGOUT_ENDPOINT, {}, 8000)
-      .then((data) => {
-        // Sai também do login central e volta para esta página.
-        if (data?.centralLogoutUrl) {
-          const url = new URL(data.centralLogoutUrl, window.location.href);
-          url.searchParams.set("volta", window.location.href);
-          if (customerAccountState.restaurantKey) url.searchParams.set("r", customerAccountState.restaurantKey);
-          window.location.assign(url.toString());
-        }
-      })
-      .catch(() => {});
-    clearAuthProfile();
-    clearCustomerClientToken();
-    customerTrackingState.loading = false;
-    customerTrackingState.loaded = true;
-    customerTrackingState.authenticated = false;
-    customerTrackingState.activeOrder = null;
-    authState.view = "entry";
-    authState.socialProvider = null;
-    authState.socialStatus = "idle";
-    authState.editing = false;
-    authState.phoneCodeStatus = "idle";
-    authState.error = "";
-    authState.message = "Voce saiu da conta neste aparelho.";
-    authState.draft = {};
-    updateAuthTriggers();
-    renderAuthPanel();
-    renderCart();
-    renderDeliveryHistory();
-    renderOrderHistoryPage();
-    renderTrackingPage();
-    void loadReviewPage();
-    prefillProfileForms();
+    performCustomerLogout();
     return;
   }
 
