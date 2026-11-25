@@ -1,0 +1,52 @@
+# Troca o plano de restaurantes no banco de PRODUÇÃO (Neon), pelo mesmo código do
+# Painel INOVAS. Só roda à mão (Actions > Trocar plano de restaurantes > Run workflow).
+# Primeiro rode com "simular" para ver quem muda; depois com "aplicar".
+name: Trocar plano de restaurantes
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'simular ou aplicar'
+        required: true
+        default: simular
+        type: choice
+        options: [simular, aplicar]
+      plano:
+        description: 'Plano novo (START, BUSINESS ou PRO)'
+        required: true
+        default: PRO
+        type: string
+      nomes:
+        description: 'Partes do nome/endereço dos restaurantes, separadas por vírgula'
+        required: true
+        default: 'kasulo,casulo,tokyo,default'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  trocar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferir segredo
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          if [ -z "$MIGRATION_DATABASE_URL" ]; then
+            echo "::error::Falta o segredo MIGRATION_DATABASE_URL. Nada foi feito."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev --ignore-scripts
+      - name: Trocar plano
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          FLAG=""
+          if [ "${{ inputs.modo }}" = "aplicar" ]; then FLAG="--aplicar"; fi
+          node scripts/set-restaurant-plans.cjs --plano "${{ inputs.plano }}" --nomes "${{ inputs.nomes }}" $FLAG

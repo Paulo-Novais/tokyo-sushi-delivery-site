@@ -40,18 +40,13 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 - Maquininha integrada no salão: é do restaurante; online já temos.
 - Várias lojas na mesma conta: cada restaurante tem contrato próprio.
 
-## Revisão dos planos e preços (a fazer depois — decisões do Paulo, 19/11/2026)
+## Planos e preços (definidos pelo Paulo em 25/11/2026) — feito
 
-- [ ] **Essencial: R$ 109,90/mês** (hoje R$ 49,90), com **primeiro mês por R$ 49,90**.
-- [x] **Domínio próprio é adicional à parte** em todos os planos (feito 19/11: site, calculadora e cadastro) (hoje aparece
-      "incluso" no Completo: site de vendas, cadastro do Painel INOVAS e
-      cobrança).
-- [ ] **Nota fiscal automática é adicional à parte** (já é + R$ 49,90; confirmar
-      valor e em quais planos).
-- [ ] Revisar o que cada plano oferece e os valores (Grátis, Essencial,
-      Profissional, Completo), e depois atualizar juntos: página de planos
-      (inovas.html/index.html), cadastro do Painel INOVAS, tabela de planos do
-      servidor e textos de economia/comparação.
+- [x] Essencial R$ 99,90 · Profissional R$ 179,90 · Completo R$ 299,90 (ver docs/PLANOS.md).
+- [x] Domínio próprio opcional em qualquer plano pago: + R$ 49/mês, cobrado junto com a mensalidade.
+- [x] Nota fiscal (NFC-e) inclusa no Profissional e no Completo (a emissão ainda precisa ser construída).
+- [x] Grátis saiu do site e do cadastro novo (segue como plano legado).
+- [ ] Decidir se o Tokyo (Completo legado, R$ 219,90) passa para o preço novo.
 
 ## Ativação (depende de terceiros)
 
