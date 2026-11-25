@@ -8632,6 +8632,100 @@ body.has-tracking-order .tracking-section {
   }
 }
 
+/* ===================== Sacola ampla (todos os restaurantes) ===================== */
+.cart-keep-shopping { display: none; }
+@media (min-width: 1024px) {
+  .cart-overlay { backdrop-filter: blur(6px); }
+  .cart-drawer {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: min(1040px, calc(100vw - 48px));
+    max-width: none;
+    height: min(860px, calc(100vh - 48px));
+    max-height: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    border-radius: 28px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -48%) scale(0.97);
+    transition: transform 240ms ease, opacity 200ms ease;
+  }
+  body.cart-open .cart-drawer {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .cart-drawer-header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 18px 24px; }
+  .cart-drawer-title { margin-right: auto; }
+  .cart-keep-shopping {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(245, 195, 211, 0.18);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cart-keep-shopping:hover { border-color: rgba(245, 195, 211, 0.4); }
+  .cart-drawer-body { grid-column: 1; grid-row: 2; min-height: 0; overflow: auto; padding: 20px 24px; }
+  .cart-drawer-footer {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.015);
+    backdrop-filter: none;
+  }
+  .cart-checkout-dock { padding: 0; border: 0; background: none; box-shadow: none; }
+  .cart-checkout-toggle { display: none; }
+  .cart-checkout-panel { max-height: none; overflow: visible; padding-right: 0; }
+  .cart-checkout-panel[hidden] { display: block; }
+}
+@media (min-width: 721px) and (max-width: 1023px) {
+  .cart-overlay { backdrop-filter: blur(6px); }
+  .cart-drawer {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: min(680px, calc(100vw - 48px));
+    max-width: none;
+    height: min(900px, calc(100vh - 48px));
+    border-radius: 26px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -48%) scale(0.97);
+    transition: transform 240ms ease, opacity 200ms ease;
+  }
+  body.cart-open .cart-drawer { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  .cart-keep-shopping { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin-left: auto; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(245, 195, 211, 0.18); background: transparent; color: var(--text); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+}
+@media (max-width: 720px) {
+  .cart-drawer {
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+}
+
 /* ===================== Página de entrega (nova) ===================== */
 .dl-page {
   --dl-card: rgba(23, 12, 15, 0.92);

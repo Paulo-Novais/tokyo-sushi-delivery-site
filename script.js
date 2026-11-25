@@ -5394,8 +5394,11 @@ const getCartCheckoutValidation = (
   };
 };
 
+// Sacola ampla (computador): o fechamento do pedido fica sempre aberto ao lado dos itens.
+const isCartWideLayout = () => Boolean(window.matchMedia?.("(min-width: 1024px)").matches);
+
 const setCartCheckoutExpanded = (expanded) => {
-  cartUiState.checkoutExpanded = Boolean(expanded);
+  cartUiState.checkoutExpanded = Boolean(expanded) || isCartWideLayout();
 
   const shell = document.querySelector("[data-cart-checkout-shell]");
   const panel = document.querySelector("[data-cart-checkout-panel]");
@@ -5471,7 +5474,7 @@ const syncCartCheckoutDock = ({
     return;
   }
 
-  if (cart.length === 0 && cartUiState.checkoutExpanded) {
+  if (cart.length === 0 && cartUiState.checkoutExpanded && !isCartWideLayout()) {
     setCartCheckoutExpanded(false);
   } else {
     setCartCheckoutExpanded(cartUiState.checkoutExpanded);
@@ -10759,6 +10762,7 @@ const createCartShell = () => {
             <h2 id="cart-title">Sua sacola</h2>
             <span class="cart-title-total" data-cart-total>R$ 0,00</span>
           </div>
+          <button class="cart-keep-shopping" type="button" data-cart-close>&larr; Continuar escolhendo</button>
           <button class="cart-close" type="button" data-cart-close aria-label="Fechar sacola">&times;</button>
         </div>
         <div class="cart-drawer-body">
@@ -14341,6 +14345,10 @@ const handleDocumentClick = (event) => {
 
 document.addEventListener("click", handleDocumentClick);
 document.addEventListener("input", handleDocumentInput);
+window.matchMedia?.("(min-width: 1024px)").addEventListener?.("change", () => {
+  if (!isCartWideLayout()) cartUiState.checkoutExpanded = false;
+  syncCartCheckoutDock();
+});
 document.addEventListener("focusout", handleDocumentFocusOut);
 document.addEventListener("submit", handleDocumentSubmit);
 window.addEventListener(
