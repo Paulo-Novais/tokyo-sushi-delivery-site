@@ -24,15 +24,17 @@ const names = get("--nomes", "").split(",").map((value) => value.trim().toLowerC
   console.log(`Restaurantes no banco: ${restaurants.length}. Encontrados: ${targets.length}.`);
   for (const restaurant of targets) {
     const before = await store.getRestaurantBillingByKey(restaurant.restaurantKey);
-    console.log(`- ${restaurant.name} (${restaurant.restaurantKey}): hoje ${before?.plan || "?"} R$ ${before?.monthlyValue ?? "?"}`);
+    console.log(`- ${restaurant.name} (${restaurant.restaurantKey}): hoje ${before?.plan || "?"} R$ ${before?.monthlyValue ?? "?"} (adicionais: ${(before?.addons || []).map((addon) => addon.label).join(", ") || "nenhum"})`);
     if (!apply) continue;
     await store.updateRestaurantSubscription(
-      { restaurantKey: restaurant.restaurantKey, plan, status: "ACTIVE" },
+      // Mantém a mensalidade combinada (só troca o plano e os recursos).
+      { restaurantKey: restaurant.restaurantKey, plan, status: "ACTIVE", monthlyValue: Number(before?.planMonthlyValue ?? before?.monthlyValue ?? 0) },
       { login: "github-actions", userType: "MASTER", displayName: "Troca de plano (GO do Paulo)" }
     );
     const after = await store.getRestaurantBillingByKey(restaurant.restaurantKey);
     const access = await store.getRestaurantCommercialAccess(restaurant.restaurantKey);
-    console.log(`  agora ${after.plan} R$ ${after.monthlyValue} · recursos: ${access.releasedFeatures.join(", ")}`);
+    console.log(`  agora ${after.plan} R$ ${after.monthlyValue} (plano R$ ${after.planMonthlyValue}; adicionais: ${(after.addons || []).map((addon) => `${addon.label} R$ ${addon.monthlyValue}`).join(", ") || "nenhum"})`);
+    console.log(`  recursos: ${access.releasedFeatures.join(", ")}`);
   }
   if (!apply) console.log("Simulação: nada foi alterado. Rode com --aplicar para trocar.");
 })().catch((error) => {
