@@ -41,7 +41,6 @@
     />
     <script defer src="./site-config.js"></script>
     <script defer src="./store-hours.js"></script>
-    <script defer src="/lib/business-hours.cjs"></script>
 
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -111,223 +110,121 @@
       </div>
     </header>
 
-    <main>
-      <section class="section page-hero-section">
-        <div class="container page-grid">
-          <div class="page-copy reveal">
-            <div class="eyebrow" data-premium-page-tag="entrega">
-              <span></span>
-              Entrega Tokyo
-            </div>
-            <h1>Calcule a estimativa da sua entrega antes de fechar o pedido.</h1>
-            <p>
-              Quando o Google Maps estiver disponivel, a taxa sai automatica.
-              Se ele nao responder agora, o site salva seu endereco em modo
-              provisorio para a operacao confirmar no gestor.
-            </p>
-
-            <div class="page-metrics">
-              <article class="glass-card">
-                <strong>Origem fixa</strong>
-                <span data-premium-store-address>R. General Osório, 2165 - CEP 14400-520.</span>
-              </article>
-              <article class="glass-card">
-                <strong>Distância calculada</strong>
-                <span>Usamos o Google Maps quando disponivel e ativamos um modo provisorio quando necessario.</span>
-              </article>
-              <article class="glass-card">
-                <strong>Faixas oficiais</strong>
-                <span>O valor segue as regras do estabelecimento para cada distância.</span>
-              </article>
-            </div>
-          </div>
-
-          <section class="glass-card form-card reveal">
-            <p class="section-tag">Simulador de entrega</p>
-            <h2>Descubra taxa e distância calculada</h2>
-            <form class="auth-form form-layout" data-delivery-form>
-              <label class="auth-field">
-                <span>Rua ou avenida do cliente</span>
-                <input
-                  class="auth-input"
-                  type="text"
-                  name="delivery_street"
-                  placeholder="Rua Exemplo"
-                  required
-                />
-              </label>
-
-              <input type="hidden" name="delivery_neighborhood" value="" />
-              <input type="hidden" name="delivery_city" value="" />
-              <input type="hidden" name="delivery_state" value="" />
-
-              <div class="field-grid">
-                <label class="auth-field">
-                  <span>CEP</span>
-                  <input
-                    class="auth-input"
-                    type="text"
-                    name="delivery_cep"
-                    inputmode="numeric"
-                    maxlength="9"
-                    placeholder="00000-000"
-                    required
-                  />
-                </label>
-
-                <label class="auth-field">
-                  <span>Número</span>
-                  <input
-                    class="auth-input"
-                    type="text"
-                    name="delivery_number"
-                    inputmode="numeric"
-                    placeholder="123"
-                    required
-                  />
-                </label>
-              </div>
-
-              <div class="delivery-cep-feedback" data-delivery-cep-feedback aria-live="polite">
-                Digite o CEP para preencher a rua automaticamente.
-              </div>
-
-              <label class="auth-field">
-                <span>Complemento opcional</span>
-                <input
-                  class="auth-input"
-                  type="text"
-                  name="delivery_complement"
-                  placeholder="Apto, bloco ou referência"
-                />
-              </label>
-
-              <label class="auth-field">
-                <span>Ponto de referência</span>
-                <input
-                  class="auth-input"
-                  type="text"
-                  name="delivery_reference"
-                  placeholder="Portaria, esquina, cor do portão ou outro apoio"
-                />
-              </label>
-
-              <div class="delivery-origin-note">
-                <strong>Origem do delivery</strong>
-                <span data-premium-store-address-note>Rua General Osório, 2165 - Franca/SP - CEP 14400-520</span>
-              </div>
-
-              <button class="button button-primary full-width" type="submit">
-                Calcular entrega
-              </button>
-            </form>
-
-            <div class="result-card" data-delivery-result>
-              <p>
-                Informe o endereco do cliente para calcular a entrega. Se o
-                Google Maps falhar, o site salva o pedido em modo provisorio.
-              </p>
-            </div>
-          </section>
+    <main class="dl-page">
+      <section class="dl-hero container" aria-labelledby="dl-title">
+        <div class="dl-hero-copy">
+          <p class="dl-eyebrow" data-premium-page-tag="entrega">Entrega</p>
+          <h1 id="dl-title">Quanto custa a entrega até você?</h1>
+          <p class="dl-lead">Digite o CEP e veja na hora a taxa, a distância e quanto tempo o seu pedido leva para chegar.</p>
+          <ul class="dl-chips" aria-label="Resumo da entrega">
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-dl-chip-time>Prazo informado no cálculo</span></li>
+            <li data-dl-chip-radius hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span></span></li>
+            <li data-dl-chip-pickup hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18l-2 11H5L3 9zM8 9V6a4 4 0 0 1 8 0v3"/></svg><span>Retirada sem taxa</span></li>
+          </ul>
+        </div>
+        <div class="dl-hero-art">
+          <img data-dl-hero-image src="./site-images/combinado-imperial.png" alt="" loading="eager" />
         </div>
       </section>
 
-      <section class="section support-section">
-        <div class="container">
-          <section class="glass-card page-panel reveal delivery-rules-panel">
-            <div class="section-heading compact-heading">
-              <p class="section-tag">Regras da entrega</p>
-              <h2>Faixas cobradas do estabelecimento até o cliente</h2>
-              <p>
-                A distancia usada na cobranca e calculada automaticamente
-                quando o Google Maps estiver online. Se ele falhar, o site
-                salva o endereco e mostra uma taxa minima provisoria para o
-                atendimento confirmar depois.
-              </p>
-            </div>
+      <section class="dl-calc container" aria-label="Calcular entrega">
+        <form class="dl-card dl-form" data-delivery-form novalidate>
+          <div class="dl-card-head">
+            <h2>Seu endereço</h2>
+            <ol class="dl-steps" aria-label="Etapas" data-dl-steps>
+              <li data-dl-step="cep">CEP</li>
+              <li data-dl-step="numero">Número</li>
+              <li data-dl-step="pronto">Pronto</li>
+            </ol>
+          </div>
 
-            <div class="delivery-rules-grid">
-              <div class="stack-list" data-premium-delivery-bands>
-                <article>
-                  <strong>R$ 9,00 até 1,9 km</strong>
-                  <span>Faixa inicial para destinos mais próximos.</span>
-                </article>
-                <article>
-                  <strong>R$ 10,00 até 6,9 km</strong>
-                  <span>Aplicada automaticamente para trajetos de alcance médio.</span>
-                </article>
-                <article>
-                  <strong>R$ 12,00 até 10,9 km</strong>
-                  <span>Indicada para entregas com percurso mais estendido.</span>
-                </article>
-                <article>
-                  <strong>R$ 15,00 até 14,9 km</strong>
-                  <span>Faixa limite antes da cobrança por km rodado.</span>
-                </article>
-              </div>
+          <label class="dl-field">
+            <span>CEP</span>
+            <span class="dl-input dl-input-main">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              <input type="text" name="delivery_cep" inputmode="numeric" maxlength="9" placeholder="00000-000" autocomplete="postal-code" required />
+              <a class="dl-help-link" href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener">Não sei meu CEP</a>
+            </span>
+          </label>
 
-              <div class="delivery-policy">
-                <strong>Observações operacionais</strong>
-                <ul class="delivery-route">
-                  <li data-premium-delivery-extra>Entregas acima de 15 km possuem acréscimo de R$ 1,00 por km adicional.</li>
-                  <li>Para maior agilidade, pedimos que o cliente esteja disponível no momento da entrega.</li>
-                  <li>O ponto de entrega padrão é na portaria de prédios ou área de acesso principal.</li>
-                  <li>Entregadores não são obrigados a subir escadas ou acessar áreas internas, exceto em casos específicos previamente combinados.</li>
-                  <li>Em caso de dificuldade na entrega ou ausência no local, poderá ser cobrada taxa de deslocamento.</li>
-                </ul>
-              </div>
+          <div class="delivery-cep-feedback dl-cep-feedback" data-delivery-cep-feedback aria-live="polite">
+            Digite o CEP para preencher a rua automaticamente.
+          </div>
+
+          <label class="dl-field">
+            <span>Rua ou avenida</span>
+            <span class="dl-input"><input type="text" name="delivery_street" placeholder="Preenchida pelo CEP" autocomplete="address-line1" required /></span>
+          </label>
+
+          <input type="hidden" name="delivery_neighborhood" value="" />
+          <input type="hidden" name="delivery_city" value="" />
+          <input type="hidden" name="delivery_state" value="" />
+
+          <div class="dl-row">
+            <label class="dl-field dl-field-number">
+              <span>Número</span>
+              <span class="dl-input"><input type="text" name="delivery_number" inputmode="numeric" placeholder="123" required /></span>
+            </label>
+            <label class="dl-field">
+              <span>Complemento <em>(opcional)</em></span>
+              <span class="dl-input"><input type="text" name="delivery_complement" placeholder="Apto, bloco" autocomplete="address-line2" /></span>
+            </label>
+          </div>
+
+          <label class="dl-field">
+            <span>Ponto de referência <em>(opcional)</em></span>
+            <span class="dl-input"><input type="text" name="delivery_reference" placeholder="Portaria, esquina, cor do portão" /></span>
+          </label>
+
+          <button class="dl-btn dl-btn-primary" type="submit">Calcular entrega</button>
+          <p class="dl-note">Saída da loja: <span class="delivery-origin-note"><span data-premium-store-address-note>Rua General Osório, 2165 - Franca/SP - CEP 14400-520</span></span></p>
+        </form>
+
+        <div class="dl-card dl-result">
+          <div class="dl-card-head">
+            <h2>Sua entrega</h2>
+          </div>
+          <div class="result-card dl-result-body" data-delivery-result>
+            <div class="dl-empty">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+              <strong>Informe o CEP e o número</strong>
+              <span>A taxa, a distância e o tempo aparecem aqui.</span>
             </div>
-          </section>
+          </div>
         </div>
+      </section>
 
-        <div class="container support-grid">
-          <article class="glass-card info-card reveal">
-            <p class="section-tag">Origem fixa</p>
-            <h3>Origem fixa do estabelecimento</h3>
-            <p data-premium-origin-copy>
-              Toda simulação parte de Rua General Osório, 2165, CEP 14400-520,
-              para manter o cálculo alinhado com a operação do delivery.
-            </p>
-          </article>
-
-          <article class="glass-card info-card reveal">
-            <p class="section-tag">Atendimento</p>
-            <h3>Distância e taxa na hora</h3>
-            <p>
-              O cliente entende a distância calculada e o valor da entrega antes
-              de fechar o pedido.
-            </p>
-          </article>
-
-          <article class="glass-card info-card reveal">
-            <p class="section-tag">Últimas consultas</p>
-            <h3>As simulações ficam salvas neste aparelho</h3>
-            <p>
-              Isso ajuda o cliente a comparar CEPs e revisar rapidamente a última
-              estimativa feita.
-            </p>
-          </article>
+      <section class="dl-card dl-ruler-card container" aria-labelledby="dl-ruler-title">
+        <div class="dl-card-head">
+          <h2 id="dl-ruler-title">Taxa por distância</h2>
+          <span class="dl-muted">Medida a partir da loja</span>
         </div>
+        <div class="dl-ruler" data-dl-ruler hidden></div>
+        <details class="dl-bands-list">
+          <summary>Ver todas as faixas</summary>
+          <div class="stack-list" data-premium-delivery-bands>
+            <article>
+              <strong>Taxa conforme a distância</strong>
+              <span>O valor é confirmado pela loja no pedido.</span>
+            </article>
+          </div>
+          <p class="dl-muted" data-premium-delivery-extra>Entregas fora das faixas são combinadas com a loja.</p>
+        </details>
+      </section>
 
-        <div class="container">
-          <section class="glass-card timeline-card reveal">
-            <div class="section-heading compact-heading">
-              <p class="section-tag">Simulações recentes</p>
-              <h2>Consultas de entrega feitas neste aparelho</h2>
-              <p>
-                As últimas simulações aparecem aqui para facilitar a comparação
-                entre destinos.
-              </p>
-            </div>
+      <section class="dl-card dl-policy container" aria-labelledby="dl-policy-title">
+        <h2 id="dl-policy-title">Como funciona a entrega</h2>
+        <ul>
+          <li>Esteja disponível no momento da entrega, com o celular por perto.</li>
+          <li>A entrega é feita na portaria do prédio ou na entrada principal.</li>
+          <li>Em caso de ausência no local, pode ser cobrada uma nova taxa de deslocamento.</li>
+        </ul>
+        <p class="dl-muted" data-premium-origin-copy hidden>Toda simulação parte do endereço da loja.</p>
+      </section>
 
-            <div class="timeline-list" data-delivery-history>
-              <div class="empty-panel">
-                <strong>Nenhuma simulacao feita ainda.</strong>
-                <span>Seu calculo de entrega aparecera aqui depois do primeiro envio.</span>
-              </div>
-            </div>
-          </section>
-        </div>
+      <section class="dl-card dl-history container" aria-labelledby="dl-history-title" data-dl-history-card hidden>
+        <h2 id="dl-history-title">Seus últimos endereços</h2>
+        <div class="timeline-list" data-delivery-history></div>
       </section>
     </main>
 

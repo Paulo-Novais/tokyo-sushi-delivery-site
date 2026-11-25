@@ -2303,22 +2303,26 @@ const lookupCepData = async (cep) => {
   const timeoutId = window.setTimeout(() => controller.abort(), DELIVERY_CEP_LOOKUP_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+    // CEP pelo servidor do restaurante (o navegador não fala com o ViaCEP).
+    const response = await fetch(`/api/customer/delivery/cep?cep=${encodeURIComponent(cep)}`, {
       method: "GET",
       signal: controller.signal,
+      headers: { Accept: "application/json" },
     });
+    const payload = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      throw new Error("Falha ao consultar o CEP.");
+    if (!response.ok || !payload?.address) {
+      throw new Error(payload?.error || "Nao foi possivel consultar esse CEP agora.");
     }
 
-    const payload = await response.json();
-
-    if (payload?.erro) {
-      throw new Error("CEP nao encontrado.");
-    }
-
-    return payload;
+    // Mesmo formato que o resto do site já usa.
+    return {
+      cep: payload.address.cep,
+      logradouro: payload.address.street,
+      bairro: payload.address.neighborhood,
+      localidade: payload.address.city,
+      uf: payload.address.state,
+    };
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("A consulta do CEP demorou demais para responder.");
@@ -2362,6 +2366,10 @@ const syncDeliveryCepLookup = async (form, force = false) => {
 
     fillDeliveryAddressFromCep(form, cepData);
     form.dataset.deliveryCepResolved = cepDigits;
+    const numberField = form.elements?.namedItem("delivery_number");
+    if (numberField && !numberField.value && document.activeElement === cepField && window.matchMedia?.("(min-width: 900px)").matches) {
+      numberField.focus();
+    }
     setDeliveryCepFeedback(
       form,
       cepData.logradouro
@@ -7585,10 +7593,15 @@ const isPublicPickupEnabled = () => getRestaurantSettings().deliveryBase?.pickup
 const isPublicDeliveryEnabled = () => getRestaurantSettings().deliveryBase?.deliveryEnabled !== false;
 const getConfiguredPublicStoreCoordinates = () => {
   const deliveryBase = getRestaurantSettings().deliveryBase || {};
+  const isBlank = (value) => value === null || value === undefined || String(value).trim() === "";
+  if (isBlank(deliveryBase.latitude) || isBlank(deliveryBase.longitude)) {
+    return null;
+  }
   const latitude = Number(deliveryBase.latitude);
   const longitude = Number(deliveryBase.longitude);
 
   if (
+    !(latitude === 0 && longitude === 0) &&
     Number.isFinite(latitude) &&
     Number.isFinite(longitude) &&
     latitude >= -90 &&
@@ -12240,22 +12253,36 @@ const geocodeDeliveryAddress = async (address, fallbackMessage) => {
     origin: getCurrentPageOrigin(),
     address,
   });
-  const { Geocoder } = await google.maps.importLibrary("geocoding");
-  const geocoder = new Geocoder();
-  const response = await withGoogleMapsTimeout(
-    geocoder.geocode({
-      address,
-      region: GOOGLE_MAPS_REGION,
-    }),
-    fallbackMessage
-  );
-  const result = response?.results?.[0];
+  // Localização pelo servidor (a chave do Google fica só no servidor).
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), GOOGLE_MAPS_REQUEST_TIMEOUT_MS);
+  let payload = {};
+  try {
+    const response = await fetch(`/api/customer/delivery/geocode?endereco=${encodeURIComponent(address)}`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw createDeliveryEstimateError(payload?.error || fallbackMessage);
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") throw createDeliveryEstimateError(fallbackMessage);
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+  const location = payload?.location;
+  const result = location
+    ? { formatted_address: location.formattedAddress, partial_match: location.partialMatch, geometry: { location: { lat: location.lat, lng: location.lng } } }
+    : null;
 
   if (!result?.geometry?.location) {
     logDeliveryDebug("geocode-empty-result", {
       origin: getCurrentPageOrigin(),
       address,
-      response,
+      payload,
     });
     throw createDeliveryEstimateError(
       "O Google Maps nao conseguiu localizar esse endereco com precisao suficiente."
@@ -12477,61 +12504,171 @@ const saveDeliveryEstimate = (estimate, profile = loadAuthProfile()) => {
   saveDeliveryHistory(quotes);
 };
 
+const DL_ICON_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const DL_ICON_INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
+
+const formatDeliveryKmShort = (value) => `${String(Number(Number(value || 0).toFixed(1))).replace(".", ",")} km`;
+
+const buildDeliveryResultMapSvg = (estimate) => {
+  const distance = Math.max(0.2, Number(estimate?.distanceKm || 0));
+  const maxRadius = Math.max(distance, getPublicMaxDeliveryRadiusKm() || distance * 1.4);
+  const ratio = Math.min(1, distance / maxRadius);
+  const youX = 150 + ratio * 160;
+  return `
+    <svg class="dl-res-map" viewBox="0 0 360 120" role="img" aria-label="Loja até você: ${escapeHtml(estimate.distanceText || "")}">
+      <path d="M60 60 C ${60 + (youX - 60) * 0.35} 18, ${60 + (youX - 60) * 0.65} 102, ${youX} 60" fill="none" stroke="#e83637" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+      <circle cx="60" cy="60" r="13" fill="#e83637"/><text x="60" y="98" text-anchor="middle" fill="#cbb6bb" font-size="13">Loja</text>
+      <circle cx="${youX}" cy="60" r="13" fill="#34d399"/><text x="${youX}" y="98" text-anchor="middle" fill="#a7f3d0" font-size="13">Você · ${escapeHtml(estimate.distanceText || "")}</text>
+    </svg>`;
+};
+
 const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
   if (!resultNode) {
     return;
   }
 
   const isManual = isManualDeliveryQuote(estimate);
-  const feeLabel = getDeliveryQuoteFeeText(estimate);
-  const summaryLabel = isManual ? "Modo provisorio ativo" : "Estimativa atual";
-  const addressLabel = estimate.geocodedAddress || estimate.destinationLabel || "";
-  const metaLines = isManual
-    ? [
-        "Endereco salvo",
-        addressLabel,
-        estimate.routeBand,
-        estimate.freeShippingApplied ? "Frete gratis aplicado" : `Taxa minima: ${feeLabel}`,
-        estimate.minimumOrderMessage,
-        `Prazo: ${estimate.totalEstimateText || DELIVERY_MANUAL_TIME_TEXT}`,
-      ]
+  const feeLabel = estimate.freeShippingApplied ? "Grátis" : formatPrice(Number(estimate.fee || 0));
+  const addressLabel = estimate.destinationLabel || estimate.geocodedAddress || "";
+  const stats = isManual
+    ? []
     : [
-        "Distancia calculada",
-        estimate.distanceText,
-        estimate.routeBand,
-        estimate.freeShippingApplied ? "Frete gratis aplicado" : "",
-        estimate.minimumOrderMessage,
-        `Preparo: ${estimate.preparationTimeText}`,
-        `Deslocamento: ${estimate.travelTimeText}`,
-        `Prazo total: ${estimate.totalEstimateText}`,
-      ];
-  const visibleMetaLines = metaLines.filter(Boolean);
+        { value: estimate.distanceText, label: "de distância" },
+        { value: estimate.totalEstimateText, label: "prazo" },
+      ].filter((item) => item.value);
+  const pickupLink = isPublicPickupEnabled()
+    ? '<p class="dl-res-alt">Prefere buscar? <a href="./cardapio.html#catalogo">Retire na loja sem taxa</a></p>'
+    : "";
+  const details = !isManual
+    ? `<details class="dl-res-details"><summary>Como chegamos nesse valor</summary><ul>${[
+        estimate.pricingRuleLabel,
+        estimate.preparationTimeText ? `Preparo: ${estimate.preparationTimeText}` : "",
+        estimate.travelTimeText ? `Caminho até você: ${estimate.travelTimeText}` : "",
+        "Em dias de chuva o prazo pode aumentar um pouco.",
+      ]
+        .filter(Boolean)
+        .map((line) => `<li>${escapeHtml(line)}</li>`)
+        .join("")}</ul></details>`
+    : "";
 
   resultNode.innerHTML = `
-    <div class="delivery-summary">
-      <div class="delivery-top">
+    <div class="dl-res" data-dl-result-state="${isManual ? "manual" : "ok"}">
+      <div class="dl-res-fee">
         <div>
-          <span class="section-tag">${summaryLabel}</span>
-          <strong>${feeLabel}</strong>
+          <small>${isManual ? "Taxa a partir de" : "Taxa de entrega"}</small>
+          <strong>${escapeHtml(feeLabel)}</strong>
         </div>
-        <span class="catalog-badge">${escapeHtml(estimate.routeBand)}</span>
+        ${stats.length ? `<div class="dl-res-stats">${stats.map((item) => `<span>${escapeHtml(item.value)}<small>${escapeHtml(item.label)}</small></span>`).join("")}</div>` : ""}
       </div>
-
-      <p>${escapeHtml(
+      ${
         isManual
-          ? "Seu endereco foi salvo mesmo sem o Google Maps. O atendimento confirma taxa final e prazo no WhatsApp."
-          : `Endereco confirmado: ${addressLabel}.`
-      )}</p>
-
-      <div class="delivery-meta">
-        ${visibleMetaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
-      </div>
-
-      <ul class="delivery-route">
-        ${estimate.routeSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
-      </ul>
+          ? `<div class="dl-res-warn">${DL_ICON_INFO}<span>Endereço salvo. A loja confirma a taxa final e o prazo quando receber o seu pedido.</span></div>`
+          : `<div class="dl-res-ok">${DL_ICON_OK}<span>Entregamos no seu endereço${addressLabel ? `: ${escapeHtml(addressLabel)}` : ""}.</span></div>`
+      }
+      ${estimate.minimumOrderMessage ? `<div class="dl-res-warn">${DL_ICON_INFO}<span>${escapeHtml(estimate.minimumOrderMessage)}</span></div>` : ""}
+      ${isManual ? "" : buildDeliveryResultMapSvg(estimate)}
+      <a class="dl-btn dl-btn-primary" href="./cardapio.html#catalogo">Ver cardápio e pedir</a>
+      ${pickupLink}
+      ${details}
     </div>
   `;
+  renderDeliveryPageExtras(estimate);
+};
+
+const renderDeliveryErrorCard = (resultNode, message, reason = "") => {
+  if (!resultNode) {
+    return;
+  }
+  const isOutOfArea = /radius|neighborhood|area|distance/i.test(String(reason || ""));
+  const title = reason === "paused" ? "Entrega pausada agora" : isOutOfArea ? "Ainda não entregamos aí" : "Confira o endereço";
+  const pickup = isPublicPickupEnabled() && (isOutOfArea || reason === "paused")
+    ? '<a class="dl-btn dl-btn-ghost" href="./cardapio.html#catalogo">Pedir para retirar na loja</a>'
+    : "";
+  resultNode.innerHTML = `
+    <div class="dl-res" data-dl-result-state="error">
+      <div class="dl-res-error"><strong>${escapeHtml(title)}</strong><br />${escapeHtml(message)}</div>
+      ${pickup}
+    </div>
+  `;
+  setDeliveryStepsState(document.querySelector("[data-delivery-form]"));
+};
+
+const setDeliveryStepsState = (form) => {
+  const steps = document.querySelector("[data-dl-steps]");
+  if (!steps || !form) {
+    return;
+  }
+  const cepOk = normalizeCep(form.elements?.namedItem("delivery_cep")?.value || "").length === 8;
+  const numberOk = Boolean(String(form.elements?.namedItem("delivery_number")?.value || "").replace(/\D/g, ""));
+  const done = Boolean(document.querySelector('[data-dl-result-state="ok"], [data-dl-result-state="manual"]'));
+  const state = { cep: cepOk, numero: cepOk && numberOk, pronto: done };
+  const current = !state.cep ? "cep" : !state.numero ? "numero" : state.pronto ? "" : "pronto";
+  steps.querySelectorAll("[data-dl-step]").forEach((item) => {
+    const key = item.getAttribute("data-dl-step");
+    item.classList.toggle("is-done", Boolean(state[key]));
+    item.classList.toggle("is-current", key === current);
+  });
+};
+
+const renderDeliveryPageExtras = (estimate = null) => {
+  if (!document.querySelector(".dl-page")) {
+    return;
+  }
+
+  const settings = getRestaurantSettings();
+  const heroImage = document.querySelector("[data-dl-hero-image]");
+  const bannerUrl = String(settings?.bannerUrl || "").trim();
+  if (heroImage && bannerUrl && heroImage.getAttribute("src") !== bannerUrl) {
+    heroImage.setAttribute("src", bannerUrl);
+  }
+
+  const timeChip = document.querySelector("[data-dl-chip-time]");
+  if (timeChip) {
+    timeChip.textContent = getDeliveryTimeText();
+  }
+  const radiusKm = getPublicMaxDeliveryRadiusKm();
+  const radiusChip = document.querySelector("[data-dl-chip-radius]");
+  if (radiusChip) {
+    radiusChip.hidden = !(radiusKm > 0);
+    const label = radiusChip.querySelector("span");
+    if (label) label.textContent = `Entregamos até ${formatDeliveryKmShort(radiusKm)}`;
+  }
+  const pickupChip = document.querySelector("[data-dl-chip-pickup]");
+  if (pickupChip) {
+    pickupChip.hidden = !isPublicPickupEnabled();
+  }
+
+  const ruler = document.querySelector("[data-dl-ruler]");
+  if (ruler) {
+    const bands = getActiveDeliveryBands().slice(0, 6);
+    const quote = estimate || getLatestSavedDeliveryQuote(loadAuthProfile());
+    const youKm = quote && !isManualDeliveryQuote(quote) && Number.isFinite(Number(quote.distanceKm)) ? Number(quote.distanceKm) : null;
+    if (!bands.length) {
+      ruler.hidden = true;
+      ruler.innerHTML = "";
+    } else {
+      const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
+      const lastBand = bands[bands.length - 1];
+      const top = hasMax(lastBand) ? Number(lastBand.maxKm) : Math.max(radiusKm, Number(lastBand.minKm || 0) + 3);
+      const widths = bands.map((band) => Math.max(1, (hasMax(band) ? Number(band.maxKm) : top) - Number(band.minKm || 0)));
+      const youIndex = youKm === null ? -1 : bands.findIndex((band) => youKm >= Number(band.minKm || 0) && (!hasMax(band) || youKm <= Number(band.maxKm)));
+      const pinPercent = youKm === null || top <= 0 ? null : Math.min(94, Math.max(6, (youKm / top) * 100));
+      ruler.innerHTML = `
+        ${pinPercent === null ? "" : `<div class="dl-ruler-pin" style="left:${pinPercent.toFixed(1)}%;transform:translateX(${pinPercent < 20 ? -12 : pinPercent > 80 ? -88 : -50}%)"><b>Você · ${escapeHtml(formatDeliveryKmShort(youKm))}</b><i></i></div>`}
+        <div class="dl-ruler-track">${widths.map((width, index) => `<div class="dl-ruler-seg${index === youIndex ? " is-you" : ""}" style="flex:${width} 1 0"></div>`).join("")}</div>
+        <div class="dl-ruler-labels">${bands
+          .map((band, index) => `<div class="${index === youIndex ? "is-you" : ""}" style="flex:${widths[index]} 1 0"><span>${escapeHtml(getDeliveryBandLabel(band))}</span><b>${escapeHtml(Number(band.customerFee ?? band.fee ?? 0) > 0 ? formatPrice(Number(band.customerFee ?? band.fee)) : "Grátis")}</b></div>`)
+          .join("")}</div>`;
+      ruler.hidden = false;
+    }
+  }
+
+  const historyCard = document.querySelector("[data-dl-history-card]");
+  if (historyCard) {
+    historyCard.hidden = getDeliveryHistoryForProfile(loadAuthProfile()).length === 0;
+  }
+
+  setDeliveryStepsState(document.querySelector("[data-delivery-form]"));
 };
 
 const calculateDeliveryEstimate = async ({
@@ -12586,19 +12723,6 @@ const calculateDeliveryEstimate = async ({
   });
 
   try {
-    await loadGoogleMapsApi();
-  } catch (error) {
-    console.error("[delivery] maps-init-error", error);
-    throw createDeliveryEstimateError(
-      normalizeGoogleMapsErrorMessage(
-        error,
-        "Nao foi possivel inicializar o Google Maps para calcular a distancia."
-      ),
-      ""
-    );
-  }
-
-  try {
     const customerGeocode = await geocodeDeliveryAddress(
       destinationAddress,
       "O Google Maps demorou demais para localizar o endereco do cliente."
@@ -12636,6 +12760,9 @@ const calculateDeliveryEstimate = async ({
       partialMatch: customerGeocode.partialMatch,
     });
   } catch (error) {
+    if (error?.preventManualFallback) {
+      throw error;
+    }
     console.error("[delivery] distance-calc-error", {
       origin: getCurrentPageOrigin(),
       destinationAddress,
@@ -12672,6 +12799,7 @@ const renderDeliveryHistory = () => {
         }</span>
       </div>
     `;
+    renderDeliveryPageExtras();
     schedulePortugueseUiRefresh();
     return;
   }
@@ -12697,6 +12825,7 @@ const renderDeliveryHistory = () => {
     )
     .join("");
 
+  renderDeliveryPageExtras();
   schedulePortugueseUiRefresh();
 };
 
@@ -12728,8 +12857,7 @@ const submitDeliveryForm = async (form) => {
     setResultCardState(resultNode, "error");
 
     if (resultNode) {
-      resultNode.innerHTML =
-        "<p>Informe rua, CEP valido e numero da casa para calcular a distancia da entrega.</p>";
+      renderDeliveryErrorCard(resultNode, "Informe o CEP, a rua e o número da casa para calcular.");
     }
 
     schedulePortugueseUiRefresh();
@@ -12738,13 +12866,13 @@ const submitDeliveryForm = async (form) => {
 
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = "Calculando rota...";
+    submitButton.textContent = "Calculando...";
   }
 
   if (resultNode) {
     setResultCardState(resultNode, "");
     resultNode.innerHTML =
-      "<p>Calculando a entrega automaticamente. Se o Google Maps nao responder, o site salva seu endereco em modo provisorio.</p>";
+      '<div class="dl-empty"><strong>Calculando a sua entrega...</strong><span>Leva só alguns segundos.</span></div>';
   }
 
   schedulePortugueseUiRefresh();
@@ -12773,9 +12901,11 @@ const submitDeliveryForm = async (form) => {
       setResultCardState(resultNode, "error");
 
       if (resultNode) {
-        resultNode.innerHTML = `<p>${escapeHtml(
-          error.userMessage || error.message || "Entrega indisponivel para este endereco."
-        )}</p>`;
+        renderDeliveryErrorCard(
+          resultNode,
+          error.userMessage || error.message || "Entrega indisponível para este endereço.",
+          error.deliveryReason || ""
+        );
       }
 
       schedulePortugueseUiRefresh();
@@ -12818,6 +12948,7 @@ const submitDeliveryForm = async (form) => {
       submitButton.disabled = false;
       submitButton.textContent = "Calcular entrega";
     }
+    setDeliveryStepsState(form);
   }
 };
 
@@ -13646,6 +13777,10 @@ const handleDocumentFocusOut = (event) => {
     });
     renderCart();
     return;
+  }
+
+  if (event.target.name === "delivery_number" || event.target.name === "delivery_cep") {
+    setDeliveryStepsState(event.target.closest("[data-delivery-form]"));
   }
 
   if (event.target.name !== "delivery_cep") {
