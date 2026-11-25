@@ -90,7 +90,9 @@ test("navegador: criar conta no login central, voltar ao restaurante e fazer ped
   // Pedido com cliente logado.
   await page.locator("[data-add-to-cart]").first().click();
   await page.locator("[data-cart-toggle]").first().click();
-  await page.locator("[data-cart-checkout-toggle]").click();
+  // No computador o fechamento do pedido já fica aberto ao lado dos itens.
+  const checkoutToggle = page.locator("[data-cart-checkout-toggle]");
+  if (await checkoutToggle.isVisible()) await checkoutToggle.click();
   await page.locator("label").filter({ has: page.locator('input[name=cart_payment_method][value=pix]') }).first().click();
   await page.locator("label").filter({ has: page.locator('input[name=cart_fulfillment_mode][value=pickup]') }).first().click();
   await page.locator("[data-cart-submit]").click();
