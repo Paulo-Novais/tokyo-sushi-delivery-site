@@ -69,13 +69,11 @@ test("navegador: criar conta no login central, voltar ao restaurante e fazer ped
   test.setTimeout(120_000);
   const email = `nav-${restaurantA.key}@cliente.test`;
   await page.goto(`/${restaurantA.key}/cardapio`, { waitUntil: "networkidle" });
+  // "Entrar" leva direto para a tela de login (sem janela intermediária).
   await page.locator("[data-auth-open]").first().click();
-  const signup = page.locator('[data-conta-criar][href^="http"]');
-  await expect(signup).toBeVisible();
-  await signup.click();
-
-  // Login central (outra origem).
   await expect(page).toHaveURL(new RegExp(`^${customerAuthOrigin}/conta/entrar`));
+  await expect(page.locator("[data-conta-title]")).toHaveText("Que bom te ver!");
+  await page.locator('[data-conta-tab="criar"]').click();
   await expect(page.locator("[data-conta-title]")).toHaveText("Crie sua conta");
   const form = page.locator('[data-conta-form="criar"]');
   await form.locator('input[name="name"]').fill("Mariana Navegador");
@@ -119,7 +117,7 @@ test("navegador: entrar com Google pede o telefone uma vez e volta ao restaurant
   });
   await page.goto(`/${restaurantA.key}/cardapio`, { waitUntil: "networkidle" });
   await page.locator("[data-auth-open]").first().click();
-  await page.locator('[data-conta-entrar][href^="http"]').click();
+  await expect(page).toHaveURL(new RegExp(`^${customerAuthOrigin}/conta/entrar`));
   await page.locator("[data-conta-google]").click();
 
   // Primeiro acesso pelo Google: pede o telefone.
