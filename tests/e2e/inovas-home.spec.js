@@ -67,22 +67,22 @@ test("Home: Recursos mostra o módulo escolhido", async ({ page }) => {
 test("Home: Economia calcula plano, domínio e comissão do app", async ({ page }) => {
   await page.goto("/inovas#economia");
   const price = page.locator("[data-builder-price]");
-  await expect(price).toHaveText("R$ 49,90");
-  await expect(page.locator("[data-builder-year]")).toContainText("R$ 598,80 por ano");
+  await expect(price).toHaveText("R$ 99,90");
+  await expect(page.locator("[data-builder-year]")).toContainText("R$ 1.199 por ano");
 
-  // Valores padrão: R$ 20.000, 30%, Plano Básico do app (15,2%), plano Essencial (R$ 49,90).
+  // Valores padrão: R$ 20.000, 30%, Plano Básico do app (15,2%), plano Essencial (R$ 99,90).
   await expect(page.locator("[data-calc-fee]")).toHaveText("R$ 912/mês");
-  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 862,10");
-  await expect(page.locator("[data-calc-year]")).toHaveText("R$ 10.345");
-  await expect(page.locator("[data-calc-break]")).toContainText("R$ 328,29 por mês");
+  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 812,10");
+  await expect(page.locator("[data-calc-year]")).toHaveText("R$ 9.745");
+  await expect(page.locator("[data-calc-break]")).toContainText("R$ 657,24 por mês");
 
-  // Profissional + domínio próprio = R$ 189,90.
+  // Profissional + domínio próprio = R$ 228,90.
   await page.locator('.if-plan-pick label:has(input[value="profissional"])').click();
   await page.locator(".if-toggle").click();
-  await expect(price).toHaveText("R$ 189,90");
+  await expect(price).toHaveText("R$ 228,90");
   await expect(page.locator("[data-builder-desc]")).toHaveText("Plano Profissional · domínio próprio incluso");
-  await expect(page.locator("[data-calc-inovas]")).toHaveText("R$ 189,90/mês");
-  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 722,10");
+  await expect(page.locator("[data-calc-inovas]")).toHaveText("R$ 228,90/mês");
+  await expect(page.locator("[data-calc-month]")).toHaveText("R$ 683,10");
 
   // Plano Entrega do app (26,2%) sobre R$ 6.000 = R$ 1.572.
   await page.locator('.if-calc-plan label:has(input[value="0.262"])').click();
@@ -93,9 +93,9 @@ test("Home: Economia calcula plano, domínio e comissão do app", async ({ page 
   await page.locator("[data-calc-share]").fill("5");
   await expect(page.locator("[data-calc-month]")).toHaveText("R$ 0");
 
-  // "trocar" avança o plano: Profissional -> Completo; domínio próprio é à parte (+ R$ 40).
+  // "trocar" avança o plano: Profissional -> Completo; domínio próprio é à parte (+ R$ 49).
   await page.locator("[data-calc-swap]").click();
-  await expect(price).toHaveText("R$ 259,90");
+  await expect(price).toHaveText("R$ 348,90");
   await expect(page.locator("[data-builder-desc]")).toHaveText("Plano Completo · domínio próprio incluso");
 });
 
