@@ -14190,3 +14190,10 @@ body.master-body {
     width: 100%;
   }
 }
+
+/* Recurso fora do plano: item com cadeado no menu e tela "mude de plano". */
+.admin-nav-item.is-plan-locked { opacity: 0.72; }
+.admin-nav-badge.is-plan-locked { background: rgba(255, 106, 0, 0.12); color: #c2410c; font-weight: 700; white-space: nowrap; }
+.admin-plan-locked { display: grid; justify-items: center; gap: 10px; max-width: 520px; margin: 40px auto; text-align: center; }
+.admin-plan-locked-icon { font-size: 2rem; line-height: 1; }
+.admin-plan-locked .admin-button { margin-top: 6px; text-decoration: none; }

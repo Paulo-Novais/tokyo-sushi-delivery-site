@@ -154,16 +154,16 @@
   const ONBOARDING_PLAN_ORDER = ["START", "BUSINESS", "PRO"];
   const ONBOARDING_PLAN_COPY = Object.freeze({
     START: {
-      label: "START",
-      description: "Operacao inicial com cardapio online, pedidos e WhatsApp.",
+      label: "Essencial · R$ 99,90",
+      description: "Cardapio digital, gestor de pedidos, calculo de entrega, pagamento online, pedidos agendados e repasse semanal.",
     },
     BUSINESS: {
-      label: "BUSINESS",
-      description: "Rotina comercial com delivery, CRM, promocoes e relatorios.",
+      label: "Profissional · R$ 179,90",
+      description: "Tudo do Essencial + estoque, financeiro, relatorios e nota fiscal (NFC-e).",
     },
     PRO: {
-      label: "PRO",
-      description: "Operacao completa com estoque, financeiro, dominio proprio e recursos avancados.",
+      label: "Completo · R$ 299,90",
+      description: "Tudo do Profissional + caixa, comandas e mesas, app do garcom, clientes e campanhas e previsao.",
     },
   });
   const ONBOARDING_RESOURCE_OPTIONS = Object.freeze([
@@ -2247,7 +2247,7 @@
         <header class="master-panel-head">
           <div>
             <h2>Gestao dos Planos</h2>
-            <p>Planos oficiais V1.3: Essencial, Profissional e Enterprise. Pagamento real nao integrado.</p>
+            <p>Planos oficiais V1.3: Essencial, Profissional e Completo. Pagamento real nao integrado.</p>
           </div>
           ${renderActionButton("Novo plano", "plan-create")}
         </header>

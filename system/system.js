@@ -100,7 +100,7 @@
   });
 
   const PLAN_LABELS = Object.freeze({
-    PREMIUM: "Completo",
+    PREMIUM: "Completo (legado)",
     TRIAL: "Avaliação",
     FREE: "Grátis",
     BASIC: "Essencial",
@@ -491,9 +491,10 @@
     ["BUSINESS", "Profissional", 179.9, "estoque, financeiro, nota fiscal"],
     ["PRO", "Completo", 299.9, "salão, caixa, clientes, previsão"],
   ];
-  const WIZ_ADDON_PLANS = ["BUSINESS", "PRO"];
+  const WIZ_ADDON_PLANS = ["BUSINESS", "PRO", "PREMIUM"];
   // Nota fiscal inclusa no Profissional e no Completo (tabela de 25/11/2026).
   const WIZ_NFCE_PRICE = 0;
+  const WIZ_DOMAIN_PRICE = 49;
   const WIZ_CATEGORIES = [
     ["DELIVERY", "Delivery", "até 50/dia", "Só entrega e retirada (dark kitchen, lanchonete).", "Conta compartilhada INOVAS"],
     ["RESTAURANT", "Restaurante", "50 a 120/dia", "Salão + delivery + retirada. Caixa, mesas e app do garçom.", "Conta compartilhada INOVAS"],
@@ -666,7 +667,9 @@
       form.querySelector("[data-wiz-addon]")?.classList.toggle("is-disabled", !addonAllowed);
     }
     const nfce = Boolean(addonInput?.checked);
-    const monthly = planPrice + (nfce ? WIZ_NFCE_PRICE : 0);
+    // Domínio próprio informado: + R$ 49/mês (cobrado junto com a mensalidade).
+    const domainFee = plan !== "FREE" && String(get("customDomain")?.value || "").trim() ? WIZ_DOMAIN_PRICE : 0;
+    const monthly = Math.round((planPrice + (nfce ? WIZ_NFCE_PRICE : 0) + domainFee) * 100) / 100;
     const cycle = get("billingCycle")?.value || "MONTHLY";
     const cycleEntry = WIZ_CYCLES.find((entry) => entry[0] === cycle) || WIZ_CYCLES[0];
     const charge = wizCycleCharge(monthly, cycle);
@@ -1153,7 +1156,7 @@
           return `<tr data-billing-row="${escapeHtml(row.restaurantKey)}">
             <td data-label="Restaurante"><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.restaurantKey)}${row.onlinePayment ? " · pagamento online" : ""}</small></td>
             <td data-label="Plano">${escapeHtml(translatePlan(row.plan))}</td>
-            <td data-label="Mensalidade">${escapeHtml(brl(row.monthlyValueCents))}</td>
+            <td data-label="Mensalidade">${escapeHtml(brl(row.monthlyValueCents))}${(row.addons || []).length ? `<br><small class="sys-hint">${escapeHtml((row.addons || []).map((addon) => `${addon.label} ${brl(addon.monthlyValueCents)}`).join(" · "))}</small>` : ""}</td>
             <td data-label="Ciclo de cobrança">${
               canPlan
                 ? `<select class="sys-select" data-billing-cycle="${escapeHtml(row.restaurantKey)}" aria-label="Ciclo de cobrança de ${escapeHtml(row.name)}">${cycleOption(row, "MONTHLY", "Mensal")}${cycleOption(row, "QUARTERLY", "Trimestral")}${cycleOption(row, "SEMIANNUAL", "Semestral")}${cycleOption(row, "ANNUAL", "Anual")}</select>`

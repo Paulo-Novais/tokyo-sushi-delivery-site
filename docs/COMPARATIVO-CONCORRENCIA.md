@@ -53,7 +53,7 @@ um número em material de venda, confira no site oficial.
 
 ## 2. INOVAS hoje
 
-Preço: **Grátis (50 pedidos/mês) · Essencial R$ 49,90 · Profissional R$ 149,90 · Completo R$ 219,90**.
+Preço (25/11/2026): **Essencial R$ 99,90 · Profissional R$ 179,90 · Completo R$ 299,90** (domínio próprio + R$ 49/mês).
 Sem comissão por pedido. Pix online **0%** de taxa INOVAS; cartão e VR/VA online **1,5%**.
 
 **Já tem (no ar):** site delivery próprio com o nome do restaurante, domínio
@@ -72,8 +72,8 @@ VR/VA) com repasse semanal e extrato — falta a Stone; integração iFood,
 
 | Recurso | INOVAS | Consumer/MenuDino | Saipos | iFood |
 |---|---|---|---|---|
-| Menor preço pago | **R$ 49,90** | R$ 59,90 (anual) | R$ 240,79 | 12% + 3,2% por pedido |
-| Plano grátis | **50 pedidos** | 30 pedidos | não | — |
+| Menor preço pago | **R$ 99,90** | R$ 59,90 (anual) | R$ 240,79 | 12% + 3,2% por pedido |
+| Plano grátis | não (Grátis legado: 50 pedidos) | 30 pedidos | não | — |
 | Comissão por pedido | **não** | não | não | **12% a 23%** |
 | Site/domínio próprio | sim | sim | sim | não |
 | Pagamento online | pronto (falta Stone) · Pix 0% | sim (taxa ?) | ? | sim (3,2%) |

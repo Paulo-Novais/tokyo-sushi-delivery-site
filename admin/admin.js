@@ -158,10 +158,22 @@ const SECTION_FEATURE_MAP = Object.freeze({
   promotions: "promotions",
   metrics: "advancedReports",
   reports: "advancedReports",
-  forecast: "advancedReports",
+  forecast: "forecast",
   inventory: "inventory",
   finance: "finance",
   reviews: "reviews",
+  "cash-register": "salon",
+});
+// Plano mínimo de cada recurso (tabela de 25/11/2026), para a tela "mude de plano".
+const FEATURE_MIN_PLAN = Object.freeze({
+  advancedReports: { name: "Profissional", price: "R$ 179,90" },
+  inventory: { name: "Profissional", price: "R$ 179,90" },
+  finance: { name: "Profissional", price: "R$ 179,90" },
+  crm: { name: "Completo", price: "R$ 299,90" },
+  promotions: { name: "Completo", price: "R$ 299,90" },
+  reviews: { name: "Completo", price: "R$ 299,90" },
+  salon: { name: "Completo", price: "R$ 299,90" },
+  forecast: { name: "Completo", price: "R$ 299,90" },
 });
 const SYSTEM_GLOBAL_FILTERS = Object.freeze({
   orders: Object.freeze([
@@ -1141,10 +1153,15 @@ const hasMenuVisibilityPermission = (sectionKey) => {
   return hasAdminPermission(SECTION_MENU_VISIBILITY_MAP[sectionKey] || "");
 };
 
-const canAccessAdminSection = (sectionKey) =>
+// Pode ver no menu (perfil do usuário). Se o plano não inclui, aparece com cadeado.
+const canSeeAdminSection = (sectionKey) =>
   hasMenuVisibilityPermission(sectionKey) &&
-  hasAdminPermission(SECTION_PERMISSION_MAP[sectionKey] || "") &&
-  hasPlanFeatureForSection(sectionKey);
+  hasAdminPermission(SECTION_PERMISSION_MAP[sectionKey] || "");
+
+const canAccessAdminSection = (sectionKey) =>
+  canSeeAdminSection(sectionKey) && hasPlanFeatureForSection(sectionKey);
+
+const isPlanLockedSection = (sectionKey) => canSeeAdminSection(sectionKey) && !hasPlanFeatureForSection(sectionKey);
 
 const getNavigationSectionsForActor = () =>
   isSystemAdminActor() ? SYSTEM_NAV_SECTIONS : RESTAURANT_NAV_SECTIONS;
@@ -1155,7 +1172,7 @@ const getNavigationSectionByKey = (sectionKey) =>
   null;
 
 const getVisibleNavSections = () =>
-  getNavigationSectionsForActor().filter((section) => canAccessAdminSection(section.key));
+  getNavigationSectionsForActor().filter((section) => canSeeAdminSection(section.key));
 
 // Caixa e Pedidos ficam só no app INOVAS PDV: no site, o menu lateral do
 // restaurante não mostra esses itens. As telas continuam existindo (o app abre
@@ -1171,13 +1188,13 @@ const getSidebarNavSections = () =>
 const ensureActiveSectionAllowed = () => {
   if (
     getVisibleNavSections().some((section) => section.key === adminState.activeSection) &&
-    canAccessAdminSection(adminState.activeSection)
+    canSeeAdminSection(adminState.activeSection)
   ) {
     return;
   }
 
   adminState.activeSection =
-    getVisibleNavSections().find((section) => IMPLEMENTED_SECTIONS.has(section.key))?.key ||
+    getVisibleNavSections().find((section) => IMPLEMENTED_SECTIONS.has(section.key) && hasPlanFeatureForSection(section.key))?.key ||
     (isSystemAdminActor() ? "users" : "orders");
 };
 
@@ -4267,7 +4284,8 @@ const renderSidebarNav = () => {
       return "Em breve";
     })();
 
-    const cashRegisterSubmenu = section.key === "cash-register" && isActive && !isHiddenInSidebar
+    const isLocked = isPlanLockedSection(section.key);
+    const cashRegisterSubmenu = section.key === "cash-register" && isActive && !isHiddenInSidebar && !isLocked
       ? `
         <div class="admin-nav-submenu" aria-label="Opções do caixa">
           <button type="button" data-cash-register-subview="floor">Salão</button>
@@ -4279,7 +4297,7 @@ const renderSidebarNav = () => {
 
     return `
       <button
-        class="admin-nav-item${isActive ? " is-active" : ""}${!isImplemented ? " is-disabled" : ""}"
+        class="admin-nav-item${isActive ? " is-active" : ""}${!isImplemented ? " is-disabled" : ""}${isLocked ? " is-plan-locked" : ""}"
         type="button"
         data-admin-section="${escapeHtml(section.key)}"
         ${isActive ? 'aria-current="page"' : ""}
@@ -4291,7 +4309,9 @@ const renderSidebarNav = () => {
           <small>${escapeHtml(section.helper)}</small>
         </div>
         ${
-          (section.key === "inventory" && String(badgeValue) !== "0") || section.key === "settings"
+          isLocked
+            ? `<span class="admin-nav-badge is-plan-locked" title="Disponível no plano ${escapeHtml(FEATURE_MIN_PLAN[SECTION_FEATURE_MAP[section.key]]?.name || "superior")}">🔒 ${escapeHtml(FEATURE_MIN_PLAN[SECTION_FEATURE_MAP[section.key]]?.name || "Plano")}</span>`
+            : (section.key === "inventory" && String(badgeValue) !== "0") || section.key === "settings"
             ? `<span class="admin-nav-badge${section.key === "inventory" ? " is-alert" : ""}">${escapeHtml(badgeValue)}</span>`
             : ""
         }
@@ -13123,19 +13143,25 @@ const renderPlanBlockedModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
   const section = getNavigationSectionByKey(adminState.activeSection);
   const featureKey = SECTION_FEATURE_MAP[adminState.activeSection] || "";
+  const minPlan = FEATURE_MIN_PLAN[featureKey] || null;
+  const currentPlan = adminState.commercialAccess?.planName || adminState.commercialAccess?.planKey || "";
+  const featureLabel = adminState.commercialAccess?.features?.[featureKey]?.label || section?.label || "Este módulo";
 
   if (!moduleRoot) {
     return;
   }
 
   moduleRoot.innerHTML = `
-    <div class="admin-empty-state" data-admin-plan-blocked>
-      <strong>Este modulo não esta disponível no plano atual.</strong>
+    <div class="admin-empty-state admin-plan-locked" data-admin-plan-blocked>
+      <span class="admin-plan-locked-icon" aria-hidden="true">🔒</span>
+      <strong>${escapeHtml(section?.label || "Módulo")} faz parte do plano ${escapeHtml(minPlan?.name || "superior")}</strong>
       <span>${escapeHtml(
-        featureKey
-          ? `${section?.label || "Modulo"} depende do recurso comercial ${featureKey}.`
-          : `${section?.label || "Modulo"} não esta liberado no contrato atual.`
+        minPlan
+          ? `${featureLabel} está incluso no plano ${minPlan.name} (${minPlan.price}/mês)${currentPlan ? `. Seu plano hoje: ${currentPlan}` : ""}.`
+          : `${featureLabel} não está liberado no contrato atual.`
       )}</span>
+      <span>Para liberar, fale com a equipe INOVAS: a mudança de plano é feita na hora, sem perder nenhum dado.</span>
+      <a class="admin-button admin-button-primary" href="https://inovasfood.com.br/#planos" target="_blank" rel="noopener">Ver planos</a>
     </div>
   `;
 };
@@ -17609,6 +17635,13 @@ const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
     return;
   }
 
+  // Fora do plano: mostra a tela "mude de plano" sem buscar dados.
+  if (!hasPlanFeatureForSection(adminState.activeSection)) {
+    renderSectionChrome();
+    renderModuleContent();
+    return;
+  }
+
   if (adminState.activeSection === "cash-register") {
     await window.InovasCashRegister?.load({ force: true });
     return;
@@ -18447,7 +18480,7 @@ const initDashboardPage = () => {
         ? "cash-register"
         : String(navButton.dataset.adminSection || "").trim();
 
-      if (!nextSection || !IMPLEMENTED_SECTIONS.has(nextSection) || !canAccessAdminSection(nextSection)) {
+      if (!nextSection || !IMPLEMENTED_SECTIONS.has(nextSection) || !canSeeAdminSection(nextSection)) {
         return;
       }
 
