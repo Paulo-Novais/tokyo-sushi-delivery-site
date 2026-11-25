@@ -211,21 +211,21 @@ test("Cadastro novo: CNPJ preenche a empresa, categoria pelo volume, nota fiscal
   await expect(form.locator('input[name="category"][value="SUPER"]')).toBeChecked();
   await form.getByLabel("Salão (mesas e garçom)").check();
 
-  // Plano Profissional + nota fiscal: R$ 149,90 + R$ 49,90.
+  // Plano Profissional (R$ 179,90): nota fiscal inclusa, sem custo extra.
   const addon = form.locator('input[name="addons"][value="nfce"]');
   await addon.check();
-  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 199,80/mês");
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 179,90/mês");
   await expect(form.locator("[data-wiz-nfce-provider]")).toHaveText("Brasil NFe (ilimitada)");
   // Essencial não tem nota fiscal; domínio próprio é adicional em qualquer plano pago.
   await form.locator('input[name="plan"][value="START"]').check();
   await expect(addon).toBeDisabled();
   await expect(form.getByLabel("Domínio próprio (opcional)")).toBeEnabled();
-  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 49,90/mês");
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 99,90/mês");
   await form.locator('input[name="plan"][value="BUSINESS"]').check();
   await addon.check();
-  // Trimestral: R$ 5 a menos por mês.
+  // Trimestral: R$ 15 de desconto no ciclo.
   await form.getByLabel("Ciclo de cobrança").selectOption("QUARTERLY");
-  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 584,40 a cada 3 meses");
+  await expect(form.locator("[data-wiz-total]")).toHaveText("R$ 524,70 a cada 3 meses");
 
   // Senha gerada pelo sistema.
   await form.getByRole("button", { name: "Gerar" }).click();
@@ -258,7 +258,7 @@ test("Cadastro novo: CNPJ preenche a empresa, categoria pelo volume, nota fiscal
   const contracts = billing.data?.contracts || billing.contracts || billing.data?.restaurants || billing.restaurants || [];
   const contract = contracts.find((entry) => entry.restaurantKey === slug);
   expect(contract, JSON.stringify(Object.keys(billing.data || billing))).toBeTruthy();
-  expect(contract.monthlyValueCents).toBe(19980);
+  expect(contract.monthlyValueCents).toBe(17990);
   expect(contract.billingCycle).toBe("QUARTERLY");
   expect(pageErrors).toEqual([]);
 });

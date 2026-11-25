@@ -446,7 +446,7 @@
       }),
       actionButton(restaurant.customDomain ? "Gerenciar domínio próprio" : "Vincular domínio próprio", `data-restaurant-action="domain" data-key="${key}"`, {
         permission: "system.domains.manage",
-        help: "Opcional · + R$ 40/mês.",
+        help: "Opcional · + R$ 49/mês.",
       }),
       actionButton(suspended ? "Reativar acesso" : "Suspender acesso", `data-restaurant-action="status" data-key="${key}"`, {
         tone: suspended ? "primary" : "danger",
@@ -487,13 +487,13 @@
 
   // ---------- Cadastro novo de restaurante (8 etapas numa tela só) ----------
   const WIZ_PLANS = [
-    ["FREE", "Grátis", 0, "até 50 pedidos/mês"],
-    ["START", "Essencial", 49.9, "site + pedidos"],
-    ["BUSINESS", "Profissional", 149.9, "salão, estoque, financeiro"],
-    ["PRO", "Completo", 219.9, "tudo + usuários ilimitados"],
+    ["START", "Essencial", 99.9, "pedidos online"],
+    ["BUSINESS", "Profissional", 179.9, "estoque, financeiro, nota fiscal"],
+    ["PRO", "Completo", 299.9, "salão, caixa, clientes, previsão"],
   ];
   const WIZ_ADDON_PLANS = ["BUSINESS", "PRO"];
-  const WIZ_NFCE_PRICE = 49.9;
+  // Nota fiscal inclusa no Profissional e no Completo (tabela de 25/11/2026).
+  const WIZ_NFCE_PRICE = 0;
   const WIZ_CATEGORIES = [
     ["DELIVERY", "Delivery", "até 50/dia", "Só entrega e retirada (dark kitchen, lanchonete).", "Conta compartilhada INOVAS"],
     ["RESTAURANT", "Restaurante", "50 a 120/dia", "Salão + delivery + retirada. Caixa, mesas e app do garçom.", "Conta compartilhada INOVAS"],
@@ -604,13 +604,13 @@
               </div>
               <label class="sys-wiz-addon" data-wiz-addon="nfce">
                 <span><input type="checkbox" name="addons" value="nfce" /><span><strong>Nota fiscal automática (NFC-e)</strong><small data-wiz-addon-note>Profissional e Completo · notas ilimitadas para o restaurante</small></span></span>
-                <strong>+ ${escapeHtml(wizMoney(WIZ_NFCE_PRICE))}/mês</strong>
+                <strong>${WIZ_NFCE_PRICE ? `+ ${escapeHtml(wizMoney(WIZ_NFCE_PRICE))}/mês` : "Incluso no plano"}</strong>
               </label>
               <div class="sys-wiz-total"><span data-wiz-total-label>Total</span><strong data-wiz-total>—</strong></div>`)}
             ${box("site", "5. Site e domínio", "O site entra no ar assim que o cadastro termina.", `
               <div class="sys-wiz-grid">
                 <label class="sys-field"><span>Endereço INOVAS</span><span class="sys-wiz-prefix"><span>inovasfood.com.br/</span><input class="sys-input" name="slug" required pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" minlength="3" maxlength="60" data-slug-target /></span><small class="sys-hint" data-wiz-slug-status></small></label>
-                <label class="sys-field" data-wiz-domain><span>Domínio próprio (opcional)</span><input class="sys-input" name="customDomain" placeholder="www.restaurante.com.br" /><small class="sys-hint" data-wiz-domain-note>Adicional de R$ 40/mês (planos pagos). Fica "aguardando DNS" até o dono apontar o domínio.</small></label>
+                <label class="sys-field" data-wiz-domain><span>Domínio próprio (opcional)</span><input class="sys-input" name="customDomain" placeholder="www.restaurante.com.br" /><small class="sys-hint" data-wiz-domain-note>Adicional de R$ 49/mês (planos pagos). Fica "aguardando DNS" até o dono apontar o domínio.</small></label>
               </div>
               <fieldset class="sys-wiz-colors"><legend>Cor principal do site</legend>
                 ${WIZ_COLORS.map(([hex, label], index) => `<label><input type="radio" name="primaryColor" value="${hex}" ${index === 0 ? "checked" : ""} /><span style="background:${hex}" aria-hidden="true"></span>${escapeHtml(label)}</label>`).join("")}
@@ -676,7 +676,7 @@
     if (totalLabel) totalLabel.textContent = cycle === "MONTHLY" ? "Total mensal" : `Total ${cycleEntry[1].toLowerCase()} (com desconto)`;
     const domainField = form.querySelector("[data-wiz-domain]");
     const domainInput = get("customDomain");
-    // Domínio próprio é adicional (+ R$ 40/mês) em qualquer plano pago.
+    // Domínio próprio é adicional (+ R$ 49/mês) em qualquer plano pago.
     const domainAllowed = plan !== "FREE";
     if (domainInput) {
       domainInput.disabled = !domainAllowed;
@@ -849,7 +849,7 @@
       const verified = normalize(current?.status) === "VERIFIED";
       return openDialog(`
         <form class="sys-dialog-form" data-restaurant-form="domain" data-key="${escapeHtml(key)}">
-          ${dialogHead("Domínio próprio · + R$ 40/mês", name)}
+          ${dialogHead("Domínio próprio · + R$ 49/mês", name)}
           <div class="sys-dialog-body">
             ${field("Domínio", `<input class="sys-input" name="customDomain" placeholder="minhapizzaria.com.br" value="${escapeHtml(current?.host || "")}" />`, "Deixe em branco e salve para desvincular.")}
             <div class="sys-note">${icon("lock", 18)}<span>Para o domínio abrir o site: 1) adicionar o domínio no projeto da Vercel; 2) no registro do domínio (ex.: Registro.br), apontar <strong>A @ → 76.76.21.21</strong> e <strong>CNAME www → cname.vercel-dns.com</strong>; 3) quando a Vercel mostrar o domínio como válido, clicar em "Confirmar DNS". Enquanto isso o site segue no endereço INOVAS.</span></div>
@@ -1279,7 +1279,7 @@
         <dl class="sys-facts">
           <div class="sys-fact"><span>Identificador</span><strong>${escapeHtml(restaurant.restaurantKey)}</strong></div>
           <div class="sys-fact"><span>Site INOVAS</span><strong>${restaurant.publicUrl ? `<a href="${escapeHtml(restaurant.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(restaurant.publicUrl.replace(/^https?:\/\//, ""))}</a>` : escapeHtml(`/${restaurant.slug || restaurant.restaurantKey}`)}<br>${restaurantSiteIsLive(restaurant) ? statusPill("No ar", "ok", { dot: false }) : statusPill(restaurant.publicSiteEnabled === false ? "Fora do ar" : "Indisponível", "crit", { dot: false })}</strong></div>
-          <div class="sys-fact"><span>Domínio próprio</span><strong>${restaurant.customDomain ? `${escapeHtml(restaurant.customDomain.host)}<br>${statusPill(normalize(restaurant.customDomain.status) === "VERIFIED" ? "Ativo" : "Aguardando DNS", normalize(restaurant.customDomain.status) === "VERIFIED" ? "ok" : "warn", { dot: false })}` : "Não vinculado <small class=\"sys-hint\">(+ R$ 40/mês)</small>"}</strong></div>
+          <div class="sys-fact"><span>Domínio próprio</span><strong>${restaurant.customDomain ? `${escapeHtml(restaurant.customDomain.host)}<br>${statusPill(normalize(restaurant.customDomain.status) === "VERIFIED" ? "Ativo" : "Aguardando DNS", normalize(restaurant.customDomain.status) === "VERIFIED" ? "ok" : "warn", { dot: false })}` : "Não vinculado <small class=\"sys-hint\">(+ R$ 49/mês)</small>"}</strong></div>
           <div class="sys-fact"><span>Plano</span><strong>${escapeHtml(translatePlan(restaurant.plan))}</strong></div>
           <div class="sys-fact"><span>Domínio</span><strong>${escapeHtml(translateDomain(health.domainStatus))}${restaurant.domain ? `<br><small class="sys-hint">${escapeHtml(restaurant.domain)}</small>` : ""}</strong></div>
           <div class="sys-fact"><span>Responsável</span><strong>${escapeHtml(restaurant.owner || "Não informado")}</strong></div>

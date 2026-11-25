@@ -27,7 +27,8 @@ test("adicional de nota só conta nos planos Profissional e Completo", () => {
   assert.equal(profile.isAddonAllowed("nfce", "PRO"), true);
   assert.equal(profile.isAddonAllowed("nfce", "START"), false);
   assert.equal(profile.isAddonAllowed("nfce", "FREE"), false);
-  assert.equal(profile.addonsMonthlyValue(["nfce"], "BUSINESS"), 49.9);
+  // Desde 25/11/2026 a nota fiscal vem inclusa no Profissional e no Completo.
+  assert.equal(profile.addonsMonthlyValue(["nfce"], "BUSINESS"), 0);
   // Plano caiu para Essencial: adicional deixa de ser cobrado.
   assert.equal(profile.addonsMonthlyValue(["nfce"], "START"), 0);
   assert.deepEqual(profile.normalizeAddons(["nfce", "nfce", "inexistente"]).map((addon) => addon.key), ["nfce"]);

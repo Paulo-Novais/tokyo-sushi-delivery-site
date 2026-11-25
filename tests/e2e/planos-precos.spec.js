@@ -9,8 +9,8 @@ const {
   uniqueKey,
 } = require("./helpers/v1.9-fixtures.cjs");
 
-// Tabela comercial: Grátis (até 50 pedidos/mês) · Essencial R$ 49,90 ·
-// Profissional R$ 149,90 · Completo R$ 219,90.
+// Tabela comercial (25/11/2026): Essencial R$ 99,90 · Profissional R$ 179,90 ·
+// Completo R$ 299,90. O Grátis (até 50 pedidos/mês) segue como plano legado.
 
 test("Plano Grátis: aceita 50 pedidos no mês e recusa o 51º com aviso", async () => {
   test.setTimeout(240_000);

@@ -375,6 +375,9 @@ html.if-js .if-page:not(.is-active) { display: none; }
 .if-plan ul { display: grid; gap: 10px; flex: 1; align-content: start; }
 .if-plan li { position: relative; padding-left: 26px; }
 .if-plan li::before { content: "✓"; position: absolute; left: 2px; color: var(--if-orange-text); font-weight: 800; }
+.if-plan li.if-plan-sep { height: 1px; padding: 0; margin: 4px 0; background: var(--if-line); }
+.if-plan li.if-plan-sep::before { content: none; }
+.if-plan.is-featured li.if-plan-sep { background: rgba(255, 255, 255, 0.14); }
 .if-plan-note { padding: 12px 14px; border-radius: 12px; background: var(--if-card); color: var(--if-ink); font-size: 14px; font-weight: 600; }
 .if-plan.is-featured { border: 2px solid var(--if-orange); background: var(--if-ink); color: #ddd; transform: translateY(-8px); box-shadow: 0 30px 60px rgba(17, 17, 17, 0.18); }
 .if-plan.is-featured h3, .if-plan.is-featured .if-price b, .if-plan.is-featured .if-plan-plus { color: #fff; }
