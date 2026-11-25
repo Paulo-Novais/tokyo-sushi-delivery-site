@@ -7857,7 +7857,7 @@ const syncRestaurantCopy = (settings) => {
     footerHours.textContent = `Funcionamento: ${businessHours}`;
   }
 
-  const deliveryOriginNote = document.querySelector(".delivery-origin-note span");
+  const deliveryOriginNote = document.querySelector(".delivery-origin-note span, [data-dl-origin]");
   if (deliveryOriginNote) {
     deliveryOriginNote.textContent = address;
   }
@@ -12504,22 +12504,35 @@ const saveDeliveryEstimate = (estimate, profile = loadAuthProfile()) => {
   saveDeliveryHistory(quotes);
 };
 
-const DL_ICON_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
-const DL_ICON_INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
-
 const formatDeliveryKmShort = (value) => `${String(Number(Number(value || 0).toFixed(1))).replace(".", ",")} km`;
 
-const buildDeliveryResultMapSvg = (estimate) => {
-  const distance = Math.max(0.2, Number(estimate?.distanceKm || 0));
-  const maxRadius = Math.max(distance, getPublicMaxDeliveryRadiusKm() || distance * 1.4);
-  const ratio = Math.min(1, distance / maxRadius);
-  const youX = 150 + ratio * 160;
-  return `
-    <svg class="dl-res-map" viewBox="0 0 360 120" role="img" aria-label="Loja até você: ${escapeHtml(estimate.distanceText || "")}">
-      <path d="M60 60 C ${60 + (youX - 60) * 0.35} 18, ${60 + (youX - 60) * 0.65} 102, ${youX} 60" fill="none" stroke="#e83637" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
-      <circle cx="60" cy="60" r="13" fill="#e83637"/><text x="60" y="98" text-anchor="middle" fill="#cbb6bb" font-size="13">Loja</text>
-      <circle cx="${youX}" cy="60" r="13" fill="#34d399"/><text x="${youX}" y="98" text-anchor="middle" fill="#a7f3d0" font-size="13">Você · ${escapeHtml(estimate.distanceText || "")}</text>
-    </svg>`;
+const DL_TILE_ICONS = {
+  bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8zM9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  cart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2 11h11l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>',
+  rain: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4 4 0 0 1 .5-8 5 5 0 0 1 9.5 1.5A3.5 3.5 0 0 1 17 15H7z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+};
+
+const getDeliveryFreeShippingInfo = (estimate) => {
+  const freeShipping = getDeliverySettings().freeShipping || {};
+  const minimum = Number(freeShipping.minimumOrder || 0);
+  if (!freeShipping.enabled || !(minimum > 0)) {
+    return null;
+  }
+  if (estimate?.freeShippingApplied) {
+    return { done: true, percent: 100, text: "Frete grátis aplicado no seu pedido." };
+  }
+  const subtotal = Number(getCartTotalAmount(loadCart(), loadCartAddons()) || 0);
+  const missing = Math.max(0, minimum - subtotal);
+  if (subtotal <= 0) {
+    return { done: false, percent: 0, text: `Frete grátis em pedidos acima de ${formatPrice(minimum)}.` };
+  }
+  return {
+    done: false,
+    percent: Math.min(100, Math.round((subtotal / minimum) * 100)),
+    text: `Faltam ${formatPrice(missing)} para o frete grátis.`,
+  };
 };
 
 const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
@@ -12529,49 +12542,37 @@ const renderDeliveryEstimateResultCard = (resultNode, estimate) => {
 
   const isManual = isManualDeliveryQuote(estimate);
   const feeLabel = estimate.freeShippingApplied ? "Grátis" : formatPrice(Number(estimate.fee || 0));
-  const addressLabel = estimate.destinationLabel || estimate.geocodedAddress || "";
-  const stats = isManual
-    ? []
-    : [
-        { value: estimate.distanceText, label: "de distância" },
-        { value: estimate.totalEstimateText, label: "prazo" },
-      ].filter((item) => item.value);
+  const addressLabel = [estimate.street, estimate.houseNumber].filter(Boolean).join(", ") || estimate.destinationLabel || "";
+  const timeText = String(estimate.totalEstimateText || "").replace(/^Entrega estimada entre\s*/i, "").replace(/\s*minutos$/i, " min");
+  const free = isManual ? null : getDeliveryFreeShippingInfo(estimate);
   const pickupLink = isPublicPickupEnabled()
-    ? '<p class="dl-res-alt">Prefere buscar? <a href="./cardapio.html#catalogo">Retire na loja sem taxa</a></p>'
-    : "";
-  const details = !isManual
-    ? `<details class="dl-res-details"><summary>Como chegamos nesse valor</summary><ul>${[
-        estimate.pricingRuleLabel,
-        estimate.preparationTimeText ? `Preparo: ${estimate.preparationTimeText}` : "",
-        estimate.travelTimeText ? `Caminho até você: ${estimate.travelTimeText}` : "",
-        "Em dias de chuva o prazo pode aumentar um pouco.",
-      ]
-        .filter(Boolean)
-        .map((line) => `<li>${escapeHtml(line)}</li>`)
-        .join("")}</ul></details>`
+    ? '<p class="dl-res-alt">Prefere buscar? <a href="./cardapio.html#catalogo">Retire na loja</a></p>'
     : "";
 
   resultNode.innerHTML = `
     <div class="dl-res" data-dl-result-state="${isManual ? "manual" : "ok"}">
       <div class="dl-res-fee">
-        <div>
-          <small>${isManual ? "Taxa a partir de" : "Taxa de entrega"}</small>
-          <strong>${escapeHtml(feeLabel)}</strong>
-        </div>
-        ${stats.length ? `<div class="dl-res-stats">${stats.map((item) => `<span>${escapeHtml(item.value)}<small>${escapeHtml(item.label)}</small></span>`).join("")}</div>` : ""}
+        <div><small>${isManual ? "Taxa a partir de" : "Taxa de entrega"}</small><strong>${escapeHtml(feeLabel)}</strong></div>
+        ${isManual ? "" : `<div class="dl-res-time">${escapeHtml(timeText)}<small>${escapeHtml(estimate.distanceText || "")} da loja</small></div>`}
       </div>
       ${
         isManual
-          ? `<div class="dl-res-warn">${DL_ICON_INFO}<span>Endereço salvo. A loja confirma a taxa final e o prazo quando receber o seu pedido.</span></div>`
-          : `<div class="dl-res-ok">${DL_ICON_OK}<span>Entregamos no seu endereço${addressLabel ? `: ${escapeHtml(addressLabel)}` : ""}.</span></div>`
+          ? '<div class="dl-res-warn">Endereço salvo. A loja confirma a taxa final e o prazo quando receber o seu pedido.</div>'
+          : `<div class="dl-res-ok">✓ Entregamos${addressLabel ? ` na ${escapeHtml(addressLabel)}` : " no seu endereço"}</div>`
       }
-      ${estimate.minimumOrderMessage ? `<div class="dl-res-warn">${DL_ICON_INFO}<span>${escapeHtml(estimate.minimumOrderMessage)}</span></div>` : ""}
-      ${isManual ? "" : buildDeliveryResultMapSvg(estimate)}
+      ${estimate.minimumOrderMessage ? `<div class="dl-res-warn">${escapeHtml(estimate.minimumOrderMessage)}</div>` : ""}
+      ${free ? `<div class="dl-res-free">${escapeHtml(free.text)}<div class="dl-res-bar"><b style="width:${free.percent}%"></b></div></div>` : ""}
       <a class="dl-btn dl-btn-primary" href="./cardapio.html#catalogo">Ver cardápio e pedir</a>
       ${pickupLink}
-      ${details}
     </div>
   `;
+
+  const sticky = document.querySelector("[data-dl-sticky]");
+  if (sticky) {
+    const stickyFee = sticky.querySelector("[data-dl-sticky-fee]");
+    if (stickyFee) stickyFee.textContent = feeLabel;
+    sticky.hidden = false;
+  }
   renderDeliveryPageExtras(estimate);
 };
 
@@ -12590,24 +12591,235 @@ const renderDeliveryErrorCard = (resultNode, message, reason = "") => {
       ${pickup}
     </div>
   `;
-  setDeliveryStepsState(document.querySelector("[data-delivery-form]"));
+  const sticky = document.querySelector("[data-dl-sticky]");
+  if (sticky) sticky.hidden = true;
+  renderDeliveryMap(null);
 };
 
-const setDeliveryStepsState = (form) => {
-  const steps = document.querySelector("[data-dl-steps]");
-  if (!steps || !form) {
+// Mantido para compatibilidade: a página nova não mostra etapas.
+const setDeliveryStepsState = () => {};
+
+const DL_ZONE_COLORS = ["#34d399", "#facc15", "#fb923c", "#e53935", "#c084fc", "#60a5fa"];
+const DL_MAP_STORE = { x: 62, y: 60 };
+const DL_MAP_MAX_R = 46;
+
+const DL_RIDER_SVG = `<svg viewBox="-8 -14 82 64" aria-hidden="true">
+  <circle class="puff" cx="4" cy="38" r="2.4" fill="#cfc6c8"/><circle class="puff b" cx="4" cy="38" r="2.4" fill="#cfc6c8"/>
+  <ellipse cx="33" cy="46.5" rx="27" ry="2.6" fill="rgba(0,0,0,.45)"/>
+  <g class="bob">
+    <rect x="1" y="2" width="19" height="17" rx="2.5" fill="#c62828"/><rect x="1" y="2" width="19" height="4.5" rx="2" fill="#e53935"/><rect x="1" y="12" width="19" height="2" fill="#8e1b1b"/>
+    <circle cx="10.5" cy="9.3" r="2.4" fill="#fff"/><circle cx="10.5" cy="9.3" r="1.1" fill="#c62828"/><rect x="18" y="16" width="6" height="2.4" rx="1" fill="#3a3a3a"/>
+    <path d="M5 37C5 28 12 24.5 21 24.5L31 25C33.5 29 32 35.5 27.5 37Z" fill="#e53935"/>
+    <path d="M8 33C10 29 14 27.5 20 27.5" fill="none" stroke="#ff8a80" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M13 24.8Q20 20.6 29.5 23.2L30 25.5L13 25.5Z" fill="#1d1d22"/>
+    <path d="M27 35.5L43 35.5L45 38L26 38Z" fill="#b71c1c"/>
+    <path d="M41.5 37L46.5 17.5Q47.5 14.8 50.5 15.6L51.5 16.2L47 37.5Z" fill="#e53935"/>
+    <path d="M49.5 15.5L46.5 10.5M45 10.5L48.5 10" stroke="#2b2b2f" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="51.8" cy="18" r="2.2" fill="#ffe082"/>
+    <path d="M45 37.5Q52 31.5 59 37.5" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>
+    <path d="M24 22L36 25.5L38.5 34" fill="none" stroke="#2b3550" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M36.5 34.5L42 34.5" stroke="#111" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M20.5 23.5C19 16 22 9.5 28.5 7.5L32.5 8.5C34.5 14 33 19.5 29.5 23.5Z" fill="#23232b"/>
+    <path d="M24 9.6C26.5 14 27.5 18.5 26.8 23.2" fill="none" stroke="#e53935" stroke-width="1.6"/>
+    <path d="M30.5 10.5L38.5 15L45.5 10.8" fill="none" stroke="#23232b" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="45.8" cy="10.6" r="2.1" fill="#111"/>
+    <rect x="28" y="4" width="4" height="4.5" rx="1.5" fill="#c98f6b"/>
+    <path d="M23.5 -1C23.5 -8.5 36.5 -9.5 37.5 -1.5L37.5 2.5L25 3.5C23.8 2.6 23.5 1 23.5 -1Z" fill="#e53935"/>
+    <path d="M30.5 -3.5L37.6 -3L37.6 1.8L31.5 1.6Z" fill="#20262e"/>
+  </g>
+  <g class="wheel"><circle cx="15" cy="40" r="6.6" fill="#141416"/><circle cx="15" cy="40" r="3.6" fill="#bdbdbd"/><path d="M15 36.4V43.6M11.4 40H18.6" stroke="#6b6b6b" stroke-width="1"/><circle cx="15" cy="40" r="1.2" fill="#e53935"/></g>
+  <g class="wheel"><circle cx="52" cy="40" r="6.6" fill="#141416"/><circle cx="52" cy="40" r="3.6" fill="#bdbdbd"/><path d="M52 36.4V43.6M48.4 40H55.6" stroke="#6b6b6b" stroke-width="1"/><circle cx="52" cy="40" r="1.2" fill="#e53935"/></g>
+</svg>`;
+
+const DL_PIN_STORE = '<svg viewBox="0 0 24 24"><path d="M4 10l8-6 8 6v10H4z"/><path d="M10 20v-5h4v5"/></svg>';
+const DL_PIN_HOME = '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg>';
+
+// Caminho em "ruas" (só retas e curvas arredondadas) entre dois pontos.
+const buildDeliveryStreetPath = (from, to) => {
+  const midX = from.x + (to.x - from.x) * 0.45;
+  const midY = from.y + (to.y - from.y) * 0.55;
+  const points = [from, { x: midX, y: from.y }, { x: midX, y: midY }, { x: to.x, y: midY }, to];
+  let d = `M${from.x.toFixed(2)} ${from.y.toFixed(2)}`;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const corner = points[index];
+    const next = points[index + 1];
+    const inLength = Math.hypot(corner.x - previous.x, corner.y - previous.y);
+    const outLength = Math.hypot(next.x - corner.x, next.y - corner.y);
+    const radius = Math.min(4, inLength / 2, outLength / 2);
+    if (radius < 0.2) continue;
+    const before = { x: corner.x - ((corner.x - previous.x) / inLength) * radius, y: corner.y - ((corner.y - previous.y) / inLength) * radius };
+    const after = { x: corner.x + ((next.x - corner.x) / outLength) * radius, y: corner.y + ((next.y - corner.y) / outLength) * radius };
+    d += ` L${before.x.toFixed(2)} ${before.y.toFixed(2)} Q${corner.x.toFixed(2)} ${corner.y.toFixed(2)} ${after.x.toFixed(2)} ${after.y.toFixed(2)}`;
+  }
+  return `${d} L${to.x.toFixed(2)} ${to.y.toFixed(2)}`;
+};
+
+let deliveryMapAnimationToken = 0;
+
+const renderDeliveryMap = (estimate) => {
+  const map = document.querySelector("[data-dl-map]");
+  if (!map) {
     return;
   }
-  const cepOk = normalizeCep(form.elements?.namedItem("delivery_cep")?.value || "").length === 8;
-  const numberOk = Boolean(String(form.elements?.namedItem("delivery_number")?.value || "").replace(/\D/g, ""));
-  const done = Boolean(document.querySelector('[data-dl-result-state="ok"], [data-dl-result-state="manual"]'));
-  const state = { cep: cepOk, numero: cepOk && numberOk, pronto: done };
-  const current = !state.cep ? "cep" : !state.numero ? "numero" : state.pronto ? "" : "pronto";
-  steps.querySelectorAll("[data-dl-step]").forEach((item) => {
-    const key = item.getAttribute("data-dl-step");
-    item.classList.toggle("is-done", Boolean(state[key]));
-    item.classList.toggle("is-current", key === current);
+  const token = ++deliveryMapAnimationToken;
+  const bands = getActiveDeliveryBands();
+  const radiusKm = getPublicMaxDeliveryRadiusKm();
+  const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
+  const topKm = Math.max(
+    radiusKm || 0,
+    ...bands.map((band) => (hasMax(band) ? Number(band.maxKm) : Number(band.minKm || 0) + 3)),
+    1
+  );
+  const storeLabel = escapeHtml(getPublicRestaurantName() || "Loja");
+  const youKm = estimate && !isManualDeliveryQuote(estimate) && Number.isFinite(Number(estimate.distanceKm)) ? Number(estimate.distanceKm) : null;
+  const S = DL_MAP_STORE;
+
+  let svg = "";
+  for (let x = 8; x < 160; x += 22) svg += `<path class="street" stroke-width="${x % 44 === 8 ? 3.4 : 2.2}" d="M${x} 0V100"/>`;
+  for (let y = 10; y < 100; y += 18) svg += `<path class="street" stroke-width="${y % 36 === 10 ? 3.4 : 2.2}" d="M0 ${y}H160"/>`;
+  (bands.length ? bands : [{ maxKm: topKm }]).forEach((band, index) => {
+    const km = hasMax(band) ? Number(band.maxKm) : topKm;
+    const r = Math.max(6, Math.sqrt(Math.min(1, km / topKm)) * DL_MAP_MAX_R);
+    const color = DL_ZONE_COLORS[index % DL_ZONE_COLORS.length];
+    svg += `<circle class="zone" cx="${S.x}" cy="${S.y}" r="${r.toFixed(2)}" stroke="${color}" fill="${color}" fill-opacity=".035"/>`;
   });
+
+  let you = null;
+  let route = "";
+  if (youKm !== null) {
+    const r = Math.max(22, Math.sqrt(Math.min(1, youKm / topKm)) * DL_MAP_MAX_R);
+    const angle = (-30 * Math.PI) / 180;
+    you = { x: S.x + Math.cos(angle) * r, y: S.y + Math.sin(angle) * r };
+    route = buildDeliveryStreetPath(S, you);
+    svg += `<path class="road" d="${route}"/><path class="trail" d="${route}"/>`;
+  }
+
+  const pct = (point) => `left:${((point.x / 160) * 100).toFixed(2)}%;top:${point.y.toFixed(2)}%`;
+  map.innerHTML = `
+    <svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${svg}</svg>
+    <div class="dl-map-sweep" style="${pct(S)}"></div>
+    <div class="dl-pin is-store" style="${pct(S)}"><label>${storeLabel}</label><div class="dl-pin-head">${DL_PIN_STORE}</div><div class="dl-pin-base"></div></div>
+    ${
+      you
+        ? `<div class="dl-pin is-you" style="${pct(you)}"><label>Você · ${escapeHtml(formatDeliveryKmShort(youKm))}</label><div class="dl-pin-head">${DL_PIN_HOME}</div><div class="dl-pin-base"></div><i class="dl-pin-ring"></i></div>
+           <div class="dl-rider" style="${pct(S)}"><span class="dl-rider-eta"></span><div class="tilt"><div class="flip">${DL_RIDER_SVG}</div></div></div>
+           <div class="dl-map-toast">Chegou!</div>`
+        : '<div class="dl-map-hint">Calcule para ver o caminho até você</div>'
+    }
+  `;
+  map.setAttribute(
+    "aria-label",
+    you ? `Mapa: o entregador sai da loja e percorre ${formatDeliveryKmShort(youKm)} até o seu endereço` : "Mapa da área de entrega a partir da loja"
+  );
+  if (!you) {
+    return;
+  }
+
+  const path = map.querySelector(".trail");
+  const rider = map.querySelector(".dl-rider");
+  const tilt = rider.querySelector(".tilt");
+  const eta = rider.querySelector(".dl-rider-eta");
+  const toast = map.querySelector(".dl-map-toast");
+  const youPin = map.querySelector(".dl-pin.is-you");
+  const total = path.getTotalLength();
+  path.style.strokeDasharray = String(total);
+  path.style.strokeDashoffset = String(total);
+  const maxMinutes = Number(getDeliverySettings().deliveryTime?.maxMinutes || 0) || 45;
+
+  // Tabela de movimento: devagar nas curvas, acelera na saída e freia na chegada.
+  const N = 300;
+  const points = [];
+  const heads = [];
+  for (let index = 0; index <= N; index += 1) points.push(path.getPointAtLength((total * index) / N));
+  for (let index = 0; index <= N; index += 1) {
+    const a = points[Math.max(0, index - 3)];
+    const b = points[Math.min(N, index + 3)];
+    heads.push(Math.atan2(b.y - a.y, b.x - a.x));
+  }
+  const wrap = (value) => {
+    let angle = value;
+    while (angle > Math.PI) angle -= 2 * Math.PI;
+    while (angle < -Math.PI) angle += 2 * Math.PI;
+    return angle;
+  };
+  const speeds = heads.map((_, index) => {
+    const turn = Math.abs(wrap(heads[Math.min(N, index + 8)] - heads[Math.max(0, index - 8)]));
+    const f = index / N;
+    let v = 1 - 0.55 * Math.min(1, turn / (Math.PI / 2));
+    v *= Math.min(1, 0.25 + (f / 0.08) * 0.75);
+    v *= Math.min(1, 0.15 + ((1 - f) / 0.12) * 0.85);
+    return Math.max(0.12, v);
+  });
+  const times = [0];
+  for (let index = 1; index <= N; index += 1) times.push(times[index - 1] + 2 / (speeds[index] + speeds[index - 1]));
+  const T = times[N];
+  const lengthAt = (u) => {
+    const t = u * T;
+    let lo = 0;
+    let hi = N;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= t) lo = mid; else hi = mid;
+    }
+    const k = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
+    return { len: (total * (lo + k)) / N, index: lo };
+  };
+
+  let dir = 1;
+  let angleDeg = 0;
+  const place = (u, dt = 16) => {
+    const { len, index } = lengthAt(Math.min(1, u));
+    const point = path.getPointAtLength(len);
+    rider.style.left = `${((point.x / 160) * 100).toFixed(2)}%`;
+    rider.style.top = `${point.y.toFixed(2)}%`;
+    const heading = heads[Math.min(N, index)];
+    const previousDir = dir;
+    if (Math.abs(Math.cos(heading)) > 0.12) dir = Math.cos(heading) < 0 ? -1 : 1;
+    rider.classList.toggle("is-left", dir < 0);
+    const target = (wrap(heading - (dir < 0 ? Math.PI : 0)) * 180) / Math.PI;
+    if (dir !== previousDir) angleDeg = target;
+    angleDeg += ((wrap(((target - angleDeg) * Math.PI) / 180) * 180) / Math.PI) * Math.min(1, dt / 90);
+    tilt.style.transform = `rotate(${angleDeg.toFixed(2)}deg)`;
+    path.style.strokeDashoffset = String(total - len);
+    eta.textContent = u >= 1 ? "Entregue" : `${Math.max(1, Math.ceil(maxMinutes * (1 - u)))} min`;
+  };
+
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    place(1);
+    rider.classList.add("is-stopped");
+    return;
+  }
+  const DUR = 7000;
+  const HOLD = 2200;
+  let start = null;
+  let previous = null;
+  const frame = (ts) => {
+    if (token !== deliveryMapAnimationToken || !map.isConnected) return;
+    if (start === null) start = ts;
+    const dt = previous === null ? 16 : ts - previous;
+    previous = ts;
+    const elapsed = ts - start;
+    if (elapsed < DUR) {
+      rider.classList.remove("is-stopped");
+      toast.classList.remove("is-on");
+      youPin.classList.remove("is-arrived");
+      rider.style.opacity = String(Math.min(1, elapsed / 300));
+      place(elapsed / DUR, dt);
+    } else if (elapsed < DUR + HOLD) {
+      place(1, dt);
+      rider.classList.add("is-stopped");
+      toast.classList.add("is-on");
+      youPin.classList.add("is-arrived");
+      rider.style.opacity = String(elapsed > DUR + HOLD - 400 ? (DUR + HOLD - elapsed) / 400 : 1);
+    } else {
+      start = ts;
+      dir = 1;
+      angleDeg = 0;
+    }
+    window.requestAnimationFrame(frame);
+  };
+  window.requestAnimationFrame(frame);
 };
 
 const renderDeliveryPageExtras = (estimate = null) => {
@@ -12615,60 +12827,44 @@ const renderDeliveryPageExtras = (estimate = null) => {
     return;
   }
 
-  const settings = getRestaurantSettings();
-  const heroImage = document.querySelector("[data-dl-hero-image]");
-  const bannerUrl = String(settings?.bannerUrl || "").trim();
-  if (heroImage && bannerUrl && heroImage.getAttribute("src") !== bannerUrl) {
-    heroImage.setAttribute("src", bannerUrl);
-  }
-
   const timeChip = document.querySelector("[data-dl-chip-time]");
   if (timeChip) {
     timeChip.textContent = getDeliveryTimeText();
   }
-  const radiusKm = getPublicMaxDeliveryRadiusKm();
-  const radiusChip = document.querySelector("[data-dl-chip-radius]");
-  if (radiusChip) {
-    radiusChip.hidden = !(radiusKm > 0);
-    const label = radiusChip.querySelector("span");
-    if (label) label.textContent = `Entregamos até ${formatDeliveryKmShort(radiusKm)}`;
-  }
-  const pickupChip = document.querySelector("[data-dl-chip-pickup]");
-  if (pickupChip) {
-    pickupChip.hidden = !isPublicPickupEnabled();
+
+  const quote = estimate || getLatestSavedDeliveryQuote(loadAuthProfile());
+  const youKm = quote && !isManualDeliveryQuote(quote) && Number.isFinite(Number(quote.distanceKm)) ? Number(quote.distanceKm) : null;
+  const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
+  const bands = getActiveDeliveryBands();
+
+  const kms = document.querySelector("[data-dl-kms]");
+  if (kms) {
+    kms.innerHTML = bands
+      .map((band) => {
+        const isYou = youKm !== null && youKm >= Number(band.minKm || 0) && (!hasMax(band) || youKm <= Number(band.maxKm));
+        const fee = Number(band.customerFee ?? band.fee ?? 0);
+        const label = hasMax(band) ? `até ${formatDeliveryKmShort(band.maxKm)}` : getDeliveryBandLabel(band);
+        return `<span class="${isYou ? "is-you" : ""}">${escapeHtml(label)}<b>${escapeHtml(fee > 0 ? formatPrice(fee) : "Grátis")}</b></span>`;
+      })
+      .join("");
   }
 
-  const ruler = document.querySelector("[data-dl-ruler]");
-  if (ruler) {
-    const bands = getActiveDeliveryBands().slice(0, 6);
-    const quote = estimate || getLatestSavedDeliveryQuote(loadAuthProfile());
-    const youKm = quote && !isManualDeliveryQuote(quote) && Number.isFinite(Number(quote.distanceKm)) ? Number(quote.distanceKm) : null;
-    if (!bands.length) {
-      ruler.hidden = true;
-      ruler.innerHTML = "";
-    } else {
-      const hasMax = (band) => band.maxKm !== null && band.maxKm !== undefined && Number.isFinite(Number(band.maxKm));
-      const lastBand = bands[bands.length - 1];
-      const top = hasMax(lastBand) ? Number(lastBand.maxKm) : Math.max(radiusKm, Number(lastBand.minKm || 0) + 3);
-      const widths = bands.map((band) => Math.max(1, (hasMax(band) ? Number(band.maxKm) : top) - Number(band.minKm || 0)));
-      const youIndex = youKm === null ? -1 : bands.findIndex((band) => youKm >= Number(band.minKm || 0) && (!hasMax(band) || youKm <= Number(band.maxKm)));
-      const pinPercent = youKm === null || top <= 0 ? null : Math.min(94, Math.max(6, (youKm / top) * 100));
-      ruler.innerHTML = `
-        ${pinPercent === null ? "" : `<div class="dl-ruler-pin" style="left:${pinPercent.toFixed(1)}%;transform:translateX(${pinPercent < 20 ? -12 : pinPercent > 80 ? -88 : -50}%)"><b>Você · ${escapeHtml(formatDeliveryKmShort(youKm))}</b><i></i></div>`}
-        <div class="dl-ruler-track">${widths.map((width, index) => `<div class="dl-ruler-seg${index === youIndex ? " is-you" : ""}" style="flex:${width} 1 0"></div>`).join("")}</div>
-        <div class="dl-ruler-labels">${bands
-          .map((band, index) => `<div class="${index === youIndex ? "is-you" : ""}" style="flex:${widths[index]} 1 0"><span>${escapeHtml(getDeliveryBandLabel(band))}</span><b>${escapeHtml(Number(band.customerFee ?? band.fee ?? 0) > 0 ? formatPrice(Number(band.customerFee ?? band.fee)) : "Grátis")}</b></div>`)
-          .join("")}</div>`;
-      ruler.hidden = false;
-    }
+  const tiles = document.querySelector("[data-dl-tiles]");
+  if (tiles) {
+    const items = [];
+    if (isPublicPickupEnabled()) items.push(["bag", "Retirada na loja", `Sem taxa. ${getPickupEstimateText()}`]);
+    items.push(["clock", "Agendar", "Peça agora ou escolha um horário no carrinho."]);
+    const radiusKm = getPublicMaxDeliveryRadiusKm();
+    if (radiusKm > 0) items.push(["pin", "Até onde vamos", `Entregamos até ${formatDeliveryKmShort(radiusKm)} da loja.`]);
+    const free = getDeliverySettings().freeShipping || {};
+    if (free.enabled && Number(free.minimumOrder) > 0) items.push(["cart", "Frete grátis", `Em pedidos acima de ${formatPrice(Number(free.minimumOrder))}.`]);
+    items.push(["rain", "Dias de chuva", "O prazo pode aumentar um pouco."]);
+    tiles.innerHTML = items
+      .map(([icon, title, text]) => `<div class="dl-tile"><b>${DL_TILE_ICONS[icon]}${escapeHtml(title)}</b>${escapeHtml(text)}</div>`)
+      .join("");
   }
 
-  const historyCard = document.querySelector("[data-dl-history-card]");
-  if (historyCard) {
-    historyCard.hidden = getDeliveryHistoryForProfile(loadAuthProfile()).length === 0;
-  }
-
-  setDeliveryStepsState(document.querySelector("[data-delivery-form]"));
+  renderDeliveryMap(quote && !isManualDeliveryQuote(quote) ? quote : null);
 };
 
 const calculateDeliveryEstimate = async ({
