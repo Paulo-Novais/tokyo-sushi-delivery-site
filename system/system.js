@@ -883,7 +883,7 @@
           <div class="sys-dialog-body">
             <p style="margin:0">${suspended ? "Gestor e site voltam a funcionar." : "Enquanto suspenso, o Gestor fica bloqueado e o site sai do ar. Nenhum dado é apagado."}</p>
             ${field("Motivo", '<textarea class="sys-input" name="reason" required minlength="10" rows="3" placeholder="Ex.: mensalidade de novembro em atraso"></textarea>', "Mínimo de 10 caracteres. Fica registrado na auditoria.")}
-            <label class="sys-check"><input type="checkbox" name="confirmed" required /> <span>Confirmo ${suspended ? "a reativação" : "a suspensão"} de ${name}.</span></label>
+            <label class="sys-billing-check"><input type="checkbox" name="confirmed" required /> <span>Confirmo ${suspended ? "a reativação" : "a suspensão"} de ${name}.</span></label>
             <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
           </div>
           <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn ${suspended ? "sys-btn-primary" : "sys-btn-danger"}" type="submit">${suspended ? "Reativar acesso" : "Suspender acesso"}</button></div>
@@ -1129,6 +1129,9 @@
     PAID_UP: ["Em dia", "ok"],
     DUE: ["A vencer", "warn"],
     OVERDUE: ["Em atraso", "crit"],
+    GRACE: ["Com prazo", "warn"],
+    GRACE_EXPIRED: ["Prazo vencido", "crit"],
+    BLOCKED: ["Bloqueado", "crit"],
     CONTRACT_TRIAL: ["Em teste", "neutral"],
     CONTRACT_BLOCKED: ["Bloqueado", "crit"],
     CONTRACT_CANCELED: ["Cancelado", "neutral"],
@@ -1136,6 +1139,61 @@
   };
   const billingFilter = { value: "" };
   const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—");
+  const formatGraceDay = (day) => {
+    const [year, month, date] = String(day || "").split("-");
+    return year && month && date ? `${date}/${month}/${year}` : "—";
+  };
+  const addDays = (days) => {
+    const date = new Date(Date.now() - 3 * 60 * 60 * 1000 + days * 24 * 60 * 60 * 1000);
+    return date.toISOString().slice(0, 10);
+  };
+  const billingOpenGrace = { key: "" };
+
+  // Prazo de pagamento, bloqueio e liberação (só equipe INOVAS).
+  const renderBillingActions = (row, canManage) => {
+    if (!canManage) return "";
+    const key = escapeHtml(row.restaurantKey);
+    const canSuspend = hasPermission("system.restaurants.suspend");
+    const owing = row.owedCents > 0;
+    if (billingOpenGrace.key === row.restaurantKey) {
+      const grace = row.billingGrace || {};
+      return `<form class="sys-billing-grace" data-billing-grace-form="${key}">
+        <label><span>Pagar até</span><input class="sys-input" type="date" name="until" required min="${addDays(0)}" value="${escapeHtml(grace.until || addDays(5))}"></label>
+        <label><span>Observação</span><input class="sys-input" type="text" name="note" maxlength="300" placeholder="Ex.: prometeu pagar via Pix" value="${escapeHtml(grace.note || "")}"></label>
+        <label class="sys-billing-check"><input type="checkbox" name="autoBlock" ${grace.autoBlock ? "checked" : ""} ${canSuspend ? "" : "disabled"}> <span>Bloquear sozinho se não pagar até essa data</span></label>
+        <div class="sys-actions">
+          <button class="sys-btn sys-btn-primary sys-btn-sm" type="submit">Salvar prazo</button>
+          ${row.billingGrace ? `<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-grace-clear="${key}">Tirar prazo</button>` : ""}
+          <button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-grace-cancel>Cancelar</button>
+        </div>
+      </form>`;
+    }
+    const buttons = [];
+    if (owing) {
+      buttons.push(`<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-pay="${key}" data-owed="${row.owedCents}">Registrar pagamento</button>`);
+    }
+    if (owing && ["DUE", "OVERDUE", "GRACE", "GRACE_EXPIRED"].includes(row.situation)) {
+      buttons.push(`<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-grace="${key}">${row.billingGrace ? "Mudar prazo" : "Dar prazo"}</button>`);
+    }
+    if (canSuspend && owing && ["OVERDUE", "GRACE", "GRACE_EXPIRED"].includes(row.situation)) {
+      buttons.push(`<button class="sys-btn sys-btn-danger sys-btn-sm" type="button" data-billing-block="${key}" data-name="${escapeHtml(row.name)}">Bloquear agora</button>`);
+    }
+    if (canSuspend && row.situation === "BLOCKED") {
+      buttons.push(`<button class="sys-btn sys-btn-primary sys-btn-sm" type="button" data-billing-unblock="${key}" data-name="${escapeHtml(row.name)}">Liberar acesso</button>`);
+    }
+    return `<div class="sys-actions">${buttons.join("")}</div>`;
+  };
+
+  const renderBillingSituationNote = (row) => {
+    if (row.situation === "BLOCKED") {
+      return row.billingBlock ? `<small class="sys-hint">por falta de pagamento${row.billingBlock.auto ? " (automático)" : ""} · ${escapeHtml(formatDate(row.billingBlock.at))}</small>` : "";
+    }
+    if (row.billingGrace) {
+      const grace = row.billingGrace;
+      return `<small class="sys-hint" data-billing-grace-info>prazo até ${escapeHtml(formatGraceDay(grace.until))}${grace.autoBlock ? " · bloqueia sozinho" : ""}${grace.note ? ` · ${escapeHtml(grace.note)}` : ""}${grace.grantedBy ? ` · por ${escapeHtml(grace.grantedBy)}` : ""}</small>`;
+    }
+    return "";
+  };
 
   const renderBillingRows = (data) => {
     const rows = (data.restaurants || []).filter((row) => !billingFilter.value || row.situation === billingFilter.value);
@@ -1162,15 +1220,11 @@
                 ? `<select class="sys-select" data-billing-cycle="${escapeHtml(row.restaurantKey)}" aria-label="Ciclo de cobrança de ${escapeHtml(row.name)}">${cycleOption(row, "MONTHLY", "Mensal")}${cycleOption(row, "QUARTERLY", "Trimestral")}${cycleOption(row, "SEMIANNUAL", "Semestral")}${cycleOption(row, "ANNUAL", "Anual")}</select>`
                 : `${escapeHtml(row.cycleCharge?.label || "Mensal")} · ${escapeHtml(brl(row.cycleCharge?.totalCents))}`
             }</td>
-            <td data-label="Situação">${statusPill(label, tone, { dot: false })}</td>
+            <td data-label="Situação">${statusPill(label, tone, { dot: false })}${renderBillingSituationNote(row)}</td>
             <td data-label="Devendo"><strong>${row.owedCents ? escapeHtml(brl(row.owedCents)) : "—"}</strong>${row.owedCents && row.onlinePayment ? '<small class="sys-hint">desconta do repasse</small>' : ""}</td>
             <td data-label="Última cobrança">${escapeHtml(formatDate(row.lastChargeAt))}</td>
             <td data-label="Último pagamento">${escapeHtml(formatDate(row.lastPaymentAt))}</td>
-            <td>${
-              canManage && row.owedCents
-                ? `<button class="sys-btn sys-btn-secondary sys-btn-sm" type="button" data-billing-pay="${escapeHtml(row.restaurantKey)}" data-owed="${row.owedCents}">Registrar pagamento</button>`
-                : ""
-            }</td>
+            <td>${renderBillingActions(row, canManage)}</td>
           </tr>`;
         })
         .join("")}
@@ -1188,17 +1242,39 @@
       ${data.ledgerAvailable === false ? `<div class="sys-note">${icon("warning", 18)}<span>O extrato ainda não está ativo no banco (faltam as atualizações 032–034). Os valores devidos aparecem depois disso.</span></div>` : ""}
       <section class="sys-kpis">
         <article class="sys-kpi"><span>Em dia</span><strong>${escapeHtml(String(summary.paidUp ?? 0))}</strong><small>de ${escapeHtml(String(summary.total ?? 0))} restaurantes</small></article>
-        <article class="sys-kpi"><span>Em atraso</span><strong>${escapeHtml(String(summary.overdue ?? 0))}</strong><small>${escapeHtml(String(summary.due ?? 0))} a vencer</small></article>
+        <article class="sys-kpi"><span>Em atraso</span><strong>${escapeHtml(String(summary.overdue ?? 0))}</strong><small>${escapeHtml(String(summary.due ?? 0))} a vencer · ${escapeHtml(String(summary.graceExpired ?? 0))} prazo vencido · ${escapeHtml(String(summary.blocked ?? 0))} bloqueado(s)</small></article>
         <article class="sys-kpi"><span>Total devido</span><strong>${escapeHtml(brl(summary.owedCents))}</strong><small>somando todos</small></article>
         <article class="sys-kpi"><span>Receita mensal</span><strong>${escapeHtml(brl(summary.monthlyRevenueCents))}</strong><small>contratos ativos</small></article>
       </section>
       <div class="sys-filters" role="group" aria-label="Filtrar por situação">
-        ${[["", "Todos"], ["OVERDUE", "Em atraso"], ["DUE", "A vencer"], ["PAID_UP", "Em dia"]]
+        ${[["", "Todos"], ["OVERDUE", "Em atraso"], ["GRACE", "Com prazo"], ["GRACE_EXPIRED", "Prazo vencido"], ["BLOCKED", "Bloqueados"], ["DUE", "A vencer"], ["PAID_UP", "Em dia"]]
           .map(([value, label]) => `<button type="button" class="sys-btn sys-btn-sm ${billingFilter.value === value ? "sys-btn-primary" : "sys-btn-secondary"}" data-billing-filter="${value}" aria-pressed="${billingFilter.value === value}">${label}</button>`)
           .join("")}
       </div>
       <div data-billing-list>${renderBillingRows(data)}</div>`;
   };
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-billing-grace-form]");
+    if (!form) return;
+    event.preventDefault();
+    const submit = form.querySelector("[type=submit]");
+    submit.disabled = true;
+    try {
+      const until = form.elements.until.value;
+      await requestJson(`/api/system/billing/${encodeURIComponent(form.dataset.billingGraceForm)}/grace`, {
+        method: "POST",
+        body: JSON.stringify({ until, note: form.elements.note.value, autoBlock: form.elements.autoBlock.checked }),
+      });
+      billingOpenGrace.key = "";
+      notify(`Prazo dado até ${formatGraceDay(until)}.`);
+      state.data = (await requestJson("/api/system/billing")).data;
+      renderBilling(state.data);
+    } catch (error) {
+      notify(error.message || "Não foi possível salvar o prazo.");
+      submit.disabled = false;
+    }
+  });
 
   // Ciclo de cobrança: mensal, trimestral (−R$ 15), semestral (−R$ 30), anual (−8%).
   document.addEventListener("change", async (event) => {
@@ -1229,6 +1305,53 @@
       renderBilling(state.data);
       return;
     }
+    const graceOpen = event.target.closest("[data-billing-grace]");
+    if (graceOpen && state.data) {
+      billingOpenGrace.key = graceOpen.dataset.billingGrace;
+      renderBilling(state.data);
+      document.querySelector(`[data-billing-grace-form] input[name=until]`)?.focus();
+      return;
+    }
+    if (event.target.closest("[data-billing-grace-cancel]") && state.data) {
+      billingOpenGrace.key = "";
+      renderBilling(state.data);
+      return;
+    }
+    const graceClear = event.target.closest("[data-billing-grace-clear]");
+    const blockButton = event.target.closest("[data-billing-block]");
+    const unblockButton = event.target.closest("[data-billing-unblock]");
+    if (graceClear || blockButton || unblockButton) {
+      const target = graceClear || blockButton || unblockButton;
+      const key = target.dataset.billingGraceClear || target.dataset.billingBlock || target.dataset.billingUnblock;
+      let url = `/api/system/billing/${encodeURIComponent(key)}/`;
+      let body = {};
+      let done = "";
+      if (graceClear) {
+        url += "grace";
+        body = { clear: true };
+        done = "Prazo removido.";
+      } else if (blockButton) {
+        if (!window.confirm(`Bloquear ${target.dataset.name}? O site sai do ar e o Gestor fica travado até liberar.`)) return;
+        url += "block";
+        done = "Restaurante bloqueado.";
+      } else {
+        if (!window.confirm(`Liberar o acesso de ${target.dataset.name}?`)) return;
+        url += "unblock";
+        done = "Acesso liberado.";
+      }
+      target.disabled = true;
+      try {
+        await requestJson(url, { method: "POST", body: JSON.stringify(body) });
+        billingOpenGrace.key = "";
+        notify(done);
+        state.data = (await requestJson("/api/system/billing")).data;
+        renderBilling(state.data);
+      } catch (error) {
+        notify(error.message || "Não foi possível concluir.");
+        target.disabled = false;
+      }
+      return;
+    }
     const pay = event.target.closest("[data-billing-pay]");
     if (!pay) return;
     const owed = Number(pay.dataset.owed || 0);
@@ -1244,7 +1367,7 @@
     }
     pay.disabled = true;
     try {
-      await requestJson(`/api/system/restaurants/${encodeURIComponent(pay.dataset.billingPay)}/ledger`, {
+      const paid = await requestJson(`/api/system/restaurants/${encodeURIComponent(pay.dataset.billingPay)}/ledger`, {
         method: "POST",
         body: JSON.stringify({
           type: "CREDIT",
@@ -1253,7 +1376,8 @@
           idempotencyKey: `mensalidade-paga:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`,
         }),
       });
-      notify("Pagamento registrado.");
+      const release = paid?.data?.billingRelease;
+      notify(release?.released ? "Pagamento registrado. Acesso liberado." : "Pagamento registrado.");
       state.data = (await requestJson("/api/system/billing")).data;
       renderBilling(state.data);
     } catch (error) {

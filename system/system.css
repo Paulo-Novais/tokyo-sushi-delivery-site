@@ -3679,3 +3679,11 @@ dialog.sys-dialog.is-wide {
 }
 .sys-wiz-receita strong { font-size: 14px; }
 .sys-wiz-receita.is-blocked { border-color: #fecaca; background: #fef2f2; color: #7f1d1d; }
+
+/* Mensalidades: prazo de pagamento */
+.sys-billing-grace { display: grid; gap: 8px; min-width: 220px; }
+.sys-billing-grace label { display: grid; gap: 4px; font-size: 13px; }
+.sys-billing-grace .sys-billing-check { display: flex; gap: 8px; align-items: flex-start; }
+.sys-billing-grace .sys-billing-check input { margin-top: 2px; }
+[data-billing-row] .sys-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+[data-billing-row] td small.sys-hint { display: block; margin-top: 4px; }
