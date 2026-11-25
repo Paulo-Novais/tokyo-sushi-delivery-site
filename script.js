@@ -9392,6 +9392,13 @@ const openAuth = (view = null, pendingHref = "") => {
 
   if (!loadAuthProfile()) {
     authState.editing = false;
+    // Sem login: vai direto para a tela de login (desenho novo), sem janela intermediária.
+    // O carrinho fica salvo neste aparelho e o cliente volta para a mesma página.
+    const loginHref = buildCustomerLoginUrl("entrar");
+    if (loginHref) {
+      window.location.assign(loginHref);
+      return;
+    }
   }
 
   closeMobileNavigation();
