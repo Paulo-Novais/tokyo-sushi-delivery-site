@@ -14244,3 +14244,56 @@ body.master-body {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Cardápio > Montagem de pizza (Pizzaria) */
+.admin-pizza-builder > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.admin-pizza-builder > summary::-webkit-details-marker { display: none; }
+.admin-pizza-builder > summary small { display: block; color: var(--gx-muted, #667085); font-size: 13px; font-weight: 400; }
+.admin-pizza-builder-status {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-pizza-builder-status.is-on { background: #dcfae6; color: #085d3a; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-status { background: #344054; color: #f2f4f7; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-status.is-on { background: #074d31; color: #dcfae6; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-note.is-ok { color: #75e0a7; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-note.is-error { color: #fda29b; }
+.admin-pizza-builder-form { display: grid; gap: 16px; margin-top: 16px; }
+.admin-pizza-builder-switch { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.admin-pizza-builder-switch input { width: 20px; height: 20px; }
+.admin-pizza-builder-grid { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 16px; align-items: start; }
+.admin-pizza-builder-fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--gx-border, #e5e7eb);
+  border-radius: 12px;
+}
+.admin-pizza-builder-fieldset legend { padding: 0 6px; font-weight: 700; font-size: 13px; }
+.admin-pizza-builder-fieldset label { display: inline-flex; align-items: center; gap: 6px; }
+.admin-pizza-builder-fieldset small { color: var(--gx-muted, #667085); }
+.admin-pizza-builder-borders { display: grid; gap: 8px; width: 100%; }
+.admin-pizza-builder-border { display: grid; grid-template-columns: 1fr 140px auto; gap: 8px; }
+.admin-pizza-builder-note { flex-basis: 100%; margin: 0; color: var(--gx-muted, #667085); font-size: 13px; }
+.admin-pizza-builder-note.is-ok { color: #15803d; font-weight: 600; }
+.admin-pizza-builder-note.is-error { color: #b42318; font-weight: 600; }
+.admin-pizza-builder-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.admin-pizza-builder-actions .admin-pizza-builder-note { flex: 1; flex-basis: auto; }
+@media (max-width: 720px) {
+  .admin-pizza-builder-grid { grid-template-columns: 1fr; }
+  .admin-pizza-builder-border { grid-template-columns: 1fr 110px auto; }
+}
