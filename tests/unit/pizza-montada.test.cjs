@@ -83,3 +83,11 @@ test("pedido: o preço enviado pelo navegador é ignorado e recalculado", () => 
   assert.equal(pizza.totalPrice, 177.8);
   assert.equal(order.items.find((item) => item.id === "coca").unitPrice, 14.9);
 });
+
+test("borda grátis (R$ 0) é aceita e não muda o preço", () => {
+  const free = { ...config, borders: [{ name: "Catupiry", price: "0" }, { name: "Cheddar", price: 0 }] };
+  assert.deepEqual(normalizePizzaBuilder(free).borders.map((border) => border.price), [0, 0]);
+  const pizza = resolvePizzaItem(buildPizzaItemId(["calabresa", "camarao"], "cheddar"), { itemMap, config: free });
+  assert.equal(pizza.unitPrice, 79.9);
+  assert.match(pizza.name, /borda de Cheddar/);
+});
