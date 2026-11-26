@@ -84,11 +84,6 @@
       title: "Dominios",
       subtitle: "Cadastro tecnico sem integracao DNS.",
     },
-    subscriptions: {
-      chip: "Assinaturas",
-      title: "Assinaturas",
-      subtitle: "Base preparada para cobranca futura.",
-    },
     reports: {
       chip: "Relatorios Gerais",
       title: "Relatorios Gerais",
@@ -163,7 +158,7 @@
     },
     PRO: {
       label: "Completo · R$ 299,90",
-      description: "Tudo do Profissional + caixa, comandas e mesas, app do garcom, clientes e campanhas e previsao.",
+      description: "Tudo do Profissional + caixa, comandas e mesas, app do garcom, clientes, avaliacoes e campanhas e previsao.",
     },
   });
   const ONBOARDING_RESOURCE_OPTIONS = Object.freeze([

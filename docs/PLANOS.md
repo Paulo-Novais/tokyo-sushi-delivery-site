@@ -8,14 +8,19 @@ mensalidade) e `lib/plan-limits.cjs` (vagas de usuário).
 | **Essencial** (`START`) | R$ 99,90 | 2 | Cardápio digital, Gestor de pedidos, cálculo de entrega, pagamento online, pedidos agendados, repasse semanal |
 | **Profissional** (`BUSINESS`) | R$ 179,90 | 5 | Tudo do Essencial + estoque, financeiro, relatórios e métricas (e exportações), nota fiscal (NFC-e) |
 | **Completo** (`PRO`) | R$ 299,90 | ilimitados | Tudo do Profissional + caixa, comandas, mesas e app do garçom, clientes e campanhas, avaliações, previsão de vendas e de compras |
-| Completo legado (`PREMIUM`) | R$ 219,90 | ilimitados | Igual ao Completo. Usado pelo Tokyo; mantém o preço antigo |
+| Completo legado (`PREMIUM`) | R$ 219,90 | ilimitados | Igual ao Completo. Ninguém usa mais (Tokyo e Kasulo passaram para o Completo em 25/11/2026) |
 | Grátis (`FREE`, legado) | R$ 0 | 1 | Básico, até 50 pedidos/mês. Fora do site e do cadastro novo |
 
 ## Adicionais
 
 - **Domínio próprio**: + R$ 49/mês em qualquer plano pago. Entra sozinho na
   mensalidade quando o domínio é vinculado no Painel INOVAS e sai quando é removido.
-  O Completo legado (Tokyo) não paga (já era incluso).
+  O Completo legado (`PREMIUM`) não paga (já era incluso).
+
+## Clientes atuais (25/11/2026)
+
+- **Tokyo Sushi** e **Kasulo Rocha Pizzaria**: Completo (`PRO`), mensalidade combinada
+  de R$ 349 mantida.
 - **Nota fiscal (NFC-e)**: inclusa no Profissional e no Completo (adicional de R$ 0).
   A emissão ainda não está pronta.
 

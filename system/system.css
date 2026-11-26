@@ -901,8 +901,14 @@ select.sys-input {
 
 .sys-detail {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   padding: 20px;
+}
+
+/* Nome/endereço comprido não estica o painel além da tela (celular). */
+.sys-detail > * {
+  min-width: 0;
 }
 
 .sys-detail h2 {
