@@ -9711,3 +9711,28 @@ html body.admin-body .gx-presence-option { white-space: nowrap; font-size: 12.5p
   .gx-fc-recipe-row { grid-template-columns: minmax(0, 1fr) 90px; }
   .gx-fc-recipe-row .gx-fc-muted { grid-column: 1; }
 }
+
+/* Configurações > Nota fiscal (NFC-e) */
+.gx-fiscal-blockers { margin: 0; padding-left: 20px; color: var(--gx-ink); line-height: 1.6; }
+.gx-fiscal-switch { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--gx-ink); font-weight: 600; }
+.gx-fiscal-switch input { width: 18px; height: 18px; }
+.gx-fiscal-select { flex: 1; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--gx-ink); font: 500 15px/1.2 "Inter", system-ui, sans-serif; }
+.gx-fiscal-list { display: grid; gap: 8px; }
+.gx-fiscal-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--gx-border); color: var(--gx-ink); }
+.gx-fiscal-row:first-child { border-top: 0; }
+.gx-fiscal-row small { color: var(--gx-muted); }
+.gx-set-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+@media (max-width: 720px) {
+  .gx-fiscal-row { grid-template-columns: 1fr auto; }
+}
+
+/* Pedido > Nota fiscal */
+.gx-od-invoice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--gx-border); border-radius: 12px; color: var(--gx-ink); }
+.gx-od-invoice > span:first-child { font-weight: 700; }
+.gx-od-invoice small { flex-basis: 100%; color: var(--gx-muted); }
+.gx-od-invoice.is-muted { border-style: dashed; }
+.gx-od-invoice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.gx-od-invoice-actions a,
+.gx-od-invoice-actions button { padding: 7px 12px; border: 1px solid var(--gx-border); border-radius: 9px; background: transparent; color: var(--gx-ink); font: 600 13px/1 "Inter", system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+.gx-od-invoice-actions button.is-danger { color: #b42318; }
+.gx-od-invoice-msg { font-weight: 600; }

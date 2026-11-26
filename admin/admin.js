@@ -11411,6 +11411,7 @@ const SITE_SETTINGS_TABS = Object.freeze([
   { key: "seo", label: "Google e compartilhamento", title: "Google e compartilhamento", text: "Como o site aparece em buscas e links." },
   { key: "payments", label: "Pagamentos e repasses", title: "Pagamentos e repasses", text: "Pagamento online no site (Pix, cartão e vale), taxas e a conta bancária que recebe os repasses." },
   { key: "channels", label: "Integrações", title: "iFood, 99Food e Uber Eats", text: "Receba os pedidos das plataformas no mesmo Gestor. Sem taxa da INOVAS." },
+  { key: "fiscal", label: "Nota fiscal", title: "Nota fiscal (NFC-e)", text: "Dados para emitir a nota do consumidor sozinha quando o pedido é entregue ou retirado." },
 ]);
 const SITE_SETTINGS_PALETTES = Object.freeze([
   { key: "tokyo", label: "Tokyo (padrão)", colors: ["#F97316", "#0F141F", "#FBBF24"] },
@@ -11647,6 +11648,163 @@ const renderFeeRow = (method, amountCents, data) => {
     <td><strong>${fee === null ? `até ${escapeHtml(formatMoney((amountCents - platform) / 100))}` : escapeHtml(formatMoney((amountCents - fee - platform) / 100))}</strong></td>
   </tr>`;
 };
+
+// ---------- Configurações > Nota fiscal (NFC-e) ----------
+const fiscalState = { loading: false, saving: false, data: null, message: "", tone: "" };
+const FISCAL_INVOICE_STATUS = {
+  AUTHORIZED: ["Autorizada", "is-ok"],
+  PROCESSING: ["Processando", "is-warn"],
+  REJECTED: ["Rejeitada", "is-bad"],
+  ERROR: ["Erro", "is-bad"],
+  CANCELED: ["Cancelada", "is-warn"],
+};
+
+const loadFiscalSettings = async () => {
+  fiscalState.loading = true;
+  try {
+    fiscalState.data = await fetchJson("/api/admin/settings/fiscal");
+  } catch (error) {
+    fiscalState.message = error.message || "Não foi possível carregar a nota fiscal.";
+    fiscalState.tone = "error";
+  } finally {
+    fiscalState.loading = false;
+    renderFiscalInto();
+  }
+};
+
+const renderFiscalBody = () => {
+  const data = fiscalState.data;
+  if (!data) {
+    if (!fiscalState.loading) void loadFiscalSettings();
+    return `<p class="gx-pay-muted">${escapeHtml(fiscalState.message || "Carregando nota fiscal…")}</p>`;
+  }
+  const readiness = data.readiness || {};
+  const fiscal = readiness.fiscal || {};
+  const busy = fiscalState.saving;
+  const disabled = busy ? "disabled" : "";
+  const feedback = fiscalState.message
+    ? `<div class="admin-feedback is-${escapeHtml(fiscalState.tone)}" role="status" data-fiscal-message>${escapeHtml(fiscalState.message)}</div>`
+    : "";
+  const wrap = (label, control) =>
+    `<label class="gx-set-field"><span class="gx-set-field-label">${escapeHtml(label)}</span><span class="gx-set-input">${control}</span></label>`;
+  const field = (name, label, value, attrs = "") =>
+    wrap(label, `<input data-fiscal-field="${name}" value="${escapeHtml(value ?? "")}" ${attrs} ${disabled} />`);
+  const statusCard = gxSetCard(
+    "Situação",
+    readiness.ready
+      ? `Tudo pronto. ${fiscal.autoEmit ? "A nota sai sozinha quando o pedido é entregue ou retirado." : "Emita pelo botão Nota fiscal de cada pedido."}`
+      : "Ainda falta algo para emitir:",
+    readiness.ready
+      ? `<p class="gx-pay-muted">Ambiente: <strong>${readiness.environment === "producao" ? "Produção (vale de verdade)" : "Homologação (teste, sem valor fiscal)"}</strong>${fiscal.certificateExpiresAt ? ` · Certificado válido até ${escapeHtml(fiscal.certificateExpiresAt)}` : ""}</p>`
+      : `<ul class="gx-fiscal-blockers" data-fiscal-blockers>${(readiness.blockers || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
+    `<span class="gx-payout-status ${readiness.ready ? "is-ok" : "is-warn"}" data-fiscal-status>${readiness.ready ? "Pronta para emitir" : "Pendente"}</span>`
+  );
+  const companyCard = gxSetCard(
+    "Dados da empresa",
+    "Como estão no cartão CNPJ e na Sefaz. Em dúvida, confirme com o contador.",
+    `<div class="gx-set-grid">
+      ${field("legalName", "Razão social", fiscal.legalName, 'maxlength="160"')}
+      ${field("cnpj", "CNPJ", fiscal.cnpj, 'inputmode="numeric" maxlength="18"')}
+      ${field("stateRegistration", "Inscrição estadual", fiscal.stateRegistration, 'maxlength="20"')}
+      ${wrap("Regime de impostos", `<select class="gx-fiscal-select" data-fiscal-field="crt" ${disabled}>
+          ${[[1, "Simples Nacional"], [2, "Simples Nacional (excesso de sublimite)"], [3, "Regime normal (Presumido/Real)"]]
+            .map(([value, label]) => `<option value="${value}" ${Number(fiscal.crt) === value ? "selected" : ""}>${label}</option>`)
+            .join("")}
+        </select>`)}
+      ${field("series", "Série da NFC-e", fiscal.series || "1", 'inputmode="numeric" maxlength="3"')}
+    </div>
+    <label class="gx-fiscal-switch"><input type="checkbox" data-fiscal-field="autoEmit" ${fiscal.autoEmit !== false ? "checked" : ""} ${disabled} /> Emitir sozinho quando o pedido for entregue ou retirado</label>`
+  );
+  const sefazCard = gxSetCard(
+    "Certificado digital e CSC",
+    "O certificado A1 (.pfx) e o CSC vão direto para o serviço emissor e não ficam guardados na INOVAS.",
+    `<div class="gx-set-grid">
+      ${field("cscId", "ID do CSC (na Sefaz)", fiscal.cscId, 'inputmode="numeric" maxlength="6"')}
+      ${wrap("CSC (código de segurança)", `<input type="password" autocomplete="off" data-fiscal-secret="cscToken" placeholder="${fiscal.companyRegistered ? "Já enviado · preencha só para trocar" : "Cole o CSC da Sefaz"}" ${disabled} />`)}
+      ${wrap("Certificado A1 (.pfx)", `<input type="file" accept=".pfx,.p12,application/x-pkcs12" data-fiscal-certificate ${disabled} />`)}
+      ${wrap("Senha do certificado", `<input type="password" autocomplete="off" data-fiscal-secret="certificatePassword" ${disabled} />`)}
+    </div>
+    ${readiness.providerActive ? "" : '<p class="gx-pay-warn">O envio do certificado e do CSC libera quando a INOVAS ativar o serviço emissor. Os outros dados já podem ser salvos.</p>'}`,
+    `<span class="gx-payout-status ${fiscal.companyRegistered ? "is-ok" : "is-warn"}">${fiscal.companyRegistered ? "Enviado" : "Não enviado"}</span>`
+  );
+  const codesCard = gxSetCard(
+    "Códigos dos produtos (NCM e CFOP)",
+    "Padrão usado em todos os itens. Bebidas são reconhecidas pelo nome/categoria. O contador confere.",
+    `<div class="gx-set-grid">
+      ${field("ncmFood", "NCM de comidas", fiscal.ncmFood, 'inputmode="numeric" maxlength="8"')}
+      ${field("ncmDrink", "NCM de bebidas", fiscal.ncmDrink, 'inputmode="numeric" maxlength="8"')}
+      ${field("cfop", "CFOP", fiscal.cfop, 'inputmode="numeric" maxlength="4"')}
+      ${field("icmsCst", "CSOSN/CST do ICMS", fiscal.icmsCst, 'inputmode="numeric" maxlength="3"')}
+      ${field("pisCofinsCst", "CST de PIS/COFINS", fiscal.pisCofinsCst, 'inputmode="numeric" maxlength="2"')}
+    </div>
+    <div class="gx-set-actions"><button type="button" class="gx-set-btn is-primary" data-fiscal-action="save" ${disabled}>${busy ? "Salvando…" : "Salvar nota fiscal"}</button></div>`
+  );
+  const invoices = Array.isArray(data.invoices) ? data.invoices : [];
+  const listCard = gxSetCard(
+    "Últimas notas",
+    invoices.length ? "" : "Nenhuma nota emitida ainda.",
+    invoices.length
+      ? `<div class="gx-fiscal-list" data-fiscal-invoices>${invoices
+          .map((invoice) => {
+            const [label, tone] = FISCAL_INVOICE_STATUS[invoice.status] || [invoice.status, "is-warn"];
+            return `<div class="gx-fiscal-row"><span>Pedido ${escapeHtml(invoice.orderPublicId || invoice.orderId)}${invoice.number ? ` · NFC-e nº ${escapeHtml(invoice.number)}` : ""}</span><span>${escapeHtml(formatMoney((invoice.amountCents || 0) / 100))}</span><span class="gx-payout-status ${tone}">${escapeHtml(label)}</span>${invoice.danfeUrl ? `<a href="${escapeHtml(invoice.danfeUrl)}" target="_blank" rel="noopener noreferrer">Ver nota</a>` : `<small>${escapeHtml(invoice.message || "")}</small>`}</div>`;
+          })
+          .join("")}</div>`
+      : ""
+  );
+  return `${feedback}${statusCard}${companyCard}${sefazCard}${codesCard}${listCard}`;
+};
+
+const renderFiscalInto = () => {
+  const slot = document.querySelector("[data-fiscal-slot]");
+  if (slot) slot.innerHTML = renderFiscalBody();
+};
+
+const readFileAsBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").replace(/^data:[^,]*,/, ""));
+    reader.onerror = () => reject(new Error("Não foi possível ler o arquivo do certificado."));
+    reader.readAsDataURL(file);
+  });
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest?.('[data-fiscal-action="save"]');
+  if (!button) return;
+  const slot = document.querySelector("[data-fiscal-slot]");
+  if (!slot) return;
+  const read = (name) => slot.querySelector(`[data-fiscal-field="${name}"]`);
+  const body = {};
+  ["legalName", "cnpj", "stateRegistration", "crt", "series", "cscId", "ncmFood", "ncmDrink", "cfop", "icmsCst", "pisCofinsCst"].forEach((name) => {
+    const input = read(name);
+    if (input) body[name] = String(input.value || "").trim();
+  });
+  body.autoEmit = Boolean(read("autoEmit")?.checked);
+  const csc = slot.querySelector('[data-fiscal-secret="cscToken"]')?.value.trim();
+  const password = slot.querySelector('[data-fiscal-secret="certificatePassword"]')?.value || "";
+  const file = slot.querySelector("[data-fiscal-certificate]")?.files?.[0];
+  fiscalState.saving = true;
+  fiscalState.message = "";
+  try {
+    if (csc) body.cscToken = csc;
+    if (file) {
+      if (file.size > 80000) throw new Error("Arquivo do certificado grande demais. Use o certificado A1 (.pfx).");
+      body.certificateBase64 = await readFileAsBase64(file);
+      body.certificatePassword = password;
+    }
+    renderFiscalInto();
+    const payload = await fetchJson("/api/admin/settings/fiscal-save", { method: "POST", body: JSON.stringify(body) });
+    fiscalState.data = { ...(fiscalState.data || {}), readiness: payload.readiness };
+    fiscalState.message = payload.notice || "Dados da nota fiscal salvos.";
+    fiscalState.tone = "success";
+  } catch (error) {
+    fiscalState.message = error.message || "Não foi possível salvar.";
+    fiscalState.tone = "error";
+  } finally {
+    fiscalState.saving = false;
+    renderFiscalInto();
+  }
+});
 
 const loadPaymentSettings = async () => {
   paymentSettingsState.loading = true;
@@ -12342,6 +12500,7 @@ const renderRestaurantSettingsModule = () => {
 
           ${panel("payments", `<div data-payment-settings-slot>${renderPaymentSettingsBody()}</div>`)}
           ${panel("channels", `<div data-channels-slot>${renderChannelsBody()}</div>`)}
+          ${panel("fiscal", `<div data-fiscal-slot>${renderFiscalBody()}</div>`)}
 
           <p class="gx-set-updated">Última atualização: ${escapeHtml(adminState.isLoadingRestaurantSettings ? "carregando..." : updatedLabel)}</p>
         </div>
@@ -14251,8 +14410,99 @@ const renderOrdersDetailPanel = (detailRoot) => {
           ? ""
           : `<button class="gx-od-cancel" type="button" data-order-action="${escapeHtml(order.id)}" data-next-status="Cancelado" data-action-note="${escapeHtml(ACTION_NOTES.Cancelado)}" ${adminState.isUpdatingStatus ? "disabled" : ""}>Cancelar pedido</button>`
       }
+      ${renderOrderInvoiceBlock(order)}
     </div>`;
 };
+
+// ---------- Nota fiscal do pedido ----------
+const orderInvoiceState = new Map();
+
+const loadOrderInvoice = async (orderId, { force = false } = {}) => {
+  const current = orderInvoiceState.get(orderId);
+  if (current?.loading || (current?.data && !force)) return;
+  orderInvoiceState.set(orderId, { ...(current || {}), loading: true });
+  try {
+    const data = await fetchJson(`/api/admin/orders/invoice?orderId=${encodeURIComponent(orderId)}`);
+    orderInvoiceState.set(orderId, { loading: false, data });
+  } catch (error) {
+    orderInvoiceState.set(orderId, { loading: false, data: null, error: error.message || "Não foi possível ver a nota." });
+  }
+  if (adminState.selectedOrderId === orderId) renderOrderDetails();
+};
+
+const renderOrderInvoiceBlock = (order) => {
+  if (!order?.id) return "";
+  const entry = orderInvoiceState.get(order.id);
+  if (!entry || (!entry.data && !entry.error && !entry.loading)) {
+    void loadOrderInvoice(order.id);
+    return "";
+  }
+  if (entry.loading && !entry.data) return "";
+  if (entry.error && !entry.data) return "";
+  const { readiness = {}, invoices = [] } = entry.data || {};
+  const latest = invoices[0] || null;
+  const active = invoices.find((invoice) => invoice.status === "AUTHORIZED" || invoice.status === "PROCESSING");
+  const [label, tone] = latest ? FISCAL_INVOICE_STATUS[latest.status] || [latest.status, "is-warn"] : ["Sem nota", "is-warn"];
+  const canEmit = readiness.ready && !active && order.status !== "Cancelado" && isFinalOrder(order);
+  const busy = entry.busy ? "disabled" : "";
+  const feedback = entry.message ? `<small class="gx-od-invoice-msg">${escapeHtml(entry.message)}</small>` : "";
+  if (!latest && !readiness.ready) {
+    // Emissão ainda não ativada pela INOVAS ou plano sem nota: não mostra nada.
+    if (!readiness.providerActive || !readiness.planAllowed) return "";
+    // Restaurante sem nota fiscal configurada: só um aviso discreto.
+    return `<div class="gx-od-invoice is-muted" data-order-invoice><span>Nota fiscal</span><small>${escapeHtml((readiness.blockers || [])[0] || "Não configurada.")}</small></div>`;
+  }
+  return `
+    <div class="gx-od-invoice" data-order-invoice>
+      <span>Nota fiscal${latest?.number ? ` nº ${escapeHtml(latest.number)}` : ""}</span>
+      <span class="gx-payout-status ${tone}" data-order-invoice-status>${escapeHtml(label)}</span>
+      ${latest?.status === "REJECTED" || latest?.status === "ERROR" ? `<small>${escapeHtml(latest.message || "")}</small>` : ""}
+      <div class="gx-od-invoice-actions">
+        ${active?.danfeUrl ? `<a href="${escapeHtml(active.danfeUrl)}" target="_blank" rel="noopener noreferrer">Ver nota</a>` : ""}
+        ${canEmit ? `<button type="button" data-invoice-action="emit" data-order-id="${escapeHtml(order.id)}" ${busy}>Emitir nota fiscal</button>` : ""}
+        ${active?.status === "AUTHORIZED" ? `<button type="button" class="is-danger" data-invoice-action="cancel" data-order-id="${escapeHtml(order.id)}" ${busy}>Cancelar nota</button>` : ""}
+      </div>
+      ${feedback}
+    </div>`;
+};
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest?.("[data-invoice-action]");
+  if (!button) return;
+  const orderId = button.dataset.orderId;
+  const action = button.dataset.invoiceAction;
+  let reason = "";
+  if (action === "cancel") {
+    reason = window.prompt("Motivo do cancelamento da nota (mínimo 15 letras):", "Pedido cancelado a pedido do cliente") || "";
+    if (reason.trim().length < 15) return;
+  }
+  const entry = orderInvoiceState.get(orderId) || {};
+  orderInvoiceState.set(orderId, { ...entry, busy: true, message: "" });
+  renderOrderDetails();
+  let message = "";
+  try {
+    const payload = await fetchJson(`/api/admin/orders/${action === "emit" ? "invoice-emit" : "invoice-cancel"}`, {
+      method: "POST",
+      body: JSON.stringify({ orderId, reason }),
+    });
+    const status = payload.invoice?.status;
+    message =
+      action === "emit"
+        ? status === "AUTHORIZED"
+          ? "Nota autorizada."
+          : payload.invoice?.message || "A Sefaz não autorizou a nota."
+        : payload.canceled
+          ? "Nota cancelada."
+          : payload.message || "Não foi possível cancelar a nota.";
+  } catch (error) {
+    message = error.message || "Não foi possível concluir.";
+  }
+  orderInvoiceState.delete(orderId);
+  await loadOrderInvoice(orderId, { force: true });
+  const fresh = orderInvoiceState.get(orderId);
+  if (fresh) orderInvoiceState.set(orderId, { ...fresh, message });
+  renderOrderDetails();
+});
 
 // ---------- Alertas sonoros de pedidos ----------
 // Novo pedido (repete até aceitar), pedido passando de 20 min e atrasado (+30 min).
