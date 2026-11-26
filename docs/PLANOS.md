@@ -21,8 +21,8 @@ mensalidade) e `lib/plan-limits.cjs` (vagas de usuário).
 
 - **Tokyo Sushi** e **Kasulo Rocha Pizzaria**: Completo (`PRO`), mensalidade combinada
   de R$ 349 mantida.
-- **Nota fiscal (NFC-e)**: inclusa no Profissional e no Completo (adicional de R$ 0).
-  A emissão ainda não está pronta.
+- **Nota fiscal (NFC-e)**: inclusa no Profissional e no Completo. Pronta no sistema,
+  esperando os dados do serviço emissor (ver `docs/NOTA-FISCAL.md`).
 
 ## Como o sistema aplica
 

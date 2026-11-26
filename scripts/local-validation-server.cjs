@@ -34,6 +34,7 @@ process.env.INOVAS_ALLOW_TENANT_CATALOG_FALLBACK = "true";
 process.env.INOVAS_PRESENCE_ENFORCE = process.env.INOVAS_PRESENCE_ENFORCE || "prefix:presenca-";
 process.env.INOVAS_PAYMENT_PROVIDER = process.env.INOVAS_PAYMENT_PROVIDER || "fake";
 process.env.INOVAS_CHANNELS_PROVIDER = process.env.INOVAS_CHANNELS_PROVIDER || "fake";
+process.env.FISCAL_PROVIDER = process.env.FISCAL_PROVIDER || "fake";
 process.env.INOVAS_DELIVERY_GEO_PROVIDER = process.env.INOVAS_DELIVERY_GEO_PROVIDER || "fake";
 process.env.INOVAS_LOOKUP_API_URL = process.env.INOVAS_LOOKUP_API_URL || "fake";
 // Login do cliente: login central em outra origem (localhost x 127.0.0.1),

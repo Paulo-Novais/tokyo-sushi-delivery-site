@@ -21,7 +21,7 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 ## Próximos recursos (decisão do Paulo, 19/11/2026)
 
 **Agora**
-1. [ ] **Emissão de NFC-e automática** (por serviço pronto de notas).
+1. [x] **Emissão de NFC-e automática**: pronta no sistema; falta contratar o emissor (Focus NFe), cadastrar as variáveis e aplicar a 037 (ver docs/NOTA-FISCAL.md).
 2. [ ] **KDS (tela da cozinha)** — replicar o projeto parecido que já existe.
 
 **Mais à frente**
@@ -44,7 +44,7 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 
 - [x] Essencial R$ 99,90 · Profissional R$ 179,90 · Completo R$ 299,90 (ver docs/PLANOS.md).
 - [x] Domínio próprio opcional em qualquer plano pago: + R$ 49/mês, cobrado junto com a mensalidade.
-- [x] Nota fiscal (NFC-e) inclusa no Profissional e no Completo (a emissão ainda precisa ser construída).
+- [x] Nota fiscal (NFC-e) inclusa no Profissional e no Completo (emissão pronta, esperando o emissor).
 - [x] Grátis saiu do site e do cadastro novo (segue como plano legado).
 - [x] Tokyo e Kasulo no Completo (`PRO`), mantendo a mensalidade combinada de R$ 349.
 
