@@ -2680,6 +2680,10 @@ const getMenuItemsTotalAmount = (itemIds, quantityById) =>
   );
 
 const normalizeCartItem = (item) => {
+  // Pizza montada (pizza-builder.js): nome e preço vêm dos sabores escolhidos.
+  if (String(item?.id || "").startsWith("pizza|")) {
+    return window.InovasPizza?.resolveCartItem(item) || null;
+  }
   const menuItem = MENU_ITEM_LOOKUP.get(item.id);
 
   if (!menuItem || !isMenuItemOrderable(menuItem)) {
@@ -7526,6 +7530,9 @@ const normalizePublicRestaurantSettingsPayload = (settings = {}) => {
       source.premiumContent && typeof source.premiumContent === "object"
         ? source.premiumContent
         : defaults.premiumContent,
+    // Pizzaria: montagem de pizza (pizza-builder.js).
+    pizzaBuilder:
+      source.pizzaBuilder && typeof source.pizzaBuilder === "object" ? source.pizzaBuilder : null,
     updatedAt: normalizePublicSettingsText(source.updatedAt, "", 80),
   };
 };
@@ -8063,6 +8070,7 @@ const applyRestaurantSettingsToPublicSite = () => {
 
   const settings = getRestaurantSettings();
 
+  window.InovasPizza?.mount();
   syncPremiumModelContent(settings);
   applyPublicSiteAppearance(settings);
   applyRestaurantMetaTags(settings);
@@ -13802,6 +13810,8 @@ const renderCatalog = () => {
     })
     .join("");
 
+  // Pizzaria: "Monte sua pizza" no topo do cardápio (pizza-builder.js).
+  window.InovasPizza?.mount();
   syncCatalogSelections();
   syncPublicLayoutNavigation();
   setupReveal();

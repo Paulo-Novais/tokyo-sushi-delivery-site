@@ -5589,6 +5589,184 @@ const renderMenuSectionCard = (section) => {
   `;
 };
 
+// ---------- Pizzaria: montagem de pizza ----------
+// O dono liga "Monte sua pizza" no site, diz quais categorias são os sabores
+// (cada prato = pizza inteira daquele sabor), quantos sabores a pizza aceita e
+// as bordas recheadas com preço. Preço cobrado = sabor mais caro + borda.
+const PIZZA_BUILDER_DEFAULT_BORDERS = [
+  { name: "Catupiry", price: "" },
+  { name: "Cheddar", price: "" },
+  { name: "Muçarela", price: "" },
+];
+const pizzaBuilderState = { loaded: false, loading: false, config: null, message: "", tone: "" };
+
+const loadPizzaBuilderConfig = async () => {
+  if (pizzaBuilderState.loading) return;
+  pizzaBuilderState.loading = true;
+  try {
+    const payload = await fetchJson("/api/admin/catalog/pizza-builder");
+    pizzaBuilderState.config = payload?.pizzaBuilder || null;
+  } catch (error) {
+    pizzaBuilderState.config = null;
+  }
+  pizzaBuilderState.loaded = true;
+  pizzaBuilderState.loading = false;
+  const holder = document.querySelector("[data-pizza-builder-card]");
+  if (holder) holder.outerHTML = renderPizzaBuilderCard(getMenuSnapshot());
+};
+
+const renderPizzaBuilderCard = (snapshot) => {
+  if (!pizzaBuilderState.loaded) {
+    void loadPizzaBuilderConfig();
+  }
+  const config = pizzaBuilderState.config || {};
+  const enabled = config.enabled === true;
+  const counts = Array.isArray(config.flavorCounts) && config.flavorCounts.length ? config.flavorCounts : [1, 2];
+  const sectionIds = new Set(Array.isArray(config.flavorSectionIds) ? config.flavorSectionIds : []);
+  const borders = Array.isArray(config.borders) && config.borders.length ? config.borders : PIZZA_BUILDER_DEFAULT_BORDERS;
+  const isOpen = adminState.menuOpenKeys instanceof Set && adminState.menuOpenKeys.has("pizza-builder");
+  const sections = snapshot.sections || [];
+  const formatBorderPrice = (value) =>
+    value === "" || value === null || value === undefined ? "" : Number(value).toFixed(2).replace(".", ",");
+  return `
+    <details class="admin-module-card admin-pizza-builder" data-pizza-builder-card data-menu-open-key="pizza-builder" ${isOpen ? "open" : ""}>
+      <summary>
+        <span><strong>Montagem de pizza</strong><small>Pizzaria: o cliente escolhe 1, 2 ou 4 sabores e paga pelo mais caro</small></span>
+        <span class="admin-pizza-builder-status ${enabled ? "is-on" : ""}">${enabled ? "Ligada no site" : "Desligada"}</span>
+      </summary>
+      ${
+        !pizzaBuilderState.loaded
+          ? '<p class="admin-pizza-builder-note">Carregando…</p>'
+          : `
+      <form class="admin-pizza-builder-form" data-pizza-builder-form novalidate>
+        <label class="admin-pizza-builder-switch">
+          <input type="checkbox" name="enabled" ${enabled ? "checked" : ""} />
+          <span>Mostrar <b>“Monte sua pizza”</b> no topo do cardápio do site</span>
+        </label>
+
+        <div class="admin-pizza-builder-grid">
+          <label class="admin-field">
+            <span>Tamanho da pizza</span>
+            <input class="admin-input" name="sizeLabel" maxlength="40" value="${escapeHtml(config.sizeLabel || "8 pedaços")}" />
+          </label>
+          <fieldset class="admin-pizza-builder-fieldset">
+            <legend>Quantos sabores o cliente pode escolher</legend>
+            ${[1, 2, 3, 4]
+              .map(
+                (count) => `<label><input type="checkbox" name="flavorCounts" value="${count}" ${counts.includes(count) ? "checked" : ""} /> ${count === 1 ? "1 sabor" : `${count} sabores`}</label>`
+              )
+              .join("")}
+          </fieldset>
+        </div>
+
+        <fieldset class="admin-pizza-builder-fieldset">
+          <legend>Categorias que são sabores de pizza</legend>
+          <p class="admin-pizza-builder-note">Cada prato dessas categorias vira um sabor, com o preço da pizza inteira daquele sabor.</p>
+          ${
+            sections.length
+              ? sections
+                  .map(
+                    (section) => `<label><input type="checkbox" name="flavorSectionIds" value="${escapeHtml(section.id)}" ${sectionIds.has(section.id) ? "checked" : ""} /> ${escapeHtml(section.title)} <small>(${escapeHtml(String((section.items || []).length))} itens)</small></label>`
+                  )
+                  .join("")
+              : '<p class="admin-pizza-builder-note">Cadastre as categorias do cardápio primeiro.</p>'
+          }
+        </fieldset>
+
+        <fieldset class="admin-pizza-builder-fieldset">
+          <legend>Bordas recheadas (deixe o preço vazio para não oferecer)</legend>
+          <div class="admin-pizza-builder-borders" data-pizza-builder-borders>
+            ${borders
+              .map(
+                (border) => `
+              <div class="admin-pizza-builder-border" data-pizza-builder-border>
+                <input class="admin-input" name="borderName" maxlength="40" placeholder="Recheio (ex.: Catupiry)" value="${escapeHtml(border.name || "")}" aria-label="Recheio da borda" />
+                <input class="admin-input" name="borderPrice" inputmode="decimal" placeholder="Preço (ex.: 9,00)" value="${escapeHtml(formatBorderPrice(border.price))}" aria-label="Preço da borda" />
+                <button type="button" class="admin-button admin-button-ghost" data-pizza-builder-remove-border aria-label="Remover borda">✕</button>
+              </div>`
+              )
+              .join("")}
+          </div>
+          <button type="button" class="admin-button admin-button-ghost" data-pizza-builder-add-border>+ Adicionar borda</button>
+        </fieldset>
+
+        <div class="admin-pizza-builder-actions">
+          <p class="admin-pizza-builder-note ${pizzaBuilderState.tone ? `is-${pizzaBuilderState.tone}` : ""}" data-pizza-builder-message role="status">${escapeHtml(
+            pizzaBuilderState.message || "Preço cobrado = sabor mais caro + borda. O servidor confere tudo no pedido."
+          )}</p>
+          <button type="submit" class="admin-button admin-button-primary">Salvar montagem</button>
+        </div>
+      </form>`
+      }
+    </details>
+  `;
+};
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-pizza-builder-add-border]")) {
+    const list = document.querySelector("[data-pizza-builder-borders]");
+    if (!list || list.children.length >= 8) return;
+    const row = document.createElement("div");
+    row.className = "admin-pizza-builder-border";
+    row.setAttribute("data-pizza-builder-border", "");
+    row.innerHTML = `<input class="admin-input" name="borderName" maxlength="40" placeholder="Recheio" aria-label="Recheio da borda" /><input class="admin-input" name="borderPrice" inputmode="decimal" placeholder="Preço" aria-label="Preço da borda" /><button type="button" class="admin-button admin-button-ghost" data-pizza-builder-remove-border aria-label="Remover borda">✕</button>`;
+    list.appendChild(row);
+    row.querySelector("input")?.focus();
+    return;
+  }
+  const remove = event.target.closest("[data-pizza-builder-remove-border]");
+  if (remove) remove.closest("[data-pizza-builder-border]")?.remove();
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-pizza-builder-form]");
+  if (!form) return;
+  event.preventDefault();
+  const message = form.querySelector("[data-pizza-builder-message]");
+  const checked = (name) => [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
+  const borders = [...form.querySelectorAll("[data-pizza-builder-border]")]
+    .map((row) => ({
+      name: row.querySelector('[name="borderName"]').value.trim(),
+      price: row.querySelector('[name="borderPrice"]').value.trim().replace(/\./g, "").replace(",", "."),
+    }))
+    .filter((border) => border.name && border.price !== "");
+  const pizzaBuilder = {
+    enabled: form.elements.enabled.checked,
+    sizeLabel: form.elements.sizeLabel.value,
+    flavorCounts: checked("flavorCounts").map(Number),
+    flavorSectionIds: checked("flavorSectionIds"),
+    borders,
+  };
+  if (pizzaBuilder.enabled && !pizzaBuilder.flavorSectionIds.length) {
+    message.textContent = "Marque pelo menos uma categoria de sabores.";
+    message.className = "admin-pizza-builder-note is-error";
+    return;
+  }
+  if (!pizzaBuilder.flavorCounts.length) {
+    message.textContent = "Marque quantos sabores a pizza pode ter.";
+    message.className = "admin-pizza-builder-note is-error";
+    return;
+  }
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true;
+  try {
+    const payload = await fetchJson("/api/admin/catalog/pizza-builder", {
+      method: "POST",
+      body: JSON.stringify({ pizzaBuilder }),
+    });
+    pizzaBuilderState.config = payload?.pizzaBuilder || pizzaBuilder;
+    pizzaBuilderState.message = pizzaBuilderState.config.enabled
+      ? "Montagem salva. “Monte sua pizza” já aparece no site."
+      : "Montagem salva (desligada no site).";
+    pizzaBuilderState.tone = "ok";
+  } catch (error) {
+    pizzaBuilderState.message = error.message || "Não foi possível salvar.";
+    pizzaBuilderState.tone = "error";
+  }
+  const holder = document.querySelector("[data-pizza-builder-card]");
+  if (holder) holder.outerHTML = renderPizzaBuilderCard(getMenuSnapshot());
+});
+
 const renderMenuModule = () => {
   const moduleRoot = document.querySelector("[data-admin-module-content]");
   const snapshot = getMenuSnapshot();
@@ -5695,6 +5873,8 @@ const renderMenuModule = () => {
         <p>Itens pausados somem do site do cliente, mas continuam aqui para reativação posterior. Clique em um prato para editar.</p>
       </div>
     </section>
+
+    ${renderPizzaBuilderCard(snapshot)}
 
     <details class="admin-module-card admin-menu-create-section" data-menu-open-key="new-section" ${
       adminState.menuOpenKeys instanceof Set && adminState.menuOpenKeys.has("new-section") ? "open" : ""
