@@ -14260,12 +14260,16 @@ body.master-body {
   flex: none;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(102, 112, 133, 0.12);
-  color: var(--gx-muted, #667085);
+  background: #f2f4f7;
+  color: #344054;
   font-size: 12px;
   font-weight: 700;
 }
-.admin-pizza-builder-status.is-on { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.admin-pizza-builder-status.is-on { background: #dcfae6; color: #085d3a; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-status { background: #344054; color: #f2f4f7; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-status.is-on { background: #074d31; color: #dcfae6; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-note.is-ok { color: #75e0a7; }
+body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-note.is-error { color: #fda29b; }
 .admin-pizza-builder-form { display: grid; gap: 16px; margin-top: 16px; }
 .admin-pizza-builder-switch { display: flex; align-items: center; gap: 10px; font-size: 15px; }
 .admin-pizza-builder-switch input { width: 20px; height: 20px; }
