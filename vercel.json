@@ -468,6 +468,10 @@
     {
       "path": "/api/payments/cron-payouts",
       "schedule": "7 12 * * 3"
+    },
+    {
+      "path": "/api/payments/cron-billing",
+      "schedule": "17 9 * * *"
     }
   ]
 }

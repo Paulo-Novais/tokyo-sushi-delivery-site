@@ -34,22 +34,27 @@ test("Navegador: Caixa e mudança de pedido bloqueados; app funciona; Painel seg
   expect(browserSession.pdvApp).toEqual({ required: true, isApp: false });
   await api.dispose();
 
-  // Tela do navegador: Pedidos e Caixa mostram o aviso com o botão de baixar.
+  // Tela do navegador (site INOVAS): entra direto no Painel; Pedidos e Caixa
+  // não abrem por ali (voltam para o Painel). Eles ficam só no app.
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `127.88.${Math.floor(Math.random() * 200)}.6` });
-  await page.goto("/admin/login.html?next=%2Fadmin%2F");
+  await page.goto("/login");
   await page.locator('input[name="identifier"]').fill(restaurant.ownerLogin);
   await page.locator('input[name="password"]').fill(restaurant.ownerPassword);
   await page.locator("[data-admin-login-submit]").click();
   await page.waitForLoadState("networkidle");
-  await page.goto("/admin/?section=orders");
-  await expect(page.locator("[data-pdv-app-required] h2")).toHaveText("Pedidos funciona no app INOVAS PDV");
-  await expect(page.locator("[data-pdv-download]")).toHaveAttribute("href", /INOVAS-PDV-Setup\.exe$/);
-  if (process.env.PDV_SHOT_DIR) await page.screenshot({ path: `${process.env.PDV_SHOT_DIR}/somente-app-pedidos.png` });
-  await page.goto("/admin/caixa/salao");
-  await expect(page.locator("[data-pdv-app-required] h2")).toHaveText("Caixa e Comandas funciona no app INOVAS PDV");
-  // Painel continua no navegador.
-  await page.goto("/admin/?section=dashboard");
-  await expect(page.locator("[data-pdv-app-required]")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/admin\/(\?section=dashboard)?$/);
+  await expect(page.locator("h1").first()).toHaveText("Resumo do turno e indicadores");
+  for (const blockedPath of ["/admin/?section=orders", "/admin/?section=cash-register", "/admin/caixa/salao", "/admin/caixa/abertura"]) {
+    await page.goto(blockedPath);
+    await page.waitForLoadState("networkidle");
+    await expect(page, blockedPath).toHaveURL(/\/admin\/\?section=dashboard$/);
+    await expect(page.locator("h1").first()).toHaveText("Resumo do turno e indicadores");
+    await expect(page.locator("[data-pdv-app-required]")).toHaveCount(0);
+  }
+  if (process.env.PDV_SHOT_DIR) await page.screenshot({ path: `${process.env.PDV_SHOT_DIR}/somente-app-painel.png` });
+  // O menu do navegador não mostra Pedidos nem Caixa.
+  await expect(page.locator('[data-admin-nav] [data-admin-section="orders"]')).toBeHidden();
+  await expect(page.locator('[data-admin-nav] [data-admin-section="cash-register"]')).toBeHidden();
 });
 
 test("App INOVAS PDV antigo (0.2.0): Gestor pede para atualizar, com botão quando o app oferece", async ({ browser }) => {

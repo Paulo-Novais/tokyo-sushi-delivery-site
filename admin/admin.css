@@ -14197,3 +14197,50 @@ body.master-body {
 .admin-plan-locked { display: grid; justify-items: center; gap: 10px; max-width: 520px; margin: 40px auto; text-align: center; }
 .admin-plan-locked-icon { font-size: 2rem; line-height: 1; }
 .admin-plan-locked .admin-button { margin-top: 6px; text-decoration: none; }
+
+/* Mensalidade: faixa de prazo e tela de bloqueio */
+.billing-banner {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  padding: 10px 16px;
+  background: #fff4d6;
+  color: #6b4a00;
+  border-bottom: 1px solid #f1d58a;
+  font-size: 14px;
+  text-align: center;
+}
+.access-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 15, 18, 0.86);
+  backdrop-filter: blur(4px);
+}
+.access-lock-card {
+  max-width: 440px;
+  width: 100%;
+  padding: 28px 24px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1d1d1f;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.access-lock-icon { font-size: 40px; }
+.access-lock-card h2 { margin: 8px 0 10px; font-size: 20px; }
+.access-lock-card p { margin: 0 0 10px; line-height: 1.5; color: #444; }
+.access-lock-help { font-weight: 600; color: #1d1d1f !important; }
+.access-lock-exit {
+  margin-top: 8px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #1d1d1f;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}

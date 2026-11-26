@@ -1100,6 +1100,58 @@ const syncAdminAccessFromPayload = (admin = {}) => {
   } else if (admin.planAccess && typeof admin.planAccess === "object") {
     adminState.commercialAccess = admin.planAccess;
   }
+
+  if (admin.accessNotice && typeof admin.accessNotice === "object") {
+    renderRestaurantAccessNotice(admin.accessNotice);
+  }
+};
+
+// Mensalidade: faixa com o prazo de pagamento e tela de bloqueio quando a
+// INOVAS suspende o acesso. O restaurante só vê; quem decide é a INOVAS.
+const formatNoticeDate = (iso = "") => {
+  const [year, month, day] = String(iso).slice(0, 10).split("-");
+  return year && month && day ? `${day}/${month}/${year}` : "";
+};
+
+const renderRestaurantAccessNotice = (notice = {}) => {
+  document.querySelector("[data-access-lock]")?.remove();
+  document.querySelector("[data-billing-banner]")?.remove();
+  if (notice.suspended) {
+    const lock = document.createElement("div");
+    lock.className = "access-lock";
+    lock.setAttribute("data-access-lock", "");
+    lock.setAttribute("role", "alertdialog");
+    lock.setAttribute("aria-modal", "true");
+    lock.setAttribute("aria-labelledby", "access-lock-title");
+    lock.innerHTML = `
+      <div class="access-lock-card">
+        <div class="access-lock-icon" aria-hidden="true">🔒</div>
+        <h2 id="access-lock-title">${notice.billingBlocked ? "Sistema bloqueado por mensalidade em atraso" : "Acesso suspenso"}</h2>
+        <p>${notice.billingBlocked
+          ? "O Gestor, os pedidos e o site da loja estão pausados até a mensalidade ser paga. Assim que o pagamento for registrado, tudo volta a funcionar."
+          : "O acesso deste restaurante foi suspenso pela INOVAS Food."}</p>
+        <p class="access-lock-help">Fale com a INOVAS Food para regularizar.</p>
+        <button type="button" class="access-lock-exit" data-access-lock-exit>Sair</button>
+      </div>`;
+    document.body.appendChild(lock);
+    lock.querySelector("[data-access-lock-exit]").addEventListener("click", async () => {
+      try {
+        await fetchJson("/api/admin/logout", { method: "POST" });
+      } catch (error) {
+        // Mesmo que o logout falhe, seguimos para a tela de login.
+      }
+      window.location.href = "/login";
+    });
+    return;
+  }
+  if (notice.graceUntil) {
+    const banner = document.createElement("div");
+    banner.className = "billing-banner";
+    banner.setAttribute("data-billing-banner", "");
+    banner.setAttribute("role", "status");
+    banner.innerHTML = `<strong>Mensalidade em atraso.</strong> Prazo para pagamento: <strong>${formatNoticeDate(notice.graceUntil)}</strong>. Depois dessa data o sistema poderá ser bloqueado.`;
+    document.body.prepend(banner);
+  }
 };
 
 const hasAdminPermission = (permissionKey) => {
@@ -13361,6 +13413,21 @@ if (typeof window !== "undefined") {
   });
 }
 
+const sendBrowserRestaurantToDashboard = () => {
+  adminState.activeSection = "dashboard";
+  ensureActiveSectionAllowed();
+  if (["orders", "cash-register"].includes(adminState.activeSection)) {
+    adminState.activeSection =
+      getVisibleNavSections().find((section) => IMPLEMENTED_SECTIONS.has(section.key) && !["orders", "cash-register"].includes(section.key))?.key ||
+      "dashboard";
+  }
+  try {
+    window.history.replaceState(null, "", "/admin/?section=dashboard");
+  } catch (error) {
+    // Sem histórico: segue só trocando a tela.
+  }
+};
+
 const isPdvAppBlockedSection = () =>
   adminState.pdvAppBlocked === true && ["orders", "cash-register"].includes(adminState.activeSection);
 
@@ -17610,14 +17677,27 @@ const loadInitialAdminSession = async () => {
   if (adminState.pdvAppBlocked) syncOrderAlertBanner();
   adminState.isRestaurantUser = session.admin?.userScope === "RESTAURANT";
   renderSupportAccessBanner(session.admin?.support || null);
+  const isBrowserRestaurant =
+    adminState.isRestaurantUser && session.pdvApp?.isApp !== true && !isInsideOutdatedPdvApp() && !getPdvAppBridge();
+  const requestedSection = new URLSearchParams(window.location.search).get("section");
   if (
     getRequestedCashRegisterView() &&
+    !adminState.pdvAppBlocked &&
     IMPLEMENTED_SECTIONS.has("cash-register") &&
     canAccessAdminSection("cash-register")
   ) {
     adminState.activeSection = "cash-register";
   } else {
+    // Restaurante no navegador (site INOVAS): a tela inicial é o Painel.
+    if (isBrowserRestaurant && !requestedSection) adminState.activeSection = "dashboard";
     ensureActiveSectionAllowed();
+  }
+  if (
+    isBrowserRestaurant &&
+    (isPdvAppBlockedSection() ||
+      (adminState.pdvAppBlocked && (["orders", "cash-register"].includes(requestedSection) || getRequestedCashRegisterView())))
+  ) {
+    sendBrowserRestaurantToDashboard();
   }
   renderSectionChrome();
   renderSidebarNav();
@@ -17629,10 +17709,10 @@ const loadInitialAdminSession = async () => {
 const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
   ensureActiveSectionAllowed();
 
-  if (isPdvAppBlockedSection()) {
-    renderSectionChrome();
-    renderModuleContent();
-    return;
+  // No navegador, Pedidos e Caixa não abrem (só no app INOVAS PDV): vai
+  // para o Painel.
+  if (isPdvAppBlockedSection() && !isInsideOutdatedPdvApp() && !getPdvAppBridge()) {
+    sendBrowserRestaurantToDashboard();
   }
 
   // Fora do plano: mostra a tela "mude de plano" sem buscar dados.

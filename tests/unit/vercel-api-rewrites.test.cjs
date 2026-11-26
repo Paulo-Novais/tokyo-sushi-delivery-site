@@ -24,6 +24,9 @@ test("rotas novas do Gestor e do pagamento online têm reescrita", () => {
   assert.equal(payments.destination, "/api/customer/[...action]?action=__payments/:path*");
 });
 
-test("rotina semanal do repasse agendada", () => {
-  assert.deepEqual(vercel.crons, [{ path: "/api/payments/cron-payouts", schedule: "7 12 * * 3" }]);
+test("rotinas agendadas: repasse semanal e cobrança diária", () => {
+  assert.deepEqual(vercel.crons, [
+    { path: "/api/payments/cron-payouts", schedule: "7 12 * * 3" },
+    { path: "/api/payments/cron-billing", schedule: "17 9 * * *" },
+  ]);
 });
