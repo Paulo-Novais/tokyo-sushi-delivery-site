@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Esfiharia · Loja 1 (Noemia) · Demonstração INOVAS</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Demonstração INOVAS Food: site de pedidos da A Esfiharia (Loja 1 · Noemia).">
+<link rel="icon" href="/demo/aesfiharia/img/carne2.jpg">
+<style>
+/* Fontes hospedadas no próprio site (a política de segurança não carrega fontes de fora). */
+@font-face{font-family:Rubik;font-style:normal;font-weight:400;font-display:swap;src:url(/demo/aesfiharia/fonts/rubik-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Rubik;font-style:normal;font-weight:500;font-display:swap;src:url(/demo/aesfiharia/fonts/rubik-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Rubik;font-style:normal;font-weight:600;font-display:swap;src:url(/demo/aesfiharia/fonts/rubik-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Rubik;font-style:normal;font-weight:700;font-display:swap;src:url(/demo/aesfiharia/fonts/rubik-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:Rubik;font-style:normal;font-weight:800;font-display:swap;src:url(/demo/aesfiharia/fonts/rubik-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Lilita One";font-style:normal;font-weight:400;font-display:swap;src:url(/demo/aesfiharia/fonts/lilita-one-latin-400-normal.woff2) format("woff2")}
+:root{
+  --bg:#120a06; --bg-soft:#1c100a; --wood:#2a170d;
+  --surface:rgba(42,24,14,.82); --surface-strong:rgba(52,30,17,.95); --card:#24150c;
+  --primary:#f5862e; --primary-dark:#c9611a; --primary-soft:rgba(245,134,46,.14);
+  --cream:#f6e4bf; --cream-soft:rgba(246,228,191,.12);
+  --brown:#6b2e26; --terracotta:#a9603f; --cocoa:#74543a;
+  --green:#0f5a2e; --green-2:#0b4524;
+  --text:#fff6ec; --muted:rgba(255,236,214,.68); --border:rgba(246,228,191,.14);
+  --ok:#22c55e; --danger:#ef4444; --warn:#f59e0b;
+  --shadow:0 24px 60px rgba(0,0,0,.45); --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Rubik,system-ui,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(900px 500px at 10% -10%,rgba(245,134,46,.22),transparent 60%),radial-gradient(700px 500px at 100% 10%,rgba(169,96,63,.25),transparent 60%),linear-gradient(180deg,#160c07,#0f0804)}
+a{color:inherit}
+button{font:inherit;cursor:pointer;color:inherit}
+img{display:block;max-width:100%}
+.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.wrap{width:min(1180px,100% - 32px);margin:0 auto}
+.mock{background:#000;color:#fff;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:7px 12px}
+.mock b{background:#1d1d1d;border:1px solid #333;border-radius:999px;padding:3px 10px;font-weight:600;letter-spacing:.02em}
+.mock .lock{color:#22c55e}
+.mock label{display:flex;gap:6px;align-items:center;opacity:.85;cursor:pointer}
+.mock input{accent-color:var(--primary)}
+
+/* ---------- topo ---------- */
+.top{position:sticky;top:0;z-index:40;padding:14px 0 6px}
+.top .wrap{display:flex;align-items:center;gap:18px;height:74px}
+.top-pill{background:rgba(24,13,8,.86);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:28px;padding:0 14px 0 16px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.enter{display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);border-radius:999px;padding:5px 16px 5px 5px;font-weight:700}
+.enter .av{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#1b0d05;display:grid;place-items:center}
+.enter .av .i{width:17px;height:17px}
+.nav-club{color:var(--primary) !important;font-weight:700 !important}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-oval{width:96px;height:52px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#ffd9a8,#f39a3e 60%,#d9681a);display:grid;place-items:center;border:3px solid #fff0d6;box-shadow:0 6px 18px rgba(245,134,46,.35)}
+.logo-oval span{font:22px/1 "Lilita One",cursive;color:#7a2a17;letter-spacing:.01em;transform:rotate(-4deg);text-shadow:0 1px 0 #ffe7c2}
+.logo-oval small{font:700 8px/1 Rubik;color:#7a2a17;position:absolute;transform:translate(-30px,-15px)}
+.logo-text{display:flex;flex-direction:column;line-height:1.1}
+.logo-text b{font-size:15px}.logo-text small{color:var(--muted);font-size:12px}
+.nav{display:flex;gap:2px;margin:0 auto}
+.nav a{padding:9px 12px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:center;white-space:nowrap;font-size:15px}
+.nav a:hover{color:var(--text);background:var(--cream-soft)}
+.nav a.on{color:#1b0d05;background:var(--primary);font-weight:700}
+.top-acts{display:flex;gap:10px;align-items:center;margin-left:auto}
+.nav{margin-left:auto}.nav+.top-acts{margin-left:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border);background:var(--cream-soft);color:var(--text);border-radius:12px;padding:10px 16px;font-weight:600;text-decoration:none;white-space:nowrap;transition:.15s}
+.btn:hover{border-color:rgba(246,228,191,.35)}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#1b0d05;font-weight:700;box-shadow:0 10px 24px rgba(245,134,46,.28)}
+.btn.pri:hover{background:#ff9640}
+.btn.ghost{background:transparent}
+.btn.sm{padding:7px 12px;font-size:13.5px;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bag-btn{position:relative}
+.bag-btn em{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:999px;background:var(--cream);color:#5a2414;font:800 11px/20px Rubik;font-style:normal;text-align:center;padding:0 5px}
+.burger{display:none}
+
+/* ---------- comum ---------- */
+.view{display:none;animation:fade .25s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.glass{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+.sec{padding:34px 0}
+.sec-h{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.tag{display:inline-flex;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--primary)}
+h1,h2,h3{margin:0;letter-spacing:-.01em}
+h2{font-size:28px}
+.muted{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.open{background:rgba(34,197,94,.15);color:#4ade80}
+.pill.closed{background:rgba(239,68,68,.15);color:#f87171}
+.money{font-weight:800}
+
+/* ---------- início ---------- */
+.hero{padding:26px 0 8px}
+.hero-grid{display:grid;grid-template-columns:1.25fr .9fr;gap:22px;align-items:stretch}
+.carousel{position:relative;border-radius:22px;overflow:hidden;min-height:380px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s}
+.carousel img.on{opacity:1}
+.carousel::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(12,6,3,.85))}
+.car-copy{position:absolute;left:24px;right:24px;bottom:22px;z-index:2}
+.car-copy .seal{display:inline-flex;align-items:center;gap:8px;background:rgba(15,90,46,.9);color:#eaffef;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px}
+.car-copy h1{font:clamp(30px,4vw,46px)/1.02 "Lilita One",cursive;color:var(--cream);text-shadow:0 3px 18px rgba(0,0,0,.5);letter-spacing:.01em}
+.car-copy p{margin:8px 0 0;color:#ffe9cf;max-width:520px}
+.dots{position:absolute;right:20px;top:18px;z-index:3;display:flex;gap:6px}
+.dots button{width:9px;height:9px;border-radius:50%;border:0;background:rgba(255,255,255,.45);padding:0}
+.dots button.on{background:#fff;width:22px;border-radius:999px}
+.store-card{padding:22px;display:flex;flex-direction:column;gap:14px}
+.store-head{display:flex;gap:14px;align-items:center}
+.store-head .logo-oval{width:84px;height:84px;flex:0 0 auto}
+.store-head h3{font-size:21px}
+.status-box{display:flex;gap:12px;align-items:center;background:var(--cream-soft);border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+.status-box .i{color:var(--primary);width:24px;height:24px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fact{background:rgba(0,0,0,.18);border:1px solid var(--border);border-radius:14px;padding:11px 13px}
+.fact small{display:block;color:var(--muted);font-size:12px}
+.fact b{font-size:15px}
+.fact .free{color:#4ade80}
+.hero-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto}
+.club-strip{margin-top:22px;display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:20px 24px;background:linear-gradient(120deg,var(--green),var(--green-2));border:1px solid rgba(255,255,255,.08);border-radius:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.club-strip::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;border:2px dashed rgba(255,255,255,.18)}
+.club-title{font:30px/0.95 "Lilita One",cursive;color:var(--cream)}
+.club-title span{display:block;color:var(--primary);font-size:36px}
+.club-bar small{color:#d1fae5}
+.tiers{display:flex;gap:10px;flex-wrap:wrap}
+.tier{background:#fff7ea;color:#5a2414;border-radius:12px;padding:8px 12px;text-align:center;min-width:92px}
+.tier b{display:block;background:var(--primary);color:#fff;margin:-8px -12px 6px;padding:4px 0;border-radius:12px 12px 0 0;font:15px "Lilita One",cursive;letter-spacing:.04em}
+.tier strong{font:26px/1 "Lilita One",cursive;color:#a33a1a}
+.tier small{display:block;font-size:11px;font-weight:600}
+.progress{position:relative;height:12px;background:rgba(255,255,255,.18);border-radius:999px;margin:18px 0 6px}
+.progress i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#fbbf24,var(--primary));border-radius:999px}
+.progress span{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;background:var(--primary);transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.marks{display:flex;justify-content:space-between;font-size:11.5px;opacity:.8}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(190px,1fr);gap:14px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.prod{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;scroll-snap-align:start;transition:transform .15s,border-color .15s}
+.prod:hover{transform:translateY(-3px);border-color:rgba(245,134,46,.5)}
+.prod .ph{aspect-ratio:1.35;position:relative;overflow:hidden}
+.prod .ph img{width:100%;height:100%;object-fit:cover}
+.prod .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.prod h4{margin:0;font-size:15.5px}
+.prod p{margin:0;color:var(--muted);font-size:12.8px;line-height:1.35}
+.prod .row{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:6px}
+.combo-art{width:100%;height:100%;display:grid;place-items:center;text-align:center;font:26px/0.95 "Lilita One",cursive;color:#fff;text-shadow:0 3px 0 #3a170e,0 0 2px #3a170e}
+.combo-art span{display:block;color:#ffb36b;font-size:20px}
+.add{width:38px;height:38px;border-radius:12px;border:0;background:var(--primary);color:#1b0d05;display:grid;place-items:center;box-shadow:0 8px 18px rgba(245,134,46,.3)}
+.ribbon{position:absolute;left:10px;top:10px;background:var(--brown);color:var(--cream);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700}
+.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.step{padding:20px;display:flex;gap:14px;align-items:flex-start}
+.step .n{width:44px;height:44px;border-radius:14px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:0 0 auto}
+.step h4{margin:0 0 4px}
+.step p{margin:0;color:var(--muted);font-size:14px}
+.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.review{padding:18px}
+.stars{color:#fbbf24;letter-spacing:2px}
+.review p{margin:8px 0;color:#ffe9cf}
+.review small{color:var(--muted)}
+.photo-band{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.photo-band img{border-radius:18px;height:230px;width:100%;object-fit:cover;border:1px solid var(--border)}
+
+/* ---------- cardápio ---------- */
+.menu-head{padding:26px 0 10px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0 14px;min-width:min(420px,100%)}
+.search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);padding:13px 0;font:inherit}
+.search input::placeholder{color:var(--muted)}
+.chips{position:sticky;top:94px;z-index:20;background:rgba(18,10,6,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);margin:0 -16px;padding:10px 16px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chip{border:1px solid var(--border);background:var(--cream-soft);color:var(--text);border-radius:999px;padding:8px 14px;font-weight:600;white-space:nowrap;display:flex;gap:7px;align-items:center}
+.chip.on{background:var(--primary);color:#1b0d05;border-color:var(--primary)}
+.chip i{font-style:normal;font-size:16px}
+.cat{padding:24px 0 6px;scroll-margin-top:140px}
+.cat h3{font-size:22px;display:flex;align-items:center;gap:10px}
+.cat h3 small{font-size:13px;color:var(--muted);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:12px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:12px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;cursor:pointer;transition:.15s;text-align:left;color:inherit}
+.item:hover{border-color:rgba(245,134,46,.5);transform:translateY(-2px)}
+.item h4{margin:0;font-size:15.5px}
+.item p{margin:4px 0 10px;color:var(--muted);font-size:13px;line-height:1.35}
+.item .thumb{width:96px;height:96px;border-radius:14px;overflow:hidden;position:relative;background:var(--wood)}
+.item .thumb img{width:100%;height:100%;object-fit:cover}
+.item .thumb .emoji{width:100%;height:100%;display:grid;place-items:center;font-size:44px;background:radial-gradient(circle at 50% 40%,#3b2414,#1d0f07)}
+.item .price{font-weight:800;color:var(--cream)}
+.item .price s{color:var(--muted);font-weight:500;margin-right:6px}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+.side-bag{position:sticky;top:150px;padding:18px}
+.side-bag h3{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+
+/* ---------- sacola / modais ---------- */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:60;opacity:0;pointer-events:none;transition:.2s}
+.ov.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--bg-soft);border-left:1px solid var(--border);z-index:70;transform:translateX(105%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.drawer.on{transform:none}
+.dh{display:flex;align-items:center;gap:10px;padding:18px 20px;border-bottom:1px solid var(--border)}
+.dh h3{font-size:19px}
+.x{margin-left:auto;width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--cream-soft);display:grid;place-items:center}
+.db{flex:1;overflow:auto;padding:14px 20px}
+.df{padding:16px 20px;border-top:1px solid var(--border);display:grid;gap:10px}
+.line{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--border)}
+.line img,.line .emoji{width:56px;height:56px;border-radius:12px;object-fit:cover;display:grid;place-items:center;font-size:28px;background:var(--wood)}
+.line b{display:block;font-size:14.5px}
+.line small{color:var(--muted);display:block;font-size:12.5px}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:6px}
+.qty button{width:30px;height:28px;border:0;background:var(--cream-soft)}
+.qty span{min-width:28px;text-align:center;font-weight:700;font-size:13.5px}
+.sum{display:grid;gap:6px;font-size:14px}
+.sum div{display:flex;justify-content:space-between;gap:10px}
+.sum .tot{font-size:18px;font-weight:800;padding-top:8px;border-top:1px solid var(--border)}
+.sum .free{color:#4ade80}
+.hint{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center;background:var(--cream-soft);border-radius:10px;padding:8px 10px}
+.hint .bar{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.hint .bar i{display:block;height:100%;background:var(--ok)}
+.bag-empty{text-align:center;padding:40px 10px;color:var(--muted)}
+.bag-empty .i{width:64px;height:64px;color:var(--primary);margin:0 auto 10px}
+.modal{position:fixed;left:50%;top:50%;z-index:80;width:min(560px,calc(100% - 24px));max-height:calc(100vh - 30px);overflow:auto;background:var(--bg-soft);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);transform:translate(-50%,-46%) scale(.98);opacity:0;pointer-events:none;transition:.2s}
+.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.modal.wide{width:min(760px,calc(100% - 24px))}
+.m-img{height:220px;position:relative}
+.m-img img{width:100%;height:100%;object-fit:cover}
+.m-img .x{position:absolute;right:14px;top:14px;background:rgba(0,0,0,.55)}
+.m-body{padding:18px 22px}
+.m-body h3{font-size:23px}
+.m-foot{position:sticky;bottom:0;background:var(--bg-soft);border-top:1px solid var(--border);padding:14px 22px;display:flex;gap:12px;align-items:center}
+.opt-group{margin-top:16px;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.og-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(0,0,0,.2)}
+.og-h b{font-size:14.5px}
+.og-h small{color:var(--muted)}
+.req{font-size:11px;font-weight:800;background:var(--brown);color:var(--cream);border-radius:6px;padding:2px 7px}
+.req.ok{background:rgba(34,197,94,.2);color:#4ade80}
+.opt{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--border);cursor:pointer}
+.opt:hover{background:rgba(255,255,255,.03)}
+.opt span{flex:1}
+.opt small{color:var(--muted)}
+.opt input{accent-color:var(--primary);width:18px;height:18px}
+.counter{display:inline-flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.counter button{width:32px;height:30px;border:0;background:var(--cream-soft)}
+.counter span{min-width:26px;text-align:center;font-weight:700}
+textarea,.field input,.field select{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:11px 12px;font:inherit}
+textarea{min-height:70px;resize:vertical}
+.field{display:grid;gap:6px;margin-bottom:12px}
+.field>span{font-weight:600;font-size:13.5px}
+.field small{color:var(--muted)}
+.field select option{background:#24150c}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.seg button{border:1px solid var(--border);background:var(--cream-soft);border-radius:12px;padding:12px;text-align:left;display:flex;gap:10px;align-items:center}
+.seg button b{display:block}.seg button small{color:var(--muted)}
+.seg button.on{border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 2px rgba(245,134,46,.25)}
+.pays{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay{border:1px solid var(--border);background:var(--cream-soft);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;text-align:left;font-size:13.5px}
+.pay.on{border-color:var(--primary);background:var(--primary-soft)}
+.pay .ic{width:30px;height:22px;border-radius:5px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;flex:0 0 auto}
+.stepper{display:flex;gap:6px;margin-bottom:16px}
+.stepper span{flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,.12)}
+.stepper span.on{background:var(--primary)}
+.cpn{display:flex;gap:8px}
+.cpn input{flex:1}
+.coupon-ok{color:#4ade80;font-size:13px;margin-top:6px}
+.toast{position:fixed;left:50%;bottom:24px;opacity:0;transform:translate(-50%,160%);background:var(--cream);color:#3a170e;font-weight:700;padding:12px 18px;border-radius:14px;z-index:99;transition:.25s;box-shadow:var(--shadow);max-width:calc(100% - 30px)}
+.toast.on{transform:translate(-50%,0);opacity:1}
+@media (max-width:640px){.toast{bottom:84px}}
+.item .thumb .combo-art{font-size:15px}.item .thumb .combo-art span{font-size:12.5px}
+.line .combo-art{font-size:11px}
+.store-head .logo-oval span{font-size:17px}
+
+/* ---------- acompanhar / pedidos ---------- */
+.track{padding:22px;display:grid;grid-template-columns:1fr 320px;gap:22px}
+.tl{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:0}
+.tl li{display:grid;grid-template-columns:40px 1fr;gap:12px;position:relative;padding-bottom:20px}
+.tl li::before{content:"";position:absolute;left:19px;top:38px;bottom:0;width:2px;background:var(--border)}
+.tl li:last-child::before{display:none}
+.tl .dot{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--muted)}
+.tl li.done .dot{background:var(--primary);color:#1b0d05;border-color:var(--primary)}
+.tl li.now .dot{background:var(--cream);color:#5a2414;box-shadow:0 0 0 6px rgba(246,228,191,.15);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 12px rgba(246,228,191,.05)}}
+.tl b{display:block;margin-top:2px}
+.tl small{color:var(--muted)}
+.eta{font:46px/1 "Lilita One",cursive;color:var(--primary)}
+.orders{display:grid;gap:12px}
+.order{display:grid;grid-template-columns:1fr auto;gap:10px;padding:16px 18px;align-items:center}
+.order b{font-size:16px}
+.order .meta{color:var(--muted);font-size:13px}
+
+/* ---------- clube ---------- */
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin:20px 0}
+.tabs button{border:0;background:none;color:var(--muted);padding:10px 16px;font-weight:700;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--primary);border-color:var(--primary)}
+.club-hero{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:center}
+.club-hero img{border-radius:22px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.points{padding:22px}
+.points .big{font:56px/1 "Lilita One",cursive;color:var(--primary)}
+.cupons{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+.cupom{overflow:hidden;text-align:center;padding:0 0 16px}
+.cupom .top-c{background:var(--primary);padding:16px 10px 10px;position:relative}
+.cupom .top-c b{display:inline-block;background:#3a170e;color:#fff;font:20px "Lilita One",cursive;padding:4px 18px;border-radius:0 0 10px 10px;position:absolute;left:50%;top:0;transform:translateX(-50%);letter-spacing:.05em}
+.cupom .val{background:#fff7ea;color:#a33a1a;margin:22px auto 0;width:150px;border-radius:12px;padding:10px 6px;font:44px/1 "Lilita One",cursive}
+.cupom .val small{font:700 11px Rubik;color:#5a2414;display:block}
+.cupom h4{margin:12px 0 2px}
+.cupom .pts{color:var(--primary);font-weight:800}
+.cupom .btn{margin:10px 16px 0;width:calc(100% - 32px)}
+.how{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:26px;margin-top:22px}
+.how>div{padding:0 22px;text-align:center}
+.how>div+div{border-left:1px solid var(--border)}
+.how .i{width:34px;height:34px;color:var(--primary);margin:0 auto 8px}
+.wallet{display:grid;gap:10px}
+.wc{display:flex;gap:14px;align-items:center;padding:14px 16px;border:1px dashed rgba(245,134,46,.6);border-radius:14px;background:var(--primary-soft)}
+.wc b{font:24px "Lilita One",cursive;color:var(--primary)}
+
+/* ---------- empresa ---------- */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.info{padding:16px 18px;display:flex;gap:14px;align-items:center;text-decoration:none}
+.info .ic{width:44px;height:44px;border-radius:12px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:0 0 auto}
+.info small{display:block;color:var(--muted);font-size:12px}
+.info .go{margin-left:auto;color:var(--primary)}
+.map{height:240px;border-radius:18px;border:1px solid var(--border);background:
+ linear-gradient(0deg,rgba(18,10,6,.25),rgba(18,10,6,.25)),
+ repeating-linear-gradient(90deg,transparent 0 58px,rgba(246,228,191,.06) 58px 60px),
+ repeating-linear-gradient(0deg,transparent 0 58px,rgba(246,228,191,.06) 58px 60px),
+ linear-gradient(135deg,#2b1a10,#1a0f08);position:relative;overflow:hidden}
+.map::before{content:"";position:absolute;left:-10%;top:55%;width:120%;height:16px;background:rgba(246,228,191,.12);transform:rotate(-8deg)}
+.map::after{content:"";position:absolute;left:30%;top:-10%;width:14px;height:120%;background:rgba(246,228,191,.1);transform:rotate(12deg)}
+.pin{position:absolute;left:48%;top:44%;z-index:2;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center}
+.pin span{background:var(--primary);color:#1b0d05;font-weight:800;font-size:12.5px;border-radius:10px;padding:6px 10px;white-space:nowrap;box-shadow:var(--shadow)}
+.pin i{width:16px;height:16px;background:var(--primary);transform:rotate(45deg);margin-top:-9px}
+.calc{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;padding:22px}
+.calc-out{display:grid;place-items:center;align-content:center;gap:6px;text-align:center;background:rgba(0,0,0,.2);border:1px dashed var(--border);border-radius:16px;padding:18px}
+.calc-out .big{font:40px/1 "Lilita One",cursive;color:var(--primary)}
+.hours{padding:6px 18px}
+.hours div{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);font-size:14.5px}
+.hours div:last-child{border:0}
+.hours .today{color:var(--primary);font-weight:800}
+.pm{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 18px}
+.pm div{display:flex;gap:10px;align-items:center;font-size:14px}
+.pm .ic{width:34px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+
+/* ---------- formulários (avaliar / trabalhe) ---------- */
+.form-card{padding:24px;max-width:720px}
+.rate{display:flex;gap:6px;font-size:34px;margin:6px 0 12px}
+.rate button{border:0;background:none;color:rgba(255,255,255,.25);padding:0}
+.rate button.on{color:#fbbf24}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tags button{border:1px solid var(--border);background:var(--cream-soft);border-radius:999px;padding:7px 12px;font-size:13px}
+.tags button.on{background:var(--primary);color:#1b0d05;border-color:var(--primary);font-weight:700}
+
+/* ---------- rodapé (formato padrão INOVAS, igual ao Tokyo) ---------- */
+.site-footer{padding:30px 0 40px}
+.sf-shell{border:1px solid var(--border);border-radius:28px;padding:22px 20px;background:rgba(20,11,7,.72);box-shadow:var(--shadow)}
+.sf-top{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.sf-brand{display:flex;gap:12px;align-items:center;text-decoration:none}
+.sf-brand strong{display:block;font-size:16px}.sf-brand small{color:var(--muted)}
+.sf-copy{color:var(--muted);max-width:500px;margin:12px 0}
+.sf-badges{display:flex;gap:8px;flex-wrap:wrap}
+.sf-badges span{font-size:12.5px;font-weight:600;border:1px solid var(--border);background:rgba(255,255,255,.04);border-radius:999px;padding:5px 11px}
+.sf-badges span.is-open{background:rgba(34,197,94,.14);color:#4ade80;border-color:rgba(34,197,94,.3)}
+.sf-badges span.is-closed{background:rgba(239,68,68,.14);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.sf-actions{display:flex;gap:10px;align-items:flex-start}
+.sf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px 0}
+.sf-grid section{border:1px solid var(--border);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.02)}
+.sf-title{margin:0 0 8px;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--primary)}
+.sf-grid a,.sf-grid p{display:block;color:var(--muted);text-decoration:none;margin:0 0 8px;font-size:14.5px}
+.sf-grid a:hover{color:var(--text)}
+.sf-bottom{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.inovas-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px 10px 4px;flex-wrap:wrap}
+.inovas-brand{display:flex;align-items:center;gap:22px;text-decoration:none}
+.inovas-brand img{width:110px}
+.inovas-brand strong{display:block;font-size:15px;color:#fff}
+.inovas-brand span{color:rgba(255,255,255,.7);font-weight:600;font-size:13.5px}
+.inovas-link{color:#ff6a00;font-weight:800;text-decoration:none;font-size:14px}
+@media (max-width:1020px){.sf-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.sf-grid{grid-template-columns:1fr}.inovas-brand{gap:14px}.inovas-brand img{width:90px}.calc{grid-template-columns:1fr}}
+footer{margin-top:40px;border-top:1px solid var(--border);background:rgba(0,0,0,.25)}
+.foot{display:none}
+.foot h5{margin:0 0 10px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--primary)}
+.foot a{display:block;color:var(--muted);text-decoration:none;margin:5px 0}
+.foot a:hover{color:var(--text)}
+.social{display:flex;gap:10px;margin-top:12px}
+.social a{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#1b0d05;display:grid;place-items:center;margin:0}
+.powered{border-top:1px solid var(--border);padding:14px 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.powered b{color:var(--primary)}
+.bottom-nav{display:none}
+.float-bag{display:none}
+
+@media (max-width:1020px){
+  .hero-grid,.layout,.track,.club-hero{grid-template-columns:1fr}
+  .side-bag{display:none}
+  .steps3,.reviews,.cupons{grid-template-columns:1fr 1fr}
+  .nav{display:none}
+  .top-acts,.nav+.top-acts{margin-left:auto}
+  .top-acts .enter-txt{display:none}
+}
+@media (max-width:640px){
+  .wrap{width:calc(100% - 28px)}
+  .top .wrap{height:64px}
+  .logo-oval{width:78px;height:44px}.logo-oval span{font-size:18px}
+  .logo-text{display:none}
+  .carousel{min-height:300px}
+  .steps3,.reviews,.cupons,.info-grid,.photo-band,.how,.pm,.facts{grid-template-columns:1fr}
+  .how>div+div{border-left:0;border-top:1px solid var(--border);padding-top:18px;margin-top:18px}
+  .club-strip{grid-template-columns:1fr;gap:12px}
+  .chips{top:80px}
+  .row2,.pays{grid-template-columns:1fr}
+  .item{grid-template-columns:minmax(0,1fr) 84px}.item .thumb{width:84px;height:84px}
+  body{padding-bottom:72px}
+  .bottom-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:45;background:rgba(18,10,6,.96);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .bottom-nav a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600}
+  .bottom-nav a.on{color:var(--primary)}
+  .h2,h2{font-size:23px}
+  .cat h3{flex-wrap:wrap;gap:4px 10px}.cat h3 small{flex-basis:100%}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="bag" viewBox="0 0 24 24"><path d="M6 7h12l1 13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M9 7a3 3 0 0 1 6 0"/><path d="M9 11a3 3 0 0 0 6 0"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+  <symbol id="gift" viewBox="0 0 24 24"><path d="M3 8h18v4H3zM5 12v8h14v-8M12 8v12M12 8S10.5 3 8 4.5 9.5 8 12 8zM12 8s1.5-5 4-3.5S14.5 8 12 8z"/></symbol>
+  <symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+  <symbol id="ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 1 0-4V4H3z"/><path d="M14 4v12"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="whats" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 21l1.6-4.8A8.5 8.5 0 1 1 21 12z"/><path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .8a5 5 0 0 1-2.3-2.3l.8-1-1-2z"/></symbol>
+  <symbol id="moto" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-3-7h-3M15 6h3l2 5"/></symbol>
+  <symbol id="walk" viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="M10 21l2-6-3-3 1-4 4 2 3 1M9 12l-3 2"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="chef" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.5 6a5 5 0 0 1 9 0A4 4 0 0 1 18 13.9V20H6z"/><path d="M6 17h12"/></symbol>
+  <symbol id="star" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="fb" viewBox="0 0 24 24"><path d="M15 3h-2a4 4 0 0 0-4 4v3H7v4h2v7h4v-7h3l1-4h-4V7a1 1 0 0 1 1-1h2z"/></symbol>
+  <symbol id="ig" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5v.01"/></symbol>
+  <symbol id="job" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+</svg>
+
+<div class="mock">
+  <span class="lock">🔒</span><b>inovasfood.com.br/aesfiharia</b>
+  <span>Demonstração INOVAS Food · pedidos, pagamentos e pontos são simulados</span>
+  <label><input type="checkbox" id="force-open"> simular loja aberta</label>
+</div>
+
+<header class="top">
+  <div class="wrap top-pill">
+    <a class="logo" href="#inicio" data-go="inicio" aria-label="A Esfiharia — início">
+      <span class="logo-oval"><span>Esfiharia</span></span>
+      <span class="logo-text"><b>A Esfiharia</b><small>Loja 1 · Noemia</small></span>
+    </a>
+    <nav class="nav" aria-label="Navegação principal">
+      <a href="#cardapio" data-go="cardapio">Cardápio</a>
+      <a href="#entrega" data-go="entrega">Entrega</a>
+      <a href="#pedidos" data-go="pedidos">Histórico</a>
+      <a href="#avaliar" data-go="avaliar">Avaliar</a>
+      <a href="#trabalhe" data-go="trabalhe">Trabalhe Conosco</a>
+      <a href="#clube" data-go="clube" class="nav-club">Clube da Esfiha</a>
+    </nav>
+    <div class="top-acts">
+      <button class="enter" data-login><span class="av"><svg class="i"><use href="#user"/></svg></span><span class="enter-txt" data-user-label>Entrar</span></button>
+      <button class="btn pri sm bag-btn" data-open-bag aria-label="Abrir sacola"><svg class="i"><use href="#bag"/></svg><span class="enter-txt">Sacola</span><em data-bag-count hidden>0</em></button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ===================== INÍCIO ===================== -->
+<section class="view on" id="v-inicio">
+  <div class="wrap hero">
+    <div class="hero-grid">
+      <div class="carousel" data-carousel>
+        <img class="on" src="/demo/aesfiharia/img/banner1.jpg" alt="Esfihas salgadas e doces da A Esfiharia">
+        <img src="/demo/aesfiharia/img/banner2.jpg" alt="Esfihas e caixas da A Esfiharia">
+        <img src="/demo/aesfiharia/img/banner3.jpg" alt="Caixa com esfihas variadas">
+        <div class="dots"><button class="on" aria-label="Foto 1"></button><button aria-label="Foto 2"></button><button aria-label="Foto 3"></button></div>
+        <div class="car-copy">
+          <span class="seal"><svg class="i" style="width:16px;height:16px"><use href="#check"/></svg>A melhor esfiha da cidade · desde 2013</span>
+          <h1>Esfiha quentinha,<br>do forno pra sua casa.</h1>
+          <p>Mais de 70 sabores entre salgadas, turbinadas, especiais e doces. Peça pelo site e ganhe pontos no Clube da Esfiha.</p>
+        </div>
+      </div>
+      <div class="glass store-card">
+        <div class="store-head">
+          <span class="logo-oval"><span>Esfiharia</span></span>
+          <div><h3>A Esfiharia · Loja 1 (Noemia)</h3><div class="muted" style="display:flex;gap:6px;align-items:center"><svg class="i" style="width:16px;height:16px"><use href="#pin"/></svg>Franca - SP · <a href="#entrega" data-go="entrega" style="color:var(--primary);font-weight:600">Saiba mais</a></div></div>
+        </div>
+        <div class="status-box"><svg class="i"><use href="#clock"/></svg><div><b data-status-title>—</b><div class="muted" data-status-sub style="font-size:13.5px">—</div></div><span class="pill" data-status-pill style="margin-left:auto">—</span></div>
+        <div class="facts">
+          <div class="fact"><small>Entrega</small><b>75 min · R$ 5,99</b></div>
+          <div class="fact"><small>Retirada no local</small><b>25 min</b></div>
+          <div class="fact"><small>Entrega grátis</small><b class="free">acima de R$ 50 · até 12 km</b></div>
+          <div class="fact"><small>Clube da Esfiha</small><b>R$ 10 = 1 ponto</b></div>
+        </div>
+        <div class="hero-acts"><a class="btn pri" href="#cardapio" data-go="cardapio"><svg class="i"><use href="#menu"/></svg>Ver cardápio</a><a class="btn" href="#pedidos" data-go="pedidos">Acompanhar pedido</a></div>
+      </div>
+    </div>
+
+    <div class="club-strip">
+      <div class="club-title">Clube<span>da Esfiha</span></div>
+      <div class="club-bar">
+        <small data-club-line>Entre e acompanhe seus pontos. A cada R$ 10 em pedidos pelo site, 1 ponto.</small>
+        <div class="progress" data-club-progress><i style="width:0%"></i><span style="left:0%"></span></div>
+        <div class="marks"><span>0</span><span>25 · Bronze</span><span>60 · Prata</span><span>100 · Ouro</span></div>
+      </div>
+      <div class="tiers">
+        <div class="tier"><b>BRONZE</b><small>25 pontos</small><strong>R$5</strong></div>
+        <div class="tier"><b>PRATA</b><small>60 pontos</small><strong>R$20</strong></div>
+        <div class="tier"><b>OURO</b><small>100 pontos</small><strong>R$50</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap sec">
+    <div class="sec-h"><div><span class="tag">Os mais pedidos</span><h2>Destaques</h2></div><a class="btn sm" href="#cardapio" data-go="cardapio">Cardápio completo <svg class="i"><use href="#right"/></svg></a></div>
+    <div class="rail" data-rail></div>
+  </div>
+
+  <div class="wrap sec" style="padding-top:6px">
+    <div class="sec-h"><div><span class="tag">Simples assim</span><h2>Como pedir</h2></div></div>
+    <div class="steps3">
+      <div class="glass step"><span class="n"><svg class="i"><use href="#menu"/></svg></span><div><h4>Escolha no cardápio</h4><p>Monte seu combo com os sabores que quiser ou escolha esfiha por esfiha.</p></div></div>
+      <div class="glass step"><span class="n"><svg class="i"><use href="#moto"/></svg></span><div><h4>Entrega ou retirada</h4><p>Entrega grátis acima de R$ 50 (até 12 km). Ou retire na loja em 25 minutos.</p></div></div>
+      <div class="glass step"><span class="n"><svg class="i"><use href="#trophy"/></svg></span><div><h4>Ganhe pontos</h4><p>Cada R$ 10 vira 1 ponto no Clube. Troque por cupons de R$ 5, R$ 20 ou R$ 50.</p></div></div>
+    </div>
+  </div>
+
+  <div class="wrap sec" style="padding-top:6px">
+    <div class="photo-band"><img src="/demo/aesfiharia/img/banner2.jpg" alt="Esfihas na caixa da A Esfiharia" style="object-position:center 60%"><img src="/demo/aesfiharia/img/banner3.jpg" alt="Caixa de esfihas sortidas" style="object-position:center 40%"></div>
+  </div>
+
+  <div class="wrap sec" style="padding-top:6px">
+    <div class="sec-h"><div><span class="tag">Quem pediu, aprovou</span><h2>Avaliações</h2></div><a class="btn sm" href="#avaliar" data-go="avaliar">Avaliar meu pedido</a></div>
+    <div class="reviews">
+      <div class="glass review"><div class="stars">★★★★★</div><p>“A de carne com limão é a melhor de Franca. Chegou quentinha!”</p><small>Cliente · Jardim Noemia · exemplo</small></div>
+      <div class="glass review"><div class="stars">★★★★★</div><p>“Combo Família salvou a reunião de domingo. Os doces de pistache são absurdos.”</p><small>Cliente · Centro · exemplo</small></div>
+      <div class="glass review"><div class="stars">★★★★☆</div><p>“Retirei no balcão em 20 minutos. Strogonoff de carne é muito bom.”</p><small>Cliente · Jardim Ângela Rosa · exemplo</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CARDÁPIO ===================== -->
+<section class="view" id="v-cardapio">
+  <div class="wrap">
+    <div class="menu-head">
+      <div><span class="tag">Loja 1 · Noemia</span><h2>Cardápio</h2><div class="muted" style="font-size:14px">Esfihas de 10 cm · preços por unidade</div></div>
+      <label class="search"><svg class="i"><use href="#search"/></svg><input type="search" placeholder="Buscar no cardápio (ex.: carne, pistache, coca)" data-search></label>
+    </div>
+    <nav class="chips" data-chips aria-label="Categorias"></nav>
+    <div class="layout">
+      <div data-menu></div>
+      <aside class="glass side-bag" data-side-bag></aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CLUBE ===================== -->
+<section class="view" id="v-clube">
+  <div class="wrap sec">
+    <div class="club-hero">
+      <div>
+        <span class="tag">Programa de vantagens</span>
+        <h2 style="font:44px/1 'Lilita One',cursive;margin:6px 0 10px">Clube da Esfiha</h2>
+        <p class="muted" style="font-size:16px;max-width:520px">A cada <b style="color:var(--text)">R$ 10,00</b> em pedidos pelo site você ganha <b style="color:var(--text)">1 ponto</b>. Troque por cupons de desconto para usar no site ou na loja. Cada ponto vale por 120 dias.</p>
+        <div class="glass points" style="margin-top:16px" data-points-card></div>
+      </div>
+      <img src="/demo/aesfiharia/img/clube.jpg" alt="Clube da Esfiha: R$ 10 gastos = 1 ponto. Bronze 25 pontos por R$ 5, Prata 60 por R$ 20, Ouro 100 por R$ 50.">
+    </div>
+    <div class="tabs" role="tablist"><button class="on" data-ctab="clube">Cupons do Clube</button><button data-ctab="cupons">Meus cupons</button></div>
+    <div data-ctab-panel="clube">
+      <div class="cupons" data-cupons></div>
+      <div class="glass how">
+        <div><svg class="i"><use href="#trophy"/></svg><h3>Acumule pontos</h3><p class="muted">Ganhe 1 ponto a cada R$ 10,00 em compras no site. Cada ponto expira em 120 dias.</p></div>
+        <div><svg class="i"><use href="#ticket"/></svg><h3>Resgate prêmios</h3><p class="muted">Troque seus pontos por cupons que podem ser usados no site ou consumidos na loja.</p></div>
+      </div>
+    </div>
+    <div data-ctab-panel="cupons" hidden><div class="wallet" data-wallet></div></div>
+  </div>
+</section>
+
+<!-- ===================== PEDIDOS ===================== -->
+<section class="view" id="v-pedidos">
+  <div class="wrap sec">
+    <div class="sec-h"><div><span class="tag">Acompanhe em tempo real</span><h2>Histórico de pedidos</h2></div></div>
+    <div data-track></div>
+    <h3 style="margin:26px 0 12px">Histórico</h3>
+    <div class="orders" data-history></div>
+  </div>
+</section>
+
+<!-- ===================== EMPRESA ===================== -->
+<section class="view" id="v-entrega">
+  <div class="wrap sec">
+    <div class="sec-h"><div><span class="tag">Entrega e retirada</span><h2>Calcule sua entrega</h2></div><span class="pill" data-status-pill2>—</span></div>
+    <div class="glass calc">
+      <div><label class="field"><span>Seu CEP</span><input data-calc-cep placeholder="14400-000" inputmode="numeric"></label>
+        <div class="row2"><label class="field"><span>Número</span><input placeholder="123"></label><label class="field"><span>Valor do pedido (opcional)</span><input data-calc-value placeholder="R$ 50,00" inputmode="decimal"></label></div>
+        <button class="btn pri" data-calc>Calcular taxa e tempo</button></div>
+      <div class="calc-out" data-calc-out><svg class="i" style="width:40px;height:40px;color:var(--primary)"><use href="#moto"/></svg><b>Informe o CEP</b><span class="muted">Mostramos a distância, a taxa e o tempo de entrega.</span></div>
+    </div>
+    <h3 style="margin:22px 0 10px">Prazos e taxas</h3>
+    <div class="glass" style="padding:6px 0">
+      <div class="info" style="border-bottom:1px solid var(--border)"><span class="ic"><svg class="i"><use href="#walk"/></svg></span><div><small>Retirada no local</small><b>25 min · sem taxa</b></div></div>
+      <div class="info" style="border-bottom:1px solid var(--border)"><span class="ic"><svg class="i"><use href="#ticket"/></svg></span><div><b style="color:#4ade80">Entrega grátis</b><small>Até 12 km · pedidos acima de R$ 50,00</small></div></div>
+      <div class="info"><span class="ic"><svg class="i"><use href="#moto"/></svg></span><div><small>Taxa por distância</small><b>R$ 5,99 · 75 min</b></div></div>
+    </div>
+    <h3 style="margin:22px 0 10px">Contato</h3>
+    <div class="info-grid">
+      <a class="glass info" href="https://wa.me/5516993741614" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#whats"/></svg></span><div><small>WhatsApp</small><b>(16) 99374-1614</b></div><svg class="i go"><use href="#right"/></svg></a>
+      <a class="glass info" href="tel:+5516993741614"><span class="ic"><svg class="i"><use href="#phone"/></svg></span><div><small>Telefone</small><b>(16) 99374-1614</b></div><svg class="i go"><use href="#right"/></svg></a>
+    </div>
+    <h3 style="margin:22px 0 10px">Localização</h3>
+    <div class="info-grid">
+      <div class="map"><div class="pin"><span>A Esfiharia · Loja 1</span><i></i></div></div>
+      <a class="glass info" href="https://maps.google.com/?q=Avenida%20Doutor%20Chafic%20Facury%2C%204779%2C%20Franca%20SP" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#pin"/></svg></span><div><small>Endereço</small><b>Avenida Doutor Chafic Facury, 4779</b><div class="muted">Prolongamento Jardim Ângela Rosa, Franca - SP</div><div style="color:var(--primary);font-weight:600;margin-top:6px">Como chegar</div></div></a>
+    </div>
+    <div class="info-grid" style="margin-top:22px">
+      <div><h3 style="margin-bottom:10px">Horários de funcionamento</h3><div class="glass hours" data-hours></div></div>
+      <div>
+        <h3 style="margin-bottom:10px">Formas de pagamento</h3>
+        <div class="glass">
+          <div style="padding:14px 18px 0" class="muted"><b style="color:var(--text)">Online no site</b> · Pix e cartão (sistema INOVAS)</div>
+          <div class="pm" data-pm-online></div>
+          <div style="padding:4px 18px 0" class="muted"><b style="color:var(--text)">Na entrega</b></div>
+          <div class="pm" data-pm-delivery></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== AVALIAR ===================== -->
+<section class="view" id="v-avaliar">
+  <div class="wrap sec">
+    <span class="tag">Sua opinião vale ponto</span><h2 style="margin-bottom:16px">Avaliar pedido</h2>
+    <form class="glass form-card" data-review-form>
+      <div class="field"><span>Pedido</span><select data-review-order></select></div>
+      <div class="field"><span>Como foi?</span><div class="rate" data-rate>${'★★★★★'}</div></div>
+      <div class="tags" data-tags><button type="button">Chegou quentinha</button><button type="button">Entrega rápida</button><button type="button">Bem recheada</button><button type="button">Embalagem caprichada</button><button type="button">Atendimento</button></div>
+      <div class="field"><span>Comentário</span><textarea placeholder="Conte o que achou (aparece no site depois de aprovado pela loja)"></textarea></div>
+      <button class="btn pri" type="submit">Enviar avaliação</button>
+    </form>
+  </div>
+</section>
+
+<!-- ===================== TRABALHE CONOSCO ===================== -->
+<section class="view" id="v-trabalhe">
+  <div class="wrap sec">
+    <span class="tag">Vem pro time</span><h2 style="margin-bottom:16px">Trabalhe conosco</h2>
+    <form class="glass form-card" data-job-form>
+      <div class="row2"><label class="field"><span>Nome completo</span><input required placeholder="Seu nome"></label><label class="field"><span>WhatsApp</span><input required placeholder="(16) 9 0000-0000"></label></div>
+      <div class="row2"><label class="field"><span>Vaga</span><select><option>Atendente</option><option>Pizzaiolo / esfiheiro</option><option>Auxiliar de cozinha</option><option>Entregador (moto própria)</option><option>Caixa</option></select></label><label class="field"><span>Disponibilidade</span><select><option>Noite (17h às 23h30)</option><option>Fins de semana</option><option>Folguista</option></select></label></div>
+      <label class="field"><span>Conte um pouco sobre você</span><textarea placeholder="Experiência, bairro onde mora…"></textarea></label>
+      <label class="field"><span>Currículo (opcional)</span><input type="file" accept=".pdf,.doc,.docx,image/*"></label>
+      <button class="btn pri" type="submit">Enviar candidatura</button>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="sf-shell">
+      <div class="sf-top">
+        <div class="sf-branding">
+          <a class="sf-brand" href="#inicio" data-go="inicio"><span class="logo-oval" style="width:74px;height:42px"><span style="font-size:15px">Esfiharia</span></span><span><strong>A Esfiharia · Loja 1 (Noemia)</strong><small>A melhor esfiha da cidade</small></span></a>
+          <p class="sf-copy">Esfihas assadas na hora desde 2013. Peça pelo site, acompanhe a entrega e junte pontos no Clube da Esfiha.</p>
+          <div class="sf-badges"><span>Cardápio digital</span><span>Entrega por distância</span><span>Gestor web de pedidos</span><span data-footer-status>—</span></div>
+        </div>
+        <div class="sf-actions"><a class="btn pri" href="#cardapio" data-go="cardapio" data-footer-cta>Pedir agora</a><a class="btn" href="#cardapio" data-go="cardapio">Abrir cardápio</a></div>
+      </div>
+      <div class="sf-grid">
+        <section><p class="sf-title">Navegação</p><a href="#inicio" data-go="inicio">Início</a><a href="#cardapio" data-go="cardapio">Cardápio</a><a href="#entrega" data-go="entrega">Entrega</a><a href="#pedidos" data-go="pedidos">Histórico</a><a href="#avaliar" data-go="avaliar">Avaliar</a><a href="#trabalhe" data-go="trabalhe">Trabalhe Conosco</a></section>
+        <section><p class="sf-title">Atendimento</p><a href="#cardapio" data-go="cardapio">Agendar pedido no cardápio</a><a href="#entrega" data-go="entrega">Calcular taxa e distância da entrega</a><a href="#pedidos" data-go="pedidos">Consultar pedidos recentes neste aparelho</a><a href="#clube" data-go="clube">Clube da Esfiha</a></section>
+        <section><p class="sf-title">Endereço</p><p>Avenida Doutor Chafic Facury, 4779, Prolongamento Jardim Ângela Rosa, Franca - SP</p><p>Funcionamento: todos os dias a partir das 17:45 (até 23:00; sex. e sáb. até 23:30)</p><p>Origem fixa usada no cálculo da entrega.</p><a href="https://maps.google.com/?q=Avenida%20Doutor%20Chafic%20Facury%2C%204779%2C%20Franca%20SP" target="_blank" rel="noopener">Abrir localização no Google Maps</a></section>
+        <section><p class="sf-title">Redes e site</p><a href="#">Instagram @aesfihariaoficial</a><a href="#">Facebook</a><a href="https://wa.me/5516993741614" target="_blank" rel="noopener">WhatsApp (16) 99374-1614</a><a href="/aesfiharia">inovasfood.com.br/aesfiharia</a></section>
+      </div>
+      <div class="sf-bottom"><span>© 2026 A Esfiharia · Loja 1 (Noemia).</span><span>Avenida Doutor Chafic Facury, 4779, Franca - SP</span></div>
+      <div class="inovas-footer" title="Faixa padrão da plataforma: igual em todos os sites, não pode ser alterada pelo restaurante">
+        <a class="inovas-brand" href="https://inovasfood.com.br" target="_blank" rel="noopener"><img src="/assets/inovas-food-logo-oficial-480.webp" alt="INOVAS Food"><div><strong>Desenvolvido por INOVAS Food</strong><span>Plataforma profissional para restaurantes</span></div></a>
+        <a href="https://inovasfood.com.br" target="_blank" rel="noopener" class="inovas-link">inovasfood.com.br</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<nav class="bottom-nav" aria-label="Menu">
+  <a href="#inicio" data-go="inicio"><svg class="i"><use href="#home"/></svg>Início</a>
+  <a href="#cardapio" data-go="cardapio"><svg class="i"><use href="#menu"/></svg>Cardápio</a>
+  <a href="#entrega" data-go="entrega"><svg class="i"><use href="#moto"/></svg>Entrega</a>
+  <a href="#pedidos" data-go="pedidos"><svg class="i"><use href="#list"/></svg>Histórico</a>
+  <a href="#clube" data-go="clube"><svg class="i"><use href="#gift"/></svg>Clube</a>
+</nav>
+
+<!-- camadas -->
+<div class="ov" data-ov></div>
+<aside class="drawer" data-bag aria-label="Sacola">
+  <div class="dh"><svg class="i" style="color:var(--primary)"><use href="#bag"/></svg><h3>Sua sacola</h3><button class="x" data-close aria-label="Fechar"><svg class="i"><use href="#x"/></svg></button></div>
+  <div class="db" data-bag-body></div>
+  <div class="df" data-bag-foot></div>
+</aside>
+<div class="modal" data-product role="dialog" aria-modal="true"></div>
+<div class="modal wide" data-checkout role="dialog" aria-modal="true"></div>
+<div class="modal" data-login-modal role="dialog" aria-modal="true"></div>
+<div class="toast" data-toast></div>
+
+<script>
+/* =========================================================
+   Dados (cardápio enviado pelo Paulo a partir do site atual)
+   ========================================================= */
+const IMG = { carne:"/demo/aesfiharia/img/carne2.jpg", carneB:"/demo/aesfiharia/img/carne.jpg", queijo:"/demo/aesfiharia/img/queijo2.jpg", queijoB:"/demo/aesfiharia/img/queijo.jpg", cheddar:"/demo/aesfiharia/img/cheddar2.jpg", cheddarB:"/demo/aesfiharia/img/cheddar.jpg", swirl:"/demo/aesfiharia/img/swirl2.jpg", swirlB:"/demo/aesfiharia/img/swirl.jpg", marg:"/demo/aesfiharia/img/marguerita.jpg", mm:"/demo/aesfiharia/img/mm.jpg", caramelo:"/demo/aesfiharia/img/caramelo.jpg", casadinho:"/demo/aesfiharia/img/casadinho.jpg", nutella:"/demo/aesfiharia/img/nutella.jpg", pistache:"/demo/aesfiharia/img/pistache.jpg", beirute:"/demo/aesfiharia/img/beirute.jpg", wrap:"/demo/aesfiharia/img/wrap.jpg", bolinho:"/demo/aesfiharia/img/bolinho.jpg" };
+const CATS = [
+  { id:"combos", name:"Combos", emoji:"🎁", sub:"Promocionais · monte com os sabores que quiser" },
+  { id:"tradicionais", name:"Tradicionais", emoji:"🥟" },
+  { id:"turbinadas", name:"Turbinadas", emoji:"🧀", sub:"com requeijão cremoso" },
+  { id:"especiais", name:"Especiais", emoji:"⭐" },
+  { id:"amoda", name:"À Moda", emoji:"👨‍🍳" },
+  { id:"gourmet", name:"Gourmet", emoji:"✨" },
+  { id:"doces", name:"Doces", emoji:"🍫" },
+  { id:"porcoes", name:"Porções", emoji:"🍢" },
+  { id:"lanches", name:"Lanches", emoji:"🥙" },
+  { id:"saladas", name:"Saladas", emoji:"🥗" },
+  { id:"bebidas", name:"Bebidas", emoji:"🥤" },
+  { id:"diversos", name:"Diversos", emoji:"🍬" },
+];
+const P = (cat, name, desc, price, img, extra = {}) => ({ id: cat + "-" + name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-"), cat, name, desc, price, img, ...extra });
+const MENU = [
+  P("combos","Combo Individual","2 Esfihas Salgadas + 1 Esfiha Doce (10cm) + 1 Refri (Lata)",31.90,null,{ combo:{ salgadas:2, doces:1, refri:"Lata 350ml" }, art:"#74543a", line1:"COMBO", line2:"INDIVIDUAL", destaque:true }),
+  P("combos","Combo Casal","4 Esfihas Salgadas + 2 Esfihas Doces (10cm) + 1 Refri (600ml)",52.90,null,{ combo:{ salgadas:4, doces:2, refri:"600ml" }, art:"#a9603f", line1:"COMBO", line2:"CASAL", destaque:true }),
+  P("combos","Combo Família","10 Esfihas Salgadas + 4 Esfihas Doces (10cm) + 1 Refri (2L)",131.90,null,{ combo:{ salgadas:10, doces:4, refri:"2 litros" }, art:"#6b2e26", line1:"COMBO", line2:"FAMÍLIA", destaque:true }),
+  // Tradicionais
+  P("tradicionais","Alho","Mussarela e Alho Frito",10.90,"queijoB"),
+  P("tradicionais","FranBacon","Frango, Bacon e Mussarela",11.90,"swirlB"),
+  P("tradicionais","Bacon","Mussarela e Bacon",10.90,"queijo"),
+  P("tradicionais","Baiana","Calabresa, cebola, ovo e pimenta",11.90,"marg"),
+  P("tradicionais","Bauru","Mussarela, presunto e tomate",11.90,"marg"),
+  P("tradicionais","Brócolis","Muçarela, Brócolis, Bacon e Alho frito",11.90,"queijoB"),
+  P("tradicionais","Caipira","Frango, Milho e Mussarela",11.90,"queijo"),
+  P("tradicionais","Calabresa","Calabresa e Cebola",10.90,"marg"),
+  P("tradicionais","Calabresa e Queijo","Calabresa e Mussarela",11.90,"queijo"),
+  P("tradicionais","Carne","Carne, Cebola, Cebola e Limão",10.90,"carne",{ destaque:true }),
+  P("tradicionais","Carne e Queijo","Carne, Tomate, Cebola e Queijo",11.90,"queijo",{ destaque:true }),
+  P("tradicionais","Frango","Frango e Mussarela",10.90,"queijoB"),
+  // Turbinadas
+  P("turbinadas","Calabresa Bacon e Requeijão","Calabresa, Bacon e Requeijão",12.90,"swirl"),
+  P("turbinadas","Berinjela","Berinjela, tomate, cebola e requeijão",12.20,"swirlB"),
+  P("turbinadas","Carne c/ Requeijão","Carne, tomate, cebola, limão e requeijão",12.20,"carneB"),
+  P("turbinadas","Calabresa c/ Requeijão","Calabresa com Requeijão",12.20,"swirl"),
+  P("turbinadas","Dois Queijos","Mussarela e requeijão",11.90,"queijo"),
+  P("turbinadas","Palmito c/ Requeijão","Palmito e requeijão",11.90,"swirlB"),
+  P("turbinadas","Milho c/ Requeijão","Milho e Requeijão",11.90,"queijoB"),
+  P("turbinadas","Frango c/ Requeijão","Frango e Requeijão",12.20,"swirl",{ destaque:true }),
+  P("turbinadas","Lombinho c/ Requeijão","Lombinho e Requeijão",12.20,"swirlB"),
+  P("turbinadas","Quatro Queijos","Mussarela Provolone, Requeijão e Cheddar",12.90,"cheddar",{ destaque:true }),
+  P("turbinadas","Três Queijos","Mussarela, requeijão e cheddar",12.20,"cheddarB"),
+  P("turbinadas","Vegetariana","Brócolis, tomate, azeitona e requeijão",12.20,"marg"),
+  P("turbinadas","Brócolis com Requeijão","Brócolis, Bacon, Alho Frito e Requeijão",12.20,"swirlB"),
+  P("turbinadas","Franbacon c/ Requeijão","Frango, bacon e Requeijão",12.90,"swirl"),
+  // Especiais
+  P("especiais","Bacalhau","Bacalhau, cebola, tomate e requeijão",14.90,"swirlB"),
+  P("especiais","Alho Poró","Alho Poró e Mussarela",12.90,"queijoB"),
+  P("especiais","Atum","Atum, tomate, cebola e requeijão",14.90,"swirlB"),
+  P("especiais","Carne Seca","Carne Seca, tomate, cebola e Requeijão",14.90,"carneB"),
+  P("especiais","Hot-Dog","Salsicha, Mostarda, catchup, Requeijão e Batata palha",13.50,"cheddarB"),
+  P("especiais","Rúcula","Rúcula, Cebola, Tomate e Mussarela",13.20,"marg"),
+  P("especiais","X-Tudo","Presunto, Bacon, Milho, Tomate, Ketchup e Requeijão",14.90,"swirl"),
+  P("especiais","Siciliana","Champignon, bacon, Alho frito e requeijão",14.90,"swirlB"),
+  P("especiais","Nordestina","Carne seca, Queijo fresco",14.90,"carneB"),
+  P("especiais","Portuguesa","Presunto, ovo, azeitona, tomate e requeijão",14.90,"marg"),
+  P("especiais","Salaminho","Salaminho, cebola e requeijão",14.90,"swirlB"),
+  P("especiais","Camarão","Camarão, Cebola, tomate e Requeijão",15.20,"cheddarB"),
+  P("especiais","Provolombo","Lombo canadense, Provolone e requeijão",13.50,"queijo"),
+  P("especiais","Abobrinha","Abobrinha, cebola, tomate e mussarela",12.20,"marg"),
+  P("especiais","Queijo Cremoso","Queijo branco, cheiro verde e creme de leite",13.50,"queijoB"),
+  P("especiais","Peperoni","Mussarela e Pepperoni",14.90,"marg"),
+  // À Moda
+  P("amoda","Carne Mix","Carne, tomate, cebola, limão, presunto, milho, bacon, ovo, requeijão e orégano",15.50,"carne"),
+  P("amoda","Frango Mix","Frango, presunto, milho, bacon, tomate, ovo, requeijão e orégano",15.50,"swirl"),
+  P("amoda","Calabresa Mix","Calabresa, Presunto, Milho, Bacon, tomate, ovo, requeijão e orégano",15.50,"swirlB"),
+  P("amoda","Calabresa do Chef","Calabresa, Tomate, Cebola, Mussarela, Requeijão e Orégano",15.50,"marg"),
+  P("amoda","Carne do Chef","Carne, Tomate, Cebola, Limão, Bacon, Palmito, Muçarela e Cheddar",15.50,"cheddar"),
+  P("amoda","Frango do Chef","Frango, Palmito, Bacon, Tomate, Cebola, Mussarela, Requeijão e Orégano",15.50,"queijo"),
+  // Gourmet
+  P("gourmet","Za'atar","Coalhada síria e Zaatar",15.50,"queijoB"),
+  P("gourmet","Strogonoff","Frango cremoso e Batata palha extra fina",15.90,"cheddarB"),
+  P("gourmet","Strogonoff Carne","Carne cremosa, mussarela, requeijão e Batata palha extra fina",16.50,"cheddar"),
+  // Doces
+  P("doces","Adão e Eva","Doce de Leite com coco ralado",14.50,"caramelo"),
+  P("doces","Bis","Chocolate ao leite com pedaços de Bis",14.50,"nutella"),
+  P("doces","Brigadeiro","Doce de brigadeiro com granulado",13.90,"mm"),
+  P("doces","Casadinho","Chocolate ao Leite e Chocolate Branco",14.50,"casadinho"),
+  P("doces","Chocolate","Chocolate ao Leite",13.50,"nutella"),
+  P("doces","Chocolate Branco","Chocolate branco",13.50,"casadinho"),
+  P("doces","Chokito","Chocolate ao leite e flocos crocantes",13.90,"nutella"),
+  P("doces","Chokito Branco","Chocolate Branco e Flocos crocantes",13.90,"casadinho"),
+  P("doces","Ninho","Doce de leite Ninho",13.20,"casadinho"),
+  P("doces","Nutella","Nutella",18.90,"nutella",{ destaque:true }),
+  P("doces","Prestígio","Chocolate ao leite com coco ralado",13.90,"nutella"),
+  P("doces","Romeu e Julieta","Goiabada e queijo branco",14.50,"caramelo"),
+  P("doces","Sensação","Chocolate ao leite, leite condensado e polpa de morango",15.50,"mm"),
+  P("doces","Sonho de Valsa","Chocolate ao leite e sonho de Valsa",14.50,"nutella"),
+  P("doces","Pistache c/ Chocolate ao Leite","Creme de Pistache c/ Chocolate ao Leite",18.90,"pistache",{ destaque:true }),
+  P("doces","Pistache c/ Chocolate Branco","Creme de Pistache c/ Chocolate Branco",18.90,"pistache"),
+  // Porções (itens não enviados — exemplo)
+  P("porcoes","Porção de exemplo","Itens de porções a confirmar com a loja",25.90,"bolinho",{ example:true }),
+  // Lanches
+  P("lanches","Beirute Filé Mignon","Pão sírio, filé mignon, alface, tomate e queijo",43.90,"beirute"),
+  P("lanches","Beirute Frango","Pão sírio, frango, alface, tomate e queijo",38.50,"beirute"),
+  P("lanches","Beirute Peito de Peru","Pão Sírio, peito de peru, alface, tomate, mussarela, queijo cremoso e requeijão",36.90,"beirute"),
+  // Saladas
+  P("saladas","Tabule","Alface, Trigo, tomate e pepino. Molho",26.50,"wrap"),
+  // Bebidas
+  P("bebidas","Água s/ Gás (500ml)","",4.50,null,{ emoji:"💧" }),
+  P("bebidas","Água c/ Gás (500ml)","",5.00,null,{ emoji:"💧" }),
+  P("bebidas","Coca-Cola (200ml)","",4.00,null,{ emoji:"🥤" }),
+  P("bebidas","Coca-Cola (350ml)","Lata",7.50,null,{ emoji:"🥫" }),
+  P("bebidas","Coca-Cola Zero (350ml)","Lata",7.50,null,{ emoji:"🥫" }),
+  P("bebidas","Coca-Cola (600ml)","",10.00,null,{ emoji:"🥤" }),
+  P("bebidas","Coca-Cola Zero (600ml)","",10.00,null,{ emoji:"🥤" }),
+  P("bebidas","Coca-Cola (1,5L)","",13.50,null,{ emoji:"🍾" }),
+  // Diversos
+  P("diversos","Pão Sírio","",4.50,null,{ emoji:"🫓" }),
+  P("diversos","Torrada","",4.50,null,{ emoji:"🍞" }),
+  P("diversos","Kit-Kat","",6.00,null,{ emoji:"🍫" }),
+  P("diversos","Baton","",2.00,null,{ emoji:"🍫" }),
+  P("diversos","Trident","",3.00,null,{ emoji:"🍬" }),
+  P("diversos","Pirulito","",1.25,null,{ emoji:"🍭" }),
+  P("diversos","Chiclete","",0.50,null,{ emoji:"🍬" }),
+  P("diversos","Bala","",0.25,null,{ emoji:"🍬" }),
+];
+const HOURS = [["Domingo","17:45","23:00"],["Segunda-feira","17:45","23:00"],["Terça-feira","17:45","23:00"],["Quarta-feira","17:45","23:00"],["Quinta-feira","17:45","23:00"],["Sexta-feira","17:45","23:30"],["Sábado","17:45","23:30"]];
+const PAY_DELIVERY = [["Dinheiro","💵","#15803d"],["Cartão de Crédito","CR","#2563eb"],["Cartão de Débito","DB","#ca8a04"],["Pluxee (Sodexo) · Refeição","PX","#16a34a"],["Alelo · Refeição","AL","#65a30d"],["VR · Refeição","VR","#15803d"],["Pix (maquininha)","PIX","#0d9488"]];
+const PAY_ONLINE = [["Pix agora (aprovação na hora)","PIX","#0d9488"],["Cartão de crédito online","CR","#2563eb"]];
+const TIERS = [["Bronze",25,5],["Prata",60,20],["Ouro",100,50]];
+
+/* =========================================================
+   Estado
+   ========================================================= */
+const S = {
+  bag: [], user: null, points: 0, wallet: [], orders: [], active: null,
+  checkout: { step: 1, mode: "delivery", address: "", km: null, pay: "Pix agora (aprovação na hora)", payGroup: "online", change: "", coupon: null, when: "now", note: "" },
+};
+const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const toast = (t) => { const el = $("[data-toast]"); el.textContent = t; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2600); };
+const imgOf = (p) => (p.img ? IMG[p.img] : null);
+const thumb = (p, cls = "") =>
+  p.combo ? `<div class="combo-art" style="background:${p.art}">${p.line1}<span>${p.line2}</span></div>`
+  : imgOf(p) ? `<img src="${imgOf(p)}" alt="${esc(p.name)}" loading="lazy">`
+  : `<div class="emoji">${p.emoji || "🥟"}</div>`;
+
+/* ---------- horário ---------- */
+const nowStatus = () => {
+  const d = new Date(), day = d.getDay(), mins = d.getHours() * 60 + d.getMinutes();
+  const [, o, c] = HOURS[day]; const [oh, om] = o.split(":").map(Number), [ch, cm] = c.split(":").map(Number);
+  const open = $("#force-open").checked || (mins >= oh * 60 + om && mins < ch * 60 + cm);
+  return { open, opens: o, closes: c, day };
+};
+const renderStatus = () => {
+  const s = nowStatus();
+  $("[data-status-title]").textContent = s.open ? "Estamos abertos" : "Estamos fechados";
+  $("[data-status-sub]").textContent = s.open ? `Aceitando pedidos até ${s.closes}` : `Abrimos hoje às ${s.opens} · você já pode agendar`;
+  const fs = $("[data-footer-status]"); if (fs) { fs.className = s.open ? "is-open" : "is-closed"; fs.textContent = s.open ? "Loja aberta" : "Fechada agora"; }
+  const fc = $("[data-footer-cta]"); if (fc) fc.textContent = s.open ? "Pedir agora" : "Agendar pedido";
+  for (const el of $$("[data-status-pill],[data-status-pill2]")) { el.className = `pill ${s.open ? "open" : "closed"}`; el.textContent = s.open ? "Aberto agora" : "Fechado"; }
+  $("[data-hours]").innerHTML = HOURS.map(([d, o, c], i) => `<div class="${i === s.day ? "today" : ""}"><span>${d}${i === s.day ? " · hoje" : ""}</span><span>${o} às ${c}</span></div>`).join("");
+};
+
+/* ---------- navegação ---------- */
+const go = (view, push = true) => {
+  if (!$("#v-" + view)) view = "inicio";
+  $$(".view").forEach((v) => v.classList.toggle("on", v.id === "v-" + view));
+  $$("[data-go]").forEach((a) => a.classList.toggle("on", a.dataset.go === view && !a.classList.contains("logo") && !a.classList.contains("btn")));
+  if (push) history.replaceState(null, "", "#" + view);
+  window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+  if (view === "pedidos") renderOrders();
+  if (view === "clube") renderClub();
+  if (view === "avaliar") renderReviewForm();
+  if (view === "trabalhe" || view === "entrega") {}
+};
+
+/* ---------- início ---------- */
+const renderRail = () => {
+  $("[data-rail]").innerHTML = MENU.filter((p) => p.destaque).map((p) => `
+    <article class="prod"><div class="ph">${thumb(p)}${p.combo ? '<span class="ribbon">Monte o seu</span>' : ""}</div>
+    <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.desc)}</p><div class="row"><span class="money">${brl(p.price)}</span><button class="add" data-open-product="${p.id}" aria-label="Adicionar ${esc(p.name)}"><svg class="i"><use href="#plus"/></svg></button></div></div></article>`).join("");
+};
+let car = 0;
+const carousel = (to) => {
+  const imgs = $$("[data-carousel] img"), dots = $$("[data-carousel] .dots button");
+  car = (to ?? car + 1) % imgs.length;
+  imgs.forEach((im, i) => im.classList.toggle("on", i === car)); dots.forEach((d, i) => d.classList.toggle("on", i === car));
+};
+
+/* ---------- cardápio ---------- */
+let query = "";
+const renderMenu = () => {
+  const q = query.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const match = (p) => !q || (p.name + " " + p.desc).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q);
+  $("[data-chips]").innerHTML = CATS.map((c) => `<button class="chip" data-chip="${c.id}"><i>${c.emoji}</i>${c.name}</button>`).join("");
+  const html = CATS.map((c) => {
+    const items = MENU.filter((p) => p.cat === c.id && match(p));
+    if (!items.length) return "";
+    return `<section class="cat" id="cat-${c.id}"><h3>${c.emoji} ${c.name} <small>${c.sub || items.length + " itens"}</small></h3><div class="grid">${items.map((p) => `
+      <button class="item" data-open-product="${p.id}"><div><h4>${esc(p.name)}</h4><p>${esc(p.desc || " ")}${p.example ? " · <b style='color:var(--warn)'>exemplo</b>" : ""}</p><span class="price">${brl(p.price)}</span></div><div class="thumb">${thumb(p)}</div></button>`).join("")}</div></section>`;
+  }).join("");
+  $("[data-menu]").innerHTML = html || `<div class="empty">Nada encontrado para “${esc(query)}”.</div>`;
+  renderSideBag();
+};
+
+/* ---------- produto (com combo "monte o seu") ---------- */
+let current = null;
+const openProduct = (id) => {
+  const p = MENU.find((x) => x.id === id); if (!p) return;
+  current = { p, qty: 1, note: "", picks: { salgadas: {}, doces: {} }, extras: {} };
+  renderProduct(); layer("[data-product]", true);
+};
+const pickCount = (o) => Object.values(o).reduce((a, b) => a + b, 0);
+const SALG = () => MENU.filter((x) => ["tradicionais", "turbinadas"].includes(x.cat));
+const DOCE = () => MENU.filter((x) => x.cat === "doces" && x.price < 15);
+const renderProduct = () => {
+  const { p, qty } = current; const m = $("[data-product]");
+  const comboGroup = (key, label, list, need) => {
+    const got = pickCount(current.picks[key]);
+    return `<div class="opt-group"><div class="og-h"><div><b>${label}</b><br><small>Escolha ${need} · pode repetir sabor</small></div><span class="req ${got === need ? "ok" : ""}">${got}/${need}</span></div>
+      ${list.map((x) => { const n = current.picks[key][x.id] || 0; return `<div class="opt"><span>${esc(x.name)}<br><small>${esc(x.desc)}</small></span><div class="counter"><button data-pick="${key}|${x.id}|-1" aria-label="Menos">−</button><span>${n}</span><button data-pick="${key}|${x.id}|1" ${got >= need ? "disabled" : ""} aria-label="Mais">+</button></div></div>`; }).join("")}</div>`;
+  };
+  const extras = p.combo ? "" : ["tradicionais", "turbinadas", "especiais", "amoda", "gourmet"].includes(p.cat)
+    ? `<div class="opt-group"><div class="og-h"><div><b>Turbinar</b><br><small>Opcional</small></div></div>
+        ${[["Requeijão extra", 2.0], ["Cheddar extra", 2.5], ["Bacon extra", 3.0]].map(([n, v]) => `<label class="opt"><input type="checkbox" data-extra="${n}|${v}" ${current.extras[n] ? "checked" : ""}><span>${n}</span><small>+ ${brl(v)}</small></label>`).join("")}</div>` : "";
+  const total = unitPrice() * qty;
+  const valid = !p.combo || (pickCount(current.picks.salgadas) === p.combo.salgadas && pickCount(current.picks.doces) === p.combo.doces);
+  m.innerHTML = `
+    <div class="m-img">${p.combo ? `<div class="combo-art" style="background:${p.art};font-size:48px">${p.line1}<span style="font-size:36px">${p.line2}</span></div>` : imgOf(p) ? `<img src="${imgOf(p)}" alt="${esc(p.name)}">` : `<div class="combo-art" style="background:radial-gradient(circle,#3b2414,#1d0f07);font-size:90px">${p.emoji}</div>`}<button class="x" data-close aria-label="Fechar"><svg class="i"><use href="#x"/></svg></button></div>
+    <div class="m-body">
+      <span class="tag">${CATS.find((c) => c.id === p.cat).name}</span>
+      <h3>${esc(p.name)}</h3><p class="muted" style="margin:6px 0 0">${esc(p.desc)}</p>
+      ${p.combo ? comboGroup("salgadas", "Esfihas salgadas", SALG(), p.combo.salgadas) + comboGroup("doces", "Esfihas doces", DOCE(), p.combo.doces) + `<div class="opt-group"><div class="og-h"><div><b>Refrigerante</b><br><small>Incluso</small></div><span class="req ok">1/1</span></div><label class="opt"><input type="radio" checked name="refri"><span>Coca-Cola ${p.combo.refri}</span></label><label class="opt"><input type="radio" name="refri"><span>Coca-Cola Zero ${p.combo.refri}</span></label></div>` : ""}
+      ${extras}
+      <div class="field" style="margin-top:16px"><span>Alguma observação?</span><textarea data-note placeholder="Ex.: sem cebola, bem assada…">${esc(current.note)}</textarea></div>
+    </div>
+    <div class="m-foot"><div class="counter"><button data-qty="-1" aria-label="Menos">−</button><span>${qty}</span><button data-qty="1" aria-label="Mais">+</button></div>
+      <button class="btn pri" style="flex:1" data-add-current ${valid ? "" : "disabled"}>${valid ? `Adicionar · ${brl(total)}` : "Escolha os sabores"}</button></div>`;
+};
+const unitPrice = () => current.p.price + Object.values(current.extras).reduce((a, b) => a + b, 0);
+const addCurrent = () => {
+  const { p, qty } = current;
+  const parts = [];
+  if (p.combo) {
+    const list = (o) => Object.entries(o).filter(([, n]) => n).map(([id, n]) => `${n}× ${MENU.find((x) => x.id === id).name}`).join(", ");
+    parts.push(list(current.picks.salgadas), list(current.picks.doces));
+  }
+  Object.keys(current.extras).forEach((e) => parts.push(e));
+  if (current.note) parts.push(`Obs.: ${current.note}`);
+  S.bag.push({ key: Date.now() + Math.random(), id: p.id, name: p.name, unit: unitPrice(), qty, detail: parts.filter(Boolean).join(" · ") });
+  layer("[data-product]", false); renderBag(); toast(`${p.name} na sacola!`);
+};
+
+/* ---------- sacola ---------- */
+const subtotal = () => S.bag.reduce((s, l) => s + l.unit * l.qty, 0);
+const bagLines = () => S.bag.map((l) => { const p = MENU.find((x) => x.id === l.id); return `
+  <div class="line">${p.combo ? `<div class="emoji" style="background:${p.art};font-size:13px;font-family:'Lilita One';color:#fff">COMBO</div>` : imgOf(p) ? `<img src="${imgOf(p)}" alt="">` : `<div class="emoji">${p.emoji}</div>`}
+  <div><b>${esc(l.name)}</b>${l.detail ? `<small>${esc(l.detail)}</small>` : ""}<div class="qty"><button data-line="${l.key}|-1" aria-label="Menos">−</button><span>${l.qty}</span><button data-line="${l.key}|1" aria-label="Mais">+</button></div></div>
+  <span class="money">${brl(l.unit * l.qty)}</span></div>`; }).join("");
+const freeHint = () => {
+  const sub = subtotal(), left = 50 - sub;
+  return left > 0 ? `<div class="hint"><span>Faltam <b>${brl(left)}</b> para entrega grátis</span><span class="bar"><i style="width:${Math.min(100, (sub / 50) * 100)}%"></i></span></div>` : `<div class="hint" style="color:#4ade80">🎉 Entrega grátis liberada (até 12 km)</div>`;
+};
+const renderBag = () => {
+  const n = S.bag.reduce((s, l) => s + l.qty, 0);
+  const c = $("[data-bag-count]"); c.hidden = !n; c.textContent = n;
+  $("[data-bag-body]").innerHTML = S.bag.length ? bagLines() : `<div class="bag-empty"><svg class="i"><use href="#bag"/></svg><p>Sua sacola está vazia!</p><button class="btn" data-go-menu>Ver produtos</button></div>`;
+  $("[data-bag-foot]").innerHTML = S.bag.length ? `${freeHint()}<div class="sum"><div><span>Subtotal</span><b>${brl(subtotal())}</b></div><div class="muted"><span>Ganha no Clube</span><span>+${Math.floor(subtotal() / 10)} pontos</span></div></div><button class="btn pri" data-start-checkout>Continuar · ${brl(subtotal())}</button>` : "";
+  renderSideBag();
+};
+const renderSideBag = () => {
+  const el = $("[data-side-bag]"); if (!el) return;
+  el.innerHTML = `<h3><svg class="i" style="color:var(--primary)"><use href="#bag"/></svg>Sua sacola</h3>${S.bag.length ? bagLines() + `<div style="margin-top:12px;display:grid;gap:10px">${freeHint()}<button class="btn pri" data-start-checkout>Continuar · ${brl(subtotal())}</button></div>` : `<div class="bag-empty" style="padding:20px 0"><svg class="i"><use href="#bag"/></svg><p>Sua sacola está vazia!</p></div>`}`;
+};
+
+/* ---------- finalizar pedido ---------- */
+const fee = () => {
+  const c = S.checkout; if (c.mode === "pickup") return 0;
+  if (c.km == null) return null;
+  return c.km <= 12 && subtotal() >= 50 ? 0 : 5.99;
+};
+const discount = () => (S.checkout.coupon ? Math.min(S.checkout.coupon.value, subtotal()) : 0);
+const total = () => subtotal() + (fee() || 0) - discount();
+const openCheckout = () => {
+  if (!S.bag.length) return;
+  if (!S.user) { openLogin(true); return; }
+  S.checkout.step = 1; layer("[data-bag]", false); renderCheckout(); layer("[data-checkout]", true);
+};
+const renderCheckout = () => {
+  const c = S.checkout, st = nowStatus(), m = $("[data-checkout]");
+  const f = fee();
+  const resumo = `<div class="glass" style="padding:14px 16px;box-shadow:none"><div class="sum">
+      <div><span>Subtotal (${S.bag.reduce((s, l) => s + l.qty, 0)} itens)</span><b>${brl(subtotal())}</b></div>
+      <div><span>${c.mode === "pickup" ? "Retirada" : "Entrega"}</span><b class="${f === 0 ? "free" : ""}">${c.mode === "pickup" ? "R$ 0,00" : f == null ? "informe o endereço" : f === 0 ? "Grátis" : brl(f)}</b></div>
+      ${c.coupon ? `<div class="free"><span>Cupom ${esc(c.coupon.label)}</span><b>− ${brl(discount())}</b></div>` : ""}
+      <div class="tot"><span>Total</span><span>${brl(total())}</span></div>
+      <div class="muted" style="font-size:12.5px"><span>Você ganha</span><span>+${Math.floor(total() / 10)} pontos no Clube</span></div></div></div>`;
+  const step1 = `
+    <div class="seg"><button class="${c.mode === "delivery" ? "on" : ""}" data-mode="delivery"><svg class="i"><use href="#moto"/></svg><span><b>Entrega</b><small>75 min · grátis acima de R$ 50</small></span></button><button class="${c.mode === "pickup" ? "on" : ""}" data-mode="pickup"><svg class="i"><use href="#walk"/></svg><span><b>Retirar na loja</b><small>25 min · sem taxa</small></span></button></div>
+    ${c.mode === "delivery" ? `<div class="row2"><label class="field"><span>CEP</span><input data-cep placeholder="14400-000" value="${esc(c.cep || "")}"></label><label class="field"><span>Número</span><input data-num placeholder="123" value="${esc(c.num || "")}"></label></div>
+      <label class="field"><span>Rua e bairro</span><input data-address placeholder="Rua, bairro" value="${esc(c.address)}"><small>${c.km != null ? `📍 ${c.km.toFixed(1).replace(".", ",")} km da loja · ${c.km <= 12 ? "dentro da área de entrega grátis (acima de R$ 50)" : "acima de 12 km: taxa R$ 5,99"}` : "Digite o CEP para calcular a distância e a taxa."}</small></label>
+      <label class="field"><span>Complemento / referência</span><input placeholder="Apto, bloco, ponto de referência"></label>` : `<div class="glass info" style="box-shadow:none;margin-bottom:12px"><span class="ic"><svg class="i"><use href="#pin"/></svg></span><div><small>Retirar em</small><b>Av. Dr. Chafic Facury, 4779</b><div class="muted">Prolongamento Jd. Ângela Rosa · pronto em 25 min</div></div></div>`}
+    <div class="field"><span>Quando?</span><div class="seg"><button class="${c.when === "now" ? "on" : ""}" data-when="now" ${st.open ? "" : "disabled"}><span><b>Agora</b><small>${st.open ? (c.mode === "pickup" ? "pronto em ~25 min" : "chega em ~75 min") : "loja fechada"}</small></span></button><button class="${c.when === "later" ? "on" : ""}" data-when="later"><span><b>Agendar</b><small>${st.open ? "escolha o horário" : `a partir das ${st.opens}`}</small></span></button></div>
+    ${c.when === "later" ? `<select data-slot>${["18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"].map((h) => `<option ${c.slot === h ? "selected" : ""}>Hoje · ${h}</option>`).join("")}</select>` : ""}</div>`;
+  const payCard = ([n, ic, color], group) => `<button class="pay ${c.pay === n ? "on" : ""}" data-pay="${esc(n)}" data-group="${group}"><span class="ic" style="background:${color}">${ic}</span>${esc(n)}</button>`;
+  const myCoupons = S.wallet.filter((w) => !w.used);
+  const step2 = `
+    <div class="field"><span>Pagar agora pelo site</span><div class="pays">${PAY_ONLINE.map((p) => payCard(p, "online")).join("")}</div><small>Pix sem taxa para a loja · confirmação automática</small></div>
+    <div class="field"><span>Pagar na ${c.mode === "pickup" ? "retirada" : "entrega"}</span><div class="pays">${PAY_DELIVERY.map((p) => payCard(p, "delivery")).join("")}</div></div>
+    ${c.pay === "Dinheiro" ? `<label class="field"><span>Troco para quanto?</span><input data-change placeholder="Ex.: 100,00 (deixe vazio se não precisar)" value="${esc(c.change)}"></label>` : ""}
+    <div class="field"><span>Cupom</span>${myCoupons.length ? `<div class="pays">${myCoupons.map((w) => `<button class="pay ${c.coupon?.code === w.code ? "on" : ""}" data-use-coupon="${w.code}"><span class="ic" style="background:var(--primary);color:#1b0d05">%</span>${esc(w.label)} · ${brl(w.value)}</button>`).join("")}</div>` : ""}
+      <div class="cpn" style="margin-top:8px"><input data-coupon-code placeholder="Tem um código? Ex.: ESFIHA10"><button class="btn" data-apply-coupon>Aplicar</button></div>${c.coupon ? `<div class="coupon-ok">✔ ${esc(c.coupon.label)} aplicado: − ${brl(discount())}</div>` : ""}</div>`;
+  const step3 = `<div class="glass" style="padding:14px 16px;box-shadow:none;margin-bottom:12px">${bagLines().replace(/data-line="[^"]+"/g, "disabled")}</div>
+    <div class="row2"><div class="glass info" style="box-shadow:none"><span class="ic"><svg class="i"><use href="#${c.mode === "pickup" ? "walk" : "moto"}"/></svg></span><div><small>${c.mode === "pickup" ? "Retirada" : "Entrega"} · ${c.when === "later" ? esc(c.slot || "Hoje · 18:00") : "agora"}</small><b>${c.mode === "pickup" ? "Na loja (Noemia)" : esc(c.address || "Endereço informado")}</b></div></div><div class="glass info" style="box-shadow:none"><span class="ic"><svg class="i"><use href="#ticket"/></svg></span><div><small>Pagamento</small><b>${esc(c.pay)}</b>${c.change ? `<div class="muted">Troco p/ R$ ${esc(c.change)}</div>` : ""}</div></div></div>`;
+  const titles = ["Entrega ou retirada", "Pagamento e cupom", "Confira e confirme"];
+  const canNext = c.step !== 1 || c.mode === "pickup" || c.km != null;
+  m.innerHTML = `<div class="m-body"><div style="display:flex;align-items:center;gap:10px"><h3>${titles[c.step - 1]}</h3><button class="x" data-close aria-label="Fechar"><svg class="i"><use href="#x"/></svg></button></div>
+    <div class="stepper" style="margin-top:12px">${[1, 2, 3].map((n) => `<span class="${n <= c.step ? "on" : ""}"></span>`).join("")}</div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px" class="ck-grid"><div>${[step1, step2, step3][c.step - 1]}</div><div>${resumo}</div></div></div>
+    <div class="m-foot">${c.step > 1 ? `<button class="btn" data-ck-back>Voltar</button>` : `<button class="btn" data-close>Continuar comprando</button>`}
+    <button class="btn pri" style="flex:1" data-ck-next ${canNext ? "" : "disabled"}>${c.step < 3 ? "Continuar" : c.payGroup === "online" ? `Pagar ${brl(total())} e enviar pedido` : `Enviar pedido · ${brl(total())}`}</button></div>`;
+};
+const placeOrder = () => {
+  const c = S.checkout, code = String(Math.floor(10000 + Math.random() * 89999));
+  const order = { code, at: new Date(), items: S.bag.map((l) => ({ ...l })), total: total(), mode: c.mode, pay: c.pay, status: 0, scheduled: c.when === "later" ? c.slot || "Hoje · 18:00" : null, points: Math.floor(total() / 10) };
+  if (c.coupon) S.wallet.find((w) => w.code === c.coupon.code) && (S.wallet.find((w) => w.code === c.coupon.code).used = true);
+  S.orders.unshift(order); S.active = order; S.points += order.points;
+  S.bag = []; S.checkout.coupon = null; renderBag();
+  layer("[data-checkout]", false); go("pedidos"); toast(`Pedido #${code} enviado! +${order.points} pontos no Clube`);
+  clearInterval(placeOrder.t); placeOrder.t = setInterval(() => { if (!S.active || S.active.status >= 4) return clearInterval(placeOrder.t); S.active.status++; renderOrders(); }, 6000);
+};
+
+/* ---------- pedidos ---------- */
+const STEPS = (mode) => [["Pedido recebido", "A loja recebeu seu pedido", "check"], ["Aceito", "Confirmado pela A Esfiharia", "chef"], ["No forno", "Suas esfihas estão assando", "clock"], mode === "pickup" ? ["Pronto para retirar", "Pode vir buscar no balcão", "walk"] : ["Saiu para entrega", "O entregador está a caminho", "moto"], [mode === "pickup" ? "Retirado" : "Entregue", "Bom apetite! Avalie e ganhe 1 ponto", "star"]];
+const renderOrders = () => {
+  const o = S.active;
+  $("[data-track]").innerHTML = o ? `<div class="glass track"><div><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><span class="tag">Pedido #${o.code}</span><h3 style="font-size:22px">${o.status >= 4 ? (o.mode === "pickup" ? "Retirado!" : "Entregue!") : STEPS(o.mode)[o.status][0]}</h3></div><span class="pill ${o.status >= 4 ? "open" : ""}" style="${o.status < 4 ? "background:var(--primary-soft);color:var(--primary)" : ""}">${o.scheduled ? "Agendado · " + o.scheduled : o.status >= 4 ? "Concluído" : "Em andamento"}</span></div>
+      <ol class="tl">${STEPS(o.mode).map(([t, s, ic], i) => `<li class="${i < o.status ? "done" : i === o.status ? "now" : ""}"><span class="dot"><svg class="i"><use href="#${ic}"/></svg></span><div><b>${t}</b><small>${s}</small></div></li>`).join("")}</ol></div>
+      <div class="glass" style="padding:18px;box-shadow:none;align-self:start"><small class="muted">Previsão</small><div class="eta">${o.status >= 4 ? "✔" : o.mode === "pickup" ? Math.max(5, 25 - o.status * 6) + " min" : Math.max(10, 75 - o.status * 18) + " min"}</div>
+      <div class="sum" style="margin-top:12px">${o.items.map((l) => `<div><span>${l.qty}× ${esc(l.name)}</span><span>${brl(l.unit * l.qty)}</span></div>`).join("")}<div class="tot"><span>Total</span><span>${brl(o.total)}</span></div><div class="muted"><span>${esc(o.pay)}</span><span>+${o.points} pts</span></div></div>
+      <a class="btn" style="width:100%;margin-top:12px" href="https://wa.me/5516993741614" target="_blank" rel="noopener"><svg class="i"><use href="#whats"/></svg>Falar com a loja</a>
+      ${o.status >= 4 ? `<button class="btn pri" style="width:100%;margin-top:8px" data-go="avaliar">Avaliar pedido</button>` : ""}</div></div>`
+    : `<div class="glass" style="padding:22px">${S.user ? "Nenhum pedido em andamento." : "Entre para ver seus pedidos e acompanhar a entrega em tempo real."} <a href="#cardapio" data-go="cardapio" style="color:var(--primary);font-weight:700">Fazer um pedido</a></div>`;
+  const hist = [...S.orders.slice(o ? 1 : 0), ...(S.user ? DEMO_HISTORY : [])];
+  $("[data-history]").innerHTML = hist.length ? hist.map((h) => `<div class="glass order"><div><b>#${h.code} · ${brl(h.total)}</b><div class="meta">${h.when || h.at.toLocaleDateString("pt-BR")} · ${h.items.map((l) => `${l.qty}× ${esc(l.name)}`).join(", ")}</div></div><button class="btn sm" data-reorder="${h.code}">Pedir de novo</button></div>`).join("") : `<div class="muted">Seu histórico aparece aqui.</div>`;
+};
+const DEMO_HISTORY = [
+  { code: "48213", when: "Sábado, 22/11", total: 52.9, items: [{ id: "combos-combo-casal", name: "Combo Casal", unit: 52.9, qty: 1, detail: "4 salgadas, 2 doces, Coca 600ml" }] },
+  { code: "47790", when: "Quinta, 13/11", total: 70.6, items: [{ id: "tradicionais-carne", name: "Carne", unit: 10.9, qty: 4, detail: "" }, { id: "doces-pistache-c-chocolate-ao-leite", name: "Pistache c/ Chocolate ao Leite", unit: 18.9, qty: 1, detail: "" }, { id: "bebidas-coca-cola-600ml", name: "Coca-Cola (600ml)", unit: 10, qty: 1, detail: "" }] },
+];
+
+/* ---------- clube ---------- */
+const renderClub = () => {
+  const pts = S.points, next = TIERS.find((t) => pts < t[1]);
+  $("[data-points-card]").innerHTML = S.user
+    ? `<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap"><div><small class="muted">Seus pontos</small><div class="big">${pts}</div></div><div class="muted" style="text-align:right">${next ? `Faltam <b style="color:var(--text)">${next[1] - pts}</b> para o cupom ${next[0]}` : "Você já pode trocar pelo Ouro!"}<br><small>Pontos valem 120 dias</small></div></div>
+       <div class="progress"><i style="width:${Math.min(100, pts)}%"></i><span style="left:${Math.min(100, pts)}%"></span></div><div class="marks"><span>0</span><span>25</span><span>60</span><span>100</span></div>`
+    : `<b>Entre para ver seus pontos</b><p class="muted" style="margin:6px 0 12px">Já é membro? Seus pontos de pedidos pelo site aparecem aqui.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" data-login>Quero me cadastrar</button><button class="btn" data-login>Já sou membro</button></div>`;
+  $("[data-cupons]").innerHTML = TIERS.map(([n, need, val]) => `<div class="glass cupom"><div class="top-c"><b>${n.toUpperCase()}</b><div class="val"><small>Troque ${need} pontos por</small>R$${String(val).padStart(2, "0")}</div></div><h4>Cupom ${n}</h4><div class="pts">${need} pontos</div><button class="btn ${S.user && S.points >= need ? "pri" : ""}" data-redeem="${n}" ${S.user && S.points < need ? "disabled" : ""}>${!S.user ? "Entrar para resgatar" : S.points >= need ? "Resgatar" : `Faltam ${need - S.points} pts`}</button></div>`).join("");
+  $("[data-wallet]").innerHTML = S.wallet.length ? S.wallet.map((w) => `<div class="wc"><b>${brl(w.value)}</b><div style="flex:1"><strong>Cupom ${esc(w.label)}</strong><div class="muted" style="font-size:13px">Código ${w.code} · use no site ou na loja · válido por 30 dias</div></div>${w.used ? '<span class="pill closed">Usado</span>' : '<span class="pill open">Disponível</span>'}</div>`).join("") : `<div class="glass" style="padding:20px" >Você ainda não tem cupons. Troque seus pontos na aba “Cupons do Clube”.</div>`;
+  const line = $("[data-club-line]"), bar = $("[data-club-progress]");
+  if (S.user) { line.innerHTML = `<b>${esc(S.user.name.split(" ")[0])}</b>, você tem <b>${pts} pontos</b>${next ? ` · faltam ${next[1] - pts} para o ${next[0]}` : ""}`; bar.innerHTML = `<i style="width:${Math.min(100, pts)}%"></i><span style="left:${Math.min(100, pts)}%"></span>`; }
+};
+
+/* ---------- login ---------- */
+const openLogin = (thenCheckout = false) => {
+  const m = $("[data-login-modal]"); m.dataset.then = thenCheckout ? "1" : "";
+  m.innerHTML = `<div class="m-body"><div style="display:flex;align-items:center;gap:10px"><div><span class="tag">Clube da Esfiha</span><h3>Entrar ou cadastrar</h3></div><button class="x" data-close aria-label="Fechar"><svg class="i"><use href="#x"/></svg></button></div>
+    <p class="muted">Com sua conta você acompanha pedidos, salva endereços e junta pontos.</p>
+    <button class="btn" style="width:100%;margin:6px 0 12px;background:#fff;color:#1f2937;border-color:#fff" data-do-login="google"><b style="color:#4285f4">G</b> Continuar com Google</button>
+    <div class="muted" style="text-align:center;font-size:12.5px;margin-bottom:10px">ou com e-mail</div>
+    <label class="field"><span>Nome</span><input data-login-name value="Mariana Souza"></label>
+    <label class="field"><span>E-mail</span><input data-login-email type="email" value="mariana@email.com"></label>
+    <label class="field"><span>Celular (WhatsApp)</span><input value="(16) 99999-0000"></label>
+    <button class="btn pri" style="width:100%" data-do-login="email">Entrar</button>
+    <p class="muted" style="font-size:12px;margin:10px 0 0">Demonstração: o login entra direto com dados de exemplo (já com 47 pontos no Clube).</p></div>`;
+  layer("[data-login-modal]", true);
+};
+const doLogin = () => {
+  S.user = { name: $("[data-login-name]")?.value || "Mariana Souza" }; S.points = 47;
+  $("[data-user-label]").textContent = S.user.name.split(" ")[0];
+  const then = $("[data-login-modal]").dataset.then === "1";
+  layer("[data-login-modal]", false); renderClub(); toast(`Olá, ${S.user.name.split(" ")[0]}! Você tem ${S.points} pontos.`);
+  if (then) openCheckout();
+};
+
+/* ---------- avaliar ---------- */
+let rating = 5;
+const renderReviewForm = () => {
+  const all = [...S.orders, ...(S.user ? DEMO_HISTORY : [])];
+  $("[data-review-order]").innerHTML = all.length ? all.map((o) => `<option>#${o.code} · ${brl(o.total)}</option>`).join("") : `<option>Faça um pedido para avaliar</option>`;
+  $("[data-rate]").innerHTML = [1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= rating ? "on" : ""}" data-star="${n}" aria-label="${n} estrelas">★</button>`).join("");
+};
+
+/* ---------- camadas ---------- */
+const layer = (sel, on) => {
+  $(sel).classList.toggle("on", on);
+  $("[data-ov]").classList.toggle("on", $$(".drawer.on,.modal.on").length > 0);
+};
+const closeAll = () => { $$(".drawer.on,.modal.on").forEach((el) => el.classList.remove("on")); $("[data-ov]").classList.remove("on"); };
+
+/* ---------- eventos ---------- */
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const g = t.closest("[data-go]"); if (g) { e.preventDefault(); closeAll(); go(g.dataset.go); return; }
+  if (t.closest("[data-close]") || t.matches("[data-ov]")) return closeAll();
+  if (t.closest("[data-open-bag]")) return layer("[data-bag]", true);
+  if (t.closest("[data-go-menu]")) { closeAll(); return go("cardapio"); }
+  const op = t.closest("[data-open-product]"); if (op) return openProduct(op.dataset.openProduct);
+  const pk = t.closest("[data-pick]"); if (pk) { const [k, id, d] = pk.dataset.pick.split("|"); const cur = current.picks[k][id] || 0; current.picks[k][id] = Math.max(0, cur + Number(d)); return renderProduct(); }
+  const q = t.closest("[data-qty]"); if (q) { current.qty = Math.max(1, current.qty + Number(q.dataset.qty)); return renderProduct(); }
+  if (t.closest("[data-add-current]")) return addCurrent();
+  const ln = t.closest("[data-line]"); if (ln) { const [k, d] = ln.dataset.line.split("|"); const l = S.bag.find((x) => String(x.key) === k); if (l) { l.qty += Number(d); if (l.qty <= 0) S.bag = S.bag.filter((x) => x !== l); } renderBag(); if ($("[data-checkout]").classList.contains("on")) renderCheckout(); return; }
+  if (t.closest("[data-start-checkout]")) return openCheckout();
+  const md = t.closest("[data-mode]"); if (md) { S.checkout.mode = md.dataset.mode; return renderCheckout(); }
+  const wh = t.closest("[data-when]"); if (wh && !wh.disabled) { S.checkout.when = wh.dataset.when; return renderCheckout(); }
+  const py = t.closest("[data-pay]"); if (py) { S.checkout.pay = py.dataset.pay; S.checkout.payGroup = py.dataset.group; return renderCheckout(); }
+  const uc = t.closest("[data-use-coupon]"); if (uc) { const w = S.wallet.find((x) => x.code === uc.dataset.useCoupon); S.checkout.coupon = S.checkout.coupon?.code === w.code ? null : { code: w.code, label: w.label, value: w.value }; return renderCheckout(); }
+  if (t.closest("[data-apply-coupon]")) { const code = ($("[data-coupon-code]").value || "").trim().toUpperCase(); if (code === "ESFIHA10") { S.checkout.coupon = { code, label: "ESFIHA10", value: 10 }; renderCheckout(); toast("Cupom aplicado!"); } else toast("Cupom inválido (no esboço, use ESFIHA10)"); return; }
+  if (t.closest("[data-ck-back]")) { S.checkout.step--; return renderCheckout(); }
+  if (t.closest("[data-ck-next]")) { if (S.checkout.step < 3) { S.checkout.step++; return renderCheckout(); } return placeOrder(); }
+  if (t.closest("[data-calc]")) {
+    const digits = ($("[data-calc-cep]").value || "").replace(/\D/g, "");
+    if (digits.length !== 8) { toast("Digite um CEP com 8 números"); return; }
+    const km = 1.5 + (Number(digits.slice(-3)) % 140) / 10;
+    const value = Number(String($("[data-calc-value]").value || "").replace(/[^0-9,]/g, "").replace(",", ".")) || 0;
+    const free = km <= 12 && value >= 50;
+    $("[data-calc-out]").innerHTML = `<span class="muted">${km.toFixed(1).replace(".", ",")} km da loja</span><div class="big">${free ? "Grátis" : brl(5.99)}</div><b>Chega em ~75 min</b><span class="muted">${km > 12 ? "Acima de 12 km: taxa por distância." : free ? "Pedido acima de R$ 50 dentro de 12 km." : "Grátis acima de R$ 50 (até 12 km)."}</span><a class="btn pri" href="#cardapio" data-go="cardapio" style="margin-top:6px">Ver cardápio</a>`;
+    return;
+  }
+  if (t.closest("[data-login]")) return openLogin(false);
+  if (t.closest("[data-do-login]")) return doLogin();
+  const rd = t.closest("[data-redeem]"); if (rd) { if (!S.user) return openLogin(false); const [n, need, val] = TIERS.find((x) => x[0] === rd.dataset.redeem); if (S.points < need) return; S.points -= need; S.wallet.unshift({ code: n.slice(0, 2).toUpperCase() + Math.floor(1000 + Math.random() * 8999), label: n, value: val, used: false }); renderClub(); toast(`Cupom ${n} de ${brl(val)} resgatado!`); return; }
+  const ct = t.closest("[data-ctab]"); if (ct) { $$("[data-ctab]").forEach((b) => b.classList.toggle("on", b === ct)); $$("[data-ctab-panel]").forEach((p) => (p.hidden = p.dataset.ctabPanel !== ct.dataset.ctab)); return; }
+  const rr = t.closest("[data-reorder]"); if (rr) { const h = [...S.orders, ...DEMO_HISTORY].find((x) => x.code === rr.dataset.reorder); h.items.forEach((l) => S.bag.push({ ...l, key: Date.now() + Math.random() })); renderBag(); layer("[data-bag]", true); toast("Itens de volta na sacola"); return; }
+  const chip = t.closest("[data-chip]"); if (chip) { $$("[data-chip]").forEach((c) => c.classList.toggle("on", c === chip)); document.getElementById("cat-" + chip.dataset.chip)?.scrollIntoView({ behavior: "smooth" }); return; }
+  const star = t.closest("[data-star]"); if (star) { rating = Number(star.dataset.star); return renderReviewForm(); }
+  const tg = t.closest("[data-tags] button"); if (tg) return tg.classList.toggle("on");
+  const dot = t.closest("[data-carousel] .dots button"); if (dot) return carousel($$("[data-carousel] .dots button").indexOf(dot));
+});
+document.addEventListener("change", (e) => {
+  const ex = e.target.closest("[data-extra]"); if (ex) { const [n, v] = ex.dataset.extra.split("|"); if (ex.checked) current.extras[n] = Number(v); else delete current.extras[n]; return renderProduct(); }
+  if (e.target.matches("[data-slot]")) S.checkout.slot = e.target.value.replace("Hoje · ", "Hoje · ");
+  if (e.target.id === "force-open") { renderStatus(); if ($("[data-checkout]").classList.contains("on")) renderCheckout(); }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.matches("[data-search]")) { query = e.target.value; renderMenu(); }
+  if (e.target.matches("[data-note]")) current.note = e.target.value;
+  if (e.target.matches("[data-address]")) S.checkout.address = e.target.value;
+  if (e.target.matches("[data-num]")) S.checkout.num = e.target.value;
+  if (e.target.matches("[data-change]")) S.checkout.change = e.target.value;
+  if (e.target.matches("[data-cep]")) {
+    S.checkout.cep = e.target.value;
+    const digits = e.target.value.replace(/\D/g, "");
+    if (digits.length === 8) { S.checkout.km = 1.5 + (Number(digits.slice(-3)) % 140) / 10; S.checkout.address = S.checkout.address || "Rua das Esfihas, Jardim Noemia"; renderCheckout(); $("[data-num]")?.focus(); }
+  }
+});
+document.addEventListener("submit", (e) => {
+  if (e.target.matches("[data-review-form]")) { e.preventDefault(); if (S.user) S.points += 1; toast("Obrigado! Avaliação enviada" + (S.user ? " · +1 ponto" : "")); e.target.reset(); }
+  if (e.target.matches("[data-job-form]")) { e.preventDefault(); toast("Candidatura enviada! A loja vai falar com você pelo WhatsApp."); e.target.reset(); }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+
+/* ---------- início ---------- */
+$("[data-pm-online]").innerHTML = PAY_ONLINE.map(([n, ic, c]) => `<div><span class="ic" style="background:${c}">${ic}</span>${n}</div>`).join("");
+$("[data-pm-delivery]").innerHTML = PAY_DELIVERY.map(([n, ic, c]) => `<div><span class="ic" style="background:${c}">${ic}</span>${n}</div>`).join("");
+renderStatus(); renderRail(); renderMenu(); renderBag(); renderClub(); renderOrders(); renderReviewForm();
+setInterval(() => carousel(), 5000);
+go((location.hash || "#inicio").slice(1), false);
+window.addEventListener("hashchange", () => go((location.hash || "#inicio").slice(1), false));
+</script>
+<style>@media (max-width:760px){.ck-grid{grid-template-columns:1fr !important}}</style>
+</body>
+</html>

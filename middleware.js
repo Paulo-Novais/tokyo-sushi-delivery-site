@@ -11,6 +11,7 @@ import tenantSql from "./lib/tenant-sql.cjs";
 import publicSurfacePolicy from "./lib/public-surface-policy.cjs";
 import premiumSiteRoutes from "./lib/premium-site-routes.cjs";
 import customerAuthHost from "./lib/customer-auth-host.cjs";
+import demoSites from "./lib/demo-sites.cjs";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login.html",
@@ -233,6 +234,12 @@ const resolvePublicRestaurantPath = async (request, pathname, rawHost) => {
   const resolution = await resolveRestaurantBySlug(route.slug);
 
   if (resolution?.matched !== true) {
+    // Sites de demonstração (página estática em /demo/<slug>/): só enquanto
+    // nenhum restaurante de verdade usar esse endereço.
+    const demoPage = demoSites.resolveDemoSitePage(route.slug, route.suffix);
+    if (demoPage) {
+      return buildRewriteResponse(request.url, demoPage);
+    }
     return buildRestaurantNotFoundResponse();
   }
 
