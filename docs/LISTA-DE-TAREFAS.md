@@ -46,7 +46,7 @@ Resultado: `docs/COMPARATIVO-CONCORRENCIA.md` (19/11/2026).
 - [x] Domínio próprio opcional em qualquer plano pago: + R$ 49/mês, cobrado junto com a mensalidade.
 - [x] Nota fiscal (NFC-e) inclusa no Profissional e no Completo (a emissão ainda precisa ser construída).
 - [x] Grátis saiu do site e do cadastro novo (segue como plano legado).
-- [ ] Decidir se o Tokyo (Completo legado, R$ 219,90) passa para o preço novo.
+- [x] Tokyo e Kasulo no Completo (`PRO`), mantendo a mensalidade combinada de R$ 349.
 
 ## Ativação (depende de terceiros)
 
