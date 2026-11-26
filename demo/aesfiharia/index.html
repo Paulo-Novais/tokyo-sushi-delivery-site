@@ -217,20 +217,34 @@ h2{font-size:28px}
 .m-body{padding:18px 22px}
 .m-body h3{font-size:23px}
 .m-foot{position:sticky;bottom:0;background:var(--bg-soft);border-top:1px solid var(--border);padding:14px 22px;display:flex;gap:12px;align-items:center}
-.opt-group{margin-top:16px;border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.og-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(0,0,0,.2)}
-.og-h b{font-size:14.5px}
-.og-h small{color:var(--muted)}
-.req{font-size:11px;font-weight:800;background:var(--brown);color:var(--cream);border-radius:6px;padding:2px 7px}
+/* Grupos de opções do produto (turbinar, refrigerante, sabores do combo) */
+.opt-group{margin-top:18px}
+.og-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;padding:0 2px 10px}
+.og-h b{font-size:16px;display:block}
+.og-h small{color:var(--muted);font-size:13px}
+.og-list{display:grid;gap:8px}
+.chip-opt{font-size:11.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:4px 10px;background:var(--cream-soft);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
+.req{font-size:12px;font-weight:800;background:var(--brown);color:var(--cream);border-radius:999px;padding:4px 11px;white-space:nowrap}
 .req.ok{background:rgba(34,197,94,.2);color:#4ade80}
-.opt{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--border);cursor:pointer}
-.opt:hover{background:rgba(255,255,255,.03)}
-.opt span{flex:1}
-.opt small{color:var(--muted)}
-.opt input{accent-color:var(--primary);width:18px;height:18px}
-.counter{display:inline-flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.counter button{width:32px;height:30px;border:0;background:var(--cream-soft)}
-.counter span{min-width:26px;text-align:center;font-weight:700}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.03);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.opt:hover{border-color:rgba(245,134,46,.45);background:rgba(245,134,46,.06)}
+.opt:has(input:checked),.opt.on{border-color:var(--primary);background:linear-gradient(90deg,rgba(245,134,46,.16),rgba(245,134,46,.05));box-shadow:0 0 0 1px rgba(245,134,46,.35) inset}
+.opt span{flex:1;min-width:0;font-weight:600}
+.opt span small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:1px}
+.opt .price-tag{flex:0 0 auto;font-size:13px;font-weight:800;color:var(--cream);background:rgba(246,228,191,.1);border:1px solid var(--border);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.opt:has(input:checked) .price-tag{background:var(--primary);color:#1b0d05;border-color:var(--primary)}
+/* caixinha e bolinha próprias (no lugar das brancas do navegador) */
+.opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:24px;height:24px;margin:0;border:2px solid rgba(246,228,191,.35);border-radius:8px;background:rgba(0,0,0,.25);display:grid;place-items:center;cursor:pointer;transition:.15s}
+.opt input[type=radio]{border-radius:50%}
+.opt input:checked{background:var(--primary);border-color:var(--primary)}
+.opt input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #1b0d05;border-width:0 3px 3px 0;transform:translateY(-1px) rotate(45deg)}
+.opt input[type=radio]:checked::after{content:"";width:9px;height:9px;border-radius:50%;background:#1b0d05}
+.opt input:focus-visible{outline:3px solid rgba(245,134,46,.45);outline-offset:2px}
+.counter{display:inline-flex;align-items:center;gap:4px;padding:3px;border:1px solid var(--border);border-radius:999px;background:rgba(0,0,0,.25)}
+.counter button{width:30px;height:30px;border:0;border-radius:50%;background:rgba(246,228,191,.1);font-size:17px;font-weight:700;line-height:1;display:grid;place-items:center}
+.counter button:last-child{background:var(--primary);color:#1b0d05}
+.counter button:disabled{opacity:.35;cursor:not-allowed}
+.counter span{min-width:22px;text-align:center;font-weight:800}
 textarea,.field input,.field select{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:11px 12px;font:inherit}
 textarea{min-height:70px;resize:vertical}
 .field{display:grid;gap:6px;margin-bottom:12px}
@@ -921,12 +935,12 @@ const renderProduct = () => {
   const { p, qty } = current; const m = $("[data-product]");
   const comboGroup = (key, label, list, need) => {
     const got = pickCount(current.picks[key]);
-    return `<div class="opt-group"><div class="og-h"><div><b>${label}</b><br><small>Escolha ${need} · pode repetir sabor</small></div><span class="req ${got === need ? "ok" : ""}">${got}/${need}</span></div>
-      ${list.map((x) => { const n = current.picks[key][x.id] || 0; return `<div class="opt"><span>${esc(x.name)}<br><small>${esc(x.desc)}</small></span><div class="counter"><button data-pick="${key}|${x.id}|-1" aria-label="Menos">−</button><span>${n}</span><button data-pick="${key}|${x.id}|1" ${got >= need ? "disabled" : ""} aria-label="Mais">+</button></div></div>`; }).join("")}</div>`;
+    return `<div class="opt-group"><div class="og-h"><div><b>${label}</b><small>Escolha ${need} · pode repetir sabor</small></div><span class="req ${got === need ? "ok" : ""}">${got}/${need}</span></div><div class="og-list">
+      ${list.map((x) => { const n = current.picks[key][x.id] || 0; return `<div class="opt ${n ? "on" : ""}"><span>${esc(x.name)}<small>${esc(x.desc)}</small></span><div class="counter"><button data-pick="${key}|${x.id}|-1" ${n ? "" : "disabled"} aria-label="Menos ${esc(x.name)}">−</button><span>${n}</span><button data-pick="${key}|${x.id}|1" ${got >= need ? "disabled" : ""} aria-label="Mais ${esc(x.name)}">+</button></div></div>`; }).join("")}</div></div>`;
   };
   const extras = p.combo ? "" : ["tradicionais", "turbinadas", "especiais", "amoda", "gourmet"].includes(p.cat)
-    ? `<div class="opt-group"><div class="og-h"><div><b>Turbinar</b><br><small>Opcional</small></div></div>
-        ${[["Requeijão extra", 2.0], ["Cheddar extra", 2.5], ["Bacon extra", 3.0]].map(([n, v]) => `<label class="opt"><input type="checkbox" data-extra="${n}|${v}" ${current.extras[n] ? "checked" : ""}><span>${n}</span><small>+ ${brl(v)}</small></label>`).join("")}</div>` : "";
+    ? `<div class="opt-group"><div class="og-h"><div><b>Turbinar</b><small>Deixe ainda mais recheada · escolha quantos quiser</small></div><span class="chip-opt">OPCIONAL</span></div><div class="og-list">
+        ${[["Requeijão extra", 2.0, "Cremoso por cima"], ["Cheddar extra", 2.5, "Fio de cheddar"], ["Bacon extra", 3.0, "Bacon crocante"]].map(([n, v, d]) => `<label class="opt"><input type="checkbox" data-extra="${n}|${v}" ${current.extras[n] ? "checked" : ""}><span>${n}<small>${d}</small></span><span class="price-tag">+ ${brl(v)}</span></label>`).join("")}</div></div>` : "";
   const total = unitPrice() * qty;
   const valid = !p.combo || (pickCount(current.picks.salgadas) === p.combo.salgadas && pickCount(current.picks.doces) === p.combo.doces);
   m.innerHTML = `
@@ -934,7 +948,7 @@ const renderProduct = () => {
     <div class="m-body">
       <span class="tag">${CATS.find((c) => c.id === p.cat).name}</span>
       <h3>${esc(p.name)}</h3><p class="muted" style="margin:6px 0 0">${esc(p.desc)}</p>
-      ${p.combo ? comboGroup("salgadas", "Esfihas salgadas", SALG(), p.combo.salgadas) + comboGroup("doces", "Esfihas doces", DOCE(), p.combo.doces) + `<div class="opt-group"><div class="og-h"><div><b>Refrigerante</b><br><small>Incluso</small></div><span class="req ok">1/1</span></div><label class="opt"><input type="radio" checked name="refri"><span>Coca-Cola ${p.combo.refri}</span></label><label class="opt"><input type="radio" name="refri"><span>Coca-Cola Zero ${p.combo.refri}</span></label></div>` : ""}
+      ${p.combo ? comboGroup("salgadas", "Esfihas salgadas", SALG(), p.combo.salgadas) + comboGroup("doces", "Esfihas doces", DOCE(), p.combo.doces) + `<div class="opt-group"><div class="og-h"><div><b>Refrigerante</b><small>Incluso no combo</small></div><span class="req ok">1/1</span></div><div class="og-list"><label class="opt"><input type="radio" checked name="refri"><span>Coca-Cola<small>${p.combo.refri}</small></span><span class="price-tag">incluso</span></label><label class="opt"><input type="radio" name="refri"><span>Coca-Cola Zero<small>${p.combo.refri}</small></span><span class="price-tag">incluso</span></label></div></div>` : ""}
       ${extras}
       <div class="field" style="margin-top:16px"><span>Alguma observação?</span><textarea data-note placeholder="Ex.: sem cebola, bem assada…">${esc(current.note)}</textarea></div>
     </div>
