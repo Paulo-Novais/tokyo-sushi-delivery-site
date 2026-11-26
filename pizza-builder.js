@@ -162,7 +162,11 @@
           .join("")}
       </div>
       <p class="pzb-rule"><b>Como cobramos:</b> numa pizza com mais de um sabor, o valor é o do sabor mais caro.${
-        (config.borders || []).length ? " Borda recheada soma à parte." : ""
+        (config.borders || []).length
+          ? (config.borders || []).some((border) => border.price > 0)
+            ? " Borda recheada soma à parte."
+            : " Borda recheada sem custo."
+          : ""
       }</p>`;
     root.prepend(section);
   };
@@ -285,13 +289,13 @@
       html += `<div class="pzb-group"><b>Borda</b><span class="${borderDone ? "is-ok" : ""}">${borderDone ? "✓ Pronto" : "Escolha o recheio"}</span></div>
         <div class="pzb-border-modes">
           <button type="button" class="${!state.withBorder ? "is-on" : ""}" data-pizza-border-mode="0"><b>Sem borda</b><small>Massa tradicional</small></button>
-          <button type="button" class="${state.withBorder ? "is-on" : ""}" data-pizza-border-mode="1"><b>Com borda recheada</b><small>a partir de ${money(minBorder)}</small></button>
+          <button type="button" class="${state.withBorder ? "is-on" : ""}" data-pizza-border-mode="1"><b>Com borda recheada</b><small>${minBorder > 0 ? `a partir de ${money(minBorder)}` : "sem custo"}</small></button>
         </div>
         ${
           state.withBorder
             ? `<div class="pzb-borders">${borders
                 .map(
-                  (entry) => `<button type="button" class="${state.border === entry.id ? "is-on" : ""}" data-pizza-border="${esc(entry.id)}"><i style="background:${borderColor(entry)}"></i><span><b>${esc(entry.name)}</b><small>+ ${money(entry.price)}</small></span></button>`
+                  (entry) => `<button type="button" class="${state.border === entry.id ? "is-on" : ""}" data-pizza-border="${esc(entry.id)}"><i style="background:${borderColor(entry)}"></i><span><b>${esc(entry.name)}</b><small>${entry.price > 0 ? `+ ${money(entry.price)}` : "grátis"}</small></span></button>`
                 )
                 .join("")}</div>`
             : ""
@@ -307,7 +311,7 @@
         count > 1 && picked.length > 1
           ? `Cobramos o sabor mais caro: <b>${esc(top.name)} ${money(top.price)}</b>`
           : `<b>${esc(top.name)}</b> ${money(top.price)}`;
-      if (border) calc += ` · borda de ${esc(border.name.toLowerCase())} <b>+ ${money(border.price)}</b>`;
+      if (border) calc += ` · borda de ${esc(border.name.toLowerCase())} <b>${border.price > 0 ? `+ ${money(border.price)}` : "grátis"}</b>`;
     } else {
       calc = count === 1 ? "Escolha o sabor da pizza." : `Escolha ${count} sabores. Você paga pelo mais caro.`;
     }
