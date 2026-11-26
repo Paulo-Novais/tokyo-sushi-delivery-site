@@ -7645,15 +7645,10 @@ const hexToRgba = (hexColor, alpha = 1) => {
   return `rgba(${red}, ${green}, ${blue}, ${Math.max(0, Math.min(1, Number(alpha) || 0))})`;
 };
 
-const resolvePublicAssetUrl = (value) => {
-  const normalizedValue = String(value || "").trim();
-
-  if (!normalizedValue || normalizedValue.startsWith("/") || /^[a-z]+:\/\//i.test(normalizedValue)) {
-    return normalizedValue;
-  }
-
-  return normalizedValue;
-};
+// Endereço final de uma imagem do restaurante. Fotos conhecidas do site
+// trocam o .png/.jpg pela versão .webp, bem mais leve (o banner do Tokyo
+// cai de 342 KB para 33 KB).
+const resolvePublicAssetUrl = (value) => optimizeKnownAssetUrl(String(value || "").trim());
 
 const setNodeText = (selector, value) => {
   document.querySelectorAll(selector).forEach((node) => {
@@ -14150,7 +14145,6 @@ const handleDocumentClick = (event) => {
 
   const authEditButton = event.target.closest("[data-auth-edit]");
   if (authEditButton) {
-    const profile = loadAuthProfile();
     authState.view = "entry";
     authState.editing = true;
     authState.phoneCodeStatus = "idle";

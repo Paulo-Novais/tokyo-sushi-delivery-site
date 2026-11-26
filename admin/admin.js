@@ -3318,20 +3318,6 @@ const getMetricsHeadlineStats = () => {
   };
 };
 
-const getModuleHeadlineStats = () => {
-  const stats = getStatsSnapshot();
-  const customerRecords = getCustomerRecords();
-  const finance = getFinancialOverview();
-
-  return {
-    activeOrders: stats.activeOrders ?? 0,
-    deliveries: getRouteOrders().length,
-    customers: customerRecords.length,
-    recurringCustomers: customerRecords.filter((customer) => customer.ordersCount > 1).length,
-    finance,
-  };
-};
-
 const syncAdminSectionState = () => {
   if (!document.body) {
     return;
@@ -4058,7 +4044,6 @@ const updateSidebarMeta = () => {
   const hasSearch = Boolean(String(adminState.searchQuery || "").trim());
   const sectionMeta = getSectionMeta();
   const dashboardOverview = getDashboardOverview();
-  const headlineStats = getModuleHeadlineStats();
   const metricsHeadline = getMetricsHeadlineStats();
   const metricsSnapshot = getMetricsSnapshot();
   const metricsFilters = metricsSnapshot?.filters || adminState.metricsFilters;
@@ -14422,7 +14407,6 @@ const renderSalonBoard = (boardRoot) => {
 const renderOrderCard = (order) => {
   const isSelected = adminState.selectedOrderId === order.id;
   const isScheduled = order.timingMode === "scheduled";
-  const isPickup = order.fulfillmentMode === "pickup";
   const sla = getOrderSla(order);
   const statusKey = normalizeStatusKey(order.status);
   const statusLabel = getOrderStatusLabel(order);

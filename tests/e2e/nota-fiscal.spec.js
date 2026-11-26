@@ -89,7 +89,7 @@ test("Nota fiscal: configura, emite sozinha ao entregar, cancela junto com o ped
   expect(invoice.invoices[0].accessKey).toHaveLength(44);
   // Emitir de novo não duplica.
   const again = await (await api.post("/api/admin/orders/invoice-emit", { data: { orderId: order.id } })).json();
-  expect(again.replayed).toBe(true);
+  expect(again.replayed, JSON.stringify(again)).toBe(true);
 
   // Lista de notas na tela.
   await page.reload();
@@ -97,7 +97,7 @@ test("Nota fiscal: configura, emite sozinha ao entregar, cancela junto com o ped
 
   // Cancelar a nota pelo botão do pedido (cancelamento manual).
   const canceled = await (await api.post("/api/admin/orders/invoice-cancel", { data: { orderId: order.id, reason: "Cliente pediu o cancelamento da compra" } })).json();
-  expect(canceled.canceled).toBe(true);
+  expect(canceled.canceled, JSON.stringify(canceled)).toBe(true);
   invoice = await (await api.get(`/api/admin/orders/invoice?orderId=${encodeURIComponent(order.id)}`)).json();
   expect(invoice.invoices[0].status).toBe("CANCELED");
 

@@ -1527,7 +1527,6 @@
       const requested = state.query.get("key");
       state.support.restaurantKey = requested && restaurants.some((restaurant) => restaurant.restaurantKey === requested) ? requested : restaurants[0]?.restaurantKey || "";
     }
-    const canAdmin = hasPermission("system.support.admin");
     state.support.mode = "ADMIN";
 
     app.innerHTML = `
