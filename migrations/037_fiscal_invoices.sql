@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS fiscal_invoices (
   order_public_id TEXT NOT NULL DEFAULT '',
   -- Referência única enviada ao emissor (não repete nota do mesmo pedido).
   provider_ref TEXT NOT NULL,
-  provider TEXT NOT NULL CHECK (provider IN ('focusnfe', 'fake')),
+  -- 'none' = pedido marcado "Não emitir" pelo restaurante (não vai ao emissor).
+  provider TEXT NOT NULL CHECK (provider IN ('focusnfe', 'fake', 'none')),
   environment TEXT NOT NULL DEFAULT 'homologacao' CHECK (environment IN ('homologacao', 'producao')),
-  status TEXT NOT NULL CHECK (status IN ('PROCESSING', 'AUTHORIZED', 'REJECTED', 'CANCELED', 'ERROR')),
+  -- SKIPPED = "Não emitir"; VOID = marcação desfeita (fica no histórico).
+  status TEXT NOT NULL CHECK (status IN ('PROCESSING', 'AUTHORIZED', 'REJECTED', 'CANCELED', 'ERROR', 'SKIPPED', 'VOID')),
   amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
   number TEXT NOT NULL DEFAULT '',
   series TEXT NOT NULL DEFAULT '',

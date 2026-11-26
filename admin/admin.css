@@ -14255,7 +14255,7 @@ body.master-body {
   list-style: none;
 }
 .admin-pizza-builder > summary::-webkit-details-marker { display: none; }
-.admin-pizza-builder > summary small { display: block; color: var(--gx-muted, #667085); font-size: 13px; font-weight: 400; }
+.admin-pizza-builder > summary small { display: block; color: var(--gx-ink-3, #667085); font-size: 13px; font-weight: 400; }
 .admin-pizza-builder-status {
   flex: none;
   padding: 4px 10px;
@@ -14285,10 +14285,10 @@ body.admin-body[data-admin-theme="dark"] .admin-pizza-builder-note.is-error { co
 }
 .admin-pizza-builder-fieldset legend { padding: 0 6px; font-weight: 700; font-size: 13px; }
 .admin-pizza-builder-fieldset label { display: inline-flex; align-items: center; gap: 6px; }
-.admin-pizza-builder-fieldset small { color: var(--gx-muted, #667085); }
+.admin-pizza-builder-fieldset small { color: var(--gx-ink-3, #667085); }
 .admin-pizza-builder-borders { display: grid; gap: 8px; width: 100%; }
 .admin-pizza-builder-border { display: grid; grid-template-columns: 1fr 140px auto; gap: 8px; }
-.admin-pizza-builder-note { flex-basis: 100%; margin: 0; color: var(--gx-muted, #667085); font-size: 13px; }
+.admin-pizza-builder-note { flex-basis: 100%; margin: 0; color: var(--gx-ink-3, #667085); font-size: 13px; }
 .admin-pizza-builder-note.is-ok { color: #15803d; font-weight: 600; }
 .admin-pizza-builder-note.is-error { color: #b42318; font-weight: 600; }
 .admin-pizza-builder-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

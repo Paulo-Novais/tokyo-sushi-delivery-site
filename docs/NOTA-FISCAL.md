@@ -5,6 +5,12 @@ planos **Profissional** e **Completo**.
 
 ## Como funciona
 
+- **Gestor > Resultados > NFC-e** (aba nova): pedidos do período (hoje, ontem,
+  7 dias, mês) com a situação da nota de cada um; chave **Automático / Eu
+  escolho**; **Emitir**, **Não emitir** (pode desfazer), **Tentar de novo**,
+  **Ver nota** e **Cancelar**; selecionar vários e emitir ou marcar de uma vez.
+  No plano Essencial o item aparece com cadeado (Profissional).
+
 - **Gestor > Configurações > Nota fiscal**: razão social, CNPJ, inscrição
   estadual, regime de impostos, série, ID do CSC, NCM/CFOP padrão e "emitir
   sozinho". O **certificado A1 (.pfx + senha)** e o **CSC** vão direto para o
@@ -48,7 +54,9 @@ planos **Profissional** e **Completo**.
 - `lib/fiscal-provider.cjs` (Focus NFe + simulador), `lib/fiscal-invoices.cjs`
   (montar/emitir/cancelar), `lib/fiscal-invoice-store.cjs`, `lib/fiscal-settings.cjs`.
 - API: `GET/POST /api/admin/settings/fiscal|fiscal-save`,
-  `GET /api/admin/orders/invoice`, `POST /api/admin/orders/invoice-emit|invoice-cancel`.
+  `GET /api/admin/orders/invoice|fiscal-list`,
+  `POST /api/admin/orders/invoice-emit|invoice-cancel|invoice-skip|invoice-unskip`
+  (`invoice-emit` e `invoice-skip` aceitam `orderIds` para vários, até 30).
 - Banco: `migrations/037_fiscal_invoices.sql` (testada com
   `node scripts/validate-fiscal-migration.mjs`).
 - Testes: `tests/unit/nota-fiscal.test.cjs`, `tests/e2e/nota-fiscal.spec.js`.

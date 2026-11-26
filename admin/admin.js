@@ -70,6 +70,7 @@ const RESTAURANT_NAV_SECTIONS = Object.freeze([
   { key: "reports", label: "Relatórios", helper: "Indicadores" },
   { key: "forecast", label: "Previsão", helper: "Vendas, clientes e compras" },
   { key: "finance", label: "Financeiro", helper: "Recebimentos" },
+  { key: "fiscal", label: "NFC-e", helper: "Notas fiscais" },
   { key: "reviews", label: "Avaliações", helper: "Feedback do cliente" },
   { key: "settings", label: "Configurações", helper: "Ajustes do sistema" },
   { key: "inventory", label: "Estoque", helper: "Itens e validade" },
@@ -96,6 +97,7 @@ const NAV_SECTIONS = Object.freeze([
 ]);
 const IMPLEMENTED_SECTIONS = new Set([
   "dashboard",
+  "fiscal",
   "cash-register",
   "orders",
   "scheduled",
@@ -124,6 +126,7 @@ const SECTION_PERMISSION_MAP = Object.freeze({
   metrics: "reports_view",
   reports: "reports_view",
   forecast: "reports_view",
+  fiscal: "orders_view",
   inventory: "inventory_view",
   finance: "financial_view",
   reviews: "reviews_view",
@@ -144,6 +147,7 @@ const SECTION_MENU_VISIBILITY_MAP = Object.freeze({
   metrics: "menu_metrics_view",
   reports: "menu_reports_view",
   forecast: "menu_reports_view",
+  fiscal: "menu_orders_view",
   finance: "menu_financial_view",
   reviews: "menu_reviews_view",
   settings: "menu_settings_view",
@@ -163,12 +167,14 @@ const SECTION_FEATURE_MAP = Object.freeze({
   finance: "finance",
   reviews: "reviews",
   "cash-register": "salon",
+  fiscal: "fiscal",
 });
 // Plano mínimo de cada recurso (tabela de 25/11/2026), para a tela "mude de plano".
 const FEATURE_MIN_PLAN = Object.freeze({
   advancedReports: { name: "Profissional", price: "R$ 179,90" },
   inventory: { name: "Profissional", price: "R$ 179,90" },
   finance: { name: "Profissional", price: "R$ 179,90" },
+  fiscal: { name: "Profissional", price: "R$ 179,90" },
   crm: { name: "Completo", price: "R$ 299,90" },
   promotions: { name: "Completo", price: "R$ 299,90" },
   reviews: { name: "Completo", price: "R$ 299,90" },
@@ -360,6 +366,12 @@ const SECTION_TITLES = {
     description: "Leitura gerencial baseada na trilha real de auditoria e nos pedidos do período.",
     focus: "Indicadores vivos da operação",
   },
+  fiscal: {
+    chip: "NFC-e",
+    title: "Notas fiscais dos pedidos",
+    description: "Escolha o que emitir ou deixe automático.",
+    focus: "Nota fiscal do consumidor",
+  },
   forecast: {
     chip: "Previsão inteligente",
     title: "Previsão de vendas, clientes e compras",
@@ -420,6 +432,8 @@ const NAV_ICON_SVGS = {
     '<svg viewBox="0 0 24 24" fill="none"><path d="M4 19h16M7 15l3-3 3 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="15" r="1"/><circle cx="10" cy="12" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/></svg>',
   reports:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M5 19V9M12 19V5M19 19v-7M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fiscal:
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   forecast:
     '<svg viewBox="0 0 24 24" fill="none"><path d="M4 18l5-6 4 3 7-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2.5"/></svg>',
   audit:
@@ -4378,7 +4392,7 @@ const NAV_GROUPS = Object.freeze([
   { key: "operacao", label: "Operação", sections: ["orders", "scheduled", "deliveries"] },
   { key: "cardapio", label: "Cardápio", sections: ["menu", "inventory"] },
   { key: "clientes", label: "Clientes", sections: ["customers", "promotions", "reviews"] },
-  { key: "resultados", label: "Resultados", sections: ["metrics", "finance", "reports", "forecast"] },
+  { key: "resultados", label: "Resultados", sections: ["metrics", "finance", "fiscal", "reports", "forecast"] },
   { key: "ajustes", label: "Ajustes", sections: ["settings", "users", "audit"] },
 ]);
 
@@ -11659,6 +11673,314 @@ const FISCAL_INVOICE_STATUS = {
   CANCELED: ["Cancelada", "is-warn"],
 };
 
+// ---------- Aba NFC-e (Resultados > NFC-e) ----------
+const fiscalListState = { loading: false, data: null, error: "", period: "today", filter: "all", query: "", selected: new Set(), openId: "", busy: false, notice: "" };
+const FISCAL_ROW_STATE = {
+  none: ["Sem nota", "is-none"],
+  AUTHORIZED: ["Autorizada", "is-ok"],
+  PROCESSING: ["Enviando…", "is-proc"],
+  REJECTED: ["Rejeitada", "is-bad"],
+  ERROR: ["Erro", "is-bad"],
+  CANCELED: ["Cancelada", "is-warn"],
+  SKIPPED: ["Não emitir", "is-skip"],
+};
+const fiscalRowState = (row) => {
+  const status = row.invoice?.status;
+  if (!status || status === "VOID") return "none";
+  return status === "ERROR" ? "REJECTED" : status;
+};
+const fiscalFilterKey = (row) => {
+  const state = fiscalRowState(row);
+  return state === "AUTHORIZED" ? "ok" : state === "REJECTED" ? "bad" : state === "SKIPPED" ? "skip" : state === "CANCELED" ? "canceled" : state === "PROCESSING" ? "ok" : "none";
+};
+const fiscalOrigin = (row) => {
+  const channel = String(row.channel || "").toLowerCase();
+  if (channel.includes("ifood")) return ["iFood", "is-ifood"];
+  if (channel.includes("99")) return ["99Food", "is-ifood"];
+  if (channel.includes("uber")) return ["Uber Eats", "is-ifood"];
+  if (channel.includes("keeta")) return ["Keeta", "is-ifood"];
+  const mode = String(row.orderType || row.fulfillmentMode || "").toLowerCase();
+  if (mode.includes("dining") || mode.includes("salao") || mode.includes("counter") || mode.includes("balcao")) return ["Salão/balcão", "is-salon"];
+  return ["Site", "is-site"];
+};
+const fiscalCanSelect = (row) => ["none", "SKIPPED", "REJECTED"].includes(fiscalRowState(row)) && !/^cancelad/i.test(row.status);
+
+const loadFiscalList = async () => {
+  fiscalListState.loading = true;
+  if (adminState.activeSection === "fiscal") renderModuleContent();
+  try {
+    fiscalListState.data = await fetchJson(`/api/admin/orders/fiscal-list?period=${encodeURIComponent(fiscalListState.period)}`);
+    fiscalListState.error = "";
+    const ids = new Set((fiscalListState.data.orders || []).filter(fiscalCanSelect).map((row) => row.id));
+    fiscalListState.selected = new Set([...fiscalListState.selected].filter((id) => ids.has(id)));
+  } catch (error) {
+    if (error.status === 401) {
+      redirectToLogin();
+      return;
+    }
+    fiscalListState.error = error.message || "Não foi possível carregar as notas.";
+  } finally {
+    fiscalListState.loading = false;
+    if (adminState.activeSection === "fiscal") renderModuleContent();
+  }
+};
+
+const renderFiscalModule = () => {
+  const moduleRoot = document.querySelector("[data-admin-module-content]");
+  if (!moduleRoot) return;
+  const data = fiscalListState.data;
+  if (!data) {
+    if (!fiscalListState.loading && !fiscalListState.error) void loadFiscalList();
+    moduleRoot.innerHTML = `<div class="gx-nf"><p class="gx-nf-muted">${escapeHtml(fiscalListState.error || "Carregando notas…")}</p></div>`;
+    return;
+  }
+  const readiness = data.readiness || {};
+  const rows = data.orders || [];
+  const counts = { all: rows.length, none: 0, ok: 0, bad: 0, skip: 0, canceled: 0 };
+  rows.forEach((row) => {
+    counts[fiscalFilterKey(row)] += 1;
+  });
+  const authorized = rows.filter((row) => fiscalRowState(row) === "AUTHORIZED");
+  const authorizedTotal = authorized.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  const q = fiscalListState.query.trim().toLowerCase();
+  const visible = rows.filter(
+    (row) =>
+      (fiscalListState.filter === "all" || fiscalFilterKey(row) === fiscalListState.filter) &&
+      (!q || `${row.publicId} ${row.customerName}`.toLowerCase().includes(q))
+  );
+  const busy = fiscalListState.busy || !readiness.ready ? "disabled" : "";
+  const busySkip = fiscalListState.busy ? "disabled" : "";
+  const actions = (row) => {
+    const state = fiscalRowState(row);
+    const id = escapeHtml(row.id);
+    const out = [];
+    if (/^cancelad/i.test(row.status) && state !== "AUTHORIZED" && state !== "CANCELED") return `<span class="gx-nf-muted">Pedido cancelado</span>`;
+    if (state === "none" || state === "SKIPPED") out.push(`<button type="button" class="gx-nf-btn is-primary" data-nf-emit="${id}" ${busy}>Emitir</button>`);
+    if (state === "none") out.push(`<button type="button" class="gx-nf-btn" data-nf-skip="${id}" ${busySkip}>Não emitir</button>`);
+    if (state === "SKIPPED") out.push(`<button type="button" class="gx-nf-btn" data-nf-unskip="${id}" ${busySkip}>Desfazer</button>`);
+    if (state === "REJECTED") out.push(`<button type="button" class="gx-nf-btn is-primary" data-nf-emit="${id}" ${busy}>Tentar de novo</button>`);
+    if (state === "AUTHORIZED") {
+      if (row.invoice?.danfeUrl) out.push(`<a class="gx-nf-btn" href="${escapeHtml(row.invoice.danfeUrl)}" target="_blank" rel="noopener noreferrer">Ver nota</a>`);
+      out.push(`<button type="button" class="gx-nf-btn is-danger" data-nf-cancel="${id}" ${busySkip}>Cancelar</button>`);
+    }
+    return out.join("");
+  };
+  const status = (row) => {
+    const state = fiscalRowState(row);
+    const [label, tone] = FISCAL_ROW_STATE[state] || [state, "is-none"];
+    const number = row.invoice?.number && ["AUTHORIZED", "CANCELED"].includes(state) ? ` · nº ${escapeHtml(row.invoice.number)}` : "";
+    const note = state === "REJECTED" && row.invoice?.message ? `<small class="gx-nf-note">${escapeHtml(row.invoice.message)}</small>` : "";
+    return `<span class="gx-nf-status ${tone}">${escapeHtml(label)}${number}</span>${note}`;
+  };
+  const time = (iso) => {
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+  const selectedRows = rows.filter((row) => fiscalListState.selected.has(row.id));
+  const selectedTotal = selectedRows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
+  const selectable = visible.filter(fiscalCanSelect);
+  const allChecked = selectable.length > 0 && selectable.every((row) => fiscalListState.selected.has(row.id));
+
+  moduleRoot.innerHTML = `
+    <div class="gx-nf" data-nf-root>
+      <header class="gx-nf-head">
+        <div>
+          <span class="gx-nf-crumb">Resultados / NFC-e</span>
+          <h2>NFC-e</h2>
+          <p>Notas fiscais dos seus pedidos. Escolha o que emitir ou deixe automático.</p>
+        </div>
+        <div class="gx-nf-mode">
+          <div><b>Como emitir</b><small>${readiness.autoEmit ? "A nota sai sozinha quando o pedido é entregue ou retirado." : "Nenhuma nota sai sozinha: você escolhe aqui quais emitir."}</small></div>
+          <div class="gx-nf-seg" role="group" aria-label="Modo de emissão">
+            <button type="button" class="${readiness.autoEmit ? "is-on" : ""}" data-nf-mode="auto" aria-pressed="${readiness.autoEmit ? "true" : "false"}" ${busySkip}>Automático</button>
+            <button type="button" class="${readiness.autoEmit ? "" : "is-on"}" data-nf-mode="manual" aria-pressed="${readiness.autoEmit ? "false" : "true"}" ${busySkip}>Eu escolho</button>
+          </div>
+        </div>
+      </header>
+      ${
+        readiness.ready
+          ? readiness.environment === "homologacao"
+            ? `<p class="gx-nf-banner is-info">Ambiente de <b>homologação</b>: as notas são de teste, sem valor fiscal.</p>`
+            : ""
+          : `<div class="gx-nf-banner is-warn" data-nf-blockers><b>A emissão ainda não está liberada.</b> ${escapeHtml((readiness.blockers || []).join(" "))} <a href="/admin/?section=settings&tab=fiscal">Abrir Configurações › Nota fiscal</a></div>`
+      }
+      ${fiscalListState.notice ? `<div class="gx-nf-banner is-ok" role="status" data-nf-notice>${escapeHtml(fiscalListState.notice)}</div>` : ""}
+      <section class="gx-nf-kpis">
+        <article class="is-ok"><span>Notas emitidas</span><strong data-nf-kpi="ok">${authorized.length}</strong><small>${escapeHtml(formatMoney(authorizedTotal))}</small></article>
+        <article class="is-warn"><span>Pedidos sem nota</span><strong data-nf-kpi="none">${counts.none}</strong><small>aguardando você</small></article>
+        <article class="is-bad"><span>Rejeitadas</span><strong data-nf-kpi="bad">${counts.bad}</strong><small>precisam de atenção</small></article>
+        <article><span>Não emitir</span><strong data-nf-kpi="skip">${counts.skip}</strong><small>marcados por você</small></article>
+      </section>
+      <section class="gx-nf-card">
+        <div class="gx-nf-tools">
+          <select class="gx-nf-period" data-nf-period aria-label="Período">
+            ${[["today", "Hoje"], ["yesterday", "Ontem"], ["7d", "Últimos 7 dias"], ["month", "Este mês"]].map(([key, label]) => `<option value="${key}" ${fiscalListState.period === key ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+          <div class="gx-nf-chips" role="group" aria-label="Filtrar">
+            ${[["all", "Todos"], ["none", "Sem nota"], ["ok", "Autorizadas"], ["bad", "Rejeitadas"], ["skip", "Não emitir"], ["canceled", "Canceladas"]]
+              .map(([key, label]) => `<button type="button" class="${fiscalListState.filter === key ? "is-on" : ""}" data-nf-filter="${key}" aria-pressed="${fiscalListState.filter === key}">${label}<i>${counts[key] || 0}</i></button>`)
+              .join("")}
+          </div>
+          <label class="gx-nf-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar pedido ou cliente" value="${escapeHtml(fiscalListState.query)}" data-nf-search aria-label="Buscar pedido ou cliente" /></label>
+        </div>
+        ${
+          fiscalListState.loading && !rows.length
+            ? `<p class="gx-nf-empty">Carregando…</p>`
+            : visible.length
+              ? `<div class="gx-nf-table" role="table" aria-label="Pedidos e notas">
+                  <div class="gx-nf-tr is-head" role="row">
+                    <span role="columnheader"><input type="checkbox" data-nf-all ${allChecked ? "checked" : ""} ${selectable.length ? "" : "disabled"} aria-label="Selecionar todos" /></span>
+                    <span role="columnheader">Pedido</span><span role="columnheader">Origem</span><span role="columnheader">Pagamento</span><span role="columnheader">Valor</span><span role="columnheader">Nota fiscal</span><span role="columnheader" class="is-right">Ações</span>
+                  </div>
+                  ${visible
+                    .map((row) => {
+                      const [origin, originTone] = fiscalOrigin(row);
+                      const checked = fiscalListState.selected.has(row.id);
+                      return `<div class="gx-nf-tr${checked ? " is-selected" : ""}" role="row" data-nf-row="${escapeHtml(row.id)}">
+                        <span role="cell"><input type="checkbox" data-nf-check="${escapeHtml(row.id)}" ${checked ? "checked" : ""} ${fiscalCanSelect(row) ? "" : "disabled"} aria-label="Selecionar pedido ${escapeHtml(row.publicId)}" /></span>
+                        <span role="cell" class="gx-nf-order"><b>#${escapeHtml(row.publicId)} · ${escapeHtml(row.customerName || "Cliente")}</b><small>${escapeHtml(time(row.createdAt))}${/^cancelad/i.test(row.status) ? " · pedido cancelado" : ""}</small></span>
+                        <span role="cell"><span class="gx-nf-origin ${originTone}">${escapeHtml(origin)}</span></span>
+                        <span role="cell" class="gx-nf-pay">${escapeHtml(getOrderPaymentLabel(row))}</span>
+                        <span role="cell" class="gx-nf-money">${escapeHtml(formatMoney(row.totalAmount || 0))}</span>
+                        <span role="cell">${status(row)}</span>
+                        <span role="cell" class="gx-nf-actions">${actions(row)}</span>
+                      </div>`;
+                    })
+                    .join("")}
+                </div>`
+              : `<p class="gx-nf-empty">Nenhum pedido neste filtro e período.</p>`
+        }
+      </section>
+      <p class="gx-nf-muted">Pedido cancelado tem a nota cancelada sozinha. “Não emitir” fica registrado e pode ser desfeito.</p>
+      <div class="gx-nf-bulk${selectedRows.length ? " is-on" : ""}" data-nf-bulk aria-hidden="${selectedRows.length ? "false" : "true"}">
+        <span>${selectedRows.length} ${selectedRows.length === 1 ? "pedido selecionado" : "pedidos selecionados"} · ${escapeHtml(formatMoney(selectedTotal))}</span>
+        <button type="button" class="gx-nf-btn is-primary" data-nf-bulk-emit ${busy}>Emitir notas</button>
+        <button type="button" class="gx-nf-btn" data-nf-bulk-skip ${busySkip}>Não emitir</button>
+        <button type="button" class="gx-nf-btn" data-nf-bulk-clear>Limpar</button>
+      </div>
+    </div>`;
+};
+
+const runFiscalAction = async (request, success) => {
+  fiscalListState.busy = true;
+  fiscalListState.notice = "";
+  renderModuleContent();
+  try {
+    const payload = await request();
+    fiscalListState.notice = typeof success === "function" ? success(payload) : success;
+    fiscalListState.selected.clear();
+  } catch (error) {
+    fiscalListState.notice = error.message || "Não foi possível concluir.";
+  } finally {
+    fiscalListState.busy = false;
+    await loadFiscalList();
+  }
+};
+const postFiscal = (action, body) => fetchJson(`/api/admin/orders/${action}`, { method: "POST", body: JSON.stringify(body) });
+const summarizeBulk = (payload, verb) => {
+  const results = payload?.results || [];
+  const ok = results.filter((entry) => entry.ok && (verb !== "emit" || entry.invoice?.status === "AUTHORIZED")).length;
+  const failed = results.length - ok;
+  return `${ok} ${ok === 1 ? "nota" : "notas"} ${verb === "emit" ? (ok === 1 ? "autorizada" : "autorizadas") : "marcadas para não emitir"}${failed ? ` · ${failed} com problema` : ""}.`;
+};
+
+document.addEventListener("click", (event) => {
+  if (adminState.activeSection !== "fiscal") return;
+  const target = event.target;
+  const mode = target.closest?.("[data-nf-mode]");
+  if (mode) {
+    const autoEmit = mode.dataset.nfMode === "auto";
+    void runFiscalAction(
+      () => fetchJson("/api/admin/settings/fiscal-save", { method: "POST", body: JSON.stringify({ autoEmit }) }),
+      autoEmit ? "Emissão automática ligada." : "Agora você escolhe quais notas emitir."
+    );
+    return;
+  }
+  const filter = target.closest?.("[data-nf-filter]");
+  if (filter) {
+    fiscalListState.filter = filter.dataset.nfFilter;
+    renderModuleContent();
+    return;
+  }
+  if (target.matches?.("[data-nf-all]")) {
+    const rows = (fiscalListState.data?.orders || []).filter(fiscalCanSelect);
+    rows.forEach((row) => (target.checked ? fiscalListState.selected.add(row.id) : fiscalListState.selected.delete(row.id)));
+    renderModuleContent();
+    return;
+  }
+  const check = target.closest?.("[data-nf-check]");
+  if (check) {
+    if (check.checked) fiscalListState.selected.add(check.dataset.nfCheck);
+    else fiscalListState.selected.delete(check.dataset.nfCheck);
+    renderModuleContent();
+    return;
+  }
+  const emit = target.closest?.("[data-nf-emit]");
+  if (emit) {
+    void runFiscalAction(() => postFiscal("invoice-emit", { orderId: emit.dataset.nfEmit }), (payload) =>
+      payload?.invoice?.status === "AUTHORIZED" ? "Nota autorizada." : payload?.invoice?.message || "A Sefaz não autorizou a nota."
+    );
+    return;
+  }
+  const skip = target.closest?.("[data-nf-skip]");
+  if (skip) {
+    void runFiscalAction(() => postFiscal("invoice-skip", { orderId: skip.dataset.nfSkip }), "Marcado para não emitir.");
+    return;
+  }
+  const unskip = target.closest?.("[data-nf-unskip]");
+  if (unskip) {
+    void runFiscalAction(() => postFiscal("invoice-unskip", { orderId: unskip.dataset.nfUnskip }), "Marcação desfeita.");
+    return;
+  }
+  const cancel = target.closest?.("[data-nf-cancel]");
+  if (cancel) {
+    const reason = window.prompt("Motivo do cancelamento da nota (mínimo 15 letras):", "Cancelamento a pedido do cliente") || "";
+    if (reason.trim().length < 15) return;
+    void runFiscalAction(() => postFiscal("invoice-cancel", { orderId: cancel.dataset.nfCancel, reason }), (payload) =>
+      payload?.canceled ? "Nota cancelada." : payload?.message || "Não foi possível cancelar a nota."
+    );
+    return;
+  }
+  if (target.closest?.("[data-nf-bulk-emit]")) {
+    const orderIds = [...fiscalListState.selected];
+    void runFiscalAction(() => postFiscal("invoice-emit", { orderIds }), (payload) => summarizeBulk(payload, "emit"));
+    return;
+  }
+  if (target.closest?.("[data-nf-bulk-skip]")) {
+    const orderIds = [...fiscalListState.selected];
+    void runFiscalAction(() => postFiscal("invoice-skip", { orderIds }), (payload) => summarizeBulk(payload, "skip"));
+    return;
+  }
+  if (target.closest?.("[data-nf-bulk-clear]")) {
+    fiscalListState.selected.clear();
+    renderModuleContent();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  if (adminState.activeSection !== "fiscal") return;
+  const period = event.target.closest?.("[data-nf-period]");
+  if (period) {
+    fiscalListState.period = period.value;
+    fiscalListState.selected.clear();
+    void loadFiscalList();
+  }
+});
+
+document.addEventListener("input", (event) => {
+  if (adminState.activeSection !== "fiscal") return;
+  const search = event.target.closest?.("[data-nf-search]");
+  if (!search) return;
+  fiscalListState.query = search.value;
+  const caret = search.selectionStart;
+  renderModuleContent();
+  const next = document.querySelector("[data-nf-search]");
+  if (next) {
+    next.focus();
+    next.setSelectionRange(caret, caret);
+  }
+});
+
 const loadFiscalSettings = async () => {
   fiscalState.loading = true;
   try {
@@ -13640,6 +13962,11 @@ const renderModuleContentBody = () => {
 
   if (adminState.activeSection === "forecast") {
     renderForecastModule();
+    return;
+  }
+
+  if (adminState.activeSection === "fiscal") {
+    renderFiscalModule();
     return;
   }
 
@@ -18218,6 +18545,16 @@ const loadActiveAdminSection = async ({ preserveSelection = true } = {}) => {
     return;
   }
 
+  if (adminState.activeSection === "fiscal") {
+    renderSectionChrome();
+    renderSidebarNav();
+    renderDashboardStats();
+    renderModuleContent();
+    updateSidebarMeta();
+    await loadFiscalList();
+    return;
+  }
+
   if (hasAdminPermission("orders_view") || adminState.activeSection === "dashboard") {
     await loadDashboard({ preserveSelection });
     return;
@@ -18363,7 +18700,7 @@ const loadDashboard = async ({ preserveSelection = true } = {}) => {
       selectedIdForLoad &&
       hasAdminPermission("orders_view") &&
       hasPlanFeatureForSection("orders") &&
-      !["customers", "dashboard", "deliveries", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection)
+      !["customers", "dashboard", "deliveries", "fiscal", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection)
     ) {
       await loadOrderDetails(selectedIdForLoad, {
         showLoading: !orderStillExists || !adminState.selectedOrder || selectedIdForLoad !== nextSelectedId,
@@ -18968,7 +19305,7 @@ const initDashboardPage = () => {
       updateSidebarMeta();
 
       if (
-        !["customers", "dashboard", "forecast", "inventory"].includes(adminState.activeSection) &&
+        !["customers", "dashboard", "fiscal", "forecast", "inventory"].includes(adminState.activeSection) &&
         adminState.selectedOrderId &&
         adminState.selectedOrder?.id !== adminState.selectedOrderId
       ) {
@@ -19022,6 +19359,7 @@ const initDashboardPage = () => {
         nextSection === "cash-register" ||
         nextSection === "reports" ||
         nextSection === "forecast" ||
+        nextSection === "fiscal" ||
         nextSection === "metrics" ||
         nextSection === "inventory" ||
         nextSection === "menu" ||
@@ -19075,6 +19413,10 @@ const initDashboardPage = () => {
         await loadForecast();
       }
 
+      if (nextSection === "fiscal") {
+        await loadFiscalList();
+      }
+
       if (nextSection === "scheduled") {
         await loadScheduledOrders({ preserveSelection: true });
       }
@@ -19112,7 +19454,7 @@ const initDashboardPage = () => {
       }
 
       if (
-        !["cash-register", "customers", "dashboard", "deliveries", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection) &&
+        !["cash-register", "customers", "dashboard", "deliveries", "fiscal", "forecast", "inventory", "settings", "users"].includes(adminState.activeSection) &&
         adminState.selectedOrderId &&
         adminState.selectedOrder?.id !== adminState.selectedOrderId
       ) {
