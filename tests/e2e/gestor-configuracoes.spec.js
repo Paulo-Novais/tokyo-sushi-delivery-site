@@ -45,7 +45,8 @@ test("Configurações: seções, pré-visualização e salvar sem afetar outro r
   await loginPage(page, a, "dark");
 
   await expect(page.locator(".gx-set-head h2")).toHaveText("Configurações do site");
-  await expect(page.locator("[data-gx-set-tab]")).toHaveCount(9);
+  await expect(page.locator("[data-gx-set-tab]")).toHaveCount(10);
+  await expect(page.locator('[data-gx-set-tab="fiscal"]')).toHaveText("Nota fiscal");
   await expect(page.locator('[data-gx-set-tab="payments"]')).toHaveText("Pagamentos e repasses");
   await expect(page.locator("[data-gx-set-status]")).toHaveText("Tudo salvo");
   await page.screenshot({ path: path.join(outDir, "identidade-escuro.png"), fullPage: true });
