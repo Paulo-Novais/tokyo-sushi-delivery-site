@@ -145,7 +145,7 @@
     const actorType = String(state.context?.actor?.userType || "").toUpperCase();
     const platformScope = state.context?.actor?.platformScope === true;
     return platformScope || ["MASTER", "SOCIO"].includes(actorType)
-      ? "/admin/master.html?section=users"
+      ? "/system/users/"
       : "/admin/?section=users";
   };
 

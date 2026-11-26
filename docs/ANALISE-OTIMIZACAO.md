@@ -48,17 +48,16 @@ Removidos (todos sem nenhum uso; testes passando depois):
   e jogada fora** (lia clientes, financeiro e entregas à toa). Removida.
 - Variáveis soltas no site, Gestor e System.
 
-**Arquivos mortos — esperando seu GO para apagar:**
+**Arquivos mortos — apagados com o GO do Paulo (26/11):**
 
 | Arquivo | Tamanho | Por que está morto |
 |---|---|---|
 | `admin/orders-production-restore.css` | 117 KB | nenhuma página usa |
 | `admin/master.html` + `admin/master.js` | 2,7 KB + 149 KB | o endereço redireciona para `/system`; o painel antigo nunca abre |
-| 65 relatórios `.md` na raiz do projeto | — | relatórios de versões antigas (V1.3, V1.8…); sugestão: mover para `docs/arquivo/` |
+| 64 relatórios `.md` da raiz | — | relatórios de versões antigas: **movidos** para `docs/arquivo/` |
 
-Junto com o master.html, trocar o link de `admin/usuarios/novo.js` que ainda
-aponta para `/admin/master.html?section=users` (hoje funciona só por causa do
-redirecionamento).
+O link de `admin/usuarios/novo.js` agora aponta direto para `/system/users/`.
+O endereço antigo `/admin/master.html` continua redirecionando para `/system`.
 
 ## 3. Qualidade do código
 
