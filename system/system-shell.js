@@ -22,12 +22,28 @@
     shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4",
     clock: "M12 6v6l4 2 M12 22a10 10 0 100-20 10 10 0 000 20z",
     userPlus: "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M19 8v6 M22 11h-6",
+    // Planos e adicionais (menu + ícones dos adicionais)
+    addons: "M12 3l9 5-9 5-9-5 9-5z M3 13l9 5 9-5",
+    chef: "M6 13.9A4 4 0 017.5 6a5 5 0 019 0A4 4 0 0118 13.9V20H6z M6 17h12",
+    scale: "M12 3v18 M5 21h14 M6 7h12 M6 7l-3 7a3 3 0 006 0z M18 7l-3 7a3 3 0 006 0z",
+    qr: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h3v3h-3z M20 14v.01 M14 20h.01 M17 20h4v-3",
+    chat: "M21 12a8 8 0 01-11.7 7.1L4 20l1-4.6A8 8 0 1121 12z M8.5 10.5h7 M8.5 13.5h4",
+    gift: "M3 8h18v4H3z M5 12v8h14v-8 M12 8v12 M12 8S10.5 3 8 4.5 9.5 8 12 8z M12 8s1.5-5 4-3.5S14.5 8 12 8z",
+    sheet: "M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2",
+    truck: "M3 6h11v10H3z M14 10h4l3 3v3h-7 M7 20a2 2 0 100-4 2 2 0 000 4z M17 20a2 2 0 100-4 2 2 0 000 4z",
+    star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z",
+    chart: "M3 20h18 M6 16l4-5 3 3 5-7",
+    receipt: "M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z M9 8h6 M9 12h6 M9 16h3",
+    people: "M9 12a4 4 0 100-8 4 4 0 000 8z M2 21a7 7 0 0114 0 M16 4a4 4 0 010 8 M22 21a7 7 0 00-5-6.7",
+    globe: "M12 21a9 9 0 100-18 9 9 0 000 18z M3 12h18 M12 3a14 14 0 010 18 M12 3a14 14 0 000 18",
+    chevronRight: "M9 6l6 6-6 6",
   });
 
   const NAVIGATION = Object.freeze([
     { key: "overview", group: "Plataforma", label: "Visão geral", short: "Início", href: "/system", permission: "system.dashboard.view", mobile: true },
     { key: "restaurants", group: "Plataforma", label: "Restaurantes", short: "Restaurantes", href: "/system#restaurants", permission: "system.restaurants.view", mobile: true },
     { key: "billing", group: "Plataforma", label: "Mensalidades e repasses", short: "Mensalidades", href: "/system#billing", permission: "system.billing.view", mobile: false },
+    { key: "addons", group: "Plataforma", label: "Planos e adicionais", short: "Adicionais", href: "/system#addons", permission: "system.billing.view", mobile: false },
     { key: "support", group: "Comercial", label: "Suporte", short: "Suporte", href: "/system#support", permission: "system.support.start", mobile: true },
     { key: "users", group: "Equipe INOVAS", label: "Usuários INOVAS", short: "Equipe", href: "/system/users", permission: "system.users.view", mobile: false },
     { key: "roles", group: "Equipe INOVAS", label: "Perfis e permissões", short: "Perfis", href: "/system/roles", permission: "system.roles.view", mobile: false },

@@ -17,6 +17,7 @@
     overview: { key: "overview", label: "Visão geral", permission: "system.dashboard.view", endpoint: "/api/system/overview" },
     restaurants: { key: "restaurants", label: "Restaurantes", permission: "system.restaurants.view", endpoint: "/api/system/restaurants" },
     billing: { key: "billing", label: "Mensalidades e repasses", permission: "system.billing.view", endpoint: "/api/system/billing" },
+    addons: { key: "addons", label: "Planos e adicionais", permission: "system.billing.view", endpoint: "/api/system/addons" },
     support: { key: "support", label: "Suporte", permission: "system.support.start", endpoint: "/api/system/support" },
     audit: { key: "audit", label: "Auditoria", permission: "system.audit.view", endpoint: "/api/system/audit" },
   });
@@ -43,6 +44,12 @@
     SYSTEM_ACCESS_DENIED: "Acesso negado",
     SYSTEM_RESTAURANT_SUSPENDED: "Restaurante suspenso",
     SYSTEM_RESTAURANT_REACTIVATED: "Restaurante reativado",
+    SYSTEM_ADDON_CREATED: "Adicional criado",
+    SYSTEM_ADDON_UPDATED: "Adicional editado",
+    SYSTEM_ADDON_ENABLED: "Adicional ligado pela INOVAS",
+    SYSTEM_ADDON_DISABLED: "Adicional desligado pela INOVAS",
+    SYSTEM_ADDON_GIFT_GRANTED: "Cortesia dada",
+    SYSTEM_ADDON_GIFT_REMOVED: "Cortesia encerrada",
     SYSTEM_RESTAURANT_UPDATED: "Dados do restaurante alterados",
     SYSTEM_RESTAURANT_DOMAIN_UPDATED: "Domínio do restaurante alterado",
     SYSTEM_RESTAURANT_SITE_PUBLISHED: "Site do restaurante publicado",
@@ -471,7 +478,9 @@
     if (!dialog) return;
     dialog.innerHTML = html;
     dialog.classList.toggle("is-wide", wide);
-    dialog.showModal();
+    dialog.classList.remove("is-drawer");
+    // Troca o conteúdo sem fechar (ex.: detalhes → dar cortesia).
+    if (!dialog.open) dialog.showModal();
   };
 
   const dialogHead = (eyebrow, title) =>
@@ -1843,9 +1852,420 @@
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 
+  /* ---------- Planos e adicionais ---------- */
+  // Aba "Restaurantes": quanto cada um paga e o que está ligado (clique abre os
+  // detalhes, com cortesia e ligar/desligar). Aba "Catálogo de adicionais":
+  // criar e editar adicionais (valor, planos e a tela que ele libera).
+
+  const ADDON_PLANS = [["START", "Essencial"], ["BUSINESS", "Profissional"], ["PRO", "Completo"]];
+  const ADDON_GROUPS = ["Operação", "Clientes", "Gestão", "Vendas"];
+  const ADDON_ICONS = ["chef", "scale", "qr", "chat", "gift", "sheet", "truck", "star", "chart", "receipt", "people", "clock"];
+  const ADDON_LINK_PATTERN = /^\/(admin|garcom)\/[\w\-./?=&%]*$/;
+  const addonsUi = { tab: "restaurants", filter: "all", openKey: "", editingKey: "" };
+
+  const formatBrDay = (value) => (/^\d{4}-\d{2}-\d{2}/.test(String(value || "")) ? String(value).slice(0, 10).split("-").reverse().join("/") : "");
+  const addonInitials = (name) =>
+    String(name || "")
+      .split(/\s+/)
+      .filter((word) => word.length > 2)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase() || "R";
+  const AVATAR_TONES = ["#ea580c", "#dc2626", "#16a34a", "#7c3aed", "#0891b2", "#4b5563", "#db2777", "#ca8a04"];
+  const avatarTone = (key) => AVATAR_TONES[[...String(key)].reduce((sum, char) => sum + char.charCodeAt(0), 0) % AVATAR_TONES.length];
+
+  const addonSituation = (row) => {
+    if (row.accessStatus === "SUSPENDED") return ["Bloqueado", "crit"];
+    if (row.billingGrace?.until) return [`Prazo até ${formatBrDay(row.billingGrace.until)}`, "warn"];
+    if (row.contractStatus === "ACTIVE") return ["Ativo", "ok"];
+    if (["TRIAL", "PILOT"].includes(row.contractStatus)) return ["Em teste", "brand"];
+    return [row.contractStatus ? translateRestaurantStatus(row.contractStatus) : "Sem contrato", "neutral"];
+  };
+  const activeAddons = (row) => (row.addons || []).filter((addon) => ["on", "ending", "gift"].includes(addon.state));
+  // Só os que entram na próxima mensalidade ("desligando" já está pago até o fim do mês).
+  const addonsChargedCents = (row) => (row.addons || []).filter((addon) => addon.state === "on").reduce((sum, addon) => sum + addon.priceCents, 0);
+  const changesNextMonth = (row) => (row.addons || []).some((addon) => addon.state === "ending" || addon.state === "gift") || Boolean(row.discount);
+
+  const addonChip = (addon) => {
+    const tone = addon.state === "ending" ? " is-ending" : addon.state === "gift" ? " is-gift" : "";
+    const suffix = addon.state === "ending" ? ` · sai ${formatBrDay(addon.offAt)}` : addon.state === "gift" ? " · cortesia" : "";
+    return `<span class="sys-addon-chip${tone}">${icon(addon.icon, 13)}${escapeHtml(addon.name)}${escapeHtml(suffix)}</span>`;
+  };
+
+  const renderAddonsRestaurants = (data) => {
+    const rows = data.restaurants || [];
+    const counted = rows.filter((row) => row.accessStatus !== "SUSPENDED" && row.contractStatus === "ACTIVE");
+    const revenue = counted.reduce((sum, row) => sum + row.monthlyValueCents, 0);
+    const addonsRevenue = counted.reduce((sum, row) => sum + addonsChargedCents(row), 0);
+    const ending = rows.reduce((sum, row) => sum + row.addons.filter((addon) => addon.state === "ending").length, 0);
+    const gifts = rows.reduce((sum, row) => sum + row.addons.filter((addon) => addon.state === "gift").length + (row.discount ? 1 : 0), 0);
+    const usage = {};
+    rows.forEach((row) => activeAddons(row).forEach((addon) => { usage[addon.name] = (usage[addon.name] || 0) + 1; }));
+    const [topName, topCount] = Object.entries(usage).sort((left, right) => right[1] - left[1])[0] || ["—", 0];
+    const filters = [
+      ["all", "Todos", rows.length],
+      ["with", "Com adicionais", rows.filter((row) => activeAddons(row).length).length],
+      ["changes", "Mudam no dia 01", rows.filter(changesNextMonth).length],
+      ["gift", "Com cortesia", rows.filter((row) => row.discount || row.addons.some((addon) => addon.state === "gift")).length],
+      ["domain", "Domínio próprio", rows.filter((row) => row.customDomain).length],
+    ];
+    const visible = rows.filter((row) =>
+      addonsUi.filter === "with" ? activeAddons(row).length
+        : addonsUi.filter === "changes" ? changesNextMonth(row)
+        : addonsUi.filter === "gift" ? row.discount || row.addons.some((addon) => addon.state === "gift")
+        : addonsUi.filter === "domain" ? row.customDomain
+        : true
+    );
+    return `
+      <section class="sys-kpis">
+        <article class="sys-kpi"><span>Receita mensal</span><strong>${escapeHtml(brl(revenue))}</strong><small>${escapeHtml(plural(counted.length, "contrato ativo", "contratos ativos"))}</small></article>
+        <article class="sys-kpi"><span>Só de adicionais</span><strong>${escapeHtml(brl(addonsRevenue))}</strong><small>${revenue ? escapeHtml(`${((addonsRevenue / revenue) * 100).toFixed(1).replace(".", ",")}% da receita`) : "—"}</small></article>
+        <article class="sys-kpi"><span>Mudam no dia 01</span><strong>${escapeHtml(String(ending + gifts))}</strong><small>${escapeHtml(`${ending} desligando · ${gifts} em cortesia`)}</small></article>
+        <article class="sys-kpi"><span>Adicional mais usado</span><strong class="sys-kpi-text">${escapeHtml(topName)}</strong><small>${escapeHtml(plural(topCount, "restaurante", "restaurantes"))}</small></article>
+      </section>
+      <div class="sys-filters" role="group" aria-label="Filtrar restaurantes">
+        ${filters.map(([key, label, count]) => `<button type="button" class="sys-btn sys-btn-sm ${addonsUi.filter === key ? "sys-btn-primary" : "sys-btn-secondary"}" data-addons-filter="${key}" aria-pressed="${addonsUi.filter === key}">${escapeHtml(label)} <span class="sys-count">${count}</span></button>`).join("")}
+      </div>
+      ${visible.length ? `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Planos e adicionais por restaurante"><thead><tr><th>Restaurante</th><th>Plano</th><th>Situação</th><th>Adicionais</th><th>Mensal</th><th></th></tr></thead><tbody>
+        ${visible.map((row) => {
+          const [label, tone] = addonSituation(row);
+          const chips = [
+            row.customDomain ? `<span class="sys-addon-chip is-domain">${icon("globe", 13)}Domínio</span>` : "",
+            ...activeAddons(row).map(addonChip),
+            row.discount ? `<span class="sys-addon-chip is-gift">${icon("gift", 13)}−${row.discount.percent}% no plano</span>` : "",
+          ].join("");
+          return `<tr class="is-clickable" tabindex="0" data-addons-row="${escapeHtml(row.restaurantKey)}">
+            <td data-label="Restaurante"><div class="sys-addon-rest"><span class="sys-addon-avatar" style="background:${avatarTone(row.restaurantKey)}">${escapeHtml(addonInitials(row.name))}</span><div><strong>${escapeHtml(row.name)}</strong><small>${escapeHtml(row.restaurantKey)}</small></div></div></td>
+            <td data-label="Plano"><strong>${escapeHtml(row.planName || translatePlan(row.plan))}</strong><small>${escapeHtml(brl(row.planMonthlyValueCents))}</small></td>
+            <td data-label="Situação">${statusPill(label, tone, { dot: false })}</td>
+            <td data-label="Adicionais"><div class="sys-addon-chips">${chips || '<span class="sys-hint">Só o plano</span>'}</div></td>
+            <td data-label="Mensal"><strong>${escapeHtml(brl(row.monthlyValueCents))}</strong></td>
+            <td class="sys-addon-chev">${icon("chevronRight", 18)}</td>
+          </tr>`;
+        }).join("")}
+      </tbody></table></div>` : renderEmpty("Nenhum restaurante neste filtro", "Troque o filtro para ver os demais.")}`;
+  };
+
+  const planCell = (item) =>
+    `<div class="sys-addon-plans">${ADDON_PLANS.map(([key, label]) => {
+      const value = item.plans?.[key] || "none";
+      return `<span class="is-${value}" title="${escapeHtml(label)}: ${value === "paid" ? "pago à parte" : value === "included" ? "incluso" : "não disponível"}">${escapeHtml(label)}${value === "included" ? " · incluso" : ""}</span>`;
+    }).join("")}</div>`;
+
+  const renderAddonsCatalog = (data) => {
+    const catalog = data.catalog || [];
+    const canEdit = hasPermission("system.plans.manage");
+    const usage = (key) => (data.restaurants || []).filter((row) => row.addons.some((addon) => addon.key === key && ["on", "ending", "gift", "included"].includes(addon.state))).length;
+    return `
+      <div class="sys-addon-cat-head">
+        <p>Tudo o que o restaurante pode ligar à parte. O que estiver <strong>Disponível</strong> aparece em <strong>Configurações › Plano e adicionais</strong> do Gestor, nos planos escolhidos. Enquanto estiver desligado, a tela do adicional fica bloqueada para o restaurante.</p>
+        ${canEdit ? `<button type="button" class="sys-btn sys-btn-primary" data-addon-new>${icon("addons", 18)}Criar adicional</button>` : ""}
+      </div>
+      ${catalog.length ? `<div class="sys-table-wrap"><table class="sys-table is-stack" aria-label="Catálogo de adicionais"><thead><tr><th>Adicional</th><th>Valor</th><th>Planos</th><th>Tela na plataforma</th><th>Em uso</th><th>Situação</th><th></th></tr></thead><tbody>
+        ${catalog.map((item) => `<tr>
+          <td data-label="Adicional"><div class="sys-addon-rest"><span class="sys-addon-icon">${icon(item.icon, 20)}</span><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.group)} · ${item.who === "owner" ? "o dono liga sozinho" : "só a INOVAS liga"}</small></div></div></td>
+          <td data-label="Valor"><strong>${escapeHtml(brl(item.priceCents))}</strong><small>por mês</small></td>
+          <td data-label="Planos">${planCell(item)}</td>
+          <td data-label="Tela"><code class="sys-addon-link">${escapeHtml(item.link)}</code>${item.menuLabel ? `<small>Menu: ${escapeHtml(item.menuLabel)}</small>` : ""}</td>
+          <td data-label="Em uso"><strong>${usage(item.key)}</strong><small>restaurante(s)</small></td>
+          <td data-label="Situação">${item.status === "live" ? statusPill("Disponível", "ok", { dot: false }) : statusPill("Rascunho", "neutral", { dot: false })}</td>
+          <td>${canEdit ? `<button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-edit="${escapeHtml(item.key)}">Editar</button>` : ""}</td>
+        </tr>`).join("")}
+      </tbody></table></div>` : renderEmpty("Nenhum adicional ainda", "Crie o primeiro adicional.")}`;
+  };
+
+  const renderAddons = (data) => {
+    if (state.query?.get?.("tab") === "catalog" && !addonsUi.touched) addonsUi.tab = "catalog";
+    app.innerHTML = `
+      ${renderHead({
+        eyebrow: "Plataforma",
+        title: "Planos e adicionais",
+        description: "Quanto cada restaurante paga por mês e o que está ligado. O dono liga e desliga os adicionais pelo Gestor; aqui você acompanha, dá cortesia e cria novos adicionais.",
+      })}
+      <div class="sys-addon-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="${addonsUi.tab === "restaurants"}" class="${addonsUi.tab === "restaurants" ? "is-active" : ""}" data-addons-tab="restaurants">Restaurantes <span>${(data.restaurants || []).length}</span></button>
+        <button type="button" role="tab" aria-selected="${addonsUi.tab === "catalog"}" class="${addonsUi.tab === "catalog" ? "is-active" : ""}" data-addons-tab="catalog">Catálogo de adicionais <span>${(data.catalog || []).length}</span></button>
+      </div>
+      <div data-addons-panel>${addonsUi.tab === "catalog" ? renderAddonsCatalog(data) : renderAddonsRestaurants(data)}</div>`;
+  };
+
+  const reloadAddons = async () => {
+    state.data = (await requestJson("/api/system/addons")).data;
+    renderAddons(state.data);
+  };
+
+  /* Detalhes do restaurante (janela lateral) */
+  const openAddonsDrawer = (restaurantKey) => {
+    const row = (state.data?.restaurants || []).find((entry) => entry.restaurantKey === restaurantKey);
+    if (!row) return;
+    addonsUi.openKey = restaurantKey;
+    const canManage = hasPermission("system.billing.manage");
+    const [label, tone] = addonSituation(row);
+    const charged = addonsChargedCents(row);
+    const extras = (row.otherAddons || []).reduce((sum, entry) => sum + entry.monthlyValueCents, 0);
+    const item = (addon) => {
+      const stateLabel = { on: ["Ligado", "ok"], ending: [`Desliga em ${formatBrDay(addon.offAt)}`, "warn"], gift: ["Cortesia", "brand"], included: ["Incluso no plano", "ok"], off: ["Desligado", "neutral"] }[addon.state] || ["—", "neutral"];
+      const sub =
+        addon.state === "gift" ? `Grátis ${addon.gift?.until ? `até ${formatBrDay(addon.gift.until)}` : "sem prazo"} · ${addon.gift?.by || "INOVAS"} · “${addon.gift?.reason || ""}”`
+        : addon.state === "ending" ? `Funciona até o fim do mês · não cobra mais`
+        : addon.state === "on" ? `Ligado desde ${formatBrDay(addon.since) || "—"}`
+        : addon.state === "included" ? "Vem no plano, sem cobrar"
+        : addon.catalogStatus === "live" ? (addon.who === "owner" ? "O dono pode ligar pelo Gestor" : "Só a INOVAS liga") : "Rascunho no catálogo";
+      const value = addon.state === "on" ? `+ ${brl(addon.priceCents)}` : addon.state === "ending" ? `<s>${escapeHtml(brl(addon.priceCents))}</s><small>não cobra mais</small>` : addon.state === "gift" ? `R$ 0,00<small><s>${escapeHtml(brl(addon.priceCents))}</s></small>` : addon.state === "included" ? "incluso" : `<small>${escapeHtml(brl(addon.priceCents))}/mês</small>`;
+      let action = "";
+      if (canManage && addon.state === "gift") action = `<button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-gift-remove="${escapeHtml(addon.key)}">Tirar cortesia</button>`;
+      else if (canManage && addon.state === "on") action = `<button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-toggle="${escapeHtml(addon.key)}" data-on="false">Desligar no dia 01</button>`;
+      else if (canManage && addon.state === "ending") action = `<button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-toggle="${escapeHtml(addon.key)}" data-on="true">Manter ligado</button>`;
+      else if (canManage && addon.state === "off" && addon.catalogStatus === "live") action = `<button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-toggle="${escapeHtml(addon.key)}" data-on="true">Ligar</button>`;
+      return `<div class="sys-addon-item is-${addon.state}"><span class="sys-addon-icon">${icon(addon.icon, 20)}</span><div><strong>${escapeHtml(addon.name)} ${statusPill(stateLabel[0], stateLabel[1], { dot: false })}</strong><small>${escapeHtml(sub)}</small>${action ? `<div class="sys-addon-item-act">${action}</div>` : ""}</div><div class="sys-addon-item-val">${value}</div></div>`;
+    };
+    const shown = (row.addons || []).filter((addon) => addon.state !== "unavailable");
+    const order = { gift: 0, on: 1, ending: 2, included: 3, off: 4 };
+    shown.sort((left, right) => (order[left.state] ?? 9) - (order[right.state] ?? 9));
+    openDialog(`
+      <div class="sys-addon-drawer">
+        <div class="sys-addon-drawer-head">
+          <span class="sys-addon-avatar is-lg" style="background:${avatarTone(row.restaurantKey)}">${escapeHtml(addonInitials(row.name))}</span>
+          <div><h2>${escapeHtml(row.name)}</h2><p>${escapeHtml(row.planName || translatePlan(row.plan))} · ${statusPill(label, tone, { dot: false })}</p></div>
+          <button class="sys-icon-btn" type="button" data-dialog-close aria-label="Fechar">${icon("close")}</button>
+        </div>
+        <div class="sys-addon-drawer-body">
+          <div class="sys-addon-hero">
+            <div><span>Mensalidade do próximo dia 01</span><strong>${escapeHtml(brl(row.monthlyValueCents))}</strong>
+            <p>Plano <b>${escapeHtml(brl(row.planMonthlyValueCents))}</b>${extras ? ` · Domínio <b>${escapeHtml(brl(extras))}</b>` : ""}${charged ? ` · Adicionais <b>${escapeHtml(brl(charged))}</b>` : ""}${row.discount ? ` · Desconto <b>− ${escapeHtml(brl(row.discount.valueCents))}</b>` : ""}</p></div>
+          </div>
+          <h3 class="sys-addon-sec">Adicionais e cortesias</h3>
+          <div class="sys-addon-list">
+            ${row.customDomain ? `<div class="sys-addon-item is-domain"><span class="sys-addon-icon">${icon("globe", 20)}</span><div><strong>Domínio próprio ${statusPill("Vinculado", "ok", { dot: false })}</strong><small>${escapeHtml(row.customDomain)} · feito pela equipe INOVAS</small></div><div class="sys-addon-item-val">+ ${escapeHtml(brl(4900))}</div></div>` : ""}
+            ${row.discount ? `<div class="sys-addon-item is-gift"><span class="sys-addon-icon">${icon("gift", 20)}</span><div><strong>${row.discount.percent}% de desconto no plano ${statusPill("Cortesia", "brand", { dot: false })}</strong><small>${row.discount.until ? `Até ${formatBrDay(row.discount.until)}` : "Sem prazo"} · ${escapeHtml(row.discount.by || "INOVAS")} · “${escapeHtml(row.discount.reason || "")}”</small>${canManage ? `<div class="sys-addon-item-act"><button type="button" class="sys-btn sys-btn-secondary sys-btn-sm" data-addon-discount-remove>Tirar desconto</button></div>` : ""}</div><div class="sys-addon-item-val">− ${escapeHtml(brl(row.discount.valueCents))}</div></div>` : ""}
+            ${shown.map(item).join("") || '<p class="sys-hint">Nenhum adicional disponível para este plano.</p>'}
+          </div>
+          <h3 class="sys-addon-sec">Histórico</h3>
+          ${(row.history || []).length ? `<ol class="sys-addon-timeline">${row.history.map((entry) => `<li class="is-${escapeHtml(entry.kind)}"><time>${escapeHtml(formatBrDay(entry.at))}</time><span>${escapeHtml(entry.text)}</span></li>`).join("")}</ol>` : '<p class="sys-hint">Nada ainda.</p>'}
+        </div>
+        <div class="sys-addon-drawer-foot">
+          <a class="sys-btn sys-btn-secondary" href="/system#billing">${icon("receipt", 18)}Ver mensalidades</a>
+          ${canManage ? `<button type="button" class="sys-btn sys-btn-secondary sys-addon-gift-btn" data-addon-gift-open>${icon("gift", 18)}Dar cortesia</button>` : ""}
+          <button type="button" class="sys-btn sys-btn-primary" data-dialog-close>Fechar</button>
+        </div>
+      </div>`);
+    dialog.classList.add("is-drawer");
+  };
+
+  /* Dar cortesia */
+  const openGiftDialog = () => {
+    const row = (state.data?.restaurants || []).find((entry) => entry.restaurantKey === addonsUi.openKey);
+    if (!row) return;
+    const options = (row.addons || []).filter((addon) => ["paid"].includes(addon.availability) && addon.catalogStatus === "live" || addon.state === "on" || addon.state === "ending");
+    openDialog(`
+      <form class="sys-dialog-form" data-addon-gift-form>
+        ${dialogHead(row.name, "Dar cortesia")}
+        <div class="sys-dialog-body">
+          ${field("O que vai de cortesia", `<select class="sys-select" name="what">${options.map((addon) => `<option value="${escapeHtml(addon.key)}">${escapeHtml(addon.name)} grátis (${escapeHtml(brl(addon.priceCents))}/mês)</option>`).join("")}<option value="__discount">Desconto na mensalidade do plano</option></select>`, "Adicional: fica ligado sem cobrar. Desconto: abate do valor do plano.")}
+          <div data-gift-discount hidden>${field("Desconto (%)", `<input class="sys-input" name="percent" type="number" min="1" max="100" value="50">`)}</div>
+          <div class="sys-field"><span>Por quanto tempo</span><div class="sys-addon-opts">${[[1, "1 mês"], [3, "3 meses"], [6, "6 meses"], [0, "Sem prazo"]].map(([value, text], index) => `<label><input type="radio" name="months" value="${value}" ${index === 0 ? "checked" : ""}>${text}</label>`).join("")}</div></div>
+          ${field("Motivo *", `<textarea class="sys-textarea" name="reason" required minlength="5" maxlength="200" placeholder="Ex.: indicou 2 restaurantes; teste da tela da cozinha."></textarea>`, "Fica na auditoria com o seu nome.")}
+          <p class="sys-addon-preview" data-gift-preview></p>
+          <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+        </div>
+        <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-addon-back>Voltar</button><button class="sys-btn sys-btn-primary" type="submit">Dar cortesia</button></div>
+      </form>`);
+    updateGiftPreview(dialog.querySelector("[data-addon-gift-form]"));
+  };
+
+  const updateGiftPreview = (form) => {
+    if (!form) return;
+    const row = (state.data?.restaurants || []).find((entry) => entry.restaurantKey === addonsUi.openKey);
+    const what = form.elements.what.value;
+    const months = Number(form.querySelector("[name=months]:checked")?.value || 0);
+    form.querySelector("[data-gift-discount]").hidden = what !== "__discount";
+    const addon = row?.addons.find((entry) => entry.key === what);
+    const value = what === "__discount" ? Math.round((row.planMonthlyValueCents * (Number(form.elements.percent.value) || 0)) / 100) : addon?.priceCents || 0;
+    const text = what === "__discount" ? `${Number(form.elements.percent.value) || 0}% de desconto no plano` : `${addon?.name || ""} ligado sem cobrar`;
+    form.querySelector("[data-gift-preview]").innerHTML = `<b>${escapeHtml(text)}</b>, ${months ? `por ${months} ${months === 1 ? "mês" : "meses"} (até o fim do ${months === 1 ? "mês atual" : `${months}º mês`})` : "sem prazo para acabar"}. O restaurante deixa de pagar <b>${escapeHtml(brl(value))}/mês</b>${months ? ` (total ${escapeHtml(brl(value * months))})` : ""}. No Gestor o dono vê “Cortesia INOVAS”.`;
+  };
+
+  /* Criar / editar adicional */
+  const openAddonForm = (key = "") => {
+    const item = key ? (state.data?.catalog || []).find((entry) => entry.key === key) : null;
+    addonsUi.editingKey = item ? item.key : "";
+    const value = item || { name: "", group: ADDON_GROUPS[0], description: "", icon: "chef", priceCents: "", who: "owner", plans: { START: "paid", BUSINESS: "paid", PRO: "paid" }, link: "", menuLabel: "", status: "draft" };
+    openDialog(`
+      <form class="sys-dialog-form" data-addon-form>
+        ${dialogHead("Catálogo de adicionais", item ? `Editar ${item.name}` : "Criar adicional")}
+        <div class="sys-dialog-body sys-addon-form">
+          <div>
+            <h3 class="sys-addon-sec">1 · O que é</h3>
+            <div class="sys-form-grid">
+              ${field("Nome *", `<input class="sys-input" name="name" maxlength="40" required value="${escapeHtml(value.name)}" placeholder="Ex.: Tela da cozinha">`)}
+              ${field("Grupo", `<select class="sys-select" name="group">${ADDON_GROUPS.map((group) => `<option ${group === value.group ? "selected" : ""}>${group}</option>`).join("")}</select>`)}
+            </div>
+            ${field("Descrição para o dono do restaurante *", `<textarea class="sys-textarea" name="description" maxlength="140" required placeholder="Uma frase simples: o que ele ganha ligando isso.">${escapeHtml(value.description)}</textarea>`, "Até 140 letras.")}
+            <div class="sys-field"><span>Ícone</span><div class="sys-addon-icons">${ADDON_ICONS.map((name) => `<label title="${name}"><input type="radio" name="icon" value="${name}" ${name === value.icon ? "checked" : ""}>${icon(name, 20)}</label>`).join("")}</div></div>
+            <h3 class="sys-addon-sec">2 · Valor e planos</h3>
+            <div class="sys-form-grid">
+              ${field("Valor por mês (R$) *", `<input class="sys-input" name="price" type="number" step="0.01" min="0" required value="${value.priceCents ? (value.priceCents / 100).toFixed(2) : ""}" placeholder="9,90">`)}
+              ${field("Quem pode ligar", `<select class="sys-select" name="who"><option value="owner" ${value.who === "owner" ? "selected" : ""}>O dono, sozinho no Gestor</option><option value="inovas" ${value.who === "inovas" ? "selected" : ""}>Só a equipe INOVAS</option></select>`)}
+            </div>
+            <div class="sys-field"><span>Em quais planos</span>
+              <div class="sys-addon-plan-rows">${ADDON_PLANS.map(([plan, label]) => `<div><b>${label}</b><div class="sys-addon-seg">${[["paid", "Pago à parte"], ["included", "Incluso no plano"], ["none", "Não disponível"]].map(([option, text]) => `<label><input type="radio" name="plan-${plan}" value="${option}" ${value.plans?.[plan] === option ? "checked" : ""}>${text}</label>`).join("")}</div></div>`).join("")}</div>
+              <small class="sys-hint">“Incluso” = já vem no plano, sem cobrar. “Pago” = o dono pode ligar pagando o valor acima.</small>
+            </div>
+            <h3 class="sys-addon-sec">3 · Tela na plataforma</h3>
+            ${field("Link da tela que este adicional libera *", `<input class="sys-input sys-addon-mono" name="link" required value="${escapeHtml(value.link)}" placeholder="/admin/?section=cozinha">`, "Só endereços da plataforma, começando com /admin/ ou /garcom/. Desligado, a tela fica bloqueada para o restaurante.")}
+            <p data-addon-link-msg></p>
+            <div class="sys-form-grid">
+              ${field("Nome no menu do Gestor", `<input class="sys-input" name="menuLabel" maxlength="30" value="${escapeHtml(value.menuLabel)}" placeholder="Ex.: Cozinha">`)}
+              ${field("Situação", `<select class="sys-select" name="status"><option value="draft" ${value.status !== "live" ? "selected" : ""}>Rascunho (ninguém vê)</option><option value="live" ${value.status === "live" ? "selected" : ""}>Disponível para os restaurantes</option></select>`)}
+            </div>
+          </div>
+          <aside class="sys-addon-form-prev"><h3 class="sys-addon-sec">Como o dono vai ver</h3><div data-addon-preview></div><p class="sys-hint" data-addon-preview-note></p></aside>
+          <p class="sys-alert is-error" data-dialog-error hidden role="alert"></p>
+        </div>
+        <div class="sys-dialog-actions"><button class="sys-btn sys-btn-secondary" type="button" data-dialog-close>Cancelar</button><button class="sys-btn sys-btn-primary" type="submit">${item ? "Salvar alterações" : "Criar adicional"}</button></div>
+      </form>`, { wide: true });
+    updateAddonPreview(dialog.querySelector("[data-addon-form]"));
+  };
+
+  const readAddonForm = (form) => ({
+    name: form.elements.name.value.trim(),
+    group: form.elements.group.value,
+    description: form.elements.description.value.trim(),
+    icon: form.querySelector("[name=icon]:checked")?.value || "chef",
+    priceCents: Math.round(Number(String(form.elements.price.value).replace(",", ".")) * 100) || 0,
+    who: form.elements.who.value,
+    plans: Object.fromEntries(ADDON_PLANS.map(([plan]) => [plan, form.querySelector(`[name="plan-${plan}"]:checked`)?.value || "none"])),
+    link: form.elements.link.value.trim(),
+    menuLabel: form.elements.menuLabel.value.trim(),
+    status: form.elements.status.value,
+  });
+
+  const updateAddonPreview = (form) => {
+    if (!form) return;
+    const item = readAddonForm(form);
+    const message = form.querySelector("[data-addon-link-msg]");
+    const taken = (state.data?.catalog || []).find((entry) => entry.link === item.link && entry.key !== addonsUi.editingKey);
+    message.className = "";
+    if (!item.link) message.textContent = "";
+    else if (!ADDON_LINK_PATTERN.test(item.link)) { message.className = "sys-addon-msg is-bad"; message.textContent = "Use um endereço da plataforma, começando com /admin/ ou /garcom/. Links de fora não são aceitos."; }
+    else if (taken) { message.className = "sys-addon-msg is-bad"; message.textContent = `Essa tela já pertence a “${taken.name}”.`; }
+    else { message.className = "sys-addon-msg is-ok"; message.innerHTML = `${icon("check", 14)} Link da plataforma · <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener">abrir para testar</a>`; }
+    form.querySelector("[data-addon-preview]").innerHTML = `<div class="sys-addon-card"><span class="sys-addon-icon">${icon(item.icon, 22)}</span><div><strong>${escapeHtml(item.name || "Nome do adicional")} ${statusPill("Desligado", "neutral", { dot: false })}</strong><p>${escapeHtml(item.description || "A descrição aparece aqui.")}</p></div><div class="sys-addon-card-foot"><b>+ ${escapeHtml(brl(item.priceCents))}</b><small>/mês</small><span class="sys-addon-switch" aria-hidden="true"></span></div></div>`;
+    const paid = ADDON_PLANS.filter(([plan]) => item.plans[plan] === "paid").map(([, label]) => label);
+    const included = ADDON_PLANS.filter(([plan]) => item.plans[plan] === "included").map(([, label]) => label);
+    form.querySelector("[data-addon-preview-note]").innerHTML = `${paid.length ? `Aparece para ligar (pago) no ${escapeHtml(paid.join(", "))}. ` : ""}${included.length ? `Já vem ligado, sem cobrar, no ${escapeHtml(included.join(", "))}. ` : ""}${item.status === "draft" ? "<br><b>Rascunho:</b> nenhum restaurante vê ainda." : ""}${item.menuLabel ? `<br>No menu do Gestor: <b>${escapeHtml(item.menuLabel)}</b>.` : ""}`;
+  };
+
+  const showDialogError = (form, error) => {
+    const box = form.querySelector("[data-dialog-error]");
+    if (box) {
+      box.textContent = error.message || "Não foi possível concluir.";
+      box.hidden = false;
+    } else notify(error.message || "Não foi possível concluir.");
+  };
+
+  document.addEventListener("click", async (event) => {
+    if (state.route !== "addons") return;
+    const tab = event.target.closest("[data-addons-tab]");
+    if (tab) {
+      addonsUi.tab = tab.dataset.addonsTab;
+      addonsUi.touched = true;
+      renderAddons(state.data);
+      return;
+    }
+    const filter = event.target.closest("[data-addons-filter]");
+    if (filter) {
+      addonsUi.filter = filter.dataset.addonsFilter;
+      renderAddons(state.data);
+      return;
+    }
+    const row = event.target.closest("[data-addons-row]");
+    if (row) return openAddonsDrawer(row.dataset.addonsRow);
+    if (event.target.closest("[data-addon-new]")) return openAddonForm();
+    const edit = event.target.closest("[data-addon-edit]");
+    if (edit) return openAddonForm(edit.dataset.addonEdit);
+    if (event.target.closest("[data-addon-gift-open]")) return openGiftDialog();
+    if (event.target.closest("[data-addon-back]")) return openAddonsDrawer(addonsUi.openKey);
+    const toggle = event.target.closest("[data-addon-toggle]");
+    const giftRemove = event.target.closest("[data-addon-gift-remove]");
+    const discountRemove = event.target.closest("[data-addon-discount-remove]");
+    if (toggle || giftRemove || discountRemove) {
+      const key = encodeURIComponent(addonsUi.openKey);
+      const target = toggle || giftRemove || discountRemove;
+      const on = toggle?.dataset.on === "true";
+      if (toggle && on && !window.confirm("Ligar este adicional para o restaurante? Se o contrato estiver ativo, o mês inteiro é lançado no extrato agora.")) return;
+      target.disabled = true;
+      try {
+        const url = toggle ? `/api/system/addons/${key}/toggle` : `/api/system/addons/${key}/gift-remove`;
+        const body = toggle ? { addonKey: toggle.dataset.addonToggle, on } : giftRemove ? { addonKey: giftRemove.dataset.addonGiftRemove } : { discount: true };
+        const result = await requestJson(url, { method: "POST", body: JSON.stringify(body) });
+        notify(toggle ? (on ? `Ligado.${result.data?.chargedCents ? ` ${brl(result.data.chargedCents)} lançado no extrato.` : ""}` : "Desliga no dia 01. Funciona até o fim do mês.") : "Cortesia encerrada.");
+        await reloadAddons();
+        openAddonsDrawer(addonsUi.openKey);
+      } catch (error) {
+        notify(error.message || "Não foi possível concluir.");
+        target.disabled = false;
+      }
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    const addonForm = event.target.closest?.("[data-addon-form]");
+    if (addonForm) updateAddonPreview(addonForm);
+    const giftForm = event.target.closest?.("[data-addon-gift-form]");
+    if (giftForm) updateGiftPreview(giftForm);
+  });
+  document.addEventListener("change", (event) => {
+    const addonForm = event.target.closest?.("[data-addon-form]");
+    if (addonForm) updateAddonPreview(addonForm);
+    const giftForm = event.target.closest?.("[data-addon-gift-form]");
+    if (giftForm) updateGiftPreview(giftForm);
+  });
+
+  document.addEventListener("submit", async (event) => {
+    const addonForm = event.target.closest("[data-addon-form]");
+    const giftForm = event.target.closest("[data-addon-gift-form]");
+    if (!addonForm && !giftForm) return;
+    event.preventDefault();
+    const form = addonForm || giftForm;
+    const submit = form.querySelector("[type=submit]");
+    submit.disabled = true;
+    try {
+      if (addonForm) {
+        const item = readAddonForm(addonForm);
+        const result = await requestJson("/api/system/addons/catalog", {
+          method: "POST",
+          body: JSON.stringify({ ...item, ...(addonsUi.editingKey ? { originalKey: addonsUi.editingKey } : {}) }),
+        });
+        dialog.close();
+        notify(addonsUi.editingKey ? "Adicional atualizado." : result.data?.item?.status === "live" ? `“${item.name}” criado e já aparece para os restaurantes.` : `“${item.name}” salvo como rascunho.`);
+        addonsUi.tab = "catalog";
+        await reloadAddons();
+      } else {
+        const what = giftForm.elements.what.value;
+        const body = {
+          months: Number(giftForm.querySelector("[name=months]:checked")?.value || 0),
+          reason: giftForm.elements.reason.value,
+          ...(what === "__discount" ? { discountPercent: Number(giftForm.elements.percent.value) } : { addonKey: what }),
+        };
+        await requestJson(`/api/system/addons/${encodeURIComponent(addonsUi.openKey)}/gift`, { method: "POST", body: JSON.stringify(body) });
+        notify("Cortesia registrada na auditoria.");
+        await reloadAddons();
+        openAddonsDrawer(addonsUi.openKey);
+      }
+    } catch (error) {
+      showDialogError(form, error);
+      submit.disabled = false;
+    }
+  });
+
+  // A janela lateral é o mesmo <dialog>; ao fechar volta ao formato normal.
+  dialog?.addEventListener("close", () => dialog.classList.remove("is-drawer"));
+
   /* ---------- roteamento ---------- */
 
-  const renderers = { overview: renderOverview, restaurants: renderRestaurants, billing: renderBilling, support: renderSupport, audit: renderAudit };
+  const renderers = { overview: renderOverview, restaurants: renderRestaurants, billing: renderBilling, addons: renderAddons, support: renderSupport, audit: renderAudit };
 
   const firstAllowedRoute = () => Object.values(ROUTES).find((route) => hasPermission(route.permission));
 

@@ -11411,6 +11411,7 @@ const SITE_SETTINGS_TABS = Object.freeze([
   { key: "payments", label: "Pagamentos e repasses", title: "Pagamentos e repasses", text: "Pagamento online no site (Pix, cartão e vale), taxas e a conta bancária que recebe os repasses." },
   { key: "channels", label: "Integrações", title: "iFood, 99Food e Uber Eats", text: "Receba os pedidos das plataformas no mesmo Gestor. Sem taxa da INOVAS." },
   { key: "fiscal", label: "Nota fiscal", title: "Nota fiscal (NFC-e)", text: "Dados para emitir a nota do consumidor sozinha quando o pedido é entregue ou retirado." },
+  { key: "addons", label: "Plano e adicionais", title: "Plano e adicionais", text: "Recursos extras que você liga e desliga quando quiser. O valor entra na sua mensalidade." },
 ]);
 const SITE_SETTINGS_PALETTES = Object.freeze([
   { key: "tokyo", label: "Tokyo (padrão)", colors: ["#F97316", "#0F141F", "#FBBF24"] },
@@ -11965,6 +11966,262 @@ document.addEventListener("input", (event) => {
     next.setSelectionRange(caret, caret);
   }
 });
+
+// ===================== Configurações > Plano e adicionais =====================
+// O dono liga e desliga os adicionais do plano. Regras (lib/plan-addons.cjs):
+// ligou no meio do mês = paga o mês inteiro; desligou = funciona até o fim do
+// mês pago e não cobra o seguinte; religou no mesmo mês = sem custo extra.
+const addonsState = { loading: false, busy: false, data: null, message: "", tone: "", pending: null, highlight: "" };
+const ADDON_ICON_PATHS = Object.freeze({
+  chef: "M6 13.9A4 4 0 017.5 6a5 5 0 019 0A4 4 0 0118 13.9V20H6z M6 17h12",
+  scale: "M12 3v18 M5 21h14 M6 7h12 M6 7l-3 7a3 3 0 006 0z M18 7l-3 7a3 3 0 006 0z",
+  qr: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h3v3h-3z M20 14v.01 M14 20h.01 M17 20h4v-3",
+  chat: "M21 12a8 8 0 01-11.7 7.1L4 20l1-4.6A8 8 0 1121 12z M8.5 10.5h7 M8.5 13.5h4",
+  gift: "M3 8h18v4H3z M5 12v8h14v-8 M12 8v12 M12 8S10.5 3 8 4.5 9.5 8 12 8z M12 8s1.5-5 4-3.5S14.5 8 12 8z",
+  sheet: "M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2",
+  truck: "M3 6h11v10H3z M14 10h4l3 3v3h-7 M7 20a2 2 0 100-4 2 2 0 000 4z M17 20a2 2 0 100-4 2 2 0 000 4z",
+  star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z",
+  chart: "M3 20h18 M6 16l4-5 3 3 5-7",
+  receipt: "M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z M9 8h6 M9 12h6 M9 16h3",
+  people: "M9 12a4 4 0 100-8 4 4 0 000 8z M2 21a7 7 0 0114 0 M16 4a4 4 0 010 8 M22 21a7 7 0 00-5-6.7",
+  clock: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 7v5l3 2",
+  check: "M20 6L9 17l-5-5",
+  globe: "M12 21a9 9 0 100-18 9 9 0 000 18z M3 12h18 M12 3a14 14 0 010 18 M12 3a14 14 0 000 18",
+});
+const addonIcon = (name, size = 22) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ADDON_ICON_PATHS[name] || ADDON_ICON_PATHS.chef}"/></svg>`;
+const addonBrl = (cents) => (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const addonDay = (value) => (/^\d{4}-\d{2}-\d{2}/.test(String(value || "")) ? String(value).slice(0, 10).split("-").reverse().join("/") : "");
+const addonMonthEnd = (today) => {
+  const [year, month] = String(today || "").split("-").map(Number);
+  if (!year) return "";
+  return addonDay(`${year}-${String(month).padStart(2, "0")}-${String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0")}`);
+};
+const addonMonthName = (today) =>
+  ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"][Number(String(today || "").slice(5, 7)) - 1] || "este mês";
+const addonNextFirst = (today) => {
+  const [year, month] = String(today || "").split("-").map(Number);
+  if (!year) return "dia 01";
+  return month === 12 ? `01/01/${year + 1}` : `01/${String(month + 1).padStart(2, "0")}`;
+};
+
+const loadAddonsSettings = async () => {
+  addonsState.loading = true;
+  try {
+    const payload = await fetchJson("/api/admin/settings/addons");
+    addonsState.data = payload.data || payload;
+  } catch (error) {
+    addonsState.message = error.message || "Não foi possível carregar os adicionais.";
+    addonsState.tone = "error";
+  } finally {
+    addonsState.loading = false;
+    renderAddonsInto();
+  }
+};
+
+// Mensalidade do próximo dia 01: plano + domínio + adicionais ligados − desconto.
+const addonsNextTotal = (data) => data.monthlyValueCents;
+
+const renderAddonCard = (addon, data) => {
+  const today = data.today;
+  const pill = {
+    on: '<span class="gx-addon-pill is-on">Ligado</span>',
+    ending: `<span class="gx-addon-pill is-ending">Desliga em ${escapeHtml(addonNextFirst(today))}</span>`,
+    gift: '<span class="gx-addon-pill is-gift">Cortesia INOVAS</span>',
+    included: '<span class="gx-addon-pill is-on">Incluso no plano</span>',
+    off: '<span class="gx-addon-pill">Desligado</span>',
+  }[addon.state] || "";
+  let note = "";
+  if (addon.state === "ending") {
+    note = `<div class="gx-addon-note is-warn">${addonIcon("clock", 16)}<span>Funciona até ${escapeHtml(addonMonthEnd(today))} e não é cobrado no mês seguinte.</span><button type="button" data-addon-keep="${escapeHtml(addon.key)}">Manter ligado</button></div>`;
+  } else if (addon.state === "gift") {
+    note = `<div class="gx-addon-note is-gift">${addonIcon("gift", 16)}<span>Grátis ${addon.giftUntil ? `até ${escapeHtml(addonDay(addon.giftUntil))}` : "por tempo indeterminado"}, presente da INOVAS. ${addon.giftUntil ? `Depois disso, você escolhe se continua por ${escapeHtml(addonBrl(addon.priceCents))}/mês.` : ""}</span></div>`;
+  } else if (addon.state === "on" && addon.since && addon.since.slice(0, 7) === String(today).slice(0, 7)) {
+    note = `<div class="gx-addon-note is-ok">${addonIcon("check", 16)}<span>Ligado em ${escapeHtml(addonDay(addon.since))}. ${addon.since === today ? `O mês de ${escapeHtml(addonMonthName(today))} inteiro (${escapeHtml(addonBrl(addon.priceCents))}) já entrou no seu extrato.` : ""}</span></div>`;
+  }
+  const price =
+    addon.state === "gift" ? `<s>${escapeHtml(addonBrl(addon.priceCents))}</s> R$ 0,00`
+      : addon.state === "included" ? "Incluso"
+      : `+ ${escapeHtml(addonBrl(addon.priceCents))}`;
+  const busy = addonsState.busy ? "disabled" : "";
+  const control =
+    addon.state === "gift" || addon.state === "included"
+      ? `<span class="gx-addon-switch is-${addon.state} is-on" aria-hidden="true"></span>`
+      : addon.who !== "owner" && addon.state === "off"
+        ? '<span class="gx-addon-only">Peça à INOVAS</span>'
+        : `<button type="button" role="switch" aria-checked="${addon.state === "on"}" aria-label="${escapeHtml(addon.name)}" class="gx-addon-switch ${addon.state === "on" ? "is-on" : addon.state === "ending" ? "is-on is-ending" : ""}" data-addon-switch="${escapeHtml(addon.key)}" ${busy}></button>`;
+  return `<article class="gx-addon is-${escapeHtml(addon.state)}${addonsState.highlight === addon.key ? " is-highlight" : ""}" data-addon-card="${escapeHtml(addon.key)}">
+    <span class="gx-addon-ic">${addonIcon(addon.icon)}</span>
+    <div class="gx-addon-body"><div class="gx-addon-title"><strong>${escapeHtml(addon.name)}</strong>${pill}</div><p>${escapeHtml(addon.description)}</p>${addon.state === "on" && addon.since ? `<small>Ligado desde ${escapeHtml(addonDay(addon.since))}</small>` : ""}</div>
+    <div class="gx-addon-side"><span class="gx-addon-price">${price}${addon.state === "included" ? "" : "<small> /mês</small>"}</span>${control}</div>
+    ${note}
+  </article>`;
+};
+
+const renderAddonsBody = () => {
+  const data = addonsState.data;
+  if (!data) {
+    if (!addonsState.loading) void loadAddonsSettings();
+    return `<p class="gx-pay-muted">${escapeHtml(addonsState.message || "Carregando adicionais…")}</p>`;
+  }
+  const feedback = addonsState.message
+    ? `<div class="admin-feedback is-${escapeHtml(addonsState.tone || "success")}" role="status" data-addons-message>${escapeHtml(addonsState.message)}</div>`
+    : "";
+  const addons = data.addons || [];
+  const groups = [...new Set(addons.map((addon) => addon.group))];
+  return `${feedback}
+    <p class="gx-addon-intro">Seu plano é o <strong>${escapeHtml(data.planName || "—")}</strong>. Ligue só o que o restaurante usa — dá para ligar e desligar quando quiser.</p>
+    ${addons.length
+      ? groups.map((group) => `<h4 class="gx-addon-group">${escapeHtml(group)}</h4><div class="gx-addon-list">${addons.filter((addon) => addon.group === group).map((addon) => renderAddonCard(addon, data)).join("")}</div>`).join("")
+      : `<div class="gx-addon-empty">${addonIcon("star", 28)}<strong>Nenhum adicional disponível ainda</strong><span>Quando a INOVAS lançar novos recursos para o seu plano, eles aparecem aqui.</span></div>`}
+    <h4 class="gx-addon-group">Feito pela equipe INOVAS</h4>
+    <article class="gx-addon is-domain">
+      <span class="gx-addon-ic">${addonIcon("globe")}</span>
+      <div class="gx-addon-body"><div class="gx-addon-title"><strong>Domínio próprio</strong>${(data.otherAddons || []).some((entry) => /dom[ií]nio/i.test(entry.label)) ? '<span class="gx-addon-pill is-on">Ligado</span>' : ""}</div><p>Seu site num endereço só seu, como <b>seurestaurante.com.br</b>. O domínio fica no CNPJ do restaurante e a INOVAS faz toda a ligação. Peça pelo suporte.</p></div>
+      <div class="gx-addon-side"><span class="gx-addon-price">+ R$ 49,00<small> /mês</small></span></div>
+    </article>`;
+};
+
+const renderAddonsSummary = () => {
+  const data = addonsState.data;
+  if (!data) return "";
+  const today = data.today;
+  const lines = [`<div><span>Plano ${escapeHtml(data.planName || "")}</span><span>${escapeHtml(addonBrl(data.planMonthlyValueCents))}</span></div>`];
+  (data.otherAddons || []).filter((entry) => entry.monthlyValueCents > 0).forEach((entry) => lines.push(`<div><span>+ ${escapeHtml(entry.label)}</span><span>${escapeHtml(addonBrl(entry.monthlyValueCents))}</span></div>`));
+  (data.addons || []).filter((addon) => addon.state === "on").forEach((addon) => lines.push(`<div><span>+ ${escapeHtml(addon.name)}</span><span>${escapeHtml(addonBrl(addon.priceCents))}</span></div>`));
+  (data.addons || []).filter((addon) => addon.state === "gift").forEach((addon) => lines.push(`<div class="is-gift"><span>${escapeHtml(addon.name)} · cortesia</span><span>R$ 0,00</span></div>`));
+  (data.addons || []).filter((addon) => addon.state === "ending").forEach((addon) => lines.push(`<div class="is-dim"><span><s>${escapeHtml(addon.name)}</s> · desliga ${escapeHtml(addonNextFirst(today))}</span><span>R$ 0,00</span></div>`));
+  if (data.discount) lines.push(`<div class="is-gift"><span>Desconto INOVAS (${data.discount.percent}%)</span><span>− ${escapeHtml(addonBrl(data.discount.valueCents))}</span></div>`);
+  lines.push(`<div class="is-total"><span>Total em ${escapeHtml(addonNextFirst(today))}</span><span>${escapeHtml(addonBrl(addonsNextTotal(data)))}</span></div>`);
+  return `<div class="gx-addon-sum">
+    <div class="gx-addon-sum-top"><small>Mensalidade do próximo mês</small><strong data-addons-total>${escapeHtml(addonBrl(addonsNextTotal(data)))}</strong><span>Vence em ${escapeHtml(addonNextFirst(today))} · Plano ${escapeHtml(data.planName || "")}</span></div>
+    <div class="gx-addon-sum-lines">${lines.join("")}</div>
+    <div class="gx-addon-sum-rule"><strong>Como funciona a cobrança</strong><ul>
+      <li><b>Ligou</b> no meio do mês? Paga o <b>mês inteiro</b>, sem valor quebrado.</li>
+      <li><b>Desligou?</b> Continua funcionando até o fim do mês pago e <b>não é cobrado</b> no seguinte.</li>
+      <li>Religou antes do fim do mês? <b>Sem custo extra.</b></li>
+    </ul></div>
+  </div>`;
+};
+
+const renderAddonsInto = () => {
+  const slot = document.querySelector("[data-addons-slot]");
+  if (slot) slot.innerHTML = renderAddonsBody();
+  const aside = document.querySelector("[data-addons-summary]");
+  if (aside) aside.innerHTML = renderAddonsSummary();
+};
+
+// Janela de confirmação (ligar mostra o valor bem grande; desligar explica até quando vale).
+const closeAddonModal = () => document.querySelector("[data-addon-modal]")?.remove();
+const openAddonModal = (addon, turnOn) => {
+  closeAddonModal();
+  const data = addonsState.data;
+  const today = data.today;
+  const now = addonsNextTotal(data);
+  const after = turnOn ? now + addon.priceCents * 2 : now - addon.priceCents;
+  const body = turnOn
+    ? `<div class="gx-addon-modal-price"><b>+ ${escapeHtml(addonBrl(addon.priceCents))}</b><span>por mês, somado à sua mensalidade</span></div>
+       <ol class="gx-addon-steps">
+         <li><i>1</i><span>Liga <b>agora</b> e já pode usar hoje.</span></li>
+         <li><i>2</i><span>O mês de ${escapeHtml(addonMonthName(today))} é cobrado <b>inteiro (${escapeHtml(addonBrl(addon.priceCents))})</b>, mesmo ligando hoje. Entra no seu extrato agora.</span></li>
+         <li><i>3</i><span>A partir de ${escapeHtml(addonNextFirst(today))}, ${escapeHtml(addonBrl(addon.priceCents))} todo mês junto com a mensalidade.</span></li>
+       </ol>
+       <div class="gx-addon-cmp"><div><small>Mensalidade de ${escapeHtml(addonNextFirst(today))} hoje</small><b>${escapeHtml(addonBrl(now))}</b></div><div class="is-to"><small>Com ${escapeHtml(addon.name)}</small><b>${escapeHtml(addonBrl(now + addon.priceCents))}</b></div></div>
+       <label class="gx-addon-confirm"><input type="checkbox" data-addon-agree /><span>Entendi o valor e quero ligar <b>${escapeHtml(addon.name)}</b>.</span></label>`
+    : `<ol class="gx-addon-steps">
+         <li><i>1</i><span>Continua funcionando <b>até ${escapeHtml(addonMonthEnd(today))}</b> — este mês já está pago.</span></li>
+         <li><i>2</i><span>Em <b>${escapeHtml(addonNextFirst(today))}</b> desliga sozinho e <b>não é cobrado</b>.</span></li>
+         <li><i>3</i><span>Mudou de ideia até lá? É só religar, <b>sem custo</b>.</span></li>
+       </ol>
+       <div class="gx-addon-cmp"><div><small>Mensalidade de ${escapeHtml(addonNextFirst(today))} hoje</small><b>${escapeHtml(addonBrl(now))}</b></div><div class="is-to"><small>Depois de desligar</small><b>${escapeHtml(addonBrl(after))}</b></div></div>`;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<div class="gx-addon-modal" data-addon-modal role="dialog" aria-modal="true" aria-labelledby="gx-addon-modal-title">
+      <div class="gx-addon-modal-card">
+        <div class="gx-addon-modal-head"><span class="gx-addon-ic ${turnOn ? "" : "is-warn"}">${addonIcon(turnOn ? addon.icon : "clock", 26)}</span><div><h3 id="gx-addon-modal-title">${turnOn ? "Ligar" : "Desligar"} ${escapeHtml(addon.name)}?</h3><p>${turnOn ? escapeHtml(addon.description) : "Antes de desligar, veja o que acontece:"}</p></div></div>
+        ${body}
+        <div class="gx-addon-modal-actions">
+          <button type="button" class="gx-set-btn" data-addon-modal-cancel>${turnOn ? "Agora não" : "Manter ligado"}</button>
+          <button type="button" class="gx-set-btn ${turnOn ? "is-primary" : "is-danger"}" data-addon-modal-go="${escapeHtml(addon.key)}" data-on="${turnOn}" ${turnOn ? "disabled" : ""}>${turnOn ? `Ligar por ${escapeHtml(addonBrl(addon.priceCents))}/mês` : `Desligar em ${escapeHtml(addonNextFirst(today))}`}</button>
+        </div>
+      </div>
+    </div>`
+  );
+  document.querySelector("[data-addon-modal] [data-addon-modal-cancel]")?.focus();
+};
+
+const toggleAddon = async (addonKey, on) => {
+  addonsState.busy = true;
+  renderAddonsInto();
+  try {
+    const payload = await fetchJson("/api/admin/settings/addons-toggle", { method: "POST", body: JSON.stringify({ addonKey, on }) });
+    addonsState.data = payload.data;
+    const addon = (payload.data.addons || []).find((entry) => entry.key === addonKey);
+    addonsState.message = on
+      ? `${addon?.name || "Adicional"} ligado! Já pode usar.${payload.chargedCents ? ` ${addonBrl(payload.chargedCents)} lançado no extrato.` : ""}`
+      : `${addon?.name || "Adicional"} funciona até ${addonMonthEnd(payload.data.today)} e não é cobrado no mês seguinte.`;
+    addonsState.tone = "success";
+  } catch (error) {
+    addonsState.message = error.message || "Não foi possível concluir.";
+    addonsState.tone = "error";
+  } finally {
+    addonsState.busy = false;
+    renderAddonsInto();
+  }
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  const modal = target.closest("[data-addon-modal]");
+  if (modal) {
+    if (target.closest("[data-addon-modal-cancel]") || target === modal) return closeAddonModal();
+    const go = target.closest("[data-addon-modal-go]");
+    if (go && !go.disabled) {
+      closeAddonModal();
+      void toggleAddon(go.dataset.addonModalGo, go.dataset.on === "true");
+    }
+    return;
+  }
+  const keep = target.closest("[data-addon-keep]");
+  if (keep) return void toggleAddon(keep.dataset.addonKeep, true);
+  const sw = target.closest("[data-addon-switch]");
+  if (!sw || sw.disabled) return;
+  const addon = (addonsState.data?.addons || []).find((entry) => entry.key === sw.dataset.addonSwitch);
+  if (!addon) return;
+  if (addon.state === "ending") return void toggleAddon(addon.key, true);
+  openAddonModal(addon, addon.state !== "on");
+});
+document.addEventListener("change", (event) => {
+  const agree = event.target?.closest?.("[data-addon-agree]");
+  if (!agree) return;
+  const go = document.querySelector("[data-addon-modal] [data-addon-modal-go]");
+  if (go) go.disabled = !agree.checked;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.querySelector("[data-addon-modal]")) closeAddonModal();
+});
+
+// Link de um adicional (ex.: /admin/?section=cozinha) com o recurso desligado:
+// leva para Configurações › Plano e adicionais, com o cartão em destaque.
+const redirectLockedAddonSection = async (section) => {
+  try {
+    const payload = await fetchJson("/api/admin/settings/addons");
+    const data = payload.data || payload;
+    const addon = (data.addons || []).find((entry) => {
+      try {
+        return new URL(entry.link || "", window.location.origin).searchParams.get("section") === section;
+      } catch {
+        return false;
+      }
+    });
+    if (addon && !["on", "ending", "gift", "included"].includes(addon.state)) {
+      window.location.replace(`/admin/?section=settings&tab=addons&addon=${encodeURIComponent(addon.key)}`);
+    }
+  } catch {
+    // sem acesso às configurações: segue no painel
+  }
+};
 
 const loadFiscalSettings = async () => {
   fiscalState.loading = true;
@@ -12529,7 +12786,7 @@ const renderRestaurantSettingsModule = () => {
       }
       ${adminState.isLoadingRestaurantSettings && !adminState.restaurantSettingsSnapshot ? `<div class="admin-empty-state admin-empty-state-loading"><strong>Carregando configurações</strong><span>Buscando os dados do site.</span></div>` : ""}
 
-      <div class="gx-set-layout" ${adminState.isLoadingRestaurantSettings && !adminState.restaurantSettingsSnapshot ? "hidden" : ""}>
+      <div class="gx-set-layout" data-active-tab="${escapeHtml(activeTab)}" ${adminState.isLoadingRestaurantSettings && !adminState.restaurantSettingsSnapshot ? "hidden" : ""}>
         <nav class="gx-set-nav" aria-label="Seções das configurações">
           ${SITE_SETTINGS_TABS.map(
             (tab) =>
@@ -12808,11 +13065,13 @@ const renderRestaurantSettingsModule = () => {
           ${panel("payments", `<div data-payment-settings-slot>${renderPaymentSettingsBody()}</div>`)}
           ${panel("channels", `<div data-channels-slot>${renderChannelsBody()}</div>`)}
           ${panel("fiscal", `<div data-fiscal-slot>${renderFiscalBody()}</div>`)}
+          ${panel("addons", `<div data-addons-slot>${activeTab === "addons" || addonsState.data ? renderAddonsBody() : ""}</div>`)}
 
           <p class="gx-set-updated">Última atualização: ${escapeHtml(adminState.isLoadingRestaurantSettings ? "carregando..." : updatedLabel)}</p>
         </div>
 
         ${renderSiteSettingsPreview(draft, accessAddress)}
+        <aside class="gx-addon-aside" data-addons-summary aria-label="Sua mensalidade">${renderAddonsSummary()}</aside>
       </div>
     </div>
   `;
@@ -12840,6 +13099,8 @@ document.addEventListener("click", (event) => {
     root.querySelectorAll("[data-gx-set-panel]").forEach((section) => {
       section.hidden = section.dataset.gxSetPanel !== adminState.siteSettingsTab;
     });
+    root.querySelector(".gx-set-layout")?.setAttribute("data-active-tab", adminState.siteSettingsTab);
+    if (adminState.siteSettingsTab === "addons") renderAddonsInto();
     return;
   }
   const paletteButton = target.closest("[data-gx-palette]");
@@ -19224,7 +19485,11 @@ const initDashboardPage = () => {
 
   if (requestedSection && IMPLEMENTED_SECTIONS.has(requestedSection)) {
     adminState.activeSection = requestedSection;
+  } else if (requestedSection && /^[a-z0-9-]{2,40}$/.test(requestedSection)) {
+    // Pode ser a tela de um adicional desligado: leva para "Plano e adicionais".
+    void redirectLockedAddonSection(requestedSection);
   }
+  addonsState.highlight = new URLSearchParams(window.location.search).get("addon") || "";
 
   const refreshButtons = Array.from(document.querySelectorAll("[data-admin-refresh]"));
   const logoutButton = document.querySelector("[data-admin-logout]");

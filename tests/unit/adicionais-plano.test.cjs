@@ -83,7 +83,8 @@ test("mensalidade: soma adicionais ligados e tira o desconto de cortesia do plan
     planDiscount: { percent: 50, until: "2026-12-31", reason: "indicação" },
   };
   const nov = lib.summarizeRestaurantAddons({ catalog, restaurant, plan: "BUSINESS", planMonthlyValueCents: 17990, today: "2026-11-26" });
-  assert.equal(nov.chargedCents, 990 + 1490);
+  // Fidelidade está desligando (vale até 30/11): não entra na próxima mensalidade.
+  assert.equal(nov.chargedCents, 990);
   assert.equal(nov.discountCents, 8995);
   const dec = lib.summarizeRestaurantAddons({ catalog, restaurant, plan: "BUSINESS", planMonthlyValueCents: 17990, today: "2026-12-01" });
   assert.equal(dec.chargedCents, 990);

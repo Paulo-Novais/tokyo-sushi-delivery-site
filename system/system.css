@@ -3693,3 +3693,634 @@ dialog.sys-dialog.is-wide {
 .sys-billing-grace .sys-billing-check input { margin-top: 2px; }
 [data-billing-row] .sys-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 [data-billing-row] td small.sys-hint { display: block; margin-top: 4px; }
+
+/* ---------- Planos e adicionais ---------- */
+
+.sys-addon-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 18px;
+  border-bottom: 1px solid var(--sys-border);
+  overflow-x: auto;
+}
+
+.sys-addon-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--sys-ink-3);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sys-addon-tabs button span {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sys-neutral-bg);
+  color: var(--sys-ink-2);
+  font-size: 12px;
+}
+
+.sys-addon-tabs button.is-active {
+  border-color: var(--sys-brand);
+  color: var(--sys-ink);
+}
+
+.sys-addon-tabs button.is-active span {
+  background: var(--sys-brand-soft);
+  color: var(--sys-brand-ink);
+}
+
+.sys-count {
+  margin-left: 4px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.sys-kpi-text {
+  font-size: 20px !important;
+}
+
+.sys-addon-rest {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sys-addon-rest small {
+  display: block;
+}
+
+.sys-addon-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sys-addon-avatar.is-lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 17px;
+}
+
+.sys-addon-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--sys-brand-soft);
+  color: var(--sys-brand-ink);
+}
+
+.sys-addon-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 340px;
+}
+
+.sys-addon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: var(--sys-neutral-bg);
+  color: var(--sys-ink-4);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sys-addon-chip.is-ending {
+  background: var(--sys-warn-bg);
+  color: var(--sys-warn-ink);
+}
+
+.sys-addon-chip.is-gift {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.sys-addon-chip.is-domain {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.sys-addon-chev {
+  color: var(--sys-ink-3);
+}
+
+.sys-addon-cat-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sys-addon-cat-head p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--sys-ink-2);
+}
+
+.sys-addon-plans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 260px;
+}
+
+.sys-addon-plans span {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--sys-neutral-bg);
+  color: var(--sys-ink-4);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.sys-addon-plans span.is-included {
+  background: var(--sys-ok-bg);
+  color: var(--sys-ok-ink);
+}
+
+.sys-addon-plans span.is-none {
+  background: transparent;
+  color: #a8a29e;
+  text-decoration: line-through;
+}
+
+.sys-addon-link {
+  padding: 3px 7px;
+  border: 1px solid var(--sys-border);
+  border-radius: 6px;
+  background: var(--sys-neutral-bg);
+  font: 600 12px ui-monospace, Menlo, monospace;
+  white-space: nowrap;
+}
+
+/* janela lateral de detalhes (o <dialog> do System encostado à direita) */
+dialog.sys-dialog.is-drawer {
+  width: min(620px, 100%);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.sys-addon-drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sys-addon-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--sys-border);
+}
+
+.sys-addon-drawer-head h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.sys-addon-drawer-head p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0 0;
+  color: var(--sys-ink-3);
+}
+
+.sys-addon-drawer-head .sys-icon-btn {
+  margin-left: auto;
+}
+
+.sys-addon-drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 22px 24px;
+}
+
+.sys-addon-drawer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--sys-border);
+}
+
+.sys-addon-gift-btn {
+  border-color: #e9d5ff !important;
+  color: #6b21a8 !important;
+}
+
+.sys-addon-hero {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #111827;
+  color: #fff;
+}
+
+.sys-addon-hero span {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sys-addon-hero strong {
+  display: block;
+  margin: 2px 0;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+.sys-addon-hero p {
+  margin: 0;
+  color: #d1d5db;
+  font-size: 13px;
+}
+
+.sys-addon-hero b {
+  color: #fff;
+}
+
+.sys-addon-sec {
+  margin: 20px 0 8px;
+  color: var(--sys-ink-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sys-addon-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sys-addon-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--sys-border);
+  border-radius: 12px;
+}
+
+.sys-addon-item strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sys-addon-item small {
+  display: block;
+  color: var(--sys-ink-3);
+}
+
+.sys-addon-item.is-off .sys-addon-icon,
+.sys-addon-item.is-included .sys-addon-icon {
+  background: var(--sys-neutral-bg);
+  color: var(--sys-ink-2);
+}
+
+.sys-addon-item.is-ending .sys-addon-icon {
+  background: var(--sys-warn-bg);
+  color: var(--sys-warn-ink);
+}
+
+.sys-addon-item.is-gift .sys-addon-icon {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.sys-addon-item.is-domain .sys-addon-icon {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.sys-addon-item-act {
+  margin-top: 6px;
+}
+
+.sys-addon-item-val {
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sys-addon-item-val small {
+  display: block;
+  font-weight: 600;
+}
+
+.sys-addon-timeline {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+  border-left: 2px solid var(--sys-border);
+  margin-left: 6px;
+}
+
+.sys-addon-timeline li {
+  position: relative;
+  font-size: 13.5px;
+}
+
+.sys-addon-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: -29px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--sys-ink-3);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.sys-addon-timeline li.is-on::before {
+  border-color: var(--sys-brand);
+  background: var(--sys-brand);
+}
+
+.sys-addon-timeline li.is-off::before {
+  border-color: var(--sys-warn-bar);
+}
+
+.sys-addon-timeline li.is-gift::before {
+  border-color: #a855f7;
+  background: #a855f7;
+}
+
+.sys-addon-timeline time {
+  display: block;
+  color: var(--sys-ink-3);
+  font-size: 12px;
+}
+
+.sys-addon-opts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.sys-addon-opts label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--sys-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.sys-addon-opts label:has(input:checked) {
+  border-color: var(--sys-brand);
+  background: var(--sys-brand-select);
+}
+
+.sys-addon-preview {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  background: #faf5ff;
+  color: #581c87;
+  font-size: 13.5px;
+}
+
+/* formulário de adicional */
+.sys-addon-form {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+}
+
+.sys-addon-form > .sys-alert {
+  grid-column: 1 / -1;
+}
+
+.sys-addon-form .sys-addon-sec:first-child {
+  margin-top: 0;
+}
+
+.sys-addon-form-prev {
+  position: sticky;
+  top: 0;
+}
+
+.sys-addon-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sys-addon-icons label {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--sys-border);
+  border-radius: 10px;
+  color: var(--sys-ink-2);
+  cursor: pointer;
+}
+
+.sys-addon-icons input,
+.sys-addon-seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sys-addon-icons label:has(input:checked) {
+  border-color: var(--sys-brand);
+  background: var(--sys-brand-soft);
+  color: var(--sys-brand-ink);
+  box-shadow: var(--sys-focus);
+}
+
+.sys-addon-plan-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.sys-addon-plan-rows > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--sys-border);
+  border-radius: 10px;
+}
+
+.sys-addon-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--sys-neutral-bg);
+}
+
+.sys-addon-seg label {
+  position: relative;
+  padding: 6px 10px;
+  border-radius: 7px;
+  color: var(--sys-ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sys-addon-seg label:has(input:checked) {
+  background: #fff;
+  color: var(--sys-ink);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+
+.sys-addon-mono {
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.sys-addon-msg {
+  margin: -6px 0 6px;
+  font-size: 12.5px;
+}
+
+.sys-addon-msg.is-bad {
+  color: var(--sys-crit-ink);
+}
+
+.sys-addon-msg.is-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sys-ok-ink);
+}
+
+.sys-addon-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--sys-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--sys-shadow);
+}
+
+.sys-addon-card .sys-addon-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--sys-neutral-bg);
+  color: var(--sys-ink-2);
+}
+
+.sys-addon-card strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sys-addon-card p {
+  margin: 4px 0 0;
+  color: var(--sys-ink-2);
+  font-size: 13px;
+}
+
+.sys-addon-card-foot {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 4px;
+}
+
+.sys-addon-card-foot b {
+  font-size: 18px;
+}
+
+.sys-addon-card-foot small {
+  color: var(--sys-ink-3);
+}
+
+.sys-addon-switch {
+  width: 46px;
+  height: 26px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+}
+
+.sys-addon-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .sys-addon-form {
+    grid-template-columns: 1fr;
+  }
+
+  .sys-addon-plan-rows > div {
+    grid-template-columns: 1fr;
+  }
+
+  .sys-addon-form-prev {
+    position: static;
+  }
+}
+
+.sys-addon-form > div:first-child {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sys-addon-form .sys-form-grid {
+  display: grid;
+}
+
+.sys-addon-form .sys-addon-sec {
+  margin: 8px 0 0;
+}
