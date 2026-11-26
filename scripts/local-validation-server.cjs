@@ -325,6 +325,7 @@ const resolveLocalRedirect = (pathname, search) => {
 };
 
 const { resolvePremiumSuffix } = require(path.join(workspaceRoot, "lib", "premium-site-routes.cjs"));
+const { resolveDemoSitePage } = require(path.join(workspaceRoot, "lib", "demo-sites.cjs"));
 
 // Mesmas regras do middleware.js (lib/premium-site-routes.cjs).
 const resolveLocalRestaurantRequest = async (pathname, search) => {
@@ -341,7 +342,9 @@ const resolveLocalRestaurantRequest = async (pathname, search) => {
   const resolution = await resolveRestaurantBySlug(route.slug);
 
   if (resolution?.matched !== true) {
-    return { notFound: true };
+    // Igual ao middleware: demonstração enquanto nenhum restaurante usa o slug.
+    const demoPage = resolveDemoSitePage(route.slug, route.suffix);
+    return demoPage ? { staticPathname: demoPage } : { notFound: true };
   }
 
   const suffix = route.suffix;
